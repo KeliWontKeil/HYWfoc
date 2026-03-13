@@ -1,0 +1,46 @@
+---
+description: General embedded development rules for ARM Cortex-M projects
+globs: **/*.[ch]
+alwaysApply: false
+---
+
+# General Embedded Development Rules
+
+## Resource Optimization
+- Minimize RAM/ROM usage
+- Prefer static allocation over dynamic
+- Use fixed-point math when possible, but floating-point is allowed in performance-sensitive tasks (ISR, ADC processing) if FPU is available
+- Adjust floating-point usage frequency based on debugging feedback and target FPU presence
+- Profile code size and execution time
+
+## Interrupt Safety
+- Keep ISRs short and deterministic
+- Use volatile for shared variables
+- Avoid floating-point in ISRs
+- Prefer event flags over polling
+
+## Peripheral Handling
+- Initialize peripherals in correct order
+- Use DMA for bulk data transfer
+- Handle error conditions gracefully
+- Document timing requirements
+
+## Code Quality
+- Use meaningful variable names
+- Add Doxygen comments to APIs
+- Avoid magic numbers
+- Use assertions for debugging
+- For ISR/DMA shared data, use `volatile` and name as `x_ready` / `x_flag`
+- Note that `volatile` does not guarantee atomic access; use interrupt masking or atomic operations when needed
+
+## Toolchain Considerations
+- Be aware of compiler optimizations
+- Use appropriate data types
+- Handle endianness correctly
+- Validate generated assembly when needed
+
+## Testing Strategy
+- Unit test utilities when possible
+- Hardware validation mandatory
+- Use oscilloscope/logic analyzer for timing
+- Document test procedures

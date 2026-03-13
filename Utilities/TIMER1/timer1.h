@@ -1,0 +1,23 @@
+#ifndef _TIMER1_H_
+#define _TIMER1_H_
+
+#include "gd32f30x.h"
+#include "interrupt_priority.h"
+
+/* TIMER1 peripheral definitions */
+#define TIMER1_PERIPH           TIMER1
+#define TIMER1_RCU              RCU_TIMER1
+#define TIMER1_IRQn             TIMER1_IRQn
+
+/* Interrupt handler callback type */
+typedef void (*timer1_callback_t)(void);
+
+/* Function prototypes */
+void Timer1_Init(uint32_t prescaler, uint32_t period);
+void Timer1_Start(void);
+void Timer1_Stop(void);
+void Timer1_SetCallback(timer1_callback_t callback);
+
+#endif /* _TIMER1_H_ */
+
+

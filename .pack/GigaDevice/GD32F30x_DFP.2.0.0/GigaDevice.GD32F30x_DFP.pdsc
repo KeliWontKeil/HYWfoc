@@ -1,0 +1,848 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+  <vendor>GigaDevice</vendor>
+  <url>http://gd32mcu.com/data/documents/pack/</url>
+  <name>GD32F30x_DFP</name>
+  <description>GigaDevice GD32F30x Series Device Support and Examples</description>
+  <releases>
+  <release version="2.0.0" date="2019-03-11">
+    update svd file.
+  </release>
+  <release version="1.1.0" date="2018-12-12">
+    update firmware description.
+  </release>
+  <release version="1.0.3" date="2018-11-11">
+    update firmware.
+  </release>
+  <release version="1.0.2" date="2018-10-18">
+    update firmware of GD32F30x Device Family Pack.
+  </release>
+  <release version="1.0.1" date="2017-04-25">
+    update device description.
+  </release>
+  <release version="1.0.0" date="2017-04-18">
+    First Release version of GD32F30x Device Family Pack.
+  </release>
+  </releases>
+  <keywords>
+  <!-- keywords for indexing -->
+  <keyword>GigaDevice</keyword>
+  <keyword>Device Support</keyword>
+  <keyword>GD32F30x</keyword>
+  </keywords>
+  <devices>
+    <family Dfamily="GD32F30x Series" Dvendor="GigaDevice:123">
+      <processor Dcore="Cortex-M4"  Dfpu="1" Dmpu="1" Dendian="Little-endian"/>
+      <description>
+GD32 is a new 32-bit high performance, low power consumption universal microcontroller family powered by the ARM Cortex-M4 RISC core,which targeted at various MCU application areas.
+GD32 family integrates features to simplify system design and provide customers wide range of comprehensive and superior cost effective MCU portfolios with proven technology and great innovation.
+GD32 family includes entry line, performance line and connectivity line currently.
+      </description>
+      <feature type="XTAL"               n="4000000"  m="32000000"  name="Crystal Oscillator"/>
+      <feature type="CoreOther"       n="1"                                        name="CRC Calculation Unit"/>
+      <feature type="DMA"               n="8"                                         name="General Purpose DMA with Centralized FIFO and Burst Support"/>
+      <feature type="IntRC"              n="16000000"                           name="Internal 16M RC oscillator"/>
+      <feature type="IntRC"              n="48000000"                           name="Internal 48M RC oscillator"/>      
+      <feature type="RTC"                n="32000"                                 name="RTC with 32 kHz calibrated Oscillator and Battery Backup"/>
+      <feature type="PLL"                 n="3"                                         name="Internal PLL"/>
+      <feature type="PowerMode"    n="4"                                          name="Run, Sleep, Deep-Sleep, Standby"/>
+      <feature type="PowerOther"    n="4"                                          name="POR, PDR, LVD, and BPOR"/>
+      <feature type="ExtInt"             n="22"                                        name="External interrupt"/>            
+      <feature type="Temp"             n="-40"          m="85"                name="Extended Operating Temperature Range"/>
+      <feature type="ADC"               n="3"              m="24"                name="High-Performance ADC"/>
+      <feature type="TempSens"      n="1"                                          name="Temperature sensor"/>
+      <feature type="Timer"             n="2"              m="32"                name="32-bit General Purpose Timer"/>
+      <feature type="Timer"             n="8"              m="16"                name="16-bit General Purpose Timer"/>
+      <feature type="Timer"             n="2"              m="16"                name="Advanced Timer"/>
+      <feature type="Timer"             n="2"              m="16"                name="Basic Timer"/>
+      <feature type="Timer"             n="1"              m="24"                name="SysTick Timer"/>
+      <feature type="WDT"               n="2"                                          name="Watchdog timer"/>
+      <feature type="MPSerial"         n="4"                                          name="Multi-Purpose Serial Interface Module: I2C, I2S, SPI, USART"/> 
+      <feature type="USART"            n="4"              m="12500000"    name="High-Speed USART Interface"/>
+      <feature type="UART"              n="4"              m="12500000"    name="High-Speed UART Interface"/>
+      <feature type="CAN"               n="2"                                          name="CAN 2.0b Controller"/>
+      <feature type="USBOTG"          n="2"                                          name="High-Speed/Full-Speed USB OTG with PHY"/>
+      <feature type="GLCD"              n="2"              m="2048.2048"   name="TFT LCD Controller"/>
+      <feature type="RNG"                n="1"                                          name="True Random Number Generator"/>
+      <feature type="SDIO"               n="1"              m="8"                  name="SDIO Interface"/>
+      <feature type="Camera"           n="1"              m="14"                name="Digital Camera Interface"/>
+      <feature type="IOs"                 n="140"                                       name="IO pins"/>
+      <feature type="I2C"                 n="3"                                           name="Low-Power I2C"/>
+      <feature type="SPI"                  n="6"                                          name="SPI Interface"/>
+      <feature type="I2S"                  n="5"                                          name="I2S Interface"  />
+      <feature type="VCC"                n="2.6"                m="3.6"          name="Voltage"/>
+      <feature type="NVIC"               n="91"                                        name="NVIC"/>
+      <feature type="Other"              n="3"                                         name="My other Interface"/>
+  
+<!-- ************************  Subfamily 'GD32F303'  **************************** -->
+      <subFamily DsubFamily="GD32F303">
+        <processor Dclock="120000000"/>
+        <description>
+        GD32F303 - ARM Cortex-M4 Core
+          Frequency up to 120 MHz
+          Flash access zero wait state
+          Single-cycle multiplier and hardware divider
+
+        Memories
+          Flash size from 256KB to 3072KB
+          SRAM size is 96 KB with HW parity checking
+          6KB ISP loader ROM
+        </description>
+
+        <!-- *************************  Device 'GD32F303CC'  ***************************** -->
+        <device Dname="GD32F303CC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x0C000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303CE'  ***************************** -->
+        <device Dname="GD32F303CE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x010000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303CG'  ***************************** -->
+        <device Dname="GD32F303CG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303RC'  ***************************** -->
+        <device Dname="GD32F303RC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x0C000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303RE'  ***************************** -->
+        <device Dname="GD32F303RE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x010000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303RG'  ***************************** -->
+        <device Dname="GD32F303RG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303RI'  ***************************** -->
+        <device Dname="GD32F303RI">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0200000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303RK'  ***************************** -->
+        <device Dname="GD32F303RK">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0300000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303VC'  ***************************** -->
+        <device Dname="GD32F303VC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x0C000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303VE'  ***************************** -->
+        <device Dname="GD32F303VE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x010000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303VG'  ***************************** -->
+        <device Dname="GD32F303VG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303VI'  ***************************** -->
+        <device Dname="GD32F303VI">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0200000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303VK'  ***************************** -->
+        <device Dname="GD32F303VK">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0300000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303ZC'  ***************************** -->
+        <device Dname="GD32F303ZC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x0C000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303ZE'  ***************************** -->
+        <device Dname="GD32F303ZE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x010000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_HD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_HD"/>
+          <debug svd="SVD/GD32F30x_HD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303ZG'  ***************************** -->
+        <device Dname="GD32F303ZG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303ZI'  ***************************** -->
+        <device Dname="GD32F303ZI">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0200000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F303ZK'  ***************************** -->
+        <device Dname="GD32F303ZK">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0300000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_XD.FLM" start="0x08000000" size="0x010000" default="1"/>
+          <compile header="Device/Include/gd32f30x.h" define="GD32F30X_XD"/>
+          <debug svd="SVD/GD32F30x_XD.svd"/>
+        </device>
+
+      </subFamily>
+
+<!-- ************************  Subfamily 'GD32F305'  **************************** -->
+      <subFamily DsubFamily="GD32F305">
+        <processor Dclock="120000000"/>
+         <compile header="Device/Include/gd32f30x.h" define="GD32F30X_CL"/>
+        <debug svd="SVD/GD32F30x_CL.svd"/>
+        <description>
+        GD32F305 - ARM Cortex-M4 Core
+          Frequency up to 120 MHz
+          Flash access zero wait state
+          Single-cycle multiplier and hardware divider
+
+        Memories
+          Flash size from 128 KB to 3072 KB
+          SRAM size is 96 KB with HW parity checking
+          18 KB ISP loader ROM
+        </description>
+
+        <!-- *************************  Device 'GD32F305RB'  ***************************** -->
+        <device Dname="GD32F305RB">
+          <memory    id="IROM1"                   start="0x08000000" size="0x020000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x010000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305RC  ***************************** -->
+        <device Dname="GD32F305RC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305RE  ***************************** -->
+        <device Dname="GD32F305RE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305RG  ***************************** -->
+        <device Dname="GD32F305RG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305VC  ***************************** -->
+        <device Dname="GD32F305VC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305VE  ***************************** -->
+        <device Dname="GD32F305VE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305VG  ***************************** -->
+        <device Dname="GD32F305VG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+
+        <!-- *************************  Device 'GD32F305ZC  ***************************** -->
+        <device Dname="GD32F305ZC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305ZE  ***************************** -->
+        <device Dname="GD32F305ZE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F305ZG  ***************************** -->
+        <device Dname="GD32F305ZG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+      </subFamily>
+
+<!-- ************************  Subfamily 'GD32F307'  **************************** -->
+      <subFamily DsubFamily="GD32F307">
+        <processor Dclock="120000000"/>
+         <compile header="Device/Include/gd32f30x.h" define="GD32F30X_CL"/>
+        <debug svd="SVD/GD32F30x_CL.svd"/>
+        <description>
+        GD32F307 - ARM Cortex-M4 Core
+          Frequency up to 120 MHz
+          Flash access zero wait state
+          Single-cycle multiplier and hardware divider
+
+        Memories
+          Flash size from 256 KB to 3072 KB
+          SRAM size is 96 KB with HW parity checking
+          18 KB ISP loader ROM
+        </description>
+
+        <!-- *************************  Device 'GD32F307RC  ***************************** -->
+        <device Dname="GD32F307RC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307RE  ***************************** -->
+        <device Dname="GD32F307RE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307RG  ***************************** -->
+        <device Dname="GD32F307RG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307VC  ***************************** -->
+        <device Dname="GD32F307VC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307VE  ***************************** -->
+        <device Dname="GD32F307VE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307VG  ***************************** -->
+        <device Dname="GD32F307VG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+
+        <!-- *************************  Device 'GD32F307ZC  ***************************** -->
+        <device Dname="GD32F307ZC">
+          <memory    id="IROM1"                   start="0x08000000" size="0x040000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307ZE  ***************************** -->
+        <device Dname="GD32F307ZE">
+          <memory    id="IROM1"                   start="0x08000000" size="0x080000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+        <!-- *************************  Device 'GD32F307ZG  ***************************** -->
+        <device Dname="GD32F307ZG">
+          <memory    id="IROM1"                   start="0x08000000" size="0x0100000" startup="1" default="1"/>
+          <memory    id="IRAM1"                   start="0x20000000" size="0x018000" init   ="0" default="1"/>
+          <algorithm name="Flash/GD32F30x_CL.FLM" start="0x08000000" size="0x010000" default="1"/>
+        </device>
+
+      </subFamily>
+    </family>
+  </devices>
+
+  <conditions>
+    <!-- Compiler Conditions -->
+    <condition id="Compiler ARMCC">
+      <require Tcompiler="ARMCC"/>
+    </condition>
+ 
+
+    <!-- Device Conditions -->
+    <condition id="GD32F30xHD">
+      <description>GigaDevice GD32F30x Devices</description>
+      <require Dvendor="GigaDevice:123" Dname="GD32F303*[CE]*"/>
+      <require Cclass="Device" Cgroup="Startup" />
+    </condition>
+
+    <!-- Device Conditions -->
+    <condition id="GD32F30xXD">
+      <description>GigaDevice GD32F30x Devices</description>
+      <require Dvendor="GigaDevice:123" Dname="GD32F303*[GIK]"/>
+      <require Cclass="Device" Cgroup="Startup" />
+    </condition>
+
+    <!-- Device Conditions -->
+    <condition id="GD32F30xCL">
+      <description>GigaDevice GD32F30x Devices</description>
+      <require Dvendor="GigaDevice:123" Dname="GD32F30[57]*"/>
+      <require Cclass="Device" Cgroup="Startup" />
+    </condition>
+
+   <!-- Device + CMSIS Conditions -->
+    <condition id="GD32F30x CMSIS">
+      <description>GigaDevice GD32F30x Devices and CMSIS-CORE</description>
+      <accept condition="GD32F30xHD"/>
+      <accept condition="GD32F30xXD"/>
+      <accept condition="GD32F30xCL"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+      <require Cclass="Device" Cgroup="GD32F30x_libopt"/>    
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="RCU"/>           
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="PMU"/>    
+    </condition>
+    <!-- GD32F30x STDPERIPHERALS RCU Conditions -->
+    <condition id="GD32F30x STDPERIPHERALS RCU">
+      <description>GigaDevice  GD32F30x Standard Peripherals Drivers with RCU</description>
+      <require condition="GD32F30x CMSIS"/>
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="RCU"/>
+    </condition>
+
+     <!-- GD32F30x STDPERIPHERALS MISC Conditions -->
+    <condition id="GD32F30x STDPERIPHERALS MISC">
+      <description>GigaDevice  GD32F30x Standard Peripherals Drivers with MISC</description>
+      <require condition="GD32F30x CMSIS"/>
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="MISC"/>
+    </condition>
+
+     <!-- GD32F30x STDPERIPHERALS EVAL Conditions -->
+    <condition id="GD32F30x STDPERIPHERALS EVAL">
+      <description>GigaDevice  GD32F30x Standard Peripherals Drivers with EVAL</description>
+      <require condition="GD32F30x CMSIS"/>
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="EXTI"/>
+      <require Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="USART"/>
+    </condition>
+  </conditions>
+
+  <components>
+    <!-- GD32F30x_StdPeripherals -->
+    <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="ADC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Analog-to-digital converter (ADC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_ADC
+        </RTE_Components_h>
+        <files>
+          <!-- ADC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_adc.h"/>
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_adc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+   <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="BKP" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Backup register(BKP) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_BKP
+        </RTE_Components_h>
+        <files>
+          <!-- BKP flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_bkp.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_bkp.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+    <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="CAN" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Controller Area Network (CAN) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CAN
+        </RTE_Components_h>
+        <files>
+          <!-- CAN flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_can.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_can.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="CRC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Cyclic Redundancy Check (CRC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CRC
+        </RTE_Components_h>
+        <files>
+          <!-- CRC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_crc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_crc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="CTC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Clock trim controller (CTC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_CTC
+        </RTE_Components_h>
+        <files>
+          <!-- CTC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_ctc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_ctc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="DAC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Digital-to-analog converter (DAC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_DAC
+        </RTE_Components_h>
+        <files>
+          <!-- DAC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_dac.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_dac.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="DBG" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Debug (DBG) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_DBG
+        </RTE_Components_h>
+        <files>
+          <!-- DBG flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_dbg.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_dbg.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="DMA" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Direct Memory Access (DMA) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_DMA
+        </RTE_Components_h>
+        <files>
+          <!-- DMA flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_dma.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_dma.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="ENET" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Ethernet(ENET) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_ENET
+        </RTE_Components_h>
+        <files>
+          <!-- ENET flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_enet.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_enet.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="EXMC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>External memory controller(EXMC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_EXMC
+        </RTE_Components_h>
+        <files>
+          <!-- EXMC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_exmc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_exmc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="EXTI" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>External Interrupt/Event (EXTI) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_EXTI
+        </RTE_Components_h>
+        <files>
+          <!-- EXTI flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_exti.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_exti.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="FMC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Flash Memory Controller (FMC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_FMC
+        </RTE_Components_h>
+        <files>
+          <!-- FMC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_fmc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_fmc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="FWDGT" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Free watchdog timer(FWDGT) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_FWDGT
+        </RTE_Components_h>
+        <files>
+          <!-- FWDGT flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_fwdgt.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_fwdgt.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="GPIO" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>General-purpose and Alternate-function I/Os (GPIO) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_GPIO
+        </RTE_Components_h>
+        <files>
+          <!-- GPIO flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_gpio.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_gpio.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="I2C" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Inter-integrated Circuit (I2C) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_I2C
+        </RTE_Components_h>
+        <files>
+          <!-- I2C flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_i2c.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_i2c.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="MISC" Cversion="1.0.2" condition="GD32F30x CMSIS">
+      <description>MISC driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_MISC
+        </RTE_Components_h>
+        <files>
+          <!-- MISC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_misc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_misc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="PMU" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Power Managment Unit(PMU) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_PMU
+        </RTE_Components_h>
+        <files>
+          <!-- PMU flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_pmu.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_pmu.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="RCU" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS MISC">
+      <description>Reset and Clock Control (RCU) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_RCU
+        </RTE_Components_h>
+        <files>
+          <!-- RCU flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_rcu.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_rcu.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="RTC" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Real-time Clock (RTC) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_RTC
+        </RTE_Components_h>
+        <files>
+          <!-- RTC flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_rtc.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_rtc.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="SDIO" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Secure digital input/output interface(SDIO) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_SDIO
+        </RTE_Components_h>
+        <files>
+          <!-- SDIO flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_sdio.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_sdio.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="SPI_I2S" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Serial Peripheral Interface / Inter-IC Sound (SPI_I2S) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_SPI
+        </RTE_Components_h>
+        <files>
+          <!-- SPI flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_spi.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_spi.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="TIMER" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>TIMER driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_TIMER
+        </RTE_Components_h>
+        <files>
+          <!-- TIMER flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_timer.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_timer.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="USART" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Universal Synchronous Asynchronous Receiver Transmitter (USART) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_USART
+        </RTE_Components_h>
+        <files>
+          <!-- USART flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_usart.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_usart.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+  <component Cclass="Device" Cgroup="GD32F30x_StdPeripherals" Csub="WWDGT" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS RCU">
+      <description>Window Watchdog Timer (WWDGT) driver for GD32F30x Devices</description>
+        <RTE_Components_h>
+        #define RTE_DEVICE_STDPERIPHERALS_WWDGT
+        </RTE_Components_h>
+        <files>
+          <!-- WWDGT flie -->
+          <file category="header" name="Device/Firmware/Peripherals/inc/gd32f30x_wwdgt.h" />
+          <file category="source" name="Device/Firmware/Peripherals/src/gd32f30x_wwdgt.c" attr="config" version="1.0.2" />
+        </files>
+    </component>
+
+    <!-- Utilities GD32F30x -->
+    <component Cclass="Device" Cgroup="EVAL" Csub="GD32F30x" Cversion="1.0.2" condition="GD32F30x STDPERIPHERALS EVAL">
+      <description>Firmware functions to manage Leds, Keys, COM ports</description>
+      <files>
+        <!-- include folder -->
+        <file category="header" name="Device/Utilities/gd32f30x_eval.h" />
+        <!-- eval file -->
+        <file category="source" name="Device/Utilities/gd32f30x_eval.c" attr="config" version="1.0.2"/>
+      </files>
+    </component>
+
+    <!-- Config GD32F30x -->
+    <component Cclass="Device" Cgroup="GD32F30x_libopt" Cversion="1.0.2" condition="GD32F30x CMSIS">
+      <description>Configuration file</description>
+      <files>
+        <!-- include folder -->
+        <file category="header" name="Device/Template/gd32f30x_libopt.h"/>
+      </files>
+    </component>
+
+   <!-- Startup GD32F30x HD -->
+    <component Cclass="Device" Cgroup="Startup"  Cversion="1.0.2" condition="GD32F30xHD">
+      <description>System Startup for GigaDevice GD32F303 High Density Devices</description>
+      <files>
+        <!-- include folder -->
+        <file category="include" name="Device/Include/"/>
+        <file category="header" name="Device/Include/gd32f30x.h"/>
+        <!-- startup file -->
+        <file category="source" name="Device/Source/ARM/startup_gd32f30x_hd.s" attr="config" version="1.0.2" condition="Compiler ARMCC"/>
+        <!-- system file -->
+        <file category="source" name="Device/Source/system_gd32f30x.c"      attr="config" version="1.0.2"/>
+      </files>
+    </component>
+
+   <!-- Startup GD32F30x XD -->
+    <component Cclass="Device" Cgroup="Startup"   Cversion="1.0.2" condition="GD32F30xXD">
+      <description>System Startup for GigaDevice GD32F303 Extra Density Devices</description>
+      <files>
+        <!-- include folder -->
+        <file category="include" name="Device/Include/"/>
+        <file category="header" name="Device/Include/gd32f30x.h"/>
+        <!-- startup file -->
+        <file category="source" name="Device/Source/ARM/startup_gd32f30x_xd.s" attr="config" version="1.0.2" condition="Compiler ARMCC"/>
+        <!-- system file -->
+        <file category="source" name="Device/Source/system_gd32f30x.c"      attr="config" version="1.0.2"/>
+
+      </files>
+    </component>
+
+   <!-- Startup GD32F30x CL -->
+    <component Cclass="Device" Cgroup="Startup"   Cversion="1.0.2" condition="GD32F30xCL">
+      <description>System Startup for GigaDevice GD32F305 and GD32F307 Devices</description>
+      <files>
+        <!-- include folder -->
+        <file category="include" name="Device/Include/"/>
+        <file category="header" name="Device/Include/gd32f30x.h"/>
+        <!-- startup file -->
+        <file category="source" name="Device/Source/ARM/startup_gd32f30x_cl.s" attr="config" version="1.0.2" condition="Compiler ARMCC"/>
+        <!-- system file -->
+        <file category="source" name="Device/Source/system_gd32f30x.c"      attr="config" version="1.0.2"/>
+      </files>
+    </component>
+  </components>
+
+</package>

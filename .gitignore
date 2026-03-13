@@ -1,0 +1,38 @@
+# dot files
+/.vscode/launch.json
+/.settings
+/.eide/log
+/.eide.usr.ctx.json
+
+# project out
+/build
+/bin
+/obj
+/out
+/output
+
+# eide template
+*.ept
+*.eide-template
+
+# temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# logs
+*.log
+*.txt
+JLinkLog.txt
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,32 @@
+---
+description: Development workflow rules for AI-assisted embedded development
+alwaysApply: true
+---
+
+# Development Workflow Rules
+
+## Version Control & Branching
+- Use semantic versioning: MAJOR.MINOR.PATCH
+- Branch naming: `feature/`, `bugfix/`, `hotfix/`, `release/v*.*.*`
+- Commit messages: Use conventional commits format
+- Tags: Create version tags for each release
+
+## AI-Assisted Development Process
+1. **Planning**: Define requirements in NEXT_MISSION.md
+2. **Implementation**: AI generates code, manual review
+3. **Compilation**: AI ensures code compiles without errors/warnings
+4. **Documentation**: Update guides after each iteration
+5. **Release**: Tag version and merge to main
+
+## Manual Debugging Requirements
+- Hardware debugging is mandatory for embedded systems
+- Use ST-LINK for flashing and debugging
+- Manual code tuning required due to toolchain limitations
+- AI does NOT perform debugging or flashing operations
+- Debugging issues should be reported in iteration requirements for AI guidance
+
+## Quality Gates
+- Zero compiler warnings in production builds
+- Code review required for all changes
+- Hardware validation before merge
+- Documentation updates mandatory

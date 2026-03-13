@@ -1,0 +1,35 @@
+## Hardware Pin Map (quick reference)
+
+- **Clocks**: 32.768kHz RTC crystal, 8MHz HXTAL
+
+### ADC
+- PA6: ADC1_IN6
+- PA7: ADC1_IN7
+- PA8: ADC1_IN8
+
+### USART
+- PA2: USART1_TX
+- PA3: USART1_RX
+- PB10: USART2_TX
+- PB11: USART2_RX
+
+### I2C
+- PB6: I2C0_SCL
+- PB7: I2C0_SDA
+
+### PWM (TIMER0 complementary)
+- PA8: TIMER0_CH0
+- PA9: TIMER0_CH1
+- PA10: TIMER0_CH2
+- PB13: TIMER0_CH0_N
+- PB14: TIMER0_CH1_N
+- PB15: TIMER0_CH2_N
+
+### USB
+- PA12: USBDP
+- PA13: USBDM
+
+### LEDs (GPIO out)
+- PB3: LED1
+- PB4: LED2
+- PB5: LED3

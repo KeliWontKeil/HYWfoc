@@ -1,0 +1,64 @@
+---
+description: Project-specific rules for GD32F303CC FOC motor control
+globs: **/*.[ch]
+alwaysApply: false
+---
+
+# GD32 FOC Project Rules
+
+## Code Style & Naming
+- Functions: `Module_FunctionName` (e.g. `Timer1_Init`, `PWM_SetDutyCycle`)
+- Macros: `UPPERCASE_WITH_UNDERSCORES`
+- Types: `xxx_t` suffix
+- Follow existing patterns unless refactoring
+
+## Module Boundaries
+- Each `Utilities/*` module is self-contained
+- Clean API via header files
+- Avoid cross-module globals
+
+## Priority & Source of Truth
+- **Primary source**: actual code (`.c/.h` files) is authoritative
+- Secondary reference: documentation under `docs/`
+- Rules in `dev-guidelines/rules/*` guide AI and collaboration
+
+## Editable Scope
+- ✅ `Application/Source`, `Application/Include`
+- ✅ `Utilities/**`
+- ✅ Docs: `docs/`, `NEXT_MISSION.md`, `CHANGELOG.md`
+- ❌ Do not edit by default: `Firmware/**`, `.eide/**` (exceptions only for build/flash fixes)
+
+## Interrupt Handling
+- Keep ISRs short and deterministic
+- Avoid blocking in ISRs; if unavoidable, ensure it cannot affect real-time behavior
+- Prefer ISR forwarding to module handler functions for complex logic
+
+## Timing & Scheduling
+- Use 1kHz/100Hz/10Hz/1Hz task slots in `timer1_algorithm.c`
+- Use DWT timing for execution measurement
+- Initialize timers via parameterized APIs (Timer1/Timer2/PWM)
+
+## Execution Time & 1kHz Budget
+- Ensure any 1kHz task completes well under 1ms
+- Use `Timer1_EnableDWT()` / `Timer1_GetExecutionTime()` to validate
+- Avoid blocking delays (`delay_1ms()`) in initialization/calibration paths unless necessary
+- If blocking delays are used, document execution time impact and ensure no interference with real-time tasks
+
+## Safety
+- Always include `<stddef.h>` when using `NULL`
+- Do not change clocks or memory mapping without mission-level approval
+- Preserve existing hardware configuration unless change is explicitly required
+
+## Build & Flash
+- Primary toolchain: Keil μVision 5 + ARM Compiler 5 (AC5)
+- Development: VS Code + EIDE extension for compilation
+- Flash/debug: ST-LINK (manual operation by user, AI does not perform flashing or debugging)
+- Treat warnings as potential issues and resolve them
+
+## Iteration & Documentation Contract
+- Only consider a change a new iteration when user explicitly requests "进行下一次迭代"
+- After each iteration, update:
+  - `CHANGELOG.md` (version history)
+  - `NEXT_MISSION.md` (next iteration goals)
+  - `docs/` (architecture/guide updates)
+  - Rules (if workflow or architecture changed)
