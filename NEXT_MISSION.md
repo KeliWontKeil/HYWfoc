@@ -6,7 +6,7 @@
 - 当前分支：**framework**（用于新项目框架演示，内容简化）。
 
 ## 版本
-- **当前版本**：v0.0.1
+- **当前版本**：v0.1.0
 
 ## 参考文档
 - 规则文件（核心）：`dev-guidelines/rules/cn/`、`dev-guidelines/rules/en/`
