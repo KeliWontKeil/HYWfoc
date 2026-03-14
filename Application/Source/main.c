@@ -9,15 +9,9 @@ int main(void)
     LED_Init();
     
     USART1_Init();
-    
-    /* Initialize TIMER2 first (master timer) */
-    Timer2_Init(0, 4999);  /* 24kHz PWM frequency*/
-    
+
     /* Initialize PWM (TIMER0 as slave) */
     PWM_Init(24, 2);
-    
-    /* Start TIMER2 (master) */
-    Timer2_Start();
     
     /* Start PWM (slave will be triggered by master) */
     PWM_Start();

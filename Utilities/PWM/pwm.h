@@ -9,6 +9,7 @@
 */
 
 #include "gd32f30x.h"
+#include "timer2.h"
 
 /* TIMER0 pin definitions (from Hardware.md) */
 /* Main output channels */
