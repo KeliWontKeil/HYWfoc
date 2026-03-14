@@ -24,8 +24,12 @@
 #define USART1_PRIORITY_GROUP      3
 #define USART1_PRIORITY_SUBGROUP   0
 
+/* USART interrupt priorities */
+#define USART2_PRIORITY_GROUP      4
+#define USART2_PRIORITY_SUBGROUP   0
+
 /* SysTick interrupt priority */
-#define SYSTICK_PRIORITY_GROUP     4
+#define SYSTICK_PRIORITY_GROUP     5
 #define SYSTICK_PRIORITY_SUBGROUP  0
 
 /* Helper macros for NVIC configuration */

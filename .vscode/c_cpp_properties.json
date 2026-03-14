@@ -112,14 +112,14 @@
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\CMSIS\\GD\\GD32F30x\\Source",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\GD32F30x_standard_peripheral\\Source",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\CMSIS\\GD\\GD32F30x\\Source\\ARM",
-                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER2",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER1",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\PWM",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\LED",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\AS5600",
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\I2C",
-                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC"
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART"
             ],
             "defines": [
                 "USE_STDPERIPH_DRIVER",
@@ -211,14 +211,14 @@
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\CMSIS\\GD\\GD32F30x\\Source",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\GD32F30x_standard_peripheral\\Source",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\CMSIS\\GD\\GD32F30x\\Source\\ARM",
-                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER2",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER1",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\PWM",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\LED",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\AS5600",
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\I2C",
-                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC"
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART"
             ],
             "defines": [
                 "USE_STDPERIPH_DRIVER",

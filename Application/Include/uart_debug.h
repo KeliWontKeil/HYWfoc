@@ -11,8 +11,10 @@
 #include "adc.h"
 #include "as5600.h"
 #include <stdint.h>
-#include "usart1.h"
 #include <stdio.h>
+#include "usart1.h"
+#include "timer1_algorithm.h"
+#include "sensor.h"
 
 /* Function prototypes */
 void UART_Debug_Init(void);
@@ -21,3 +23,4 @@ void UART_Debug_OutputEncoderAngle(void);
 void UART_Debug_OutputAll(void);
 
 #endif /* _UART_DEBUG_H_ */
+

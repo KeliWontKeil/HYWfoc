@@ -402,6 +402,16 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\timer1_algorithm.c</FilePath>
             </File>
+            <File>
+              <FileName>sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\uart_debug.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -553,11 +563,6 @@
           <GroupName>Utilities</GroupName>
           <Files>
             <File>
-              <FileName>usart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\USART\usart.c</FilePath>
-            </File>
-            <File>
               <FileName>timer2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\TIMER2\timer2.c</FilePath>
@@ -583,14 +588,24 @@
               <FilePath>.\Utilities\AS5600\as5600.c</FilePath>
             </File>
             <File>
-              <FileName>i2c.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\I2C\i2c.c</FilePath>
-            </File>
-            <File>
               <FileName>adc.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\ADC\adc.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\I2C\i2c0.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart1.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart2.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -994,6 +1009,16 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\timer1_algorithm.c</FilePath>
             </File>
+            <File>
+              <FileName>sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\uart_debug.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1145,11 +1170,6 @@
           <GroupName>Utilities</GroupName>
           <Files>
             <File>
-              <FileName>usart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\USART\usart.c</FilePath>
-            </File>
-            <File>
               <FileName>timer2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\TIMER2\timer2.c</FilePath>
@@ -1175,14 +1195,24 @@
               <FilePath>.\Utilities\AS5600\as5600.c</FilePath>
             </File>
             <File>
-              <FileName>i2c.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\I2C\i2c.c</FilePath>
-            </File>
-            <File>
               <FileName>adc.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\ADC\adc.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\I2C\i2c0.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart1.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart2.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1586,6 +1616,16 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\timer1_algorithm.c</FilePath>
             </File>
+            <File>
+              <FileName>sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\uart_debug.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1737,11 +1777,6 @@
           <GroupName>Utilities</GroupName>
           <Files>
             <File>
-              <FileName>usart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\USART\usart.c</FilePath>
-            </File>
-            <File>
               <FileName>timer2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\TIMER2\timer2.c</FilePath>
@@ -1767,14 +1802,24 @@
               <FilePath>.\Utilities\AS5600\as5600.c</FilePath>
             </File>
             <File>
-              <FileName>i2c.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\I2C\i2c.c</FilePath>
-            </File>
-            <File>
               <FileName>adc.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\ADC\adc.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\I2C\i2c0.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart1.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart2.c</FilePath>
             </File>
           </Files>
         </Group>

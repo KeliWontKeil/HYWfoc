@@ -38,3 +38,4 @@ void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimat
 void Kalman_Update(kalman_filter_t* filter, float measurement);
 
 #endif /* _SENSOR_H_ */
+

@@ -44,15 +44,15 @@ void Timer1_Algorithm_Handler(void)
     timer1_counter++;
     
     /* Execute callbacks based on counter value */
-    if (timer1_counter == 1 && algorithm_callbacks[TIMER1_CALLBACK_1KHZ] != NULL)
+    if ( (timer1_counter % 1) == 0 && algorithm_callbacks[TIMER1_CALLBACK_1KHZ] != NULL)
     {
         algorithm_callbacks[TIMER1_CALLBACK_1KHZ]();
     }
-    if (timer1_counter == 10 && algorithm_callbacks[TIMER1_CALLBACK_100HZ] != NULL)
+    if ( (timer1_counter % 10) == 0 && algorithm_callbacks[TIMER1_CALLBACK_100HZ] != NULL)
     {
         algorithm_callbacks[TIMER1_CALLBACK_100HZ]();
     }
-    if (timer1_counter == 100 && algorithm_callbacks[TIMER1_CALLBACK_10HZ] != NULL)
+    if ( (timer1_counter % 100) == 0 && algorithm_callbacks[TIMER1_CALLBACK_10HZ] != NULL)
     {
         algorithm_callbacks[TIMER1_CALLBACK_10HZ]();
     }

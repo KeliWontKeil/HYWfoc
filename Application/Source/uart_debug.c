@@ -103,9 +103,8 @@ void UART_Debug_OutputAll(void)
     /* Output algorithm execution time */
     uint32_t exec_time = Timer1_GetExecutionTime();
     char buffer[64];
-    sprintf(buffer, "Algorithm execution time: %lu cycles\r\n", exec_time);
+    sprintf(buffer, "Algorithm execution time: %lf us\r\n", exec_time / 120.0f);
     USART1_SendString(buffer);
-    
     USART1_SendString("\r\n");
 }
 

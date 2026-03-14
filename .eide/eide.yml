@@ -15,6 +15,7 @@ virtualFolder:
         - path: Application/Source/systick.c
         - path: Application/Source/timer1_algorithm.c
         - path: Application/Source/uart_debug.c
+        - path: Application/Source/sensor.c
       folders: []
     - name: CMSIS
       files:

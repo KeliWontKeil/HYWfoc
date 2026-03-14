@@ -2,6 +2,7 @@
 
 /* Function prototypes */
 static void LED_Blink_1Hz(void);
+static void Motor_Control_Loop(void);
 
 int main(void)
 {
@@ -34,7 +35,7 @@ int main(void)
     Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1HZ, LED_Blink_1Hz);
     
     /* Set sensor reading callback for 1KHz task */
-    Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1KHZ, Sensor_ReadAll);
+    Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1KHZ, Motor_Control_Loop);
     
     Set_LED(3);
     
@@ -73,4 +74,9 @@ static void LED_Blink_1Hz(void)
         Reset_LED(3);
         led3_state = 0;
     }
+}
+
+static void Motor_Control_Loop(void)
+{
+    Sensor_ReadAll();
 }
