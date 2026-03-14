@@ -2,7 +2,8 @@
 #define _AS5600_H_
 
 #include "gd32f30x.h"
-#include "i2c.h"
+#include "i2c0.h"
+#include <math.h>
 
 /* AS5600 I2C address */
 #define AS5600_I2C_7BIT_ADDRESS     0x36

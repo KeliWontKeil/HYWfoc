@@ -25,6 +25,7 @@ typedef enum {
 
 /* Function prototypes */
 void I2C0_Init(void);
+void I2C0_Unlock(void);
 i2c_status_t I2C0_WriteByte(uint8_t device_addr, uint8_t reg_addr, uint8_t data);
 i2c_status_t I2C0_ReadByte(uint8_t device_addr, uint8_t reg_addr, uint8_t *data);
 i2c_status_t I2C0_WriteBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data, uint16_t len);

@@ -12,6 +12,27 @@ alwaysApply: false
 - Types: `xxx_t` suffix
 - Follow existing patterns unless refactoring
 
+## Brace Style (K&R Style)
+- **Braces must occupy their own line, never on the same line as statements**
+- Correct:
+```c
+void Function(void)
+{
+    if (condition)
+    {
+        // code
+    }
+}
+```
+- Incorrect:
+```c
+void Function(void) {
+    if (condition) {
+        // code
+    }
+}
+```
+
 ## Module Boundaries
 - Each `Utilities/*` module is self-contained
 - Clean API via header files

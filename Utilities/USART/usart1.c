@@ -1,4 +1,4 @@
-#include "usart.h"
+#include "usart1.h"
 
 /* Private variables */
 static uint8_t rx_buffer[USART1_RX_BUFFER_SIZE];
@@ -95,7 +95,8 @@ usart_status_t USART1_SendByte(uint8_t data)
     USART1_DisableInterrupts();
     
     /* Check if TX buffer is full */
-    if (USART1_BufferIsFull(tx_head, tx_tail, USART1_TX_BUFFER_SIZE)) {
+    if (USART1_BufferIsFull(tx_head, tx_tail, USART1_TX_BUFFER_SIZE))
+    {
         USART1_EnableInterrupts();
         return USART_STATUS_BUFFER_FULL;
     }
@@ -105,7 +106,8 @@ usart_status_t USART1_SendByte(uint8_t data)
     tx_head = (tx_head + 1) % USART1_TX_BUFFER_SIZE;
     
     /* If transmitter is idle, start transmission */
-    if (!tx_busy) {
+    if (!tx_busy)
+    {
         tx_busy = 1;
         usart_interrupt_enable(USART1_PERIPH, USART_INT_TBE);
     }
@@ -124,9 +126,11 @@ usart_status_t USART1_SendString(const char *str)
 {
     usart_status_t status;
     
-    while (*str) {
+    while (*str)
+    {
         status = USART1_SendByte(*str++);
-        if (status != USART_STATUS_OK) {
+        if (status != USART_STATUS_OK)
+        {
             return status;
         }
     }
@@ -146,7 +150,8 @@ uint8_t USART1_ReceiveByte(void)
     
     USART1_DisableInterrupts();
     
-    if (!USART1_BufferIsEmpty(rx_head, rx_tail)) {
+    if (!USART1_BufferIsEmpty(rx_head, rx_tail))
+    {
         data = rx_buffer[rx_tail];
         rx_tail = (rx_tail + 1) % USART1_RX_BUFFER_SIZE;
     }
@@ -209,21 +214,25 @@ void USART1_SetRxCallback(usart_rx_callback_t callback)
 static void USART1_HandlerInternal(void)
 {
     /* Receive buffer not empty interrupt */
-    if (usart_interrupt_flag_get(USART1_PERIPH, USART_INT_FLAG_RBNE) != RESET) {
+    if (usart_interrupt_flag_get(USART1_PERIPH, USART_INT_FLAG_RBNE) != RESET)
+    {
         uint8_t data = usart_data_receive(USART1_PERIPH);
         
         /* Add to RX buffer */
-        if (!USART1_BufferIsFull(rx_head, rx_tail, USART1_RX_BUFFER_SIZE)) {
+        if (!USART1_BufferIsFull(rx_head, rx_tail, USART1_RX_BUFFER_SIZE))
+        {
             rx_buffer[rx_head] = data;
             rx_head = (rx_head + 1) % USART1_RX_BUFFER_SIZE;
             
             /* Call callback if set */
-            if (rx_callback != NULL) {
+            if (rx_callback != NULL)
+            {
                 rx_callback(data);
             }
             
             /* Loopback: echo received data */
-            if (loopback_enabled) {
+            if (loopback_enabled)
+            {
                 USART1_SendByte(data);
             }
         }
@@ -232,12 +241,16 @@ static void USART1_HandlerInternal(void)
     }
     
     /* Transmit buffer empty interrupt */
-    if (usart_interrupt_flag_get(USART1_PERIPH, USART_INT_FLAG_TBE) != RESET) {
-        if (!USART1_BufferIsEmpty(tx_head, tx_tail)) {
+    if (usart_interrupt_flag_get(USART1_PERIPH, USART_INT_FLAG_TBE) != RESET)
+    {
+        if (!USART1_BufferIsEmpty(tx_head, tx_tail))
+        {
             /* Send next byte */
             usart_data_transmit(USART1_PERIPH, tx_buffer[tx_tail]);
             tx_tail = (tx_tail + 1) % USART1_TX_BUFFER_SIZE;
-        } else {
+        }
+        else
+        {
             /* No more data to send, disable TBE interrupt */
             usart_interrupt_disable(USART1_PERIPH, USART_INT_TBE);
             tx_busy = 0;
@@ -304,7 +317,8 @@ static void USART1_DisableInterrupts(void)
 static void USART1_EnableInterrupts(void)
 {
     usart_interrupt_enable(USART1_PERIPH, USART_INT_RBNE);
-    if (tx_busy) {
+    if (tx_busy)
+    {
         usart_interrupt_enable(USART1_PERIPH, USART_INT_TBE);
     }
 }

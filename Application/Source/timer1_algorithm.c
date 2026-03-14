@@ -1,7 +1,4 @@
 #include "timer1_algorithm.h"
-#include "timer1.h"
-#include "LED.h"
-#include <stddef.h>
 
 /* Algorithm timing counters */
 static volatile uint16_t timer1_counter = 0;
@@ -25,7 +22,8 @@ void Timer1_Algorithm_Init(void)
 
 void Timer1_EnableDWT(void)
 {
-    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0) {
+    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0)
+    {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
         DWT->CYCCNT = 0;
         DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
@@ -36,7 +34,8 @@ void Timer1_Algorithm_Handler(void)
 {
     static uint8_t dwt_enabled = 0;
     
-    if (!dwt_enabled) {
+    if (!dwt_enabled)
+    {
         Timer1_EnableDWT();
         dwt_enabled = 1;
     }
@@ -45,20 +44,25 @@ void Timer1_Algorithm_Handler(void)
     timer1_counter++;
     
     /* Execute callbacks based on counter value */
-    if (timer1_counter == 1 && algorithm_callbacks[TIMER1_CALLBACK_1KHZ] != NULL) {
+    if (timer1_counter == 1 && algorithm_callbacks[TIMER1_CALLBACK_1KHZ] != NULL)
+    {
         algorithm_callbacks[TIMER1_CALLBACK_1KHZ]();
     }
-    if (timer1_counter == 10 && algorithm_callbacks[TIMER1_CALLBACK_100HZ] != NULL) {
+    if (timer1_counter == 10 && algorithm_callbacks[TIMER1_CALLBACK_100HZ] != NULL)
+    {
         algorithm_callbacks[TIMER1_CALLBACK_100HZ]();
     }
-    if (timer1_counter == 100 && algorithm_callbacks[TIMER1_CALLBACK_10HZ] != NULL) {
+    if (timer1_counter == 100 && algorithm_callbacks[TIMER1_CALLBACK_10HZ] != NULL)
+    {
         algorithm_callbacks[TIMER1_CALLBACK_10HZ]();
     }
-    if (timer1_counter == 1000 && algorithm_callbacks[TIMER1_CALLBACK_1HZ] != NULL) {
+    if (timer1_counter == 1000 && algorithm_callbacks[TIMER1_CALLBACK_1HZ] != NULL)
+    {
         algorithm_callbacks[TIMER1_CALLBACK_1HZ]();
     }
     
-    if(timer1_counter >= 1000) {
+    if(timer1_counter >= 1000)
+    {
         timer1_counter = 0;
     }
     
@@ -83,21 +87,24 @@ void Timer1_ResetCounter(void)
 /* Callback management functions */
 void Timer1_SetAlgorithmCallback(Timer1_CallbackRate_t rate, Timer1_Callback_t callback)
 {
-    if (rate < TIMER1_CALLBACK_COUNT) {
+    if (rate < TIMER1_CALLBACK_COUNT)
+    {
         algorithm_callbacks[rate] = callback;
     }
 }
 
 void Timer1_ClearAlgorithmCallback(Timer1_CallbackRate_t rate)
 {
-    if (rate < TIMER1_CALLBACK_COUNT) {
+    if (rate < TIMER1_CALLBACK_COUNT)
+    {
         algorithm_callbacks[rate] = NULL;
     }
 }
 
 void Timer1_ClearAllCallbacks(void)
 {
-    for (int i = 0; i < TIMER1_CALLBACK_COUNT; i++) {
+    for (int i = 0; i < TIMER1_CALLBACK_COUNT; i++)
+    {
         algorithm_callbacks[i] = NULL;
     }
 }

@@ -14,8 +14,8 @@
 #include <string.h>
 
 /* ADC peripheral definitions */
-#define ADC1_PERIPH           ADC0
-#define ADC1_RCU              RCU_ADC0
+#define ADC0_PERIPH           ADC0
+#define ADC0_RCU              RCU_ADC0
 
 /* ADC channel definitions */
 #define ADC_CHANNEL_PA6       ADC_CHANNEL_6     /* Phase A current */
@@ -68,12 +68,21 @@ typedef enum {
     ADC_STATUS_DMA_ERROR
 } adc_status_t;
 
+typedef enum {
+    RAW = 0,
+    VOLTAGE,
+    CURRENT
+} adc_sampletype_t;
+
 /* Function prototypes */
 void ADC_Init(void);
 void ADC_Start(void);
 void ADC_Stop(void);
-adc_status_t ADC_GetSample(adc_sample_t *sample);
-adc_status_t ADC_GetLatestSamples(adc_sample_t *samples, uint16_t count);
+adc_status_t ADC_GetSample(float *sample, adc_sampletype_t type);
+adc_status_t ADC_GetAllSamples(adc_sample_t *sample);
+adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t count);
+adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count);
+
 float ADC_RawToVoltage(uint16_t raw_value);
 float ADC_VoltageToCurrent(float voltage);
 float ADC_RawToCurrent(uint16_t raw_value);

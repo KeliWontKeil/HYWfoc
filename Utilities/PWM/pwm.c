@@ -66,7 +66,8 @@ void PWM_SetDutyCycle(pwm_channel_t channel, uint8_t duty_percent)
     uint16_t timer_channel;
     
     /* Limit duty cycle to 0-100% */
-    if (duty_percent > 100) {
+    if (duty_percent > 100)
+    {
         duty_percent = 100;
     }
     
@@ -77,7 +78,8 @@ void PWM_SetDutyCycle(pwm_channel_t channel, uint8_t duty_percent)
     compare_value = PWM_CalculateCompareValue(duty_percent, pwm_period);
     
     /* Map channel to timer channel */
-    switch (channel) {
+    switch (channel)
+    {
         case PWM_CHANNEL_0:
             timer_channel = TIMER_CH_0;
             break;
@@ -103,7 +105,8 @@ void PWM_SetDutyCycle(pwm_channel_t channel, uint8_t duty_percent)
 */
 uint8_t PWM_GetDutyCycle(pwm_channel_t channel)
 {
-    if (channel >= PWM_CHANNEL_COUNT) {
+    if (channel >= PWM_CHANNEL_COUNT)
+    {
         return 0;
     }
     return current_duty[channel];
@@ -120,7 +123,8 @@ void PWM_SetDeadTime(uint16_t dead_time_cycles)
     timer_break_parameter_struct timer_breakpara;
     
     /* Limit dead time to 0-255 as per GD32 specification */
-    if (dead_time_cycles > 255) {
+    if (dead_time_cycles > 255)
+    {
         dead_time_cycles = 255;
     }
     
@@ -226,7 +230,8 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_auto_reload_shadow_enable(PWM_TIMER0_PERIPH);
     
     #ifdef PWM_DEAD_TIME
-    if (PWM_DEAD_TIME > 0) {
+    if (PWM_DEAD_TIME > 0)
+    {
         PWM_SetDeadTime(PWM_DEAD_TIME);
     }
     #endif
@@ -239,7 +244,8 @@ static uint16_t PWM_CalculateCompareValue(uint8_t duty_percent, uint32_t period)
     compare_value = (uint32_t)duty_percent * (period + 1);
     compare_value = compare_value / 100;
     
-    if (compare_value > period) {
+    if (compare_value > period)
+    {
         compare_value = period;
     }
     

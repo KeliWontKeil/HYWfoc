@@ -47,7 +47,8 @@ void Timer1_Init(uint32_t prescaler, uint32_t period)
 */
 void Timer1_Start(void)
 {
-    if (timer1_initialized) {
+    if (timer1_initialized)
+    {
         timer_enable(TIMER1_PERIPH);
     }
 }
@@ -83,12 +84,14 @@ void Timer1_SetCallback(timer1_callback_t callback)
 */
 void Timer1_IRQHandler_Internal(void)
 {
-    if (timer_interrupt_flag_get(TIMER1_PERIPH, TIMER_INT_FLAG_UP) != RESET) {
+    if (timer_interrupt_flag_get(TIMER1_PERIPH, TIMER_INT_FLAG_UP) != RESET)
+    {
         /* Clear interrupt flag */
         timer_interrupt_flag_clear(TIMER1_PERIPH, TIMER_INT_FLAG_UP);
         
         /* Call callback function if set */
-        if (timer1_callback != 0) {
+        if (timer1_callback != 0)
+        {
             timer1_callback();
         }
     }

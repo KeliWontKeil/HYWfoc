@@ -8,6 +8,7 @@
 #ifndef SYS_TICK_H
 #define SYS_TICK_H
 
+#include "gd32f30x.h"
 #include <stdint.h>
 
 /* configure systick */

@@ -2,6 +2,9 @@
 #define _TIMER1_ALGORITHM_H_
 
 #include "gd32f30x.h"
+#include "timer1.h"
+#include "LED.h"
+#include <stddef.h>
 
 /* Callback function type */
 typedef void (*Timer1_Callback_t)(void);

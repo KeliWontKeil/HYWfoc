@@ -9,6 +9,13 @@
 #define GD32F30X_IT_H
 
 #include "gd32f30x.h"
+#include "main.h"
+#include "systick.h"
+#include "LED.h"
+#include "usart1.h"
+#include "timer1.h"
+#include "timer2.h"
+#include "adc.h"
 
 /* function declarations */
 /* this function handles NMI exception */

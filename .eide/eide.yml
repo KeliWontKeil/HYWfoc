@@ -14,6 +14,7 @@ virtualFolder:
         - path: Application/Source/main.c
         - path: Application/Source/systick.c
         - path: Application/Source/timer1_algorithm.c
+        - path: Application/Source/uart_debug.c
       folders: []
     - name: CMSIS
       files:
@@ -55,11 +56,11 @@ virtualFolder:
         - path: Utilities/LED/LED.c
         - path: Utilities/PWM/pwm.c
         - path: Utilities/TIMER1/timer1.c
-        - path: Utilities/USART/usart.c
         - path: Utilities/TIMER2/timer2.c
         - path: Utilities/AS5600/as5600.c
-        - path: Utilities/I2C/i2c.c
         - path: Utilities/ADC/adc.c
+        - path: Utilities/I2C/i2c0.c
+        - path: Utilities/USART/usart1.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -99,6 +100,8 @@ targets:
     excludeList:
       - <virtual_root>/Startup/startup_gd32f30x_cl.s
       - <virtual_root>/Utilities/TIMER.c
+      - <virtual_root>/Utilities/i2c.c
+      - <virtual_root>/Utilities/usart.c
     toolchain: AC5
     toolchainConfigMap:
       AC5:

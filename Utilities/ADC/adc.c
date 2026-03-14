@@ -33,13 +33,13 @@ void ADC_Init(void)
     ADC_Config();
     
     /* Enable ADC */
-    adc_enable(ADC1_PERIPH);
+    adc_enable(ADC0_PERIPH);
     
     /* Wait for ADC stability */
     delay_1ms(1);
     
     /* Calibrate ADC */
-    adc_calibration_enable(ADC1_PERIPH);
+    adc_calibration_enable(ADC0_PERIPH);
     
     /* Clear DMA complete flag */
     dma_complete = 0;
@@ -56,7 +56,8 @@ void ADC_Init(void)
 */
 void ADC_Start(void)
 {
-    if (!adc_initialized) {
+    if (!adc_initialized) 
+    {
         return;
     }
     
@@ -67,13 +68,13 @@ void ADC_Start(void)
     dma_channel_enable(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
     
     /* Enable ADC DMA */
-    adc_dma_mode_enable(ADC1_PERIPH);
+    adc_dma_mode_enable(ADC0_PERIPH);
     
     /* Enable external trigger */
-    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
+    adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
     
     /* Start ADC */
-    adc_software_trigger_enable(ADC1_PERIPH, ADC_ROUTINE_CHANNEL);
+    adc_software_trigger_enable(ADC0_PERIPH, ADC_ROUTINE_CHANNEL);
     
     /* Reset DMA complete flag */
     dma_complete = 0;
@@ -87,15 +88,16 @@ void ADC_Start(void)
 */
 void ADC_Stop(void)
 {
-    if (!adc_initialized) {
+    if (!adc_initialized) 
+    {
         return;
     }
     
     /* Disable external trigger */
-    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, DISABLE);
+    adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, DISABLE);
     
     /* Disable ADC DMA */
-    adc_dma_mode_disable(ADC1_PERIPH);
+    adc_dma_mode_disable(ADC0_PERIPH);
     
     /* Disable DMA channel */
     dma_channel_disable(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
@@ -107,14 +109,10 @@ void ADC_Stop(void)
     \param[out] none
     \retval     ADC status
 */
-adc_status_t ADC_GetSample(adc_sample_t *sample)
+adc_status_t ADC_GetAllSamples(adc_sample_t *sample)
 {
     uint32_t latest_index;
-    
-    if (sample == NULL) {
-        return ADC_STATUS_ERROR;
-    }
-    
+
     /* Calculate index of latest sample (assuming circular buffer) */
     latest_index = (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT - 2) % (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT);
     
@@ -133,6 +131,37 @@ adc_status_t ADC_GetSample(adc_sample_t *sample)
     return ADC_STATUS_OK;
 }
 
+adc_status_t ADC_GetSample(float *sample, adc_sampletype_t type)
+{
+    uint32_t latest_index;
+
+    /* Calculate index of latest sample (assuming circular buffer) */
+    latest_index = (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT - 2) % (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT);
+    
+    switch (type) 
+    {
+        case RAW:
+            /* Get raw ADC values */
+            sample[0] = (float)adc_buffer[latest_index];
+            sample[1] = (float)adc_buffer[latest_index + 1];
+            break;
+        case VOLTAGE:
+            /* Convert to voltage */
+            sample[0] = ADC_RawToVoltage(adc_buffer[latest_index]);
+            sample[1] = ADC_RawToVoltage(adc_buffer[latest_index + 1]);
+            break;
+        case CURRENT:
+             /* Convert to current with zero offset calibration */
+            sample[0] = ADC_VoltageToCurrent(ADC_RawToVoltage(adc_buffer[latest_index])) - zero_offset_a;
+            sample[1] = ADC_VoltageToCurrent(ADC_RawToVoltage(adc_buffer[latest_index + 1])) - zero_offset_b;
+            break;
+        default:
+            return ADC_STATUS_ERROR;
+    }
+    
+    return ADC_STATUS_OK;
+}
+
 /*!
     \brief      Get multiple latest samples from ADC buffer
     \param[in]  samples: pointer to samples array
@@ -140,25 +169,17 @@ adc_status_t ADC_GetSample(adc_sample_t *sample)
     \param[out] none
     \retval     ADC status
 */
-adc_status_t ADC_GetLatestSamples(adc_sample_t *samples, uint16_t count)
+adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count)
 {
     uint32_t start_index;
     uint16_t i;
-    
-    if (samples == NULL || count == 0) {
-        return ADC_STATUS_ERROR;
-    }
-    
-    /* Limit count to available samples */
-    if (count > ADC_BUFFER_SIZE) {
-        count = ADC_BUFFER_SIZE;
-    }
     
     /* Calculate start index (assuming circular buffer, getting most recent samples) */
     start_index = (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT - 2 * count) % (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT);
     
     /* Extract samples */
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) 
+    {
         uint32_t buffer_index = start_index + i * ADC_CHANNEL_COUNT;
         
         samples[i].phase_a_raw = adc_buffer[buffer_index];
@@ -169,6 +190,37 @@ adc_status_t ADC_GetLatestSamples(adc_sample_t *samples, uint16_t count)
         
         samples[i].phase_a_current = ADC_VoltageToCurrent(samples[i].phase_a_voltage) - zero_offset_a;
         samples[i].phase_b_current = ADC_VoltageToCurrent(samples[i].phase_b_voltage) - zero_offset_b;
+    }
+    
+    return ADC_STATUS_OK;
+}
+
+adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t count)
+{
+    uint32_t start_index;
+    
+    /* Calculate start index (assuming circular buffer, getting most recent samples) */
+    start_index = (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT - 2 * count) % (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT);
+
+    switch (type) 
+    {
+        case RAW:
+            /* Get raw ADC values */
+            sample[0] = (float)adc_buffer[start_index];
+            sample[1] = (float)adc_buffer[start_index + 1];
+            break;
+        case VOLTAGE:
+            /* Convert to voltage */
+            sample[0] = ADC_RawToVoltage(adc_buffer[start_index]);
+            sample[1] = ADC_RawToVoltage(adc_buffer[start_index + 1]);
+            break;
+        case CURRENT:
+         /* Convert to current with zero offset calibration */
+            sample[0] = ADC_VoltageToCurrent(ADC_RawToVoltage(adc_buffer[start_index])) - zero_offset_a;
+            sample[1] = ADC_VoltageToCurrent(ADC_RawToVoltage(adc_buffer[start_index + 1])) - zero_offset_b;
+             break;
+        default:
+             return ADC_STATUS_ERROR;
     }
     
     return ADC_STATUS_OK;
@@ -223,8 +275,10 @@ void ADC_CalibrateZeroOffset(void)
     const uint16_t calibration_samples = 100;
     
     /* Get multiple samples for averaging */
-    for (i = 0; i < calibration_samples; i++) {
-        if (ADC_GetSample(&sample) == ADC_STATUS_OK) {
+    for (i = 0; i < calibration_samples; i++) 
+    {
+        if (ADC_GetAllSamples(&sample) == ADC_STATUS_OK) 
+        {
             sum_a += sample.phase_a_current;
             sum_b += sample.phase_b_current;
         }
@@ -244,7 +298,8 @@ void ADC_CalibrateZeroOffset(void)
 */
 adc_status_t ADC_DMA_IsComplete(void)
 {
-    if (dma_flag_get(ADC_DMA_PERIPH, ADC_DMA_CHANNEL, DMA_FLAG_FTF)) {
+    if (dma_flag_get(ADC_DMA_PERIPH, ADC_DMA_CHANNEL, DMA_FLAG_FTF)) 
+    {
         dma_complete = 1;
         return ADC_STATUS_OK;
     }
@@ -301,7 +356,7 @@ static void ADC_DMA_Config(void)
     /* Initialize DMA struct with default values */
     dma_struct_para_init(&dma_init_struct);
     
-    dma_init_struct.periph_addr  = (uint32_t)&ADC_RDATA(ADC1_PERIPH);
+    dma_init_struct.periph_addr  = (uint32_t)&ADC_RDATA(ADC0_PERIPH);
     dma_init_struct.periph_inc   = DMA_PERIPH_INCREASE_DISABLE;
     dma_init_struct.memory_addr  = (uint32_t)adc_buffer;
     dma_init_struct.memory_inc   = DMA_MEMORY_INCREASE_ENABLE;
@@ -329,36 +384,36 @@ static void ADC_DMA_Config(void)
 static void ADC_Config(void)
 {
     /* Enable ADC clock */
-    rcu_periph_clock_enable(ADC1_RCU);
+    rcu_periph_clock_enable(ADC0_RCU);
     
     /* Reset ADC */
-    adc_deinit(ADC1_PERIPH);
+    adc_deinit(ADC0_PERIPH);
     
     /* ADC mode config: independent mode (could be changed to sync mode if needed) */
     adc_mode_config(ADC_MODE_FREE);
     
     /* ADC special function: enable scan mode */
-    adc_special_function_config(ADC1_PERIPH, ADC_SCAN_MODE, ENABLE);
+    adc_special_function_config(ADC0_PERIPH, ADC_SCAN_MODE, ENABLE);
     
     /* ADC data alignment: right alignment */
-    adc_data_alignment_config(ADC1_PERIPH, ADC_DATAALIGN_RIGHT);
+    adc_data_alignment_config(ADC0_PERIPH, ADC_DATAALIGN_RIGHT);
     
     /* ADC resolution: 12-bit */
-    adc_resolution_config(ADC1_PERIPH, ADC_RESOLUTION);
+    adc_resolution_config(ADC0_PERIPH, ADC_RESOLUTION);
     
     /* Configure regular channel sequence */
-    adc_routine_channel_config(ADC1_PERIPH, 0, ADC_CHANNEL_PA6, ADC_SAMPLE_TIME);
-    adc_routine_channel_config(ADC1_PERIPH, 1, ADC_CHANNEL_PA7, ADC_SAMPLE_TIME);
+    adc_routine_channel_config(ADC0_PERIPH, 0, ADC_CHANNEL_PA6, ADC_SAMPLE_TIME);
+    adc_routine_channel_config(ADC0_PERIPH, 1, ADC_CHANNEL_PA7, ADC_SAMPLE_TIME);
     
     /* Set regular channel sequence length */
-    adc_channel_length_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ADC_CHANNEL_COUNT);
+    adc_channel_length_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC_CHANNEL_COUNT);
     
     /* Configure external trigger */
-    adc_external_trigger_source_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ADC_EXTERNAL_TRIGGER);
-    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
+    adc_external_trigger_source_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC_EXTERNAL_TRIGGER);
+    adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
     
     /* Enable DMA request for regular channel */
-    adc_dma_mode_enable(ADC1_PERIPH);
+    adc_dma_mode_enable(ADC0_PERIPH);
 }
 
 /*!
@@ -369,7 +424,8 @@ static void ADC_Config(void)
 */
 void ADC_DMA_IRQHandler_Internal(void)
 {
-    if (dma_interrupt_flag_get(DMA0, DMA_CH0, DMA_INT_FLAG_FTF)) {
+    if (dma_interrupt_flag_get(DMA0, DMA_CH0, DMA_INT_FLAG_FTF)) 
+    {
         dma_interrupt_flag_clear(DMA0, DMA_CH0, DMA_INT_FLAG_FTF);
         dma_complete = 1;
     }

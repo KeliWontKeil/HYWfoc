@@ -1,4 +1,4 @@
-#include "i2c.h"
+#include "i2c0.h"
 #include "systick.h"
 
 /* Private function prototypes */
@@ -50,8 +50,10 @@ static i2c_status_t I2C0_WaitFlag(i2c_flag_enum flag, FlagStatus status, uint32_
 {
     uint32_t tickstart = systick_get_tick();
     
-    while (i2c_flag_get(I2C0_PERIPH, flag) != status) {
-        if ((systick_get_tick() - tickstart) > timeout) {
+    while (i2c_flag_get(I2C0_PERIPH, flag) != status)
+    {
+        if ((systick_get_tick() - tickstart) > timeout)
+        {
             return I2C_TIMEOUT;
         }
     }
@@ -67,7 +69,8 @@ static i2c_status_t I2C0_SendStart(void)
     
     /* Wait for SB flag set */
     status = I2C0_WaitFlag(I2C_FLAG_SBSEND, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
@@ -94,7 +97,8 @@ static i2c_status_t I2C0_SendAddress(uint8_t address, uint32_t direction)
     
     /* Wait for ADDSEND flag set */
     status = I2C0_WaitFlag(I2C_FLAG_ADDSEND, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
@@ -110,13 +114,15 @@ i2c_status_t I2C0_CheckDevice(uint8_t device_addr)
     
     /* Generate START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with write direction */
     status = I2C0_SendAddress(device_addr, I2C_TRANSMITTER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return I2C_NACK;
     }
@@ -133,13 +139,15 @@ i2c_status_t I2C0_WriteByte(uint8_t device_addr, uint8_t reg_addr, uint8_t data)
     
     /* Generate START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with write direction */
     status = I2C0_SendAddress(device_addr, I2C_TRANSMITTER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -147,7 +155,8 @@ i2c_status_t I2C0_WriteByte(uint8_t device_addr, uint8_t reg_addr, uint8_t data)
     /* Send register address */
     i2c_data_transmit(I2C0_PERIPH, reg_addr);
     status = I2C0_WaitFlag(I2C_FLAG_TBE, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -155,7 +164,8 @@ i2c_status_t I2C0_WriteByte(uint8_t device_addr, uint8_t reg_addr, uint8_t data)
     /* Send data */
     i2c_data_transmit(I2C0_PERIPH, data);
     status = I2C0_WaitFlag(I2C_FLAG_TBE, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -172,13 +182,15 @@ i2c_status_t I2C0_ReadByte(uint8_t device_addr, uint8_t reg_addr, uint8_t *data)
     
     /* Generate START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with write direction for register address */
     status = I2C0_SendAddress(device_addr, I2C_TRANSMITTER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -186,20 +198,23 @@ i2c_status_t I2C0_ReadByte(uint8_t device_addr, uint8_t reg_addr, uint8_t *data)
     /* Send register address */
     i2c_data_transmit(I2C0_PERIPH, reg_addr);
     status = I2C0_WaitFlag(I2C_FLAG_TBE, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
     
     /* Generate repeated START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with read direction */
     status = I2C0_SendAddress(device_addr, I2C_RECEIVER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -212,7 +227,8 @@ i2c_status_t I2C0_ReadByte(uint8_t device_addr, uint8_t reg_addr, uint8_t *data)
     
     /* Wait for RBNE flag set */
     status = I2C0_WaitFlag(I2C_FLAG_RBNE, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
         return status;
     }
@@ -234,19 +250,22 @@ i2c_status_t I2C0_WriteBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *dat
     i2c_status_t status;
     uint16_t i;
     
-    if (len == 0) {
+    if (len == 0)
+    {
         return I2C_OK;
     }
     
     /* Generate START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with write direction */
     status = I2C0_SendAddress(device_addr, I2C_TRANSMITTER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -254,16 +273,19 @@ i2c_status_t I2C0_WriteBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *dat
     /* Send register address */
     i2c_data_transmit(I2C0_PERIPH, reg_addr);
     status = I2C0_WaitFlag(I2C_FLAG_TBE, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
     
     /* Send data bytes */
-    for (i = 0; i < len; i++) {
+    for (i = 0; i < len; i++)
+    {
         i2c_data_transmit(I2C0_PERIPH, data[i]);
         status = I2C0_WaitFlag(I2C_FLAG_TBE, SET, I2C_TIMEOUT_TICKS);
-        if (status != I2C_OK) {
+        if (status != I2C_OK)
+        {
             I2C0_SendStop();
             return status;
         }
@@ -280,19 +302,22 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
     i2c_status_t status;
     uint16_t i;
     
-    if (len == 0) {
+    if (len == 0)
+    {
         return I2C_OK;
     }
     
     /* Generate START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with write direction for register address */
     status = I2C0_SendAddress(device_addr, I2C_TRANSMITTER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
@@ -300,27 +325,32 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
     /* Send register address */
     i2c_data_transmit(I2C0_PERIPH, reg_addr);
     status = I2C0_WaitFlag(I2C_FLAG_TBE, SET, I2C_TIMEOUT_TICKS);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
     
     /* Generate repeated START condition */
     status = I2C0_SendStart();
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Send device address with read direction */
     status = I2C0_SendAddress(device_addr, I2C_RECEIVER);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         I2C0_SendStop();
         return status;
     }
     
     /* Read data bytes */
-    for (i = 0; i < len; i++) {
-        if (i == len - 1) {
+    for (i = 0; i < len; i++)
+    {
+        if (i == len - 1)
+        {
             /* Last byte: disable ACK and generate STOP */
             i2c_ack_config(I2C0_PERIPH, I2C_ACK_DISABLE);
             i2c_stop_on_bus(I2C0_PERIPH);
@@ -328,7 +358,8 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
         
         /* Wait for RBNE flag set */
         status = I2C0_WaitFlag(I2C_FLAG_RBNE, SET, I2C_TIMEOUT_TICKS);
-        if (status != I2C_OK) {
+        if (status != I2C_OK)
+        {
             i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
             return status;
         }
@@ -344,4 +375,28 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
     i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
     
     return I2C_OK;
+}
+
+void I2C0_Unlock(void)
+{
+    /* Generate 9 clock pulses to unlock I2C bus */
+    uint8_t i;
+    
+    /* Configure SCL and SDA as GPIO output */
+    gpio_init(I2C0_GPIO_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN);
+    
+    /* Generate 9 clock pulses */
+    for (i = 0; i < 9; i++)
+    {
+        gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN);
+        delay_1ms(1);
+        gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SCL_PIN);
+        delay_1ms(1);
+    }
+    
+    /* Generate STOP condition */
+    gpio_bit_set(I2C0_GPIO_PORT, I2C0_SDA_PIN);
+    delay_1ms(1);
+
+    gpio_init(I2C0_GPIO_PORT, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN);
 }

@@ -12,6 +12,25 @@ alwaysApply: false
 - 类型：`xxx_t`后缀
 - 遵循现有模式，除非重构
 
+## 大括号规则 (K&R 风格)
+- **大括号必须单独占一行**，不能与语句同一行
+- 正确：```c
+void Function(void)
+{
+    if (condition)
+    {
+        // code
+    }
+}
+```
+- 错误：```c
+void Function(void) {
+    if (condition) {
+        // code
+    }
+}
+```
+
 ## 模块边界
 - 每个`Utilities/*`模块都是自包含的
 - 通过头文件提供干净的API

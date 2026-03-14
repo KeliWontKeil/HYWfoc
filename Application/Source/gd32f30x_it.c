@@ -33,13 +33,6 @@ OF SUCH DAMAGE.
 */
 
 #include "gd32f30x_it.h"
-#include "main.h"
-#include "systick.h"
-#include "LED.h"
-#include "usart.h"
-#include "timer1.h"
-#include "timer2.h"
-#include "adc.h"
 
 /*!
     \brief      this function handles NMI exception
@@ -60,7 +53,8 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
     /* if Hard Fault exception occurs, go to infinite loop */
-    while (1){
+    while (1)
+    {
     }
 }
 
@@ -73,7 +67,8 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
     /* if Memory Manage exception occurs, go to infinite loop */
-    while (1){
+    while (1)
+    {
     }
 }
 
@@ -86,7 +81,8 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
     /* if Bus Fault exception occurs, go to infinite loop */
-    while (1){
+    while (1)
+    {
     }
 }
 
@@ -99,7 +95,8 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
     /* if Usage Fault exception occurs, go to infinite loop */
-    while (1){
+    while (1)
+    {
     }
 }
 

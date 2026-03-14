@@ -1,5 +1,4 @@
 #include "as5600.h"
-#include <math.h>
 
 /* Private function prototypes */
 static uint16_t AS5600_CombineBytes(uint8_t high_byte, uint8_t low_byte);
@@ -21,19 +20,23 @@ as5600_magnet_status_t AS5600_CheckMagnet(void)
     i2c_status_t status;
     
     status = AS5600_ReadStatus(&status_reg);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return AS5600_MAGNET_NOT_DETECTED;
     }
     
-    if (!(status_reg & AS5600_STATUS_MD)) {
+    if (!(status_reg & AS5600_STATUS_MD))
+    {
         return AS5600_MAGNET_NOT_DETECTED;
     }
     
-    if (status_reg & AS5600_STATUS_MH) {
+    if (status_reg & AS5600_STATUS_MH)
+    {
         return AS5600_MAGNET_TOO_STRONG;
     }
     
-    if (status_reg & AS5600_STATUS_ML) {
+    if (status_reg & AS5600_STATUS_ML)
+    {
         return AS5600_MAGNET_TOO_WEAK;
     }
     
@@ -46,7 +49,8 @@ i2c_status_t AS5600_ReadRawAngle(uint16_t *angle)
     i2c_status_t status;
     
     status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_RAW_ANGLE_H, buffer, 2);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
@@ -60,7 +64,8 @@ i2c_status_t AS5600_ReadAngle(uint16_t *angle)
     i2c_status_t status;
     
     status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_ANGLE_H, buffer, 2);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
@@ -74,7 +79,8 @@ i2c_status_t AS5600_ReadMagnitude(uint16_t *magnitude)
     i2c_status_t status;
     
     status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_MAGNITUDE_H, buffer, 2);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
@@ -99,34 +105,39 @@ i2c_status_t AS5600_ReadAll(as5600_data_t *data)
     
     /* Read raw angle (2 bytes) */
     status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_RAW_ANGLE_H, buffer, 2);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     data->raw_angle = AS5600_CombineBytes(buffer[0], buffer[1]);
     
     /* Read filtered angle (2 bytes) */
     status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_ANGLE_H, buffer, 2);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     data->angle = AS5600_CombineBytes(buffer[0], buffer[1]);
     
     /* Read magnitude (2 bytes) */
     status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_MAGNITUDE_H, buffer, 2);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     data->magnitude = AS5600_CombineBytes(buffer[0], buffer[1]);
     
     /* Read status (1 byte) */
     status = AS5600_ReadStatus(&data->status);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
     /* Read AGC (1 byte) */
     status = AS5600_ReadAGC(&data->agc);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
@@ -151,7 +162,8 @@ i2c_status_t AS5600_SetStartPosition(uint16_t start_pos)
 {
     uint8_t buffer[2];
     
-    if (start_pos > AS5600_MAX_ANGLE) {
+    if (start_pos > AS5600_MAX_ANGLE)
+    {
         start_pos = AS5600_MAX_ANGLE;
     }
     
@@ -165,7 +177,8 @@ i2c_status_t AS5600_SetStopPosition(uint16_t stop_pos)
 {
     uint8_t buffer[2];
     
-    if (stop_pos > AS5600_MAX_ANGLE) {
+    if (stop_pos > AS5600_MAX_ANGLE)
+    {
         stop_pos = AS5600_MAX_ANGLE;
     }
     
@@ -179,7 +192,8 @@ i2c_status_t AS5600_SetMaxAngle(uint16_t max_angle)
 {
     uint8_t buffer[2];
     
-    if (max_angle > AS5600_MAX_ANGLE) {
+    if (max_angle > AS5600_MAX_ANGLE)
+    {
         max_angle = AS5600_MAX_ANGLE;
     }
     
@@ -209,7 +223,8 @@ i2c_status_t AS5600_Configure(uint8_t power_mode, uint8_t hysteresis,
     
     /* Write configuration */
     i2c_status_t status = I2C0_WriteByte(AS5600_I2C_ADDRESS, AS5600_REG_CONF_H, conf_high);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
     
