@@ -31,6 +31,9 @@ int main(void)
     /* Calibrate ADC zero offset */
     ADC_CalibrateZeroOffset();
     
+    /* Calibrate sensor zero-point (ADC currents and encoder angle) */
+    Sensor_CalibrateZeroPoint(100, 0);  /* 100 samples, 0 degree offset */
+    
     /* Set LED blink callback for 1Hz task */
     Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1HZ, LED_Blink_1Hz);
     
@@ -79,4 +82,6 @@ static void LED_Blink_1Hz(void)
 static void Motor_Control_Loop(void)
 {
     Sensor_ReadAll();
+    Sensor_ApplyZeroOffset();
+    UART_Debug_OutputOscilloscope();
 }

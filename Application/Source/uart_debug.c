@@ -122,3 +122,48 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
     sprintf(buffer, "%s: %.3f %s\r\n", label, value, unit);
     USART1_SendString(buffer);
 }
+
+/*!
+    \brief      Output data in oscilloscope format (binary format for visualization tools like Serial Oscilloscope or Serial Plotter)
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void UART_Debug_OutputOscilloscope(void)
+{
+    sensor_data_t* sensor = Sensor_GetData();
+    uint8_t buffer[20];  /* Buffer for binary data */
+    uint8_t index = 0;
+
+    /* Start marker (0xAA) */
+    buffer[index++] = 0xAA;
+
+    /* Pack current values as 16-bit integers (scaled by 1000 for precision) */
+    int16_t current_a = (int16_t)(sensor->current_a.filtered_value * 1000.0f);
+    int16_t current_b = (int16_t)(sensor->current_b.filtered_value * 1000.0f);
+    int16_t current_c = (int16_t)(sensor->current_c.filtered_value * 1000.0f);
+
+    buffer[index++] = (uint8_t)(current_a & 0xFF);
+    buffer[index++] = (uint8_t)((current_a >> 8) & 0xFF);
+    buffer[index++] = (uint8_t)(current_b & 0xFF);
+    buffer[index++] = (uint8_t)((current_b >> 8) & 0xFF);
+    buffer[index++] = (uint8_t)(current_c & 0xFF);
+    buffer[index++] = (uint8_t)((current_c >> 8) & 0xFF);
+
+    /* Pack encoder angle as 16-bit integer (scaled by 100 for precision) */
+    int16_t angle = (int16_t)(sensor->angle_degrees.filtered_value * 100.0f);
+    buffer[index++] = (uint8_t)(angle & 0xFF);
+    buffer[index++] = (uint8_t)((angle >> 8) & 0xFF);
+
+    /* Pack algorithm execution time as 16-bit integer (in microseconds) */
+    uint32_t exec_time_us = Timer1_GetExecutionTime() / 120;  /* Convert to microseconds */
+    int16_t exec_time = (int16_t)exec_time_us;
+    buffer[index++] = (uint8_t)(exec_time & 0xFF);
+    buffer[index++] = (uint8_t)((exec_time >> 8) & 0xFF);
+
+    /* End marker (0x55) */
+    buffer[index++] = 0x55;
+
+    /* Send binary data */
+    USART1_SendString(buffer);
+}

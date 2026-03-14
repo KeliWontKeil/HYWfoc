@@ -21,6 +21,7 @@ void UART_Debug_Init(void);
 void UART_Debug_OutputCurrent(void);
 void UART_Debug_OutputEncoderAngle(void);
 void UART_Debug_OutputAll(void);
+void UART_Debug_OutputOscilloscope(void);
 
 #endif /* _UART_DEBUG_H_ */
 

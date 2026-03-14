@@ -136,6 +136,7 @@ void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimat
     filter->kalman_gain = 1.0f;
     filter->estimate_error = estimate_error;
     filter->measurement_error = measurement_error;
+    filter->zero_offset = 0.0f;  /* Initialize zero offset to 0 */
 }
 
 /*!
@@ -158,4 +159,67 @@ void Kalman_Update(kalman_filter_t* filter, float measurement)
 
     /* Update estimate error */
     filter->estimate_error = (1.0f - filter->kalman_gain) * filter->estimate_error;
+}
+
+/*!
+    \brief      Calibrate zero-point for ADC and encoder sensors
+    \param[in]  samples: Number of samples to average for calibration
+    \param[in]  angle_offset: Encoder angle offset in degrees (0-360)
+    \param[out] none
+    \retval     none
+*/
+void Sensor_CalibrateZeroPoint(uint16_t samples, uint16_t angle_offset)
+{
+    uint16_t i;
+    float adc_a_sum = 0.0f;
+    float adc_b_sum = 0.0f;
+    float adc_c_sum = 0.0f;
+    float encoder_sum = 0.0f;
+
+    /* Sample ADC and encoder values multiple times for averaging */
+    for (i = 0; i < samples; i++)
+    {
+        float adc_currents[2];
+
+        /* Read ADC values */
+        if (ADC_GetSample(adc_currents, CURRENT) == ADC_STATUS_OK)
+        {
+            adc_a_sum += adc_currents[0];
+            adc_b_sum += adc_currents[1];
+            adc_c_sum += -(adc_currents[0] + adc_currents[1]);  /* Phase C estimation */
+        }
+
+        /* Read encoder value */
+        uint16_t raw_angle;
+        if (AS5600_ReadAngle(&raw_angle) == I2C_OK)
+        {
+            float angle_degrees = (float)raw_angle / 4096.0f * 360.0f;
+            encoder_sum += angle_degrees;
+        }
+
+        /* Small delay between samples (100us) */
+        volatile uint32_t delay = 12000;  /* Approximate 100us at 120MHz */
+        while (delay--) { }
+    }
+
+    /* Calculate average values and set as zero offsets */
+    sensor_data.current_a.zero_offset = adc_a_sum / samples;
+    sensor_data.current_b.zero_offset = adc_b_sum / samples;
+    sensor_data.current_c.zero_offset = adc_c_sum / samples;
+    sensor_data.angle_degrees.zero_offset = encoder_sum / samples - angle_offset;
+}
+
+/*!
+    \brief      Apply zero-point offset to sensor readings
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void Sensor_ApplyZeroOffset(void)
+{
+    /* Apply zero offset to filtered values */
+    sensor_data.current_a.filtered_value -= sensor_data.current_a.zero_offset;
+    sensor_data.current_b.filtered_value -= sensor_data.current_b.zero_offset;
+    sensor_data.current_c.filtered_value -= sensor_data.current_c.zero_offset;
+    sensor_data.angle_degrees.filtered_value -= sensor_data.angle_degrees.zero_offset;
 }
