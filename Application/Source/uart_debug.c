@@ -77,8 +77,35 @@ void UART_Debug_OutputEncoderAngle(void)
 */
 void UART_Debug_OutputAll(void)
 {
-    UART_Debug_OutputCurrent();
-    UART_Debug_OutputEncoderAngle();
+    sensor_data_t* sensor = Sensor_GetData();
+    
+    /* Output filtered sensor data */
+    if (sensor->adc_valid)
+    {
+        UART_Debug_SendFormattedFloat("Current A (filtered)", sensor->current_a.filtered_value, "A");
+        UART_Debug_SendFormattedFloat("Current B (filtered)", sensor->current_b.filtered_value, "A");
+        UART_Debug_SendFormattedFloat("Current C (filtered)", sensor->current_c.filtered_value, "A");
+    }
+    else
+    {
+        USART1_SendString("ADC: Data not valid\r\n");
+    }
+    
+    if (sensor->encoder_valid)
+    {
+        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", sensor->angle_degrees.filtered_value, "deg");
+    }
+    else
+    {
+        USART1_SendString("Encoder: Data not valid\r\n");
+    }
+    
+    /* Output algorithm execution time */
+    uint32_t exec_time = Timer1_GetExecutionTime();
+    char buffer[64];
+    sprintf(buffer, "Algorithm execution time: %lu cycles\r\n", exec_time);
+    USART1_SendString(buffer);
+    
     USART1_SendString("\r\n");
 }
 

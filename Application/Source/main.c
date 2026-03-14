@@ -24,11 +24,17 @@ int main(void)
     ADC_Init();
     ADC_Start();
     
+    /* Initialize sensor module with Kalman filters */
+    Sensor_Init();
+    
     /* Calibrate ADC zero offset */
     ADC_CalibrateZeroOffset();
     
     /* Set LED blink callback for 1Hz task */
     Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1HZ, LED_Blink_1Hz);
+    
+    /* Set sensor reading callback for 1KHz task */
+    Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1KHZ, Sensor_ReadAll);
     
     Set_LED(3);
     

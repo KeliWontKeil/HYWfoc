@@ -20,6 +20,6 @@
 #include "timer1_algorithm.h"
 #include "timer2.h"
 #include "as5600.h"
-#include "adc.h"
+#include "sensor.h"
 
 #endif /* MAIN_H */
