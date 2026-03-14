@@ -18,7 +18,8 @@ void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent)
 {
     
     PWM_GPIO_Config();
-    pwm_period = PWM_TIMER_CLOCK_HZ / 1000 / freq_kHz;
+    /* For center-aligned mode, period should be half of the desired PWM frequency */
+    pwm_period = PWM_TIMER_CLOCK_HZ / 1000 / freq_kHz / 2;
 
     PWM_Timer_Config(0, pwm_period - 1);
     PWM_SetDeadTime(pwm_period * deadtime_percent / 100);
@@ -39,6 +40,7 @@ void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent)
 */
 void PWM_Start(void)
 {
+    /* Enable TIMER0 - it will wait for trigger from TIMER2 in slave mode */
     timer_enable(PWM_TIMER0_PERIPH);
 }
 
@@ -210,7 +212,7 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     /* Configure TIMER0 as slave mode - triggered by TIMER2 */
     timer_slave_mode_select(PWM_TIMER0_PERIPH, TIMER_SLAVE_MODE_RESTART);
     timer_master_slave_mode_config(PWM_TIMER0_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
-    timer_input_trigger_source_select(PWM_TIMER0_PERIPH, TIMER_SMCFG_TRGSEL_ITI2);  /* Trigger from TIMER2 */
+    timer_input_trigger_source_select(PWM_TIMER0_PERIPH, TIMER_SMCFG_TRGSEL_ITI1);  /* Trigger from TIMER2 (ITI1) */
     
     timer_ocintpara.outputstate  = TIMER_CCX_ENABLE;
     timer_ocintpara.outputnstate = TIMER_CCXN_ENABLE;

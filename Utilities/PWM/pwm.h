@@ -42,13 +42,12 @@
 #define PWM_TIMER0_RCU              RCU_TIMER0
 
 /* PWM Configuration */
-#define PWM_FREQUENCY_HZ            20000U     /* 20kHz */
 #define PWM_TIMER_CLOCK_HZ          120000000U /* System clock: 120MHz */
 
 /* Default duty cycles (50% for all channels) */
-#define PWM_DEFAULT_DUTY_CH0        50U  /* percentage */
-#define PWM_DEFAULT_DUTY_CH1        50U
-#define PWM_DEFAULT_DUTY_CH2        50U
+#define PWM_DEFAULT_DUTY_CH0        0U  /* percentage */
+#define PWM_DEFAULT_DUTY_CH1        0U
+#define PWM_DEFAULT_DUTY_CH2        0U
 
 /* Dead time configuration (optional, in timer clock cycles) */
 #define PWM_DEAD_TIME               10U  /* Approx 0.5us at 20kHz clock */
