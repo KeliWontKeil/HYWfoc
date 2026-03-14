@@ -124,17 +124,28 @@ usart_status_t USART1_SendByte(uint8_t data)
 */
 usart_status_t USART1_SendString(const char *str)
 {
-    usart_status_t status;
-    
+    /* Send the full string; if the TX buffer is temporarily full, wait for space. */
     while (*str)
     {
-        status = USART1_SendByte(*str++);
-        if (status != USART_STATUS_OK)
+        usart_status_t status = USART1_SendByte(*str);
+        if (status == USART_STATUS_OK)
         {
-            return status;
+            str++;
+            continue;
         }
+
+        /* If the buffer is full, wait briefly and retry.
+           This prevents truncation when the output rate exceeds the USART TX buffer drain rate. */
+        if (status == USART_STATUS_BUFFER_FULL)
+        {
+            /* Allow interrupt handler to empty the buffer */
+            __NOP();
+            continue;
+        }
+
+        return status;
     }
-    
+
     return USART_STATUS_OK;
 }
 
