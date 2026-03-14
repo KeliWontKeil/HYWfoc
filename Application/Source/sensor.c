@@ -54,7 +54,7 @@ static void Sensor_ReadADC(void)
     float adc_currents[2];
 
     /* Read ADC current values */
-    if (ADC_GetSample(adc_currents, CURRENT, 1) == ADC_STATUS_OK)
+    if (ADC_GetSample(adc_currents, CURRENT) == ADC_STATUS_OK)
     {
         /* Apply Kalman filtering */
         Kalman_Update(&sensor_data.current_a, adc_currents[0]);
