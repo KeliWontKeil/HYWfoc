@@ -23,8 +23,6 @@ void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent)
 
     /* Initialize TIMER2 first (master timer) */
     Timer2_Init(0, pwm_period * 2 - 1);  /* 24kHz PWM frequency*/
-
-    /* Start TIMER2 (master) */
     Timer2_Start();
 
     PWM_Timer_Config(0, pwm_period - 1);

@@ -12,8 +12,6 @@ int main(void)
 
     /* Initialize PWM (TIMER0 as slave) */
     PWM_Init(24, 2);
-    
-    /* Start PWM (slave will be triggered by master) */
     PWM_Start();
     
     Timer1_Algorithm_Init();
