@@ -31,12 +31,42 @@ int main(void)
     
     Set_LED(3);
     
-    USART1_SendString("\r\n=== GD32F303CC System Started ===\r\n");
+    USART1_Init();
+    
+    /* Initialize TIMER2 first (master timer) */
+    Timer2_Init(5999, 19);  /* 20kHz PWM frequency: 120MHz/6000/20 = 20kHz */
+    Timer2_Start();
+    
+    /* Initialize PWM (TIMER0 as slave) */
+    PWM_Init(24, 2);
+    PWM_Start();
+    
+    Timer1_Algorithm_Init();
+    
+    /* Initialize I2C and AS5600 */
+    I2C0_Init();
+    AS5600_Init();
+    
+    /* Initialize ADC for synchronous current sampling */
+    ADC_Init();
+    ADC_Start();
+    
+    /* Calibrate ADC zero offset */
+    ADC_CalibrateZeroOffset();
+    
+    /* Set LED blink callback for 1Hz task */
+    Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1HZ, LED_Blink_1Hz);
+    
+    Set_LED(3);
+    
+    USART1_SendString("\r\n=== GD32F303CC FOC System Started ===\r\n");
     USART1_SendString("USART1 Loopback Enabled\r\n");
-    USART1_SendString("PWM Output Active (3-ch complementary)\r\n");
+    USART1_SendString("TIMER2: Master timer (20kHz) with TRGO output\r\n");
+    USART1_SendString("TIMER0: Slave timer (central aligned PWM, 3-ch complementary)\r\n");
     USART1_SendString("Timer1: 1kHz algorithm timing with LED3 blink (callback)\r\n");
     USART1_SendString("AS5600 Magnetic Encoder I2C Test Enabled\r\n");
-    USART1_SendString("ADC Current Sampling Enabled (PA6, PA7, 12-bit, DMA)\r\n");
+    USART1_SendString("ADC: Synchronous sampling (ADC0+ADC1, TIMER2_TRGO triggered)\r\n");
+    USART1_SendString("UART Debug: Current and encoder monitoring\r\n");
     USART1_SendString("Type any character to echo...\r\n\r\n");
     PWM_SetDutyCycle(PWM_CHANNEL_0, 10);
     PWM_SetDutyCycle(PWM_CHANNEL_1, 20);
@@ -44,8 +74,7 @@ int main(void)
     
     while (1)
     {
-        UART_Debug_OutputCurrent();
-        UART_Debug_OutputEncoderAngle();
+        UART_Debug_OutputAll();
         delay_1ms(500);
     }
 }

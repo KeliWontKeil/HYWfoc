@@ -32,14 +32,16 @@ void ADC_Init(void)
     ADC_DMA_Config();
     ADC_Config();
     
-    /* Enable ADC */
+    /* Enable ADCs */
     adc_enable(ADC0_PERIPH);
+    adc_enable(ADC1_PERIPH);
     
     /* Wait for ADC stability */
     delay_1ms(1);
     
-    /* Calibrate ADC */
+    /* Calibrate both ADCs */
     adc_calibration_enable(ADC0_PERIPH);
+    adc_calibration_enable(ADC1_PERIPH);
     
     /* Clear DMA complete flag */
     dma_complete = 0;
@@ -67,14 +69,12 @@ void ADC_Start(void)
     /* Enable DMA channel */
     dma_channel_enable(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
     
-    /* Enable ADC DMA */
+    /* Enable ADC DMA for ADC0 */
     adc_dma_mode_enable(ADC0_PERIPH);
     
-    /* Enable external trigger */
+    /* Enable external trigger for both ADCs */
     adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
-    
-    /* Start ADC */
-    adc_software_trigger_enable(ADC0_PERIPH, ADC_ROUTINE_CHANNEL);
+    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
     
     /* Reset DMA complete flag */
     dma_complete = 0;
@@ -93,8 +93,9 @@ void ADC_Stop(void)
         return;
     }
     
-    /* Disable external trigger */
+    /* Disable external trigger for both ADCs */
     adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, DISABLE);
+    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, DISABLE);
     
     /* Disable ADC DMA */
     adc_dma_mode_disable(ADC0_PERIPH);
@@ -116,9 +117,9 @@ adc_status_t ADC_GetAllSamples(adc_sample_t *sample)
     /* Calculate index of latest sample (assuming circular buffer) */
     latest_index = (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT - 2) % (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT);
     
-    /* Get raw ADC values */
-    sample->phase_a_raw = adc_buffer[latest_index];
-    sample->phase_b_raw = adc_buffer[latest_index + 1];
+    /* Get raw ADC values - ADC0 for phase A, ADC1 for phase B */
+    sample->phase_a_raw = adc_buffer[latest_index];      /* ADC0 result */
+    sample->phase_b_raw = adc_buffer[latest_index + 1];  /* ADC1 result */
     
     /* Convert to voltage */
     sample->phase_a_voltage = ADC_RawToVoltage(sample->phase_a_raw);
@@ -383,36 +384,48 @@ static void ADC_DMA_Config(void)
 */
 static void ADC_Config(void)
 {
-    /* Enable ADC clock */
+    /* Enable ADC clocks */
     rcu_periph_clock_enable(ADC0_RCU);
+    rcu_periph_clock_enable(ADC1_RCU);
     
-    /* Reset ADC */
+    /* Reset ADCs */
     adc_deinit(ADC0_PERIPH);
+    adc_deinit(ADC1_PERIPH);
     
-    /* ADC mode config: independent mode (could be changed to sync mode if needed) */
-    adc_mode_config(ADC_MODE_FREE);
+    /* ADC mode config: ADC0 master, ADC1 slave for synchronous sampling */
+    adc_mode_config(ADC_DAUL_ROUTINE_PARALLEL);
     
-    /* ADC special function: enable scan mode */
+    /* ADC special function: enable scan mode for both ADCs */
     adc_special_function_config(ADC0_PERIPH, ADC_SCAN_MODE, ENABLE);
+    adc_special_function_config(ADC1_PERIPH, ADC_SCAN_MODE, ENABLE);
     
-    /* ADC data alignment: right alignment */
+    /* ADC data alignment: right alignment for both */
     adc_data_alignment_config(ADC0_PERIPH, ADC_DATAALIGN_RIGHT);
+    adc_data_alignment_config(ADC1_PERIPH, ADC_DATAALIGN_RIGHT);
     
-    /* ADC resolution: 12-bit */
+    /* ADC resolution: 12-bit for both */
     adc_resolution_config(ADC0_PERIPH, ADC_RESOLUTION);
+    adc_resolution_config(ADC1_PERIPH, ADC_RESOLUTION);
     
-    /* Configure regular channel sequence */
+    /* Configure regular channel sequence for ADC0 */
     adc_routine_channel_config(ADC0_PERIPH, 0, ADC_CHANNEL_PA6, ADC_SAMPLE_TIME);
-    adc_routine_channel_config(ADC0_PERIPH, 1, ADC_CHANNEL_PA7, ADC_SAMPLE_TIME);
     
-    /* Set regular channel sequence length */
-    adc_channel_length_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC_CHANNEL_COUNT);
+    /* Configure regular channel sequence for ADC1 */
+    adc_routine_channel_config(ADC1_PERIPH, 0, ADC_CHANNEL_PA7, ADC_SAMPLE_TIME);
     
-    /* Configure external trigger */
-    adc_external_trigger_source_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC_EXTERNAL_TRIGGER);
+    /* Set regular channel sequence length (1 channel each) */
+    adc_channel_length_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, 1);
+    adc_channel_length_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, 1);
+    
+    /* Configure external trigger source: TIMER2_TRGO for both ADCs */
+    adc_external_trigger_source_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T2_TRGO);
+    adc_external_trigger_source_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T2_TRGO);
+    
+    /* Enable external trigger for both ADCs */
     adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
+    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
     
-    /* Enable DMA request for regular channel */
+    /* Enable DMA request for ADC0 regular channel */
     adc_dma_mode_enable(ADC0_PERIPH);
 }
 

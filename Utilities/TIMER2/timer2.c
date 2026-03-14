@@ -29,6 +29,10 @@ void Timer2_Init(uint32_t prescaler, uint32_t period)
     timer_initpara.repetitioncounter = 0;
     timer_init(TIMER2_PERIPH, &timer_initpara);
     
+    /* Configure TIMER2 as master to trigger TIMER0 and ADC */
+    timer_master_slave_mode_config(TIMER2_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
+    timer_master_output_trigger_source_select(TIMER2_PERIPH, TIMER_TRI_OUT_SRC_UPDATE);
+    
     /* Enable TIMER2 update interrupt */
     timer_interrupt_enable(TIMER2_PERIPH, TIMER_INT_UP);
     

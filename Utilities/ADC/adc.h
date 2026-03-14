@@ -16,6 +16,8 @@
 /* ADC peripheral definitions */
 #define ADC0_PERIPH           ADC0
 #define ADC0_RCU              RCU_ADC0
+#define ADC1_PERIPH           ADC1
+#define ADC1_RCU              RCU_ADC1
 
 /* ADC channel definitions */
 #define ADC_CHANNEL_PA6       ADC_CHANNEL_6     /* Phase A current */

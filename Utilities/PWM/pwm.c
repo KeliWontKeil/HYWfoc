@@ -200,12 +200,17 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_deinit(PWM_TIMER0_PERIPH);
     
     timer_initpara.prescaler         = prescaler;
-    timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
+    timer_initpara.alignedmode       = TIMER_COUNTER_CENTER_DOWN;  /* Central aligned mode for FOC */
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
     timer_initpara.period            = period;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_initpara.repetitioncounter = 0;
     timer_init(PWM_TIMER0_PERIPH, &timer_initpara);
+    
+    /* Configure TIMER0 as slave mode - triggered by TIMER2 */
+    timer_slave_mode_select(PWM_TIMER0_PERIPH, TIMER_SLAVE_MODE_RESTART);
+    timer_master_slave_mode_config(PWM_TIMER0_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
+    timer_input_trigger_source_select(PWM_TIMER0_PERIPH, TIMER_SMCFG_TRGSEL_ITI2);  /* Trigger from TIMER2 */
     
     timer_ocintpara.outputstate  = TIMER_CCX_ENABLE;
     timer_ocintpara.outputnstate = TIMER_CCXN_ENABLE;
