@@ -44,8 +44,9 @@
 #define ADC_DMA_RCU           RCU_DMA0
 
 /* Buffer configuration */
-#define ADC_BUFFER_SIZE       64     /* DMA buffer size (samples per channel) */
+#define ADC_BUFFER_SIZE       48     /* DMA buffer size (samples per channel) */
 #define ADC_CHANNEL_COUNT     2       /* Number of channels: PA6 and PA7 */
+#define ADC_AVG_DEFAULT_COUNT 24      /* 24kHz sampling / 1kHz control loop */
 
 /* Current calculation constants */
 #define ADC_VREF              3.3f    /* Reference voltage (V) */
@@ -81,6 +82,7 @@ void ADC_Init(void);
 void ADC_Start(void);
 void ADC_Stop(void);
 adc_status_t ADC_GetSample(float *sample, adc_sampletype_t type);
+adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t count);
 adc_status_t ADC_GetAllSamples(adc_sample_t *sample);
 adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t count);
 adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count);
@@ -88,7 +90,6 @@ adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count);
 float ADC_RawToVoltage(uint16_t raw_value);
 float ADC_VoltageToCurrent(float voltage);
 float ADC_RawToCurrent(uint16_t raw_value);
-void ADC_CalibrateZeroOffset(void);
 adc_status_t ADC_DMA_IsComplete(void);
 void ADC_SetTriggerFrequency(uint32_t frequency_hz);
 

@@ -6,42 +6,24 @@ static void Motor_Control_Loop(void);
 
 int main(void)
 {
-    systick_config();
+    systick_config();                                      
+
     LED_Init();
-    
-    USART1_Init();
+    Set_LED(3);
 
     /* Initialize PWM (TIMER0 as slave) */
     PWM_Init(24, 2);
+    PWM_SetDutyCycle(PWM_CHANNEL_0, 0);
+    PWM_SetDutyCycle(PWM_CHANNEL_1, 0);
+    PWM_SetDutyCycle(PWM_CHANNEL_2, 0);
     PWM_Start();
-    
+
     Timer1_Algorithm_Init();
-    
-    /* Initialize I2C and AS5600 */
-    I2C0_Init();
-    AS5600_Init();
-    
-    /* Initialize ADC for synchronous current sampling */
-    ADC_Init();
-    ADC_Start();
-    
-    /* Initialize sensor module with Kalman filters */
-    Sensor_Init();
-    
-    /* Calibrate ADC zero offset */
-    ADC_CalibrateZeroOffset();
-    
-    /* Calibrate sensor zero-point (ADC currents and encoder angle) */
-    Sensor_CalibrateZeroPoint(100, 0);  /* 100 samples, 0 degree offset */
-    
-    /* Set LED blink callback for 1Hz task */
+		/* Set callback for tasks */
     Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1HZ, LED_Blink_1Hz);
-    
-    /* Set sensor reading callback for 1KHz task */
     Timer1_SetAlgorithmCallback(TIMER1_CALLBACK_1KHZ, Motor_Control_Loop);
-    
-    Set_LED(3);
-    
+
+    USART1_Init();
     USART1_SendString("\r\n=== GD32F303CC FOC System Started ===\r\n");
     USART1_SendString("USART1 Loopback Enabled\r\n");
     USART1_SendString("TIMER2: Master timer (24kHz) with TRGO output\r\n");
@@ -50,16 +32,18 @@ int main(void)
     USART1_SendString("AS5600 Magnetic Encoder I2C Test Enabled\r\n");
     USART1_SendString("ADC: Synchronous sampling (ADC0+ADC1, TIMER2_TRGO triggered)\r\n");
     USART1_SendString("UART Debug: Current and encoder monitoring\r\n");
-    USART1_SendString("Type any character to echo...\r\n\r\n");
+    USART1_SendString("Init Sensors...\r\n\r\n");
+
+    /* Initialize sensor module with Kalman filters */
+    Sensor_Init();
     
-    PWM_SetDutyCycle(PWM_CHANNEL_0, 10);
-    PWM_SetDutyCycle(PWM_CHANNEL_1, 20);
-    PWM_SetDutyCycle(PWM_CHANNEL_2, 30);
-    
+    Timer1_Algorithm_Start();
+
     while (1)
     {
         UART_Debug_OutputAll();
-        delay_1ms(500);
+        UART_Debug_OutputOscilloscope();
+        delay_1ms(50);
     }
 }
 
@@ -82,6 +66,4 @@ static void LED_Blink_1Hz(void)
 static void Motor_Control_Loop(void)
 {
     Sensor_ReadAll();
-    Sensor_ApplyZeroOffset();
-    UART_Debug_OutputOscilloscope();
 }

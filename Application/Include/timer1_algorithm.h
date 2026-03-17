@@ -19,6 +19,8 @@ typedef enum {
 } Timer1_CallbackRate_t;
 
 void Timer1_Algorithm_Init(void);
+void Timer1_Algorithm_Start(void);
+void Timer1_Algorithm_Stop(void);
 void Timer1_Algorithm_Handler(void);
 void Timer1_EnableDWT(void);
 uint32_t Timer1_GetExecutionTime(void);

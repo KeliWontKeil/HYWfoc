@@ -2,16 +2,31 @@
 
 /* Private function prototypes */
 static uint16_t AS5600_CombineBytes(uint8_t high_byte, uint8_t low_byte);
+static i2c_status_t AS5600_ReadRegister16(uint8_t reg_high, uint16_t *value);
 
 void AS5600_Init(void)
 {
-    /* I2C is already initialized by main application */
-    /* Nothing to do here, AS5600 is ready to use after power-up */
+    I2C0_Init();
 }
 
 static uint16_t AS5600_CombineBytes(uint8_t high_byte, uint8_t low_byte)
 {
     return (uint16_t)((high_byte << 8) | low_byte);
+}
+
+static i2c_status_t AS5600_ReadRegister16(uint8_t reg_high, uint16_t *value)
+{
+    uint8_t buffer[2];
+    i2c_status_t status;
+
+    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, reg_high, buffer, 2);
+    if (status != I2C_OK)
+    {
+        return status;
+    }
+
+    *value = AS5600_CombineBytes(buffer[0], buffer[1]) & 0x0FFF;
+    return I2C_OK;
 }
 
 as5600_magnet_status_t AS5600_CheckMagnet(void)
@@ -45,47 +60,17 @@ as5600_magnet_status_t AS5600_CheckMagnet(void)
 
 i2c_status_t AS5600_ReadRawAngle(uint16_t *angle)
 {
-    uint8_t buffer[2];
-    i2c_status_t status;
-    
-    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_RAW_ANGLE_H, buffer, 2);
-    if (status != I2C_OK)
-    {
-        return status;
-    }
-    
-    *angle = AS5600_CombineBytes(buffer[0], buffer[1]);
-    return I2C_OK;
+    return AS5600_ReadRegister16(AS5600_REG_RAW_ANGLE_H, angle);
 }
 
 i2c_status_t AS5600_ReadAngle(uint16_t *angle)
 {
-    uint8_t buffer[2];
-    i2c_status_t status;
-    
-    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_ANGLE_H, buffer, 2);
-    if (status != I2C_OK)
-    {
-        return status;
-    }
-    
-    *angle = AS5600_CombineBytes(buffer[0], buffer[1]);
-    return I2C_OK;
+    return AS5600_ReadRegister16(AS5600_REG_ANGLE_H, angle);
 }
 
 i2c_status_t AS5600_ReadMagnitude(uint16_t *magnitude)
 {
-    uint8_t buffer[2];
-    i2c_status_t status;
-    
-    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_MAGNITUDE_H, buffer, 2);
-    if (status != I2C_OK)
-    {
-        return status;
-    }
-    
-    *magnitude = AS5600_CombineBytes(buffer[0], buffer[1]);
-    return I2C_OK;
+    return AS5600_ReadRegister16(AS5600_REG_MAGNITUDE_H, magnitude);
 }
 
 i2c_status_t AS5600_ReadStatus(uint8_t *status)
@@ -101,61 +86,47 @@ i2c_status_t AS5600_ReadAGC(uint8_t *agc)
 i2c_status_t AS5600_ReadAll(as5600_data_t *data)
 {
     i2c_status_t status;
-    uint8_t buffer[8];
     
-    /* Read raw angle (2 bytes) */
-    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_RAW_ANGLE_H, buffer, 2);
+    /* Keep ReadAll for debug/diagnosis, but reuse independent lightweight readers. */
+    status = AS5600_ReadRawAngle(&data->raw_angle);
     if (status != I2C_OK)
     {
         return status;
     }
-    data->raw_angle = AS5600_CombineBytes(buffer[0], buffer[1]);
     
-    /* Read filtered angle (2 bytes) */
-    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_ANGLE_H, buffer, 2);
+    status = AS5600_ReadAngle(&data->angle);
     if (status != I2C_OK)
     {
         return status;
     }
-    data->angle = AS5600_CombineBytes(buffer[0], buffer[1]);
     
-    /* Read magnitude (2 bytes) */
-    status = I2C0_ReadBytes(AS5600_I2C_ADDRESS, AS5600_REG_MAGNITUDE_H, buffer, 2);
+    status = AS5600_ReadMagnitude(&data->magnitude);
     if (status != I2C_OK)
     {
         return status;
     }
-    data->magnitude = AS5600_CombineBytes(buffer[0], buffer[1]);
     
-    /* Read status (1 byte) */
     status = AS5600_ReadStatus(&data->status);
     if (status != I2C_OK)
     {
         return status;
     }
     
-    /* Read AGC (1 byte) */
     status = AS5600_ReadAGC(&data->agc);
     if (status != I2C_OK)
     {
         return status;
     }
     
-    /* Calculate degrees and radians */
-    data->angle_deg = AS5600_AngleToDegrees(data->angle);
-    data->angle_rad = AS5600_AngleToRadians(data->angle);
+    data->angle_deg = (float)data->angle * AS5600_ANGLE_TO_DEGREE;
+    data->angle_rad = (float)data->angle * AS5600_ANGLE_TO_RADIAN;
     
     return I2C_OK;
 }
 
-float AS5600_AngleToDegrees(uint16_t angle)
+float AS5600_RawAngleToDegrees(uint16_t angle)
 {
     return (float)angle * AS5600_ANGLE_TO_DEGREE;
-}
-
-float AS5600_AngleToRadians(uint16_t angle)
-{
-    return (float)angle * AS5600_ANGLE_TO_RADIAN;
 }
 
 i2c_status_t AS5600_SetStartPosition(uint16_t start_pos)

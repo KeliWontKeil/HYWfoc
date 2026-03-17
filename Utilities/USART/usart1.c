@@ -90,7 +90,7 @@ void USART1_LoopbackDisable(void)
     \param[out] none
     \retval     status of operation
 */
-usart_status_t USART1_SendByte(uint8_t data)
+usart_status_t USART1_SendByte(char data)
 {
     USART1_DisableInterrupts();
     
@@ -122,7 +122,7 @@ usart_status_t USART1_SendByte(uint8_t data)
     \param[out] none
     \retval     status of operation
 */
-usart_status_t USART1_SendString(const char *str)
+usart_status_t USART1_SendString(char *str)
 {
     /* Send the full string; if the TX buffer is temporarily full, wait for space. */
     while (*str)
@@ -140,6 +140,43 @@ usart_status_t USART1_SendString(const char *str)
         {
             /* Allow interrupt handler to empty the buffer */
             __NOP();
+            continue;
+        }
+
+        return status;
+    }
+
+    return USART_STATUS_OK;
+}
+
+/*!
+    \brief      Send fixed-length binary data via USART1
+    \param[in]  data: buffer pointer
+    \param[in]  len: number of bytes
+    \param[out] none
+    \retval     status of operation
+*/
+usart_status_t USART1_SendData(const uint8_t *data, uint16_t len)
+{
+    uint16_t i;
+
+    if (data == NULL)
+    {
+        return USART_STATUS_ERROR;
+    }
+
+    for (i = 0; i < len; i++)
+    {
+        usart_status_t status = USART1_SendByte((char)data[i]);
+        if (status == USART_STATUS_OK)
+        {
+            continue;
+        }
+
+        if (status == USART_STATUS_BUFFER_FULL)
+        {
+            __NOP();
+            i--;
             continue;
         }
 

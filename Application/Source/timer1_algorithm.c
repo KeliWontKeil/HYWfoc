@@ -17,7 +17,17 @@ void Timer1_Algorithm_Init(void)
     
     Timer1_Init(TIMER1_PRESCALER, TIMER1_PERIOD);
     Timer1_SetCallback(Timer1_Algorithm_Handler);
+    //Timer1_Start();
+}
+
+void Timer1_Algorithm_Start(void)
+{
     Timer1_Start();
+}
+
+void Timer1_Algorithm_Stop(void)
+{
+    Timer1_Stop();
 }
 
 void Timer1_EnableDWT(void)

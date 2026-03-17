@@ -10,7 +10,9 @@ typedef struct {
     float kalman_gain;
     float estimate_error;
     float measurement_error;
+    float process_noise;
     float zero_offset;  /* Zero-point calibration offset */
+    float output_value;  /* Value after applying zero offset */
 } kalman_filter_t;
 
 typedef struct {
@@ -20,7 +22,6 @@ typedef struct {
     kalman_filter_t current_c;
 
     /* AS5600 encoder */
-    kalman_filter_t angle_raw;
     kalman_filter_t angle_degrees;
 
     /* Status flags */
@@ -31,13 +32,12 @@ typedef struct {
 /* Function prototypes */
 void Sensor_Init(void);
 void Sensor_ReadAll(void);
+void Sensor_SetZeroOffset(void);
 sensor_data_t* Sensor_GetData(void);
 void Sensor_DebugOutput(void);
-void Sensor_CalibrateZeroPoint(uint16_t samples, uint16_t angle_offset);
-void Sensor_ApplyZeroOffset(void);
 
 /* Kalman filter functions */
-void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimate_error, float initial_value);
+void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimate_error, float process_noise, float initial_value);
 void Kalman_Update(kalman_filter_t* filter, float measurement);
 
 #endif /* _SENSOR_H_ */

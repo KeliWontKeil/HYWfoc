@@ -30,6 +30,8 @@ static void I2C0_GPIO_Config(void)
 
 static void I2C0_Config(void)
 {
+    I2C0_Unlock();
+
     /* Enable I2C clock */
     rcu_periph_clock_enable(I2C0_RCU);
     
@@ -388,13 +390,14 @@ void I2C0_Unlock(void)
     /* Generate 9 clock pulses */
     for (i = 0; i < 9; i++)
     {
-        gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN);
-        delay_1ms(1);
         gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SCL_PIN);
+        delay_1ms(1);
+        gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN);
         delay_1ms(1);
     }
     
     /* Generate STOP condition */
+    gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SCL_PIN);
     gpio_bit_set(I2C0_GPIO_PORT, I2C0_SDA_PIN);
     delay_1ms(1);
 

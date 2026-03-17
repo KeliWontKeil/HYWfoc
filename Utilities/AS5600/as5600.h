@@ -100,8 +100,7 @@ i2c_status_t AS5600_ReadMagnitude(uint16_t *magnitude);
 i2c_status_t AS5600_ReadStatus(uint8_t *status);
 i2c_status_t AS5600_ReadAGC(uint8_t *agc);
 i2c_status_t AS5600_ReadAll(as5600_data_t *data);
-float AS5600_AngleToDegrees(uint16_t angle);
-float AS5600_AngleToRadians(uint16_t angle);
+float AS5600_RawAngleToDegrees(uint16_t angle);
 
 /* Configuration functions */
 i2c_status_t AS5600_SetStartPosition(uint16_t start_pos);

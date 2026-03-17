@@ -64,7 +64,7 @@ void ADC_Start(void)
     }
     
     /* Clear DMA interrupt flag */
-    dma_interrupt_flag_clear(ADC_DMA_PERIPH, ADC_DMA_CHANNEL, DMA_INT_FLAG_FTF);
+    //dma_interrupt_flag_clear(ADC_DMA_PERIPH, ADC_DMA_CHANNEL, DMA_INT_FLAG_FTF);
     
     /* Enable DMA channel */
     dma_channel_enable(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
@@ -160,6 +160,60 @@ adc_status_t ADC_GetSample(float *sample, adc_sampletype_t type)
             return ADC_STATUS_ERROR;
     }
     
+    return ADC_STATUS_OK;
+}
+
+adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t count)
+{
+    uint32_t total_words = ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT;
+    uint32_t remaining_words;
+    uint32_t write_index;
+    uint32_t latest_pair_index;
+    uint32_t i;
+    float sum_a = 0.0f;
+    float sum_b = 0.0f;
+
+    if ((sample == NULL) || (count == 0))
+    {
+        return ADC_STATUS_ERROR;
+    }
+
+    if (count > ADC_BUFFER_SIZE)
+    {
+        count = ADC_BUFFER_SIZE;
+    }
+
+    remaining_words = dma_transfer_number_get(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
+    write_index = (total_words - remaining_words) % total_words;
+    latest_pair_index = (write_index + total_words - ADC_CHANNEL_COUNT) % total_words;
+
+    for (i = 0; i < count; i++)
+    {
+        uint32_t pair_index = (latest_pair_index + total_words - i * ADC_CHANNEL_COUNT) % total_words;
+        uint16_t raw_a = adc_buffer[pair_index];
+        uint16_t raw_b = adc_buffer[(pair_index + 1U) % total_words];
+
+        switch (type)
+        {
+            case RAW:
+                sum_a += (float)raw_a;
+                sum_b += (float)raw_b;
+                break;
+            case VOLTAGE:
+                sum_a += ADC_RawToVoltage(raw_a);
+                sum_b += ADC_RawToVoltage(raw_b);
+                break;
+            case CURRENT:
+                sum_a += ADC_VoltageToCurrent(ADC_RawToVoltage(raw_a)) - zero_offset_a;
+                sum_b += ADC_VoltageToCurrent(ADC_RawToVoltage(raw_b)) - zero_offset_b;
+                break;
+            default:
+                return ADC_STATUS_ERROR;
+        }
+    }
+
+    sample[0] = sum_a / (float)count;
+    sample[1] = sum_b / (float)count;
     return ADC_STATUS_OK;
 }
 
@@ -260,35 +314,6 @@ float ADC_RawToCurrent(uint16_t raw_value)
 {
     float voltage = ADC_RawToVoltage(raw_value);
     return ADC_VoltageToCurrent(voltage);
-}
-
-/*!
-    \brief      Calibrate zero current offset
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void ADC_CalibrateZeroOffset(void)
-{
-    adc_sample_t sample;
-    uint16_t i;
-    float sum_a = 0.0f, sum_b = 0.0f;
-    const uint16_t calibration_samples = 100;
-    
-    /* Get multiple samples for averaging */
-    for (i = 0; i < calibration_samples; i++) 
-    {
-        if (ADC_GetAllSamples(&sample) == ADC_STATUS_OK) 
-        {
-            sum_a += sample.phase_a_current;
-            sum_b += sample.phase_b_current;
-        }
-        delay_1ms(1);
-    }
-    
-    /* Calculate average as zero offset */
-    zero_offset_a = sum_a / calibration_samples;
-    zero_offset_b = sum_b / calibration_samples;
 }
 
 /*!

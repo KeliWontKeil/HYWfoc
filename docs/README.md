@@ -4,7 +4,7 @@
 This project implements Field Oriented Control (FOC) for motor control on the GD32F303CC microcontroller. It provides a framework for high-performance motor control applications with ADC current sampling, PWM output, and sensor integration.
 
 ## Version
-Current Version: v0.0.1
+Current Version: v0.2.0
 - Framework initialization with basic peripherals
 - UART debug module for monitoring
 - Code style standardization (K&R brace style)
