@@ -15,6 +15,7 @@
 #include "usart1.h"
 #include "timer1_algorithm.h"
 #include "sensor.h"
+#include "svpwm.h"
 
 /* Function prototypes */
 void UART_Debug_Init(void);

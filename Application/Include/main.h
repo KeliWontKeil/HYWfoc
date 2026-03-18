@@ -19,5 +19,6 @@
 #include "pwm.h"
 #include "timer1_algorithm.h"
 #include "sensor.h"
+#include "svpwm.h"
 
 #endif /* MAIN_H */

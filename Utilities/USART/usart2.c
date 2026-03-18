@@ -18,6 +18,7 @@ static uint8_t USART2_BufferIsEmpty(uint16_t head, uint16_t tail);
 static void USART2_EnableInterrupts(void);
 static void USART2_DisableInterrupts(void);
 static void USART2_HandlerInternal(void);
+static uint8_t USART2_ProtocolChecksum(const uint8_t *data, uint8_t len);
 
 /*!
     \brief      Initialize USART2 for motor control parameter communication
@@ -114,6 +115,36 @@ usart2_status_t USART2_SendString(const char *str)
     return USART2_STATUS_OK;
 }
 
+usart2_status_t USART2_SendData(const uint8_t *data, uint16_t len)
+{
+    uint16_t i;
+
+    if (data == NULL)
+    {
+        return USART2_STATUS_ERROR;
+    }
+
+    for (i = 0; i < len; i++)
+    {
+        usart2_status_t status = USART2_SendByte(data[i]);
+        if (status == USART2_STATUS_OK)
+        {
+            continue;
+        }
+
+        if (status == USART2_STATUS_BUFFER_FULL)
+        {
+            __NOP();
+            i--;
+            continue;
+        }
+
+        return status;
+    }
+
+    return USART2_STATUS_OK;
+}
+
 /*!
     \brief      Receive a byte from USART2 buffer
     \param[in]  none
@@ -135,6 +166,23 @@ uint8_t USART2_ReceiveByte(void)
     USART2_EnableInterrupts();
     
     return data;
+}
+
+uint16_t USART2_ReadBuffer(uint8_t *buffer, uint16_t max_len)
+{
+    uint16_t read_len = 0;
+
+    if (buffer == NULL)
+    {
+        return 0;
+    }
+
+    while ((read_len < max_len) && USART2_IsDataAvailable())
+    {
+        buffer[read_len++] = USART2_ReceiveByte();
+    }
+
+    return read_len;
 }
 
 /*!
@@ -241,6 +289,50 @@ void USART2_IRQHandler(void)
     USART2_HandlerInternal();
 }
 
+usart2_status_t USART2_ProtocolSendFrame(uint8_t cmd, const uint8_t *payload, uint8_t len)
+{
+    uint8_t frame[2 + 1 + 1 + USART2_PROTOCOL_MAX_PAYLOAD + 1 + 1];
+    uint8_t checksum_input[1 + 1 + USART2_PROTOCOL_MAX_PAYLOAD];
+    uint16_t index = 0;
+    uint8_t i;
+
+    if ((len > USART2_PROTOCOL_MAX_PAYLOAD) || ((len > 0U) && (payload == NULL)))
+    {
+        return USART2_STATUS_ERROR;
+    }
+
+    frame[index++] = USART2_PROTOCOL_SOF0;
+    frame[index++] = USART2_PROTOCOL_SOF1;
+    frame[index++] = len;
+    frame[index++] = cmd;
+
+    checksum_input[0] = len;
+    checksum_input[1] = cmd;
+
+    for (i = 0; i < len; i++)
+    {
+        frame[index++] = payload[i];
+        checksum_input[2U + i] = payload[i];
+    }
+
+    frame[index++] = USART2_ProtocolChecksum(checksum_input, (uint8_t)(2U + len));
+    frame[index++] = USART2_PROTOCOL_EOF;
+
+    return USART2_SendData(frame, index);
+}
+
+uint16_t USART2_ProtocolReadRaw(uint8_t *buffer, uint16_t max_len)
+{
+    return USART2_ReadBuffer(buffer, max_len);
+}
+
+uint8_t USART2_ProtocolTryParse(usart2_protocol_frame_t *frame)
+{
+    (void)frame;
+    /* Reserved for future protocol parser implementation. */
+    return 0;
+}
+
 /*!
     \brief      Check if buffer is full
     \param[in]  head: buffer head index
@@ -291,4 +383,17 @@ static void USART2_EnableInterrupts(void)
     {
         usart_interrupt_enable(USART2_PERIPH, USART_INT_TBE);
     }
+}
+
+static uint8_t USART2_ProtocolChecksum(const uint8_t *data, uint8_t len)
+{
+    uint8_t i;
+    uint8_t checksum = 0;
+
+    for (i = 0; i < len; i++)
+    {
+        checksum ^= data[i];
+    }
+
+    return checksum;
 }

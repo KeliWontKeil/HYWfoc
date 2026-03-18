@@ -36,14 +36,17 @@ int main(void)
 
     /* Initialize sensor module with Kalman filters */
     Sensor_Init();
+
+    /* Initialize SVPWM simulation output (for algorithm test only). */
+    SVPWM_Init(12.0f);
     
     Timer1_Algorithm_Start();
 
     while (1)
     {
-        UART_Debug_OutputAll();
+        //UART_Debug_OutputAll();
         UART_Debug_OutputOscilloscope();
-        delay_1ms(50);
+        delay_1ms(20);
     }
 }
 
@@ -65,5 +68,20 @@ static void LED_Blink_1Hz(void)
 
 static void Motor_Control_Loop(void)
 {
+    static float theta = 0.0f;
+    svpwm_input_t sv_input;
+
+    /* 5Hz rotating vector update at 1kHz loop. */
+    sv_input.alpha = cosf(theta);
+    sv_input.beta = sinf(theta);
+    sv_input.set_voltage = 11.4f;
+    SVPWM_Update(&sv_input);
+
+    theta += 2.0f * 3.1415926f * 5.0f * 0.0001f;
+    if (theta >= 2.0f * 3.1415926f)
+    {
+        theta = 0.0f;
+    }
+
     Sensor_ReadAll();
 }

@@ -56,3 +56,14 @@ It is intended for next mini-version planning and selective fix execution.
 3. Replace `printf` telemetry path with framed non-blocking TX API.
 4. Normalize ADC helper APIs to DMA write-index aware sampling.
 5. Add guard rails (`NULL` checks, const-correctness, type cleanup).
+
+## User Suggestions
+我将会根据你提到的8点问题给出建议：
+1无需修改。1KHz任务中的计算和读取可以完全保证一致性。主循环中的读取即使存在一致性问题，也不会出现较大误差和影响算法逻辑，无需修改，修改这会带来不必要的麻烦。
+2暂时不管，这是有意为之，以确保数据稳定性。之后会根据实际情况再改。目前无需管它。
+3printf用于调试信息的方便输出，注意它的影响即可，不影响实际算法不用管。
+4api仍然保留，它们尽管没有平均，但是优势在于CPU时间占用少，可以保留，可能有用。
+5需要修改，我认为可以在ADC初始化函数中加入数组的填充。
+6不管，单片机程序无需在意这个问题，设计完成的程序传入必然不为NULL。
+7需要修改
+8需要修改

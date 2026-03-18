@@ -27,10 +27,18 @@ static void ADC_Config(void);
 */
 void ADC_Init(void)
 {
+    uint32_t i;
+
     /* Initialize all peripherals */
     ADC_GPIO_Config();
     ADC_DMA_Config();
     ADC_Config();
+
+    /* Prefill DMA buffer to mid-scale so early reads are stable before full DMA history is collected. */
+    for (i = 0; i < (ADC_BUFFER_SIZE * ADC_CHANNEL_COUNT); i++)
+    {
+        adc_buffer[i] = (uint16_t)(ADC_MAX_VALUE / 2.0f);
+    }
     
     /* Enable ADCs */
     adc_enable(ADC0_PERIPH);

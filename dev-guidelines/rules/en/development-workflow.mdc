@@ -7,7 +7,9 @@ alwaysApply: true
 
 ## Version Control & Branching
 - Use semantic versioning: MAJOR.MINOR.PATCH
-- Branch naming: `feature/`, `bugfix/`, `hotfix/`, `release/v*.*.*`
+- Default policy: do not commit immediately after each development task unless explicitly requested by the user
+- Minor-version cadence: commit before starting the next minor-version development cycle so user changes are included
+- Branch policy: commit directly on `main` by default; do not create a new branch unless explicitly requested
 - Commit messages: Use conventional commits format
 - Tags: Create version tags for each release
 

@@ -44,8 +44,8 @@ typedef enum {
 void USART1_Init(void);
 void USART1_LoopbackEnable(void);
 void USART1_LoopbackDisable(void);
-usart_status_t USART1_SendByte(char data);
-usart_status_t USART1_SendString(char *str);
+usart_status_t USART1_SendByte(uint8_t data);
+usart_status_t USART1_SendString(const char *str);
 usart_status_t USART1_SendData(const uint8_t *data, uint16_t len);
 uint8_t USART1_ReceiveByte(void);
 uint8_t USART1_IsDataAvailable(void);

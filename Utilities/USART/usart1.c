@@ -90,7 +90,7 @@ void USART1_LoopbackDisable(void)
     \param[out] none
     \retval     status of operation
 */
-usart_status_t USART1_SendByte(char data)
+usart_status_t USART1_SendByte(uint8_t data)
 {
     USART1_DisableInterrupts();
     
@@ -122,7 +122,7 @@ usart_status_t USART1_SendByte(char data)
     \param[out] none
     \retval     status of operation
 */
-usart_status_t USART1_SendString(char *str)
+usart_status_t USART1_SendString(const char *str)
 {
     /* Send the full string; if the TX buffer is temporarily full, wait for space. */
     while (*str)
@@ -167,7 +167,7 @@ usart_status_t USART1_SendData(const uint8_t *data, uint16_t len)
 
     for (i = 0; i < len; i++)
     {
-        usart_status_t status = USART1_SendByte((char)data[i]);
+        usart_status_t status = USART1_SendByte(data[i]);
         if (status == USART_STATUS_OK)
         {
             continue;

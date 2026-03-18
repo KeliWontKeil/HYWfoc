@@ -5,6 +5,23 @@ All notable changes to the GD32F303CC FOC Motor Control Project will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-03-18
+
+### Added
+- New SVPWM module under Application layer with six-sector normalized duty output API
+- USART2 protocol-oriented send/read interfaces with frame assembly placeholders
+- Temporary issue tracking document for planning the next mini-version
+
+### Changed
+- Main control loop now runs a 1kHz SVPWM simulation update path for waveform observation
+- UART oscilloscope debug output switched to direct SVPWM three-phase duty telemetry
+- ADC startup behavior improved by pre-filling initial sample buffer
+- Development workflow rules updated to default delayed commits and main-branch development
+
+### Fixed
+- USART1 API type safety and const-correctness for byte/string send functions
+- Initial SVPWM sector timing and duty normalization consistency
+
 ## [0.3.0] - 2026-03-13
 
 ### Added

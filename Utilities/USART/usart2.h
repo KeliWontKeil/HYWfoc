@@ -38,13 +38,31 @@ typedef enum {
     USART2_STATUS_BUFFER_FULL
 } usart2_status_t;
 
+typedef struct {
+    uint8_t cmd;
+    uint8_t len;
+    uint8_t payload[64];
+    uint8_t checksum;
+} usart2_protocol_frame_t;
+
+#define USART2_PROTOCOL_SOF0         0xABU
+#define USART2_PROTOCOL_SOF1         0xCDU
+#define USART2_PROTOCOL_EOF          0xEFU
+#define USART2_PROTOCOL_MAX_PAYLOAD  64U
+
 /* Function prototypes */
 void USART2_Init(void);
 usart2_status_t USART2_SendByte(uint8_t data);
 usart2_status_t USART2_SendString(const char *str);
+usart2_status_t USART2_SendData(const uint8_t *data, uint16_t len);
 uint8_t USART2_ReceiveByte(void);
+uint16_t USART2_ReadBuffer(uint8_t *buffer, uint16_t max_len);
 uint8_t USART2_IsDataAvailable(void);
 void USART2_ClearBuffers(void);
+
+usart2_status_t USART2_ProtocolSendFrame(uint8_t cmd, const uint8_t *payload, uint8_t len);
+uint16_t USART2_ProtocolReadRaw(uint8_t *buffer, uint16_t max_len);
+uint8_t USART2_ProtocolTryParse(usart2_protocol_frame_t *frame);
 
 /* Interrupt callback type */
 typedef void (*usart2_rx_callback_t)(uint8_t data);
