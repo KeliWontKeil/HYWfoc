@@ -5,8 +5,9 @@
 
 typedef struct {
     float set_voltage;
-    float alpha;
-    float beta;
+    float phase_a;
+    float phase_b;
+    float phase_c;
 } svpwm_input_t;
 
 typedef struct {

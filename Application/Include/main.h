@@ -20,5 +20,7 @@
 #include "timer1_algorithm.h"
 #include "sensor.h"
 #include "svpwm.h"
+#include "math_transforms.h"
+#include "foc_control.h"
 
 #endif /* MAIN_H */

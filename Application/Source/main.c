@@ -37,6 +37,9 @@ int main(void)
     /* Initialize sensor module with Kalman filters */
     Sensor_Init();
 
+    /* Initialize open-loop FOC module. */
+    FOC_OpenLoopInit();
+
     /* Initialize SVPWM simulation output (for algorithm test only). */
     SVPWM_Init(12.0f);
     
@@ -69,12 +72,21 @@ static void LED_Blink_1Hz(void)
 static void Motor_Control_Loop(void)
 {
     static float theta = 0.0f;
+    foc_open_loop_input_t foc_input;
+    foc_open_loop_output_t foc_output;
     svpwm_input_t sv_input;
 
-    /* 5Hz rotating vector update at 1kHz loop. */
-    sv_input.alpha = cosf(theta);
-    sv_input.beta = sinf(theta);
-    sv_input.set_voltage = 11.4f;
+    foc_input.electrical_angle = theta;
+    foc_input.ud = 0.0f;
+    foc_input.uq = 1.0f;
+    foc_input.set_voltage = 6.0f;
+
+    FOC_OpenLoopUpdate(&foc_input, &foc_output);
+
+    sv_input.phase_a = foc_output.phase_voltage.a;
+    sv_input.phase_b = foc_output.phase_voltage.b;
+    sv_input.phase_c = foc_output.phase_voltage.c;
+    sv_input.set_voltage = foc_input.set_voltage;
     SVPWM_Update(&sv_input);
 
     theta += 2.0f * 3.1415926f * 5.0f * 0.0001f;
@@ -82,6 +94,10 @@ static void Motor_Control_Loop(void)
     {
         theta = 0.0f;
     }
+
+    PWM_SetDutyCycle(PWM_CHANNEL_0, SVPWM_GetOutput()->duty_a * 100);
+    PWM_SetDutyCycle(PWM_CHANNEL_1, SVPWM_GetOutput()->duty_b * 100);
+    PWM_SetDutyCycle(PWM_CHANNEL_2, SVPWM_GetOutput()->duty_c * 100);
 
     Sensor_ReadAll();
 }

@@ -16,6 +16,9 @@ virtualFolder:
         - path: Application/Source/timer1_algorithm.c
         - path: Application/Source/uart_debug.c
         - path: Application/Source/sensor.c
+        - path: Application/Source/svpwm.c
+        - path: Application/Source/math_transforms.c
+        - path: Application/Source/foc_control.c
       folders: []
     - name: CMSIS
       files:

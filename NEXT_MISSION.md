@@ -5,7 +5,7 @@
 - 在开始编码前，请先阅读 `dev-guidelines/rules/` 目录下对应语言（`cn/` 或 `en/`）的规则文件。
 
 ## 版本
-- **当前版本**：v0.2.1
+- **当前版本**：v0.2.2-dev
 
 ## 参考文档
 - 规则文件（核心）：`dev-guidelines/rules/cn/`、`dev-guidelines/rules/en/`
@@ -29,3 +29,7 @@ v0.2.x:完成无刷电机驱动核心功能实现：SVPWM,低速有感FOC,usart2
 ---
 
 ## 备注（可选）
+- 已完成首版落地：
+	- 新增 `math_transforms` 模块，包含 Clarke/Park 及其反变换
+	- SVPWM 输入改为三相电压（反Clarke输出），并按 `set_voltage/vbus` 比例缩放
+	- 新增 `foc_control` 模块，实现恒定 Uq 的开环FOC链路并接入1kHz控制回调

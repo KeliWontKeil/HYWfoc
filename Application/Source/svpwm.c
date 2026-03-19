@@ -83,8 +83,12 @@ void SVPWM_SetBusVoltage(float vbus_voltage)
 
 void SVPWM_Update(const svpwm_input_t *input)
 {
+    float phase_a;
+    float phase_b;
+    float phase_c;
     float alpha;
     float beta;
+    float voltage_ratio;
     float magnitude;
     float theta;
     float theta_sector;
@@ -99,9 +103,27 @@ void SVPWM_Update(const svpwm_input_t *input)
         return;
     }
 
-    /* Use normalized alpha-beta vector for pure six-sector SVPWM timing. */
-    alpha = input->alpha;
-    beta = input->beta;
+    phase_a = input->phase_a;
+    phase_b = input->phase_b;
+    phase_c = input->phase_c;
+
+    voltage_ratio = input->set_voltage / s_vbus;
+    if (voltage_ratio < 0.0f)
+    {
+        voltage_ratio = -voltage_ratio;
+    }
+    if (voltage_ratio > 1.0f)
+    {
+        voltage_ratio = 1.0f;
+    }
+
+    phase_a *= voltage_ratio;
+    phase_b *= voltage_ratio;
+    phase_c *= voltage_ratio;
+
+    /* Reconstruct alpha-beta from inverse Clarke output (three-phase voltages). */
+    alpha = phase_a;
+    beta = (phase_b - phase_c) / SVPWM_SQRT3;
     magnitude = sqrtf(alpha * alpha + beta * beta);
 
     if (magnitude > 1.0f)
@@ -199,11 +221,9 @@ void SVPWM_Update(const svpwm_input_t *input)
             break;
     }
 
-    float duty = input ->set_voltage / s_vbus;
-
-    s_output.duty_a = duty * SVPWM_Clamp01(s_output.duty_a);
-    s_output.duty_b = duty * SVPWM_Clamp01(s_output.duty_b);
-    s_output.duty_c = duty * SVPWM_Clamp01(s_output.duty_c);
+    s_output.duty_a = SVPWM_Clamp01(s_output.duty_a);
+    s_output.duty_b = SVPWM_Clamp01(s_output.duty_b);
+    s_output.duty_c = SVPWM_Clamp01(s_output.duty_c);
 
     s_output.sector = sector;
 }

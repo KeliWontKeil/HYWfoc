@@ -412,6 +412,21 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>math_transforms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1019,6 +1034,21 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>math_transforms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1625,6 +1655,21 @@
               <FileName>uart_debug.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\uart_debug.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>math_transforms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\svpwm.c</FilePath>
             </File>
           </Files>
         </Group>

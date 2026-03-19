@@ -36,8 +36,8 @@ void DebugMon_Handler(void);
 void PendSV_Handler(void);
 /* this function handles SysTick exception */
 void SysTick_Handler(void);
-/* this function handles TIMER2 interrupt */
-void TIMER2_IRQHandler(void);
+/* this function handles ADC0 and ADC1 interrupt */
+void ADC0_1_IRQHandler(void);
 /* this function handles USART1 interrupt */
 void USART1_IRQHandler(void);
 /* this function handles TIMER1 interrupt */

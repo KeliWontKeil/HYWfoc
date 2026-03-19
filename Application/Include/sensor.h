@@ -3,6 +3,9 @@
 
 #include "gd32f30x.h"
 
+#define SENSOR_ZERO_CALIB_SAMPLES            200U
+#define SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT  0.15f
+
 /* Sensor data structures */
 typedef struct {
     float raw_value;

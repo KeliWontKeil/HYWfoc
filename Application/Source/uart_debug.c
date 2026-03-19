@@ -134,18 +134,18 @@ void UART_Debug_OutputOscilloscope(void)
 {
     const svpwm_output_t* svpwm = SVPWM_GetOutput();
 
-    // sensor_data_t* sensor = Sensor_GetData();
-    // printf("ab %.2f %.2f %.2f %.2f cd \r\n",
-    //     sensor->current_a.output_value,
-    //     sensor->current_b.output_value,
-    //     sensor->current_c.output_value,
-    //     sensor->angle_degrees.output_value);
+    sensor_data_t* sensor = Sensor_GetData();
+    printf("ab %.2f %.2f %.2f %.2f cd \r\n",
+        sensor->current_a.raw_value,
+        sensor->current_b.raw_value,
+        sensor->current_c.raw_value,
+        sensor->angle_degrees.output_value);
 
-    printf("ab %.3f %.3f %.3f %u cd \r\n",
+    /*printf("ab %.3f %.3f %.3f %u cd \r\n",
         svpwm->duty_a,
         svpwm->duty_b,
         svpwm->duty_c,
-        svpwm->sector);
+        svpwm->sector);*/
 }
 
 int fputc(int ch,FILE *p) 

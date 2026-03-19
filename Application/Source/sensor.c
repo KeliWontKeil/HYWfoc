@@ -1,6 +1,7 @@
 #include "sensor.h"
 #include "adc.h"
 #include "as5600.h"
+#include <math.h>
 
 /* Private variables */
 static sensor_data_t sensor_data;
@@ -39,15 +40,38 @@ void Sensor_Init(void)
 
 void Sensor_SetZeroOffset(void)
 {
-    for(uint16_t i = 0; i < 1000; i++)
+    uint16_t i;
+    float sample[2];
+    float sum_a = 0.0f;
+    float sum_b = 0.0f;
+    float avg_a;
+    float avg_b;
+
+    for (i = 0; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
     {
-        Sensor_ReadAll();
+        if (ADC_GetAverageSample(sample, CURRENT, ADC_AVG_DEFAULT_COUNT) == ADC_STATUS_OK)
+        {
+            sum_a += sample[0];
+            sum_b += sample[1];
+        }
         delay_1ms(1);
     }
 
-    sensor_data.current_a.zero_offset = sensor_data.current_a.filtered_value;
-    sensor_data.current_b.zero_offset = sensor_data.current_b.filtered_value;
-    //sensor_data.angle_degrees.zero_offset = sensor_data.angle_degrees.filtered_value;
+    avg_a = sum_a / (float)SENSOR_ZERO_CALIB_SAMPLES;
+    avg_b = sum_b / (float)SENSOR_ZERO_CALIB_SAMPLES;
+
+    /* Avoid calibrating with real current present at startup. */
+    if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT) &&
+        (fabsf(avg_b) <= SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT))
+    {
+        sensor_data.current_a.zero_offset = avg_a;
+        sensor_data.current_b.zero_offset = avg_b;
+    }
+    else
+    {
+        sensor_data.current_a.zero_offset = 0.0f;
+        sensor_data.current_b.zero_offset = 0.0f;
+    }
 
 }
 
