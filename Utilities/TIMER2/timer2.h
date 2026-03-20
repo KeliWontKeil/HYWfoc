@@ -9,6 +9,13 @@
 #define TIMER2_RCU              RCU_TIMER2
 #define TIMER2_IRQn             TIMER2_IRQn
 
+/* Synchronization: lock TIMER2 phase to PWM timer (TIMER0) */
+#define TIMER2_SYNC_WITH_PWM_ENABLE      1U
+#define TIMER2_SYNC_TRIGGER_SOURCE       TIMER_SMCFG_TRGSEL_ITI0
+
+/* ADC trigger fine tuning around center point, unit: TIMER2 ticks */
+#define TIMER2_ADC_TRIGGER_OFFSET_TICKS  0
+
 /* Interrupt handler callback type */
 typedef void (*timer2_callback_t)(void);
 

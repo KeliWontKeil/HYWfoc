@@ -142,16 +142,16 @@ void SysTick_Handler(void)
 }
 
 /*!
-    \brief      TIMER2 interrupt service routine
+    \brief      ADC0 and ADC1 interrupt service routine
     \param[in]  none
     \param[out] none
     \retval     none
 */
-void TIMER2_IRQHandler(void)
+void ADC0_1_IRQHandler(void)
 {
-    /* Call TIMER2 interrupt handler from timer2 module */
-    extern void Timer2_IRQHandler_Internal(void);
-    Timer2_IRQHandler_Internal();
+    /* Call ADC interrupt handler from ADC module */
+    extern void ADC_IRQHandler_Internal(void);
+    ADC_IRQHandler_Internal();
 }
 
 /*!

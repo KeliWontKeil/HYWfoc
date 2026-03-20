@@ -21,10 +21,6 @@ void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent)
     /* For center-aligned mode, period should be half of the desired PWM frequency */
     pwm_period = PWM_TIMER_CLOCK_HZ / 1000 / freq_kHz / 2;
 
-    /* Initialize TIMER2 first (master timer) */
-    Timer2_Init(0, pwm_period * 2 - 1);  /* 24kHz PWM frequency*/
-    Timer2_Start();
-
     PWM_Timer_Config(0, pwm_period - 1);
     PWM_SetDeadTime(pwm_period * deadtime_percent / 100);
     
@@ -206,7 +202,7 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_deinit(PWM_TIMER0_PERIPH);
     
     timer_initpara.prescaler         = prescaler;
-    timer_initpara.alignedmode       = TIMER_COUNTER_CENTER_DOWN;  /* Central aligned mode for FOC */
+    timer_initpara.alignedmode       = TIMER_COUNTER_CENTER_UP;  /* Central aligned mode for FOC */
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
     timer_initpara.period            = period;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;

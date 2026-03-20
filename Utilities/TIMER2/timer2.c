@@ -33,12 +33,6 @@ void Timer2_Init(uint32_t prescaler, uint32_t period)
     timer_master_slave_mode_config(TIMER2_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
     timer_master_output_trigger_source_select(TIMER2_PERIPH, TIMER_TRI_OUT_SRC_UPDATE);
     
-    /* Enable TIMER2 update interrupt */
-    timer_interrupt_enable(TIMER2_PERIPH, TIMER_INT_UP);
-    
-    /* Configure NVIC for TIMER2 */
-    nvic_irq_enable(TIMER2_IRQn, TIMER2_PRIORITY_GROUP, TIMER2_PRIORITY_SUBGROUP);
-    
     /* Mark as initialized */
     timer2_initialized = 1;
 }
@@ -79,24 +73,16 @@ void Timer2_SetCallback(timer2_callback_t callback)
     timer2_callback = callback;
 }
 
-/*!
-    \brief      TIMER2 interrupt service routine implementation
-    \note       This function should be called from gd32f30x_it.c
+/*! 
+    \brief      TIMER2 interrupt service routine implementation (reserved)
     \param[in]  none
     \param[out] none
     \retval     none
 */
 void Timer2_IRQHandler_Internal(void)
 {
-    if (timer_interrupt_flag_get(TIMER2_PERIPH, TIMER_INT_FLAG_UP) != RESET)
+    if (timer2_callback != 0)
     {
-        /* Clear interrupt flag */
-        timer_interrupt_flag_clear(TIMER2_PERIPH, TIMER_INT_FLAG_UP);
-        
-        /* Call callback function if set */
-        if (timer2_callback != 0)
-        {
-            timer2_callback();
-        }
+        timer2_callback();
     }
 }

@@ -17,8 +17,16 @@
 #define TIMER1_PRIORITY_GROUP      1
 #define TIMER1_PRIORITY_SUBGROUP   0
 
-#define TIMER2_PRIORITY_GROUP      2
+#define TIMER2_PRIORITY_GROUP      0
 #define TIMER2_PRIORITY_SUBGROUP   0
+
+/* ADC interrupt priorities */
+#define ADC0_1_PRIORITY_GROUP      0
+#define ADC0_1_PRIORITY_SUBGROUP   0
+
+/* ADC DMA interrupt priorities */
+#define ADC_DMA_PRIORITY_GROUP     0
+#define ADC_DMA_PRIORITY_SUBGROUP  0
 
 /* USART interrupt priorities */
 #define USART1_PRIORITY_GROUP      3

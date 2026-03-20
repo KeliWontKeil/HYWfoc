@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_STDPERIPH_DRIVER,GD32F30X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Keil5_project;.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC</IncludePath>
+              <IncludePath>..\Keil5_project;.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -411,6 +411,21 @@
               <FileName>uart_debug.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\uart_debug.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>math_transforms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\svpwm.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -606,6 +621,11 @@
               <FileName>usart2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart2.c</FilePath>
+            </File>
+            <File>
+              <FileName>timer3.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\TIMER3\timer3.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1019,6 +1039,21 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>math_transforms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1213,6 +1248,11 @@
               <FileName>usart2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart2.c</FilePath>
+            </File>
+            <File>
+              <FileName>timer3.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\TIMER3\timer3.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1626,6 +1666,21 @@
               <FileType>1</FileType>
               <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>math_transforms.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1820,6 +1875,11 @@
               <FileName>usart2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart2.c</FilePath>
+            </File>
+            <File>
+              <FileName>timer3.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\TIMER3\timer3.c</FilePath>
             </File>
           </Files>
         </Group>

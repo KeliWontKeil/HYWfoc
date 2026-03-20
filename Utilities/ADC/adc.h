@@ -9,6 +9,7 @@
 #define _ADC_H_
 
 #include "gd32f30x.h"
+#include "interrupt_priority.h"
 #include "systick.h"
 #include <stddef.h>
 #include <string.h>
@@ -32,6 +33,11 @@
 #define ADC_GPIO_PA7_PORT     GPIOA
 #define ADC_GPIO_PA7_PIN      GPIO_PIN_7
 
+/* Debug IO: use USART2 RXD pin (PB11) as ADC EOC toggle output */
+#define ADC_DEBUG_GPIO_RCU     RCU_GPIOB
+#define ADC_DEBUG_GPIO_PORT    GPIOB
+#define ADC_DEBUG_GPIO_PIN     GPIO_PIN_11
+
 /* ADC configuration */
 #define ADC_SAMPLE_TIME       ADC_SAMPLETIME_55POINT5  /* Maximum resolution */
 #define ADC_RESOLUTION        ADC_RESOLUTION_12B       /* 12-bit resolution */
@@ -44,7 +50,7 @@
 #define ADC_DMA_RCU           RCU_DMA0
 
 /* Buffer configuration */
-#define ADC_BUFFER_SIZE       48     /* DMA buffer size (samples per channel) */
+#define ADC_BUFFER_SIZE       24     /* DMA buffer size (samples per channel) */
 #define ADC_CHANNEL_COUNT     2       /* Number of channels: PA6 and PA7 */
 #define ADC_AVG_DEFAULT_COUNT 24      /* 24kHz sampling / 1kHz control loop */
 
@@ -95,6 +101,7 @@ void ADC_SetTriggerFrequency(uint32_t frequency_hz);
 
 /* DMA interrupt handler (called from ISR) */
 void ADC_DMA_IRQHandler_Internal(void);
+void ADC_IRQHandler_Internal(void);
 
 /* Private functions (not to be called externally) */
 static void ADC_GPIO_Config(void);
