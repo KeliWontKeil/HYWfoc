@@ -8,7 +8,6 @@
 #define SVPWM_TWO_PI         (2.0f * SVPWM_PI)
 #define SVPWM_PI_BY_3        (SVPWM_PI / 3.0f)
 
-static float s_vbus = 12.0f;
 static svpwm_output_t s_output;
 
 static float SVPWM_Clamp01(float value)
@@ -60,7 +59,7 @@ static uint8_t SVPWM_DetermineSector(float alpha, float beta)
     }
 }
 
-void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent,float vbus_voltage)
+void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent)
 {
     /* Initialize PWM (TIMER0 as slave) */
     PWM_Init(freq_kHz, deadtime_percent);
@@ -69,23 +68,10 @@ void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent,float vbus_voltage)
     PWM_SetDutyCycle(PWM_CHANNEL_2, 0);
     PWM_Start();
 
-    SVPWM_SetBusVoltage(vbus_voltage);
-
     s_output.sector = 0;
     s_output.duty_a = 0.5f;
     s_output.duty_b = 0.5f;
     s_output.duty_c = 0.5f;
-}
-
-void SVPWM_SetBusVoltage(float vbus_voltage)
-{
-    if (vbus_voltage < SVPWM_EPSILON)
-    {
-        s_vbus = 12.0f;
-        return;
-    }
-
-    s_vbus = vbus_voltage;
 }
 
 void SVPWM_Update(float phase_a,
@@ -115,12 +101,7 @@ void SVPWM_Update(float phase_a,
         return;
     }
 
-    if (vbus_voltage > SVPWM_EPSILON)
-    {
-        s_vbus = vbus_voltage;
-    }
-
-    voltage_ratio = set_voltage / s_vbus;
+    voltage_ratio = set_voltage / vbus_voltage;
     if (voltage_ratio < 0.0f)
     {
         voltage_ratio = -voltage_ratio;

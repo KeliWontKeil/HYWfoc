@@ -39,7 +39,7 @@ void Sensor_Init(uint8_t pwm_freq_kHz)
     sensor_data.encoder_valid = 0;
 
     Sensor_SetZeroOffset();
-    Sensor_ADCSampleTimeOffset(94.0f);
+    Sensor_ADCSampleTimeOffset(96.0f);
 
 }
 
@@ -110,6 +110,11 @@ static void Sensor_ReadADC(void)
         Kalman_Update(&sensor_data.current_b, adc_currents[1]);
         /* For 3-phase, we can estimate phase C as -(A + B) */
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
+
+        float zero_offset = sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value + sensor_data.current_c.filtered_value;
+        sensor_data.current_a.filtered_value -= zero_offset / 3.0f;
+        sensor_data.current_b.filtered_value -= zero_offset / 3.0f;
+        sensor_data.current_c.filtered_value -= zero_offset / 3.0f;
 
         sensor_data.adc_valid = 1;
     }

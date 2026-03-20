@@ -14,6 +14,13 @@
 - Compiler: ARM Compiler 5 (AC5)
 - Optimization: Balance speed and size
 - Debug: ST-LINK with SWD interface
+- Control scheduler: TIMER1 update interrupt at 1kHz
+- PWM base: TIMER0 center-aligned output synchronized by TIMER2 (24kHz)
+- ADC trigger: TIMER3 compare event
+
+### Control Period Contract
+- Open-loop speed conversion in `FOC_OpenLoopStep` currently assumes a 1ms control period.
+- If Timer1 frequency is changed, update speed-to-angle conversion accordingly to keep speed command consistent.
 
 ## Development Workflow
 
