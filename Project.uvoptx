@@ -157,9 +157,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>66</LineNumber>
+          <LineNumber>567</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134220438</Address>
+          <Address>134220336</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -168,7 +168,23 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\Utilities\ADC\adc.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Project\Utilities/ADC/adc.c\66</Expression>
+          <Expression>\\Project\Utilities/ADC/adc.c\567</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>559</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134219890</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\Utilities\ADC\adc.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Project\Utilities/ADC/adc.c\559</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -1112,6 +1128,18 @@
       <bDave2>0</bDave2>
       <PathWithFileName>.\Utilities\USART\usart2.c</PathWithFileName>
       <FilenameWithoutPath>usart2.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>5</GroupNumber>
+      <FileNumber>45</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>.\Utilities\TIMER3\timer3.c</PathWithFileName>
+      <FilenameWithoutPath>timer3.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

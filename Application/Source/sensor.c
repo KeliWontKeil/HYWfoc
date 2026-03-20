@@ -1,10 +1,8 @@
 #include "sensor.h"
-#include "adc.h"
-#include "as5600.h"
-#include <math.h>
 
 /* Private variables */
 static sensor_data_t sensor_data;
+static uint16_t timer_period = 0;
 
 /* Private function prototypes */
 static void Sensor_ReadADC(void);
@@ -16,11 +14,17 @@ static void Sensor_ReadEncoder(void);
     \param[out] none
     \retval     none
 */
-void Sensor_Init(void)
+void Sensor_Init(uint8_t pwm_freq_kHz)
 {
+    timer_period = 120000 / pwm_freq_kHz - 1;
+
     /* Initialize I2C and AS5600 */
     AS5600_Init();
     
+    /* Initialize TIMER3 as ADC sample trigger timer (mid-point compare event). */
+    Timer3_Init(0, timer_period - 1);
+    Timer3_Start();
+
     /* Initialize ADC for synchronous current sampling */
     ADC_Init();
     ADC_Start();
@@ -35,6 +39,7 @@ void Sensor_Init(void)
     sensor_data.encoder_valid = 0;
 
     Sensor_SetZeroOffset();
+    Sensor_ADCSampleTimeOffset(94.0f);
 
 }
 
@@ -151,15 +156,11 @@ sensor_data_t* Sensor_GetData(void)
     return &sensor_data;
 }
 
-/*!
-    \brief      Output sensor data for debugging
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void Sensor_DebugOutput(void)
+void Sensor_ADCSampleTimeOffset(float percent)
 {
-    /* This will be called from UART debug module */
+    /* Adjust ADC sampling time by changing the compare value of TIMER3 (ADC trigger timer) */
+    uint16_t compare_value = (uint16_t)(timer_period * percent / 100);
+    timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, compare_value);
 }
 
 /*!

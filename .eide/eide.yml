@@ -65,6 +65,7 @@ virtualFolder:
         - path: Utilities/ADC/adc.c
         - path: Utilities/I2C/i2c0.c
         - path: Utilities/USART/usart1.c
+        - path: Utilities/TIMER3/timer3.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -97,6 +98,7 @@ targets:
         - Utilities/AS5600
         - Utilities/I2C
         - Utilities/ADC
+        - Utilities/TIMER3
       libList:
         - Utilities
         - Application

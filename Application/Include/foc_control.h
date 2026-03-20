@@ -1,21 +1,36 @@
 #ifndef _FOC_CONTROL_H_
 #define _FOC_CONTROL_H_
 
+#include "gd32f30x.h"
 #include "math_transforms.h"
 
 typedef struct {
+    /* Open-loop targets */
     float electrical_angle;
+    float electrical_speed_hz;
     float ud;
     float uq;
     float set_voltage;
-} foc_open_loop_input_t;
+    float vbus_voltage;
 
-typedef struct {
-    alpha_beta_frame_t alpha_beta_voltage;
-    abc_frame_t phase_voltage;
-} foc_open_loop_output_t;
+    /* Intermediate and output states */
+    float alpha;
+    float beta;
+    float phase_a;
+    float phase_b;
+    float phase_c;
+    float duty_a;
+    float duty_b;
+    float duty_c;
+    uint8_t sector;
+} foc_motor_t;
 
-void FOC_OpenLoopInit(void);
-void FOC_OpenLoopUpdate(const foc_open_loop_input_t *input, foc_open_loop_output_t *output);
+void FOC_MotorInit(foc_motor_t *motor,
+                   float vbus_voltage,
+                   float set_voltage,
+                   float electrical_speed_hz,
+                   float ud,
+                   float uq);
+void FOC_OpenLoopStep(foc_motor_t *motor, float dt_sec);
 
 #endif /* _FOC_CONTROL_H_ */

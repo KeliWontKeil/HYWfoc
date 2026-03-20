@@ -527,9 +527,9 @@ static void ADC_Config(void)
     adc_channel_length_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, 1);
     adc_channel_length_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, 1);
     
-    /* Configure external trigger source: TIMER2_TRGO for both ADCs */
-    adc_external_trigger_source_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T2_TRGO);
-    adc_external_trigger_source_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T2_TRGO);
+    /* Configure external trigger source: TIMER3 CH3 compare event for both ADCs. */
+    adc_external_trigger_source_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T3_CH3);
+    adc_external_trigger_source_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T3_CH3);
     
     /* Enable external trigger for both ADCs */
     adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
@@ -565,7 +565,5 @@ void ADC_IRQHandler_Internal(void)
     if (adc_interrupt_flag_get(ADC0_PERIPH, ADC_INT_FLAG_EOC) != RESET)
     {
         adc_interrupt_flag_clear(ADC0_PERIPH, ADC_INT_FLAG_EOC);
-
-        
     }
 }

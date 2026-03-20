@@ -5,6 +5,7 @@
 static void I2C0_GPIO_Config(void);
 static void I2C0_Config(void);
 static i2c_status_t I2C0_WaitFlag(i2c_flag_enum flag, FlagStatus status, uint32_t timeout);
+static i2c_status_t I2C0_WaitStopClear(uint32_t timeout);
 static i2c_status_t I2C0_SendStart(void);
 static i2c_status_t I2C0_SendStop(void);
 static i2c_status_t I2C0_SendAddress(uint8_t address, uint32_t direction);
@@ -30,10 +31,16 @@ static void I2C0_GPIO_Config(void)
 
 static void I2C0_Config(void)
 {
-    I2C0_Unlock();
-
     /* Enable I2C clock */
     rcu_periph_clock_enable(I2C0_RCU);
+
+    /* Reset I2C peripheral state before each configuration/recovery cycle. */
+    i2c_disable(I2C0_PERIPH);
+    i2c_software_reset_config(I2C0_PERIPH, I2C_SRESET_SET);
+    i2c_software_reset_config(I2C0_PERIPH, I2C_SRESET_RESET);
+    i2c_deinit(I2C0_PERIPH);
+
+    I2C0_Unlock();
     
     /* I2C clock configure */
     i2c_clock_config(I2C0_PERIPH, I2C_SPEED, I2C_DUTYCYCLE);
@@ -56,9 +63,27 @@ static i2c_status_t I2C0_WaitFlag(i2c_flag_enum flag, FlagStatus status, uint32_
     {
         if ((systick_get_tick() - tickstart) > timeout)
         {
+            /* Timeout means bus state may be inconsistent; recover immediately for next transaction. */
+            I2C0_Config();
             return I2C_TIMEOUT;
         }
     }
+    return I2C_OK;
+}
+
+static i2c_status_t I2C0_WaitStopClear(uint32_t timeout)
+{
+    uint32_t tickstart = systick_get_tick();
+
+    while ((I2C_CTL0(I2C0_PERIPH) & I2C_CTL0_STOP) != 0U)
+    {
+        if ((systick_get_tick() - tickstart) > timeout)
+        {
+            I2C0_Config();
+            return I2C_TIMEOUT;
+        }
+    }
+
     return I2C_OK;
 }
 
@@ -83,11 +108,8 @@ static i2c_status_t I2C0_SendStop(void)
 {
     /* Generate STOP condition */
     i2c_stop_on_bus(I2C0_PERIPH);
-    
-    /* Wait for stop condition detected */
-    while (I2C_CTL0(I2C0_PERIPH) & I2C_CTL0_STOP);
-    
-    return I2C_OK;
+
+    return I2C0_WaitStopClear(I2C_TIMEOUT_TICKS);
 }
 
 static i2c_status_t I2C0_SendAddress(uint8_t address, uint32_t direction)
@@ -125,12 +147,16 @@ i2c_status_t I2C0_CheckDevice(uint8_t device_addr)
     status = I2C0_SendAddress(device_addr, I2C_TRANSMITTER);
     if (status != I2C_OK)
     {
-        I2C0_SendStop();
-        return I2C_NACK;
+        (void)I2C0_SendStop();
+        return (status == I2C_TIMEOUT) ? I2C_TIMEOUT : I2C_NACK;
     }
     
     /* Generate STOP condition */
-    I2C0_SendStop();
+    status = I2C0_SendStop();
+    if (status != I2C_OK)
+    {
+        return status;
+    }
     
     return I2C_OK;
 }
@@ -181,6 +207,11 @@ i2c_status_t I2C0_WriteByte(uint8_t device_addr, uint8_t reg_addr, uint8_t data)
 i2c_status_t I2C0_ReadByte(uint8_t device_addr, uint8_t reg_addr, uint8_t *data)
 {
     i2c_status_t status;
+
+    if (data == 0)
+    {
+        return I2C_ERROR;
+    }
     
     /* Generate START condition */
     status = I2C0_SendStart();
@@ -238,8 +269,12 @@ i2c_status_t I2C0_ReadByte(uint8_t device_addr, uint8_t reg_addr, uint8_t *data)
     /* Read data */
     *data = i2c_data_receive(I2C0_PERIPH);
     
-    /* Wait for stop condition detected */
-    while (I2C_CTL0(I2C0_PERIPH) & I2C_CTL0_STOP);
+    status = I2C0_WaitStopClear(I2C_TIMEOUT_TICKS);
+    if (status != I2C_OK)
+    {
+        i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
+        return status;
+    }
     
     /* Re-enable ACK */
     i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
@@ -255,6 +290,10 @@ i2c_status_t I2C0_WriteBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *dat
     if (len == 0)
     {
         return I2C_OK;
+    }
+    if (data == 0)
+    {
+        return I2C_ERROR;
     }
     
     /* Generate START condition */
@@ -294,7 +333,11 @@ i2c_status_t I2C0_WriteBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *dat
     }
     
     /* Generate STOP condition */
-    I2C0_SendStop();
+    status = I2C0_SendStop();
+    if (status != I2C_OK)
+    {
+        return status;
+    }
     
     return I2C_OK;
 }
@@ -307,6 +350,10 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
     if (len == 0)
     {
         return I2C_OK;
+    }
+    if (data == 0)
+    {
+        return I2C_ERROR;
     }
     
     /* Generate START condition */
@@ -370,8 +417,12 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
         data[i] = i2c_data_receive(I2C0_PERIPH);
     }
     
-    /* Wait for stop condition detected */
-    while (I2C_CTL0(I2C0_PERIPH) & I2C_CTL0_STOP);
+    status = I2C0_WaitStopClear(I2C_TIMEOUT_TICKS);
+    if (status != I2C_OK)
+    {
+        i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
+        return status;
+    }
     
     /* Re-enable ACK */
     i2c_ack_config(I2C0_PERIPH, I2C_ACK_ENABLE);
@@ -381,11 +432,13 @@ i2c_status_t I2C0_ReadBytes(uint8_t device_addr, uint8_t reg_addr, uint8_t *data
 
 void I2C0_Unlock(void)
 {
-    /* Generate 9 clock pulses to unlock I2C bus */
+    /* Generate clock pulses and a STOP sequence on open-drain GPIO to release a stuck slave. */
     uint8_t i;
     
-    /* Configure SCL and SDA as GPIO output */
-    gpio_init(I2C0_GPIO_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN);
+    /* Configure SCL and SDA as GPIO open-drain outputs. */
+    gpio_init(I2C0_GPIO_PORT, GPIO_MODE_OUT_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN | I2C0_SDA_PIN);
+    gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN | I2C0_SDA_PIN);
+    delay_1ms(1);
     
     /* Generate 9 clock pulses */
     for (i = 0; i < 9; i++)
@@ -396,10 +449,13 @@ void I2C0_Unlock(void)
         delay_1ms(1);
     }
     
-    /* Generate STOP condition */
-    gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SCL_PIN);
+    /* Generate STOP condition: SDA low -> SCL high -> SDA high. */
+    gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SDA_PIN);
+    delay_1ms(1);
+    gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN);
+    delay_1ms(1);
     gpio_bit_set(I2C0_GPIO_PORT, I2C0_SDA_PIN);
     delay_1ms(1);
 
-    gpio_init(I2C0_GPIO_PORT, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN);
+    gpio_init(I2C0_GPIO_PORT, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN | I2C0_SDA_PIN);
 }

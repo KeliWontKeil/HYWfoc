@@ -60,8 +60,15 @@ static uint8_t SVPWM_DetermineSector(float alpha, float beta)
     }
 }
 
-void SVPWM_Init(float vbus_voltage)
+void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent,float vbus_voltage)
 {
+    /* Initialize PWM (TIMER0 as slave) */
+    PWM_Init(freq_kHz, deadtime_percent);
+    PWM_SetDutyCycle(PWM_CHANNEL_0, 0);
+    PWM_SetDutyCycle(PWM_CHANNEL_1, 0);
+    PWM_SetDutyCycle(PWM_CHANNEL_2, 0);
+    PWM_Start();
+
     SVPWM_SetBusVoltage(vbus_voltage);
 
     s_output.sector = 0;
@@ -81,11 +88,16 @@ void SVPWM_SetBusVoltage(float vbus_voltage)
     s_vbus = vbus_voltage;
 }
 
-void SVPWM_Update(const svpwm_input_t *input)
+void SVPWM_Update(float phase_a,
+                  float phase_b,
+                  float phase_c,
+                  float set_voltage,
+                  float vbus_voltage,
+                  uint8_t *sector_out,
+                  float *duty_a,
+                  float *duty_b,
+                  float *duty_c)
 {
-    float phase_a;
-    float phase_b;
-    float phase_c;
     float alpha;
     float beta;
     float voltage_ratio;
@@ -96,18 +108,19 @@ void SVPWM_Update(const svpwm_input_t *input)
     float t1;
     float t2;
     float t0;
-    uint8_t sector;
+    uint8_t sector_id;
 
-    if (input == 0)
+    if ((sector_out == 0) || (duty_a == 0) || (duty_b == 0) || (duty_c == 0))
     {
         return;
     }
 
-    phase_a = input->phase_a;
-    phase_b = input->phase_b;
-    phase_c = input->phase_c;
+    if (vbus_voltage > SVPWM_EPSILON)
+    {
+        s_vbus = vbus_voltage;
+    }
 
-    voltage_ratio = input->set_voltage / s_vbus;
+    voltage_ratio = set_voltage / s_vbus;
     if (voltage_ratio < 0.0f)
     {
         voltage_ratio = -voltage_ratio;
@@ -135,10 +148,15 @@ void SVPWM_Update(const svpwm_input_t *input)
 
     if (magnitude < SVPWM_EPSILON)
     {
-        s_output.sector = 0;
-        s_output.duty_a = 0.5f;
-        s_output.duty_b = 0.5f;
-        s_output.duty_c = 0.5f;
+        *sector_out = 0U;
+        *duty_a = 0.5f;
+        *duty_b = 0.5f;
+        *duty_c = 0.5f;
+
+        s_output.sector = *sector_out;
+        s_output.duty_a = *duty_a;
+        s_output.duty_b = *duty_b;
+        s_output.duty_c = *duty_c;
         return;
     }
 
@@ -148,17 +166,17 @@ void SVPWM_Update(const svpwm_input_t *input)
         theta += SVPWM_TWO_PI;
     }
 
-    sector = SVPWM_DetermineSector(alpha, beta);
-    if (sector == 0U)
+    sector_id = SVPWM_DetermineSector(alpha, beta);
+    if (sector_id == 0U)
     {
-        sector = (uint8_t)(theta / SVPWM_PI_BY_3) + 1U;
-        if (sector > 6U)
+        sector_id = (uint8_t)(theta / SVPWM_PI_BY_3) + 1U;
+        if (sector_id > 6U)
         {
-            sector = 6U;
+            sector_id = 6U;
         }
     }
 
-    theta_sector = theta - (float)(sector - 1U) * SVPWM_PI_BY_3;
+    theta_sector = theta - (float)(sector_id - 1U) * SVPWM_PI_BY_3;
 
     t1 = magnitude * sinf(SVPWM_PI_BY_3 - theta_sector);
     t2 = magnitude * sinf(theta_sector);
@@ -182,50 +200,54 @@ void SVPWM_Update(const svpwm_input_t *input)
 
     t0 = 1.0f - t_sum;
 
-    switch (sector)
+    switch (sector_id)
     {
         case 1U:
-            s_output.duty_a = t1 + t2 + 0.5f * t0;
-            s_output.duty_b = t2 + 0.5f * t0;
-            s_output.duty_c = 0.5f * t0;
+            *duty_a = t1 + t2 + 0.5f * t0;
+            *duty_b = t2 + 0.5f * t0;
+            *duty_c = 0.5f * t0;
             break;
         case 2U:
-            s_output.duty_a = t1 + 0.5f * t0;
-            s_output.duty_b = t1 + t2 + 0.5f * t0;
-            s_output.duty_c = 0.5f * t0;
+            *duty_a = t1 + 0.5f * t0;
+            *duty_b = t1 + t2 + 0.5f * t0;
+            *duty_c = 0.5f * t0;
             break;
         case 3U:
-            s_output.duty_a = 0.5f * t0;
-            s_output.duty_b = t1 + t2 + 0.5f * t0;
-            s_output.duty_c = t2 + 0.5f * t0;
+            *duty_a = 0.5f * t0;
+            *duty_b = t1 + t2 + 0.5f * t0;
+            *duty_c = t2 + 0.5f * t0;
             break;
         case 4U:
-            s_output.duty_a = 0.5f * t0;
-            s_output.duty_b = t1 + 0.5f * t0;
-            s_output.duty_c = t1 + t2 + 0.5f * t0;
+            *duty_a = 0.5f * t0;
+            *duty_b = t1 + 0.5f * t0;
+            *duty_c = t1 + t2 + 0.5f * t0;
             break;
         case 5U:
-            s_output.duty_a = t2 + 0.5f * t0;
-            s_output.duty_b = 0.5f * t0;
-            s_output.duty_c = t1 + t2 + 0.5f * t0;
+            *duty_a = t2 + 0.5f * t0;
+            *duty_b = 0.5f * t0;
+            *duty_c = t1 + t2 + 0.5f * t0;
             break;
         case 6U:
-            s_output.duty_a = t1 + t2 + 0.5f * t0;
-            s_output.duty_b = 0.5f * t0;
-            s_output.duty_c = t1 + 0.5f * t0;
+            *duty_a = t1 + t2 + 0.5f * t0;
+            *duty_b = 0.5f * t0;
+            *duty_c = t1 + 0.5f * t0;
             break;
         default:
-            s_output.duty_a = 0.5f;
-            s_output.duty_b = 0.5f;
-            s_output.duty_c = 0.5f;
+            *duty_a = 0.5f;
+            *duty_b = 0.5f;
+            *duty_c = 0.5f;
             break;
     }
 
-    s_output.duty_a = SVPWM_Clamp01(s_output.duty_a);
-    s_output.duty_b = SVPWM_Clamp01(s_output.duty_b);
-    s_output.duty_c = SVPWM_Clamp01(s_output.duty_c);
+    *duty_a = SVPWM_Clamp01(*duty_a);
+    *duty_b = SVPWM_Clamp01(*duty_b);
+    *duty_c = SVPWM_Clamp01(*duty_c);
+    *sector_out = sector_id;
 
-    s_output.sector = sector;
+    s_output.sector = *sector_out;
+    s_output.duty_a = *duty_a;
+    s_output.duty_b = *duty_b;
+    s_output.duty_c = *duty_c;
 }
 
 const svpwm_output_t* SVPWM_GetOutput(void)

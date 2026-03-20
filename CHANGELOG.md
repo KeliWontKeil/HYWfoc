@@ -5,6 +5,26 @@ All notable changes to the GD32F303CC FOC Motor Control Project will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- (none yet)
+
+### Fixed
+- (none yet)
+
+## [0.2.2] - 2026-03-20
+
+### Changed
+- Removed redundant 1kHz modulo check in timer callback dispatch path.
+- Updated development guidance for where null checks are required versus redundant.
+
+### Fixed
+- Reworked I2C0 timeout handling so flag wait timeout now triggers internal bus recovery.
+- Replaced unbounded STOP wait loops with timeout-protected wait logic.
+- Corrected I2C unlock sequence to operate on both SCL/SDA in open-drain mode and generate a valid STOP.
+- Removed misplaced application-level `I2C0_Unlock()` call from UART debug path; recovery is now centralized in I2C driver.
+
 ## [0.2.1] - 2026-03-18
 
 ### Added

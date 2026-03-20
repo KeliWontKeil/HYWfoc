@@ -12,11 +12,11 @@
 #include "systick.h"
 #include <stdio.h>
 #include <math.h>
+#include "timer2.h"
 #include "LED.h"
 #include "interrupt_priority.h"
 #include "usart1.h"
 #include "uart_debug.h"
-#include "pwm.h"
 #include "timer1_algorithm.h"
 #include "sensor.h"
 #include "svpwm.h"

@@ -62,7 +62,6 @@ void UART_Debug_OutputEncoderAngle(void)
         else
         {
             USART1_SendString("AS5600: Error reading angle\r\n");
-            I2C0_Unlock();
         }
     /*} else {
         USART1_SendString("AS5600: Magnet status error\r\n");
@@ -132,13 +131,11 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
 */
 void UART_Debug_OutputOscilloscope(void)
 {
-    const svpwm_output_t* svpwm = SVPWM_GetOutput();
-
     sensor_data_t* sensor = Sensor_GetData();
     printf("ab %.2f %.2f %.2f %.2f cd \r\n",
-        sensor->current_a.raw_value,
-        sensor->current_b.raw_value,
-        sensor->current_c.raw_value,
+        sensor->current_a.output_value,
+        sensor->current_b.output_value,
+        sensor->current_c.output_value,
         sensor->angle_degrees.output_value);
 
     /*printf("ab %.3f %.3f %.3f %u cd \r\n",

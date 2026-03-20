@@ -80,6 +80,17 @@
 - **Memory corruption**: Use memory watchpoints
 - **Interrupt conflicts**: Check priority levels
 
+### I2C Recovery Strategy
+- Keep bus recovery inside the I2C driver, not in application/debug call sites.
+- Any I2C flag wait timeout should trigger immediate peripheral reconfiguration and bus unlock sequence.
+- STOP wait loops must always have timeout protection; do not use unbounded `while (STOP)` loops.
+- External modules should only handle returned status codes (`I2C_OK`, `I2C_TIMEOUT`, `I2C_NACK`, `I2C_ERROR`).
+
+### Redundant Checks Policy
+- Remove always-true or duplicate runtime checks from high-frequency paths.
+- Keep null/parameter checks only at public API boundaries or when data source is uncertain.
+- For internal control-loop helpers, prefer clear contracts over repeated defensive checks.
+
 ## Performance Optimization
 
 ### Profiling Techniques

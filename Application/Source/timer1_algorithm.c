@@ -54,7 +54,7 @@ void Timer1_Algorithm_Handler(void)
     timer1_counter++;
     
     /* Execute callbacks based on counter value */
-    if ( (timer1_counter % 1) == 0 && algorithm_callbacks[TIMER1_CALLBACK_1KHZ] != NULL)
+    if (algorithm_callbacks[TIMER1_CALLBACK_1KHZ] != NULL)
     {
         algorithm_callbacks[TIMER1_CALLBACK_1KHZ]();
     }

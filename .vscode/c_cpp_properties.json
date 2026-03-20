@@ -17,6 +17,7 @@
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\AS5600",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\I2C",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC",
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER3",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Application\\Source",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\CMSIS\\GD\\GD32F30x\\Source",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Firmware\\GD32F30x_standard_peripheral\\Source",
@@ -119,7 +120,8 @@
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\AS5600",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\I2C",
-                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART"
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART",
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER3"
             ],
             "defines": [
                 "USE_STDPERIPH_DRIVER",
@@ -218,7 +220,8 @@
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\AS5600",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\ADC",
                 "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\I2C",
-                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART"
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\USART",
+                "d:\\project\\GD32F3 project\\FOC_VSCODE\\Utilities\\TIMER3"
             ],
             "defines": [
                 "USE_STDPERIPH_DRIVER",
