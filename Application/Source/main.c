@@ -37,10 +37,10 @@ int main(void)
     Sensor_Init(24);
 
     /* Initialize SVPWM simulation output (for algorithm test only). */
-    SVPWM_Init(24, 2, 12.0f);
+    SVPWM_Init(24, 2);
 
     /* Initialize open-loop motor model and targets. */
-    FOC_MotorInit(&g_motor, 12.0f, 11.4f, 5.0f, 0.0f, 1.0f);
+    FOC_MotorInit(&g_motor, 12.0f, 6.0f, 8,0,0);
     
     Timer1_Algorithm_Start();
 
@@ -70,7 +70,7 @@ static void LED_Blink_1Hz(void)
 
 static void Motor_Control_Loop(void)
 {
-    FOC_OpenLoopStep(&g_motor, 0.002f);
+    FOC_OpenLoopStep(&g_motor, 0.5f);
 
     Sensor_ReadAll();
 }

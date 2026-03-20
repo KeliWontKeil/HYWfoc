@@ -13,17 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet)
 
-## [0.2.2] - 2026-03-20
+## [0.2.3] - 2026-03-20
 
 ### Changed
 - Removed redundant 1kHz modulo check in timer callback dispatch path.
 - Updated development guidance for where null checks are required versus redundant.
+- Refactored open-loop FOC motor model around simplified `foc_motor_t` parameter set.
+- Updated SVPWM init API to `SVPWM_Init(freq_kHz, deadtime_percent)` and passed bus voltage explicitly in `SVPWM_Update`.
+- Updated `main.c` control path to use current open-loop call pattern (`FOC_OpenLoopStep(&g_motor, turn_speed_hz)`).
+- Adjusted ADC sample trigger offset from 94% to 96%.
 
 ### Fixed
 - Reworked I2C0 timeout handling so flag wait timeout now triggers internal bus recovery.
 - Replaced unbounded STOP wait loops with timeout-protected wait logic.
 - Corrected I2C unlock sequence to operate on both SCL/SDA in open-drain mode and generate a valid STOP.
 - Removed misplaced application-level `I2C0_Unlock()` call from UART debug path; recovery is now centralized in I2C driver.
+- Added neutral-current compensation step in sensor current processing path.
 
 ## [0.2.1] - 2026-03-18
 

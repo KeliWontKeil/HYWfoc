@@ -7,7 +7,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 ### Core Architecture
 - **Microcontroller**: GD32F303CC (ARM Cortex-M4, 120MHz)
 - **Real-time Framework**: Timer-based multi-rate task scheduling
-- **Control Algorithm**: Field Oriented Control for 3-phase motors
+- **Control Algorithm**: Open-loop FOC voltage generation for 3-phase motors
 - **Feedback**: Current sensing + position encoder
 
 ### Software Layers
@@ -15,7 +15,8 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 #### Application Layer
 - `main.c`: System initialization and main loop
 - `timer1_algorithm.c`: Multi-rate task scheduler
-- User control logic (to be implemented)
+- `foc_control.c`: Open-loop FOC step (electrical angle update + transforms + SVPWM)
+- `sensor.c`: Current and angle acquisition/filter path
 
 #### Driver Layer (Utilities/)
 - **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
@@ -34,7 +35,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - Master mode operation with clock stretching support
   - Error handling and recovery mechanisms
   - Multi-device addressing capability
-- **Timer**: Hardware timer management (Timer1/Timer2 with parameterized initialization)
+- **Timer**: Hardware timer management (Timer0/1/2/3)
   - Configurable prescaler and auto-reload values
   - Interrupt generation for periodic tasks
   - Input capture and output compare modes
@@ -58,10 +59,17 @@ The system uses a hierarchical timing framework:
 
 ```
 TIMER1 (1kHz)
-├── Algorithm_1kHz_Task() - Fast control loops
-├── Algorithm_100Hz_Task() - Medium-rate tasks
-├── Algorithm_10Hz_Task() - Slow monitoring
-└── Algorithm_1Hz_Task() - Status updates
+├── Algorithm_1kHz_Task() - FOC open-loop step + sensor update
+├── Algorithm_100Hz_Task() - Medium-rate extension slot
+├── Algorithm_10Hz_Task() - Slow monitoring slot
+└── Algorithm_1Hz_Task() - Status updates (LED heartbeat)
+
+TIMER2 (24kHz master)
+├── Drives TIMER0 slave synchronization for PWM base timing
+└── Provides trigger chain reference for sampling timing
+
+TIMER3 (compare trigger)
+└── Generates ADC external trigger event (current sampling phase alignment)
 ```
 
 ### Execution Budget
@@ -74,7 +82,7 @@ TIMER1 (1kHz)
 
 ### Control Loop
 ```
-ADC Samples → Current Calculation → FOC Algorithm → PWM Duty Cycle
+ADC Samples → Current Calculation/Filtering → FOC Open-loop Algorithm → PWM Duty Cycle
     ↑                                                       ↓
 Position Encoder ←───────────────────────────────────── Motor Driver
 ```
@@ -104,15 +112,21 @@ main.c
 ├── systick.c
 ├── LED.c
 ├── USART1.c
-├── PWM.c
 ├── TIMER1.c
-├── I2C.c
-├── AS5600.c
-└── ADC.c
+├── TIMER2.c
+├── SVPWM.c
+├── foc_control.c
+└── sensor.c
 
 timer1_algorithm.c
 ├── TIMER1.c
 └── DWT (for timing)
+
+sensor.c
+├── ADC.c
+├── TIMER3.c
+├── AS5600.c
+└── I2C0.c
 ```
 
 ## Safety Considerations

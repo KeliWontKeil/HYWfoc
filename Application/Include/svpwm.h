@@ -11,8 +11,7 @@ typedef struct {
     float duty_c;
 } svpwm_output_t;
 
-void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent,float vbus_voltage);
-void SVPWM_SetBusVoltage(float vbus_voltage);
+void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent);
 void SVPWM_Update(float phase_a,
                   float phase_b,
                   float phase_c,
