@@ -40,7 +40,11 @@ int main(void)
     SVPWM_Init(24, 2);
 
     /* Initialize open-loop motor model and targets. */
-    FOC_MotorInit(&g_motor, 12.0f, 6.0f, 8,0,0);
+    FOC_MotorInit(&g_motor, 12.0f, 6.0f, FOC_POLE_PAIRS_UNDEFINED, FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED, FOC_DIR_UNDEFINED);
+    //FOC_MotorInit(&g_motor, 12.0f, 6.0f, 7, FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED, FOC_DIR_UNDEFINED);
+
+    printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction, g_motor.pole_pairs);
+    delay_1ms(1000);
     
     Timer1_Algorithm_Start();
 
@@ -48,7 +52,7 @@ int main(void)
     {
         //UART_Debug_OutputAll();
         UART_Debug_OutputOscilloscope();
-        delay_1ms(20);
+        delay_1ms(200);
     }
 }
 

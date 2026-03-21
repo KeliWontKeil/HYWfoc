@@ -4,13 +4,15 @@
 This project implements Field Oriented Control (FOC) for motor control on the GD32F303CC microcontroller. It provides a framework for high-performance motor control applications with ADC current sampling, PWM output, and sensor integration.
 
 ## Version
-Current Version: v0.2.3
+Current Version: v0.2.4
 - Framework initialization with basic peripherals
 - UART debug module for monitoring
-- Code style standardization (K&R brace style)
+- Radian-unit unification across encoder, sensor filter, and FOC math path
+- Startup calibration for zero electrical angle, direction, and pole pairs
 
 ## Features
 - **FOC Open-loop Core**: Inverse Park + Inverse Clarke + SVPWM output path
+- **Startup Calibration**: Locked zero-angle sampling + stepped probe estimation for direction and pole pairs
 - **ADC Sampling**: Synchronous current sampling for FOC (PA6/PA7 channels)
 - **PWM Output**: 3-phase complementary PWM with dead time (TIMER0, 24kHz)
 - **Sensor Integration**: AS5600 magnetic encoder via I2C

@@ -56,8 +56,8 @@ void UART_Debug_OutputEncoderAngle(void)
     //if (magnet_status == AS5600_MAGNET_OK) {
         if (AS5600_ReadRawAngle(&angle_raw) == I2C_OK)
         {
-            float angle_deg = (float)angle_raw * AS5600_ANGLE_TO_DEGREE;
-            UART_Debug_SendFormattedFloat("Encoder Angle", angle_deg, "deg");
+            float angle_rad = (float)angle_raw * AS5600_ANGLE_TO_RAD;
+            UART_Debug_SendFormattedFloat("Encoder Angle", angle_rad, "rad");
         }
         else
         {
@@ -92,8 +92,8 @@ void UART_Debug_OutputAll(void)
     
     if (sensor->encoder_valid)
     {
-        UART_Debug_SendFormattedFloat("Encoder Angle", sensor->angle_degrees.raw_value, "deg");
-        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", sensor->angle_degrees.output_value, "deg");
+        UART_Debug_SendFormattedFloat("Encoder Angle", sensor->mech_angle_rad.raw_value, "rad");
+        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", sensor->mech_angle_rad.output_value, "rad");
     }
     else
     {
@@ -136,7 +136,7 @@ void UART_Debug_OutputOscilloscope(void)
         sensor->current_a.output_value,
         sensor->current_b.output_value,
         sensor->current_c.output_value,
-        sensor->angle_degrees.output_value);
+        sensor->mech_angle_rad.output_value);
 
     /*printf("ab %.3f %.3f %.3f %u cd \r\n",
         svpwm->duty_a,

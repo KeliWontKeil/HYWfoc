@@ -118,15 +118,14 @@ i2c_status_t AS5600_ReadAll(as5600_data_t *data)
         return status;
     }
     
-    data->angle_deg = (float)data->angle * AS5600_ANGLE_TO_DEGREE;
-    data->angle_rad = (float)data->angle * AS5600_ANGLE_TO_RADIAN;
+    data->angle_rad = (float)data->angle * AS5600_ANGLE_TO_RAD;
     
     return I2C_OK;
 }
 
-float AS5600_RawAngleToDegrees(uint16_t angle)
+float AS5600_RawAngleToRad(uint16_t angle)
 {
-    return (float)angle * AS5600_ANGLE_TO_DEGREE;
+    return (float)angle * AS5600_ANGLE_TO_RAD;
 }
 
 i2c_status_t AS5600_SetStartPosition(uint16_t start_pos)

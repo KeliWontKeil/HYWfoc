@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet)
 
+## [0.2.4] - 2026-03-21
+
+### Changed
+- Refactored FOC motor model naming to explicit rad-based semantics (`electrical_phase_angle`, `mech_angle_at_elec_zero_rad`).
+- Unified encoder angle processing and UART debug output to radians across Sensor/AS5600/FOC paths.
+- Added startup calibration entry `FOC_CalibrateElectricalAngleAndDirection()` and invoked it at the end of `FOC_MotorInit()`.
+- Reworked zero electrical angle measurement to locked static sampling at electrical angle 0, with settle and multi-sample circular averaging.
+- Reworked direction and pole-pair estimation to one-way stepped electrical-angle sampling with larger total probe span.
+
+### Fixed
+- Removed mechanical/electrical angle mixed-domain operations from calibration flow.
+- Corrected open-loop output to use tracked electrical phase command instead of fixed zero-angle forcing.
+- Calibration now updates zero angle, direction, and pole pairs only when each field is undefined.
+
 ## [0.2.3] - 2026-03-20
 
 ### Changed

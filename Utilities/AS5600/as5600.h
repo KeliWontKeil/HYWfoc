@@ -69,8 +69,7 @@
 
 /* Angle calculation constants */
 #define AS5600_MAX_ANGLE             4096  /* 12-bit resolution */
-#define AS5600_ANGLE_TO_DEGREE       (360.0f / 4096.0f)
-#define AS5600_ANGLE_TO_RADIAN       (2.0f * 3.1415926535f / 4096.0f)
+#define AS5600_ANGLE_TO_RAD          (2.0f * 3.1415926535f / 4096.0f)
 
 /* AS5600 data structure */
 typedef struct {
@@ -79,8 +78,7 @@ typedef struct {
     uint16_t magnitude;      /* Magnet strength (0-4095) */
     uint8_t status;          /* Status register value */
     uint8_t agc;             /* Automatic Gain Control value */
-    float angle_deg;         /* Angle in degrees (0-360) */
-    float angle_rad;         /* Angle in radians (0-2π) */
+    float angle_rad;         /* Angle in radians (0-2pi) */
 } as5600_data_t;
 
 /* Magnet status */
@@ -100,7 +98,7 @@ i2c_status_t AS5600_ReadMagnitude(uint16_t *magnitude);
 i2c_status_t AS5600_ReadStatus(uint8_t *status);
 i2c_status_t AS5600_ReadAGC(uint8_t *agc);
 i2c_status_t AS5600_ReadAll(as5600_data_t *data);
-float AS5600_RawAngleToDegrees(uint16_t angle);
+float AS5600_RawAngleToRad(uint16_t angle);
 
 /* Configuration functions */
 i2c_status_t AS5600_SetStartPosition(uint16_t start_pos);

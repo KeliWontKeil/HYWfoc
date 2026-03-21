@@ -15,7 +15,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 #### Application Layer
 - `main.c`: System initialization and main loop
 - `timer1_algorithm.c`: Multi-rate task scheduler
-- `foc_control.c`: Open-loop FOC step (electrical angle update + transforms + SVPWM)
+- `foc_control.c`: Open-loop FOC step and startup calibration (zero electrical angle + direction + pole pairs)
 - `sensor.c`: Current and angle acquisition/filter path
 
 #### Driver Layer (Utilities/)
@@ -47,6 +47,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - 12-bit resolution angle measurement
   - I2C interface with automatic gain control
   - Zero position calibration and offset compensation
+  - Native radian conversion API for control-path consistency
 
 #### Hardware Abstraction Layer
 - GD32F30x standard peripheral library
@@ -85,6 +86,16 @@ TIMER3 (compare trigger)
 ADC Samples → Current Calculation/Filtering → FOC Open-loop Algorithm → PWM Duty Cycle
     ↑                                                       ↓
 Position Encoder ←───────────────────────────────────── Motor Driver
+```
+
+### Startup Calibration Flow
+```
+FOC_MotorInit()
+  └─ FOC_CalibrateElectricalAngleAndDirection()
+       ├─ Lock electrical angle at 0 and sample mechanical angle (zero electrical reference)
+       └─ Step electrical angle forward with settle+sample at each step
+            ├─ Estimate direction from accumulated mechanical increment sign
+            └─ Estimate pole pairs from accumulated electrical/mechanical angle ratio
 ```
 
 ### Communication Flow

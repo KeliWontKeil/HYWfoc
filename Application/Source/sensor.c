@@ -32,7 +32,7 @@ void Sensor_Init(uint8_t pwm_freq_kHz)
     /* Initialize scalar Kalman filters: (R, P0, Q, x0). */
     Kalman_Init(&sensor_data.current_a, 0.15f, 0.0f, 0.025f, 0.0f);
     Kalman_Init(&sensor_data.current_b, 0.15f, 0.0f, 0.02f, 0.0f);
-    Kalman_Init(&sensor_data.angle_degrees, 1.0f, 5.0f, 0.05f, 0.0f);
+    Kalman_Init(&sensor_data.mech_angle_rad, 1.0f, 5.0f, 0.05f, 0.0f);
 
     /* Initialize status flags */
     sensor_data.adc_valid = 0;
@@ -137,10 +137,10 @@ static void Sensor_ReadEncoder(void)
     /* Read encoder angle register via decoupled AS5600 interface. */
     if (AS5600_ReadAngle(&angle) == I2C_OK)
     {
-        float angle_degrees = (float)angle * AS5600_ANGLE_TO_DEGREE;
+        float angle_rad = (float)angle * AS5600_ANGLE_TO_RAD;
 
         /* Apply Kalman filtering */
-        Kalman_Update(&sensor_data.angle_degrees, angle_degrees);
+        Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
 
         sensor_data.encoder_valid = 1;
     }

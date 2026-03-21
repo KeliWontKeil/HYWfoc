@@ -30,7 +30,7 @@ typedef struct {
     kalman_filter_t current_c;
 
     /* AS5600 encoder */
-    kalman_filter_t angle_degrees;
+    kalman_filter_t mech_angle_rad;
 
     /* Status flags */
     uint8_t adc_valid;
