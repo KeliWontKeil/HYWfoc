@@ -36,6 +36,19 @@ static float FOC_GetDirectionSign(uint8_t direction)
     return (direction == FOC_DIR_REVERSED) ? -1.0f : 1.0f;
 }
 
+static float FOC_ClampFloat(float value, float min_val, float max_val)
+{
+    if (value < min_val)
+    {
+        return min_val;
+    }
+    if (value > max_val)
+    {
+        return max_val;
+    }
+    return value;
+}
+
 static uint8_t FOC_ClampPolePairs(int32_t pole_pairs)
 {
     if (pole_pairs < 1)
@@ -62,15 +75,151 @@ static uint8_t FOC_ReadMechanicalAngleRad(float *angle_rad)
     return 1U;
 }
 
+static float FOC_MechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad)
+{
+    float direction_sign;
+    float mech_delta;
+    float mech_delta_mod;
+
+    if (motor == 0)
+    {
+        return 0.0f;
+    }
+
+    if ((motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
+        (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
+    {
+        return motor->electrical_phase_angle;
+    }
+
+    direction_sign = FOC_GetDirectionSign(motor->direction);
+    mech_delta = FOC_WrapRadDelta(mech_angle_rad - motor->mech_angle_at_elec_zero_rad);
+
+    mech_delta_mod = fmodf(mech_delta, FOC_TWO_PI / (float)motor->pole_pairs);
+    if (mech_delta_mod < 0.0f)
+    {
+        mech_delta_mod += FOC_TWO_PI / (float)motor->pole_pairs;
+    }
+
+    return FOC_WrapRad(direction_sign * mech_delta_mod * (float)motor->pole_pairs);
+}
+
+void FOC_PIDInit(foc_pid_t *pid,
+                 float kp,
+                 float ki,
+                 float kd,
+                 float out_min,
+                 float out_max)
+{
+    if (pid == 0)
+    {
+        return;
+    }
+
+    pid->kp = kp;
+    pid->ki = ki;
+    pid->kd = kd;
+    pid->integral = 0.0f;
+    pid->prev_error = 0.0f;
+    pid->out_min = out_min;
+    pid->out_max = out_max;
+}
+
+float FOC_PIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec)
+{
+    float error;
+    float derivative;
+    float output;
+
+    if (pid == 0)
+    {
+        return 0.0f;
+    }
+
+    if (dt_sec <= 0.0f)
+    {
+        dt_sec = 0.001f;
+    }
+
+    error = target - measurement;
+    pid->integral += error * dt_sec;
+    derivative = (error - pid->prev_error) / dt_sec;
+
+    output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
+    output = FOC_ClampFloat(output, pid->out_min, pid->out_max);
+
+    if (pid->ki > 1e-6f)
+    {
+        float i_min = (pid->out_min - pid->kp * error - pid->kd * derivative) / pid->ki;
+        float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;
+        pid->integral = FOC_ClampFloat(pid->integral, i_min, i_max);
+    }
+
+    pid->prev_error = error;
+    return output;
+}
+
+void FOC_CurrentLoopStep(foc_motor_t *motor,
+                         foc_current_loop_t *loop,
+                         float current_ref,
+                         float phase_a_current,
+                         float phase_b_current,
+                         float phase_c_current,
+                         float electrical_angle,
+                         float dt_sec)
+{
+    float i_alpha;
+    float i_beta;
+    float current_mag;
+    float voltage_limit;
+
+    if ((motor == 0) || (loop == 0))
+    {
+        return;
+    }
+
+    Math_ClarkeTransform(phase_a_current,
+                         phase_b_current,
+                         phase_c_current,
+                         &i_alpha,
+                         &i_beta);
+
+    current_mag = sqrtf(i_alpha * i_alpha + i_beta * i_beta);
+    voltage_limit = FOC_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+
+    motor->electrical_phase_angle = FOC_WrapRad(electrical_angle);
+    motor->ud = 0.0f;
+    motor->uq = FOC_PIDRun(&loop->current_mag_pid, current_ref, current_mag, dt_sec);
+    motor->uq = FOC_ClampFloat(motor->uq, -voltage_limit, voltage_limit);
+}
+
 static void FOC_ApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
 {
-    float Openloop_electrical_angle = FOC_WrapRad(electrical_angle);
+    float openloop_electrical_angle = FOC_WrapRad(electrical_angle);
+    float dq_magnitude;
+    float voltage_limit;
+    float voltage_command;
+    float ud_applied;
+    float uq_applied;
 
-    motor->electrical_phase_angle = Openloop_electrical_angle;
+    motor->electrical_phase_angle = openloop_electrical_angle;
 
-    Math_InverseParkTransform(motor->ud,
-                              motor->uq,
-                              Openloop_electrical_angle,
+    voltage_limit = FOC_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+    dq_magnitude = sqrtf(motor->ud * motor->ud + motor->uq * motor->uq);
+    ud_applied = motor->ud;
+    uq_applied = motor->uq;
+
+    if ((dq_magnitude > voltage_limit) && (dq_magnitude > 1e-6f))
+    {
+        float scale = voltage_limit / dq_magnitude;
+        ud_applied *= scale;
+        uq_applied *= scale;
+        dq_magnitude = voltage_limit;
+    }
+
+    Math_InverseParkTransform(ud_applied,
+                              uq_applied,
+                              openloop_electrical_angle,
                               &motor->alpha,
                               &motor->beta);
 
@@ -80,10 +229,12 @@ static void FOC_ApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
                                 &motor->phase_b,
                                 &motor->phase_c);
 
+    voltage_command = FOC_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
+
     SVPWM_Update(motor->phase_a,
                  motor->phase_b,
                  motor->phase_c,
-                 motor->set_voltage,
+                 voltage_command,
                  motor->vbus_voltage,
                  &motor->sector,
                  &motor->duty_a,
@@ -152,7 +303,6 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
         return 0U;
     }
 
-    /* Use one-way stepping over a larger electrical span to reduce inertia bias. */
     for (i = 0U; i <= FOC_CALIB_STEP_COUNT; i++)
     {
         float elec_target = FOC_CALIB_STEP_ELEC_RAD * (float)i;
@@ -198,45 +348,10 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     *direction_est = (sum_d_mech >= 0.0f) ? FOC_DIR_NORMAL : FOC_DIR_REVERSED;
     *pole_pairs_est = FOC_ClampPolePairs((int32_t)(fabsf(sum_d_elec / sum_d_mech) + 0.5f));
 
-    /* Return to zero electrical angle after probe sweep. */
     FOC_ApplyElectricalAngle(motor, 0.0f);
     delay_1ms(FOC_CALIB_STEP_SETTLE_MS);
 
     return 1U;
-}
-
-void FOC_MotorInit(foc_motor_t *motor,
-                   float vbus_voltage,
-                   float set_voltage,
-                   uint8_t pole_pairs,
-                   float mech_angle_at_elec_zero_rad,
-                   uint8_t direction)
-{
-    if (motor == 0)
-    {
-        return;
-    }
-
-    motor->electrical_phase_angle = 0.0f;
-    motor->ud = 0.0f;
-    motor->uq = 1.0f;
-    motor->set_voltage = set_voltage;
-    motor->vbus_voltage = vbus_voltage;
-    motor->pole_pairs = pole_pairs;
-    motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
-    motor->direction = direction;
-
-    motor->alpha = 0.0f;
-    motor->beta = 0.0f;
-    motor->phase_a = 0.0f;
-    motor->phase_b = 0.0f;
-    motor->phase_c = 0.0f;
-    motor->duty_a = 0.5f;
-    motor->duty_b = 0.5f;
-    motor->duty_c = 0.5f;
-    motor->sector = 0U;
-
-    FOC_CalibrateElectricalAngleAndDirection(motor);
 }
 
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
@@ -278,8 +393,8 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
         calib_uq = 2.5f;
     }
 
-    motor->ud = 0.0f;
-    motor->uq = calib_uq;
+    motor->uq = 0.0f;
+    motor->ud = calib_uq;
 
     if (need_zero != 0U)
     {
@@ -328,20 +443,99 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     FOC_ApplyElectricalAngle(motor, 0.0f);
 }
 
+void FOC_MotorInit(foc_motor_t *motor,
+                   float vbus_voltage,
+                   float set_voltage,
+                   float phase_resistance,
+                   uint8_t pole_pairs,
+                   float mech_angle_at_elec_zero_rad,
+                   uint8_t direction)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->electrical_phase_angle = 0.0f;
+    motor->ud = 0.0f;
+    motor->uq = 1.0f;
+    motor->set_voltage = set_voltage;
+    motor->vbus_voltage = vbus_voltage;
+    motor->phase_resistance = phase_resistance;
+    motor->pole_pairs = pole_pairs;
+    motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
+    motor->direction = direction;
+
+    motor->alpha = 0.0f;
+    motor->beta = 0.0f;
+    motor->phase_a = 0.0f;
+    motor->phase_b = 0.0f;
+    motor->phase_c = 0.0f;
+    motor->duty_a = 0.5f;
+    motor->duty_b = 0.5f;
+    motor->duty_c = 0.5f;
+    motor->sector = 0U;
+
+    FOC_CalibrateElectricalAngleAndDirection(motor);
+}
+
 void FOC_OpenLoopStep(foc_motor_t *motor, float turn_speed)
 {
     float delta_theta;
     float direction_sign;
+
+    direction_sign = FOC_GetDirectionSign(motor->direction);
+    delta_theta = FOC_TWO_PI * turn_speed * motor->pole_pairs * 0.001f * direction_sign;
+    motor->electrical_phase_angle = FOC_WrapRad(motor->electrical_phase_angle + delta_theta);
+
+    FOC_ApplyElectricalAngle(motor, motor->electrical_phase_angle);
+}
+
+void FOC_TorqueControlStep(foc_motor_t *motor,
+                           foc_current_loop_t *loop,
+                           float torque_ref_current,
+                           float phase_a_current,
+                           float phase_b_current,
+                           float phase_c_current,
+                           float mech_angle_rad,
+                           float dt_sec,
+                           foc_torque_mode_t mode)
+{
+    float voltage_limit;
+    float electrical_angle;
 
     if (motor == 0)
     {
         return;
     }
 
-    direction_sign = FOC_GetDirectionSign(motor->direction);
-    delta_theta = FOC_TWO_PI * turn_speed * motor->pole_pairs * 0.001f * direction_sign;
-    motor->electrical_phase_angle = FOC_WrapRad(motor->electrical_phase_angle + delta_theta);
+    if (dt_sec <= 0.0f)
+    {
+        dt_sec = 0.001f;
+    }
 
-    /* Open-loop output uses pure electrical phase command; mechanical zero is for sensored mapping. */
+    electrical_angle = FOC_MechanicalToElectricalAngle(motor, mech_angle_rad);
+    motor->electrical_phase_angle = electrical_angle;
+    voltage_limit = FOC_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+
+    if ((mode == FOC_TORQUE_MODE_CURRENT_PID) && (loop != 0))
+    {
+        FOC_CurrentLoopStep(motor,
+                            loop,
+                            torque_ref_current,
+                            phase_a_current,
+                            phase_b_current,
+                            phase_c_current,
+                            motor->electrical_phase_angle,
+                            dt_sec);
+    }
+    else
+    {
+        float open_loop_uq = torque_ref_current * motor->phase_resistance;
+
+        motor->uq = FOC_ClampFloat(open_loop_uq, -voltage_limit, voltage_limit);
+        motor->ud = 0.0f;
+    }
+
     FOC_ApplyElectricalAngle(motor, motor->electrical_phase_angle);
 }

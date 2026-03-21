@@ -15,7 +15,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 #### Application Layer
 - `main.c`: System initialization and main loop
 - `timer1_algorithm.c`: Multi-rate task scheduler
-- `foc_control.c`: Open-loop FOC step and startup calibration (zero electrical angle + direction + pole pairs)
+- `foc_control.c`: Open-loop FOC step, startup calibration, and torque-control API path
 - `sensor.c`: Current and angle acquisition/filter path
 
 #### Driver Layer (Utilities/)
@@ -83,10 +83,15 @@ TIMER3 (compare trigger)
 
 ### Control Loop
 ```
-ADC Samples → Current Calculation/Filtering → FOC Open-loop Algorithm → PWM Duty Cycle
+ADC Samples → Current Calculation/Filtering → FOC Control API (open-loop / current-loop mode) → PWM Duty Cycle
     ↑                                                       ↓
 Position Encoder ←───────────────────────────────────── Motor Driver
 ```
+
+### Sensor-Control Boundary
+- Sensor module is responsible for acquisition/filtering only.
+- Control module accepts sampled phase currents and mechanical angle as API inputs.
+- Mechanical-to-electrical angle conversion is handled in FOC control layer using calibrated zero, direction, and pole pairs.
 
 ### Startup Calibration Flow
 ```

@@ -15,7 +15,7 @@ void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent);
 void SVPWM_Update(float phase_a,
                   float phase_b,
                   float phase_c,
-                  float set_voltage,
+                  float voltage_command,
                   float vbus_voltage,
                   uint8_t *sector,
                   float *duty_a,

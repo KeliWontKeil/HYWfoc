@@ -13,6 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet)
 
+## [0.2.5] - 2026-03-21
+
+### Changed
+- Added torque-control APIs in `foc_control` with mode switch support (open-loop and current-loop mode).
+- Refactored control path to absolute-voltage semantics: `vbus_voltage` as global limit, `set_voltage` as user clamp, `ud/uq` as absolute voltage commands.
+- Updated SVPWM update interface to use explicit `voltage_command` amplitude input.
+- Added mechanical-angle to electrical-angle mapping in FOC based on direction, pole-pairs, and calibrated zero electrical reference.
+- Decoupled sensor acquisition from control algorithm by passing measured current and mechanical angle into FOC control APIs.
+
+### Fixed
+- Corrected torque-axis command routing so torque command is applied on q-axis in control path.
+- Fixed open-loop torque branch polarity/axis assignment issue in control-step implementation.
+- Reduced electrical-angle wrap ambiguity by applying modulo-based single-electrical-cycle mapping in mechanical-to-electrical conversion.
+
+### Notes
+- Open-loop torque control is validated in current hardware tests.
+- Closed-loop behavior is logically correct but still requires parameter tuning for final dynamic performance.
+
 ## [0.2.4] - 2026-03-21
 
 ### Changed

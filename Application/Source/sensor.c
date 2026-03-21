@@ -140,7 +140,10 @@ static void Sensor_ReadEncoder(void)
         float angle_rad = (float)angle * AS5600_ANGLE_TO_RAD;
 
         /* Apply Kalman filtering */
-        Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
+        //Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
+        sensor_data.mech_angle_rad.raw_value = angle_rad;
+        sensor_data.mech_angle_rad.filtered_value = angle_rad;
+        sensor_data.mech_angle_rad.output_value = angle_rad;
 
         sensor_data.encoder_valid = 1;
     }

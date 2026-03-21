@@ -77,7 +77,7 @@ void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent)
 void SVPWM_Update(float phase_a,
                   float phase_b,
                   float phase_c,
-                  float set_voltage,
+                  float voltage_command,
                   float vbus_voltage,
                   uint8_t *sector_out,
                   float *duty_a,
@@ -86,7 +86,7 @@ void SVPWM_Update(float phase_a,
 {
     float alpha;
     float beta;
-    float voltage_ratio;
+    float modulation;
     float magnitude;
     float theta;
     float theta_sector;
@@ -101,31 +101,29 @@ void SVPWM_Update(float phase_a,
         return;
     }
 
-    voltage_ratio = set_voltage / vbus_voltage;
-    if (voltage_ratio < 0.0f)
+    if (vbus_voltage <= SVPWM_EPSILON)
     {
-        voltage_ratio = -voltage_ratio;
-    }
-    if (voltage_ratio > 1.0f)
-    {
-        voltage_ratio = 1.0f;
+        *sector_out = 0U;
+        *duty_a = 0.5f;
+        *duty_b = 0.5f;
+        *duty_c = 0.5f;
+        return;
     }
 
-    phase_a *= voltage_ratio;
-    phase_b *= voltage_ratio;
-    phase_c *= voltage_ratio;
+    modulation = voltage_command / vbus_voltage;
+    if (modulation < 0.0f)
+    {
+        modulation = -modulation;
+    }
+    if (modulation > 1.0f)
+    {
+        modulation = 1.0f;
+    }
 
     /* Reconstruct alpha-beta from inverse Clarke output (three-phase voltages). */
     alpha = phase_a;
     beta = (phase_b - phase_c) / SVPWM_SQRT3;
     magnitude = sqrtf(alpha * alpha + beta * beta);
-
-    if (magnitude > 1.0f)
-    {
-        alpha /= magnitude;
-        beta /= magnitude;
-        magnitude = 1.0f;
-    }
 
     if (magnitude < SVPWM_EPSILON)
     {
@@ -140,6 +138,11 @@ void SVPWM_Update(float phase_a,
         s_output.duty_c = *duty_c;
         return;
     }
+
+    /* Use phase vector only for direction; amplitude comes from voltage_command. */
+    alpha /= magnitude;
+    beta /= magnitude;
+    magnitude = modulation;
 
     theta = atan2f(beta, alpha);
     if (theta < 0.0f)
