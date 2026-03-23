@@ -13,6 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet)
 
+## [0.3.0] - 2026-03-23
+
+### Changed
+- Completed low-speed sensored FOC functional path for this stage: startup calibration, torque/current control entry, position/speed loop framework, and TIMER2-driven SVPWM interpolation.
+- Refactored speed-loop implementation to follow position-loop principle by integrating speed reference (rad/s) into accumulated angle reference per 1kHz cycle.
+- Unified direction semantics to signed `1/0/-1` across control APIs and internal calculations.
+- Consolidated control dataflow around torque/current loop reuse to reduce duplicated logic between outer loops.
+
+### Fixed
+- Corrected direction mapping inconsistencies that could cause effective reverse behavior in some paths.
+- Removed unstable direct speed-PID path and cleaned obsolete speed-state fields/code.
+
+### Notes
+- Current precise current control performance is still the primary remaining gap for the next mini-version.
+- Build and flash verification passed in hardware validation for this release.
+
 ## [0.2.7] - 2026-03-23
 
 ### Changed
@@ -110,7 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - USART1 API type safety and const-correctness for byte/string send functions
 - Initial SVPWM sector timing and duty normalization consistency
 
-## [0.3.0] - 2026-03-13
+## [0.3.0-legacy] - 2026-03-13
 
 ### Added
 - ADC current sampling implementation (PA6/PA7 synchronous sampling)

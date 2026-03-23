@@ -7,7 +7,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 ### Core Architecture
 - **Microcontroller**: GD32F303CC (ARM Cortex-M4, 120MHz)
 - **Real-time Framework**: Timer-based multi-rate task scheduling
-- **Control Algorithm**: Torque-control FOC with position/speed loop framework extension
+- **Control Algorithm**: Low-speed sensored FOC complete for current stage (torque/current/position/speed path available; precise current-control tuning remains next focus)
 - **Feedback**: Current sensing + position encoder
 
 ### Software Layers

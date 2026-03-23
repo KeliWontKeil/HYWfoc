@@ -50,7 +50,9 @@ int main(void)
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
     FOC_PIDInit(&g_torque_current_loop.current_mag_pid, 1.0f, 0.2f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
     FOC_PIDInit(&g_angle_loop.angle_pid, 6.0f, 1.0f, 0.01f, -g_motor.set_voltage, g_motor.set_voltage);
-    FOC_PIDInit(&g_speed_loop.speed_pid, 0.08f, 0.6f, 0.0f, -3.0f, 3.0f);
+    FOC_PIDInit(&g_speed_loop.angle_pid, 3.0f, 0.5f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
+    g_speed_loop.angle_ref_accum_rad = 0.0f;
+    g_speed_loop.angle_ref_valid = 0U;
 
     printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction , g_motor.pole_pairs);
     delay_1ms(1000);
@@ -88,10 +90,20 @@ static void Motor_Control_Loop(void)
     sensor_data_t *sensor = Sensor_GetData();
 
     //FOC_OpenLoopStep(&g_motor, 8.0f, 0.25f);
+    /*FOC_TorqueControlStep(&g_motor,
+                          &g_torque_current_loop,
+                          0.6f,
+                          sensor->current_a.output_value,
+                          sensor->current_b.output_value,
+                          sensor->current_c.output_value,
+                          sensor->mech_angle_rad.output_value,
+                          0.001f,
+                          FOC_TORQUE_MODE_CURRENT_PID);*/
+
     FOC_SpeedControlStep(&g_motor,
                          &g_speed_loop,
                          &g_torque_current_loop,
-                         6.0f,
+                         16.0f,
                          sensor->current_a.output_value,
                          sensor->current_b.output_value,
                          sensor->current_c.output_value,

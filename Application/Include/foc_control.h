@@ -42,11 +42,6 @@ typedef struct {
     float mech_angle_prev_rad;
     uint8_t mech_angle_prev_valid;
 
-    /* Speed-loop states */
-    float mech_speed_rad_s;
-    float mech_speed_accum_prev_rad;
-    uint8_t mech_speed_prev_valid;
-
     /* Intermediate and output states */
     float alpha;
     float beta;
@@ -78,7 +73,9 @@ typedef struct {
 } foc_angle_loop_t;
 
 typedef struct {
-    foc_pid_t speed_pid;
+    foc_pid_t angle_pid;
+    float angle_ref_accum_rad;
+    uint8_t angle_ref_valid;
 } foc_speed_loop_t;
 
 typedef enum {
