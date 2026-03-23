@@ -7,7 +7,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 ### Core Architecture
 - **Microcontroller**: GD32F303CC (ARM Cortex-M4, 120MHz)
 - **Real-time Framework**: Timer-based multi-rate task scheduling
-- **Control Algorithm**: Open-loop FOC voltage generation for 3-phase motors
+- **Control Algorithm**: Torque-control FOC with position-loop framework extension
 - **Feedback**: Current sensing + position encoder
 
 ### Software Layers
@@ -15,7 +15,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 #### Application Layer
 - `main.c`: System initialization and main loop
 - `timer1_algorithm.c`: Multi-rate task scheduler
-- `foc_control.c`: Open-loop FOC step, startup calibration, and torque-control API path
+- `foc_control.c`: FOC voltage synthesis, startup calibration, torque-control API, and position-loop entry
 - `sensor.c`: Current and angle acquisition/filter path
 
 #### Driver Layer (Utilities/)
@@ -83,7 +83,7 @@ TIMER3 (compare trigger)
 
 ### Control Loop
 ```
-ADC Samples → Current Calculation/Filtering → FOC Control API (open-loop / current-loop mode) → PWM Duty Cycle
+ADC Samples → Current Calculation/Filtering → FOC Control API (torque / current-loop / angle-loop entry) → PWM Duty Cycle
     ↑                                                       ↓
 Position Encoder ←───────────────────────────────────── Motor Driver
 ```

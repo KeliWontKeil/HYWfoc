@@ -6,6 +6,7 @@ static void Motor_Control_Loop(void);
 
 static foc_motor_t g_motor;
 static foc_current_loop_t g_torque_current_loop;
+static foc_angle_loop_t g_angle_loop;
 
 int main(void)
 {
@@ -46,6 +47,7 @@ int main(void)
 
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
     FOC_PIDInit(&g_torque_current_loop.current_mag_pid, 10.0f, 0.0f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
+    FOC_PIDInit(&g_angle_loop.angle_pid, 2.0f, 2.0f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
 
     printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction, g_motor.pole_pairs);
     delay_1ms(1000);
@@ -57,7 +59,7 @@ int main(void)
         //UART_Debug_OutputAll();
         UART_Debug_OutputOscilloscope();
         //printf("elec angle: %.4f rad\r\n", g_motor.electrical_phase_angle);
-        delay_1ms(20);
+        delay_1ms(10);
     }
 }
 
@@ -85,11 +87,21 @@ static void Motor_Control_Loop(void)
     //FOC_OpenLoopStep(&g_motor, 0.5f);
     FOC_TorqueControlStep(&g_motor,
                           &g_torque_current_loop,
-                          0.2f,
+                          1.0f,
                           sensor->current_a.output_value,
                           sensor->current_b.output_value,
                           sensor->current_c.output_value,
                           sensor->mech_angle_rad.output_value,
                           0.001f,
                           FOC_TORQUE_MODE_CURRENT_PID);
+    /*FOC_AngleControlStep(&g_motor,
+                          &g_angle_loop,
+                          &g_torque_current_loop,
+                          0.0f,
+                          sensor->current_a.output_value,
+                          sensor->current_b.output_value,
+                          sensor->current_c.output_value,
+                          sensor->mech_angle_rad.output_value,
+                          0.001f,
+                          FOC_TORQUE_MODE_OPEN_LOOP);*/
 }

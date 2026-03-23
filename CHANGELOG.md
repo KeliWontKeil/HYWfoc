@@ -13,6 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet)
 
+## [0.2.6] - 2026-03-23
+
+### Changed
+- Added position-loop framework on top of torque control: introduced `foc_angle_loop_t` and `FOC_AngleControlStep()` to generate torque-current reference from angle error.
+- Added accumulated mechanical position state in motor model (`mech_angle_accum_rad`) with wrap-aware incremental update for multi-turn position control.
+- Updated main control integration with angle-loop PID initialization and retained torque-loop runtime as default path for staged validation.
+- Updated next-mission direction to focus on control-effect optimization (current-loop feedforward PID and low-current open-loop fallback).
+
+### Fixed
+- Improved startup calibration flow ordering to avoid angle-state discontinuity by finalizing zero-angle lock after direction/pole-pair estimation.
+
+### Notes
+- Basic FOC functional verification is completed in current hardware tests.
+- Next mini-version will focus on control performance optimization and parameter robustness.
+
 ## [0.2.5] - 2026-03-21
 
 ### Changed

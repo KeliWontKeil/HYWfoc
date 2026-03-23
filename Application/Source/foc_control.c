@@ -104,6 +104,25 @@ static float FOC_MechanicalToElectricalAngle(foc_motor_t *motor, float mech_angl
     return FOC_WrapRad(direction_sign * mech_delta_mod * (float)motor->pole_pairs);
 }
 
+static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_angle_rad)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    if (motor->mech_angle_prev_valid == 0U)
+    {
+        motor->mech_angle_prev_rad = mech_angle_rad;
+        motor->mech_angle_accum_rad = mech_angle_rad;
+        motor->mech_angle_prev_valid = 1U;
+        return;
+    }
+
+    motor->mech_angle_accum_rad += FOC_WrapRadDelta(mech_angle_rad - motor->mech_angle_prev_rad);
+    motor->mech_angle_prev_rad = mech_angle_rad;
+}
+
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,
                  float ki,
@@ -351,6 +370,18 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     FOC_ApplyElectricalAngle(motor, 0.0f);
     delay_1ms(FOC_CALIB_STEP_SETTLE_MS);
 
+    for (i = FOC_CALIB_STEP_COUNT; i > 0; i--)
+    {
+        float elec_target = FOC_CALIB_STEP_ELEC_RAD * (float)i;
+        float mech_rad;
+
+        FOC_SampleLockedMechanicalAngle(motor,
+                                        elec_target,
+                                        FOC_CALIB_STEP_SETTLE_MS,
+                                        FOC_CALIB_STEP_SAMPLE_COUNT,
+                                         &mech_rad);
+    }
+
     return 1U;
 }
 
@@ -396,22 +427,6 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     motor->uq = 0.0f;
     motor->ud = calib_uq;
 
-    if (need_zero != 0U)
-    {
-        if (FOC_SampleLockedMechanicalAngle(motor,
-                                            0.0f,
-                                            FOC_CALIB_LOCK_SETTLE_MS,
-                                            FOC_CALIB_LOCK_SAMPLE_COUNT,
-                                            &mech_zero_rad_est) != 0U)
-        {
-            motor->mech_angle_at_elec_zero_rad = mech_zero_rad_est;
-        }
-        else
-        {
-            motor->mech_angle_at_elec_zero_rad = 0.0f;
-        }
-    }
-
     if ((need_direction != 0U) || (need_pole_pairs != 0U))
     {
         if (FOC_EstimateDirectionAndPolePairs(motor, &direction_est, &pole_pairs_est) != 0U)
@@ -438,6 +453,28 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
         }
     }
 
+    if (need_zero != 0U)
+    {
+        if (FOC_SampleLockedMechanicalAngle(motor,
+                                            0.0f,
+                                            FOC_CALIB_LOCK_SETTLE_MS,
+                                            FOC_CALIB_LOCK_SAMPLE_COUNT,
+                                            &mech_zero_rad_est) != 0U)
+        {
+            motor->mech_angle_at_elec_zero_rad = mech_zero_rad_est;
+            motor->mech_angle_accum_rad = mech_zero_rad_est;
+            motor->mech_angle_prev_rad = mech_zero_rad_est;
+            motor->mech_angle_prev_valid = 1U;
+        }
+        else
+        {
+            motor->mech_angle_at_elec_zero_rad = 0.0f;
+            motor->mech_angle_accum_rad = 0.0f;
+            motor->mech_angle_prev_rad = 0.0f;
+            motor->mech_angle_prev_valid = 1U;
+        }
+    }
+
     motor->ud = backup_ud;
     motor->uq = backup_uq;
     FOC_ApplyElectricalAngle(motor, 0.0f);
@@ -461,9 +498,15 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->uq = 1.0f;
     motor->set_voltage = set_voltage;
     motor->vbus_voltage = vbus_voltage;
+    motor->mech_angle_accum_rad = 0.0f;
+    motor->mech_angle_prev_rad = 0.0f;
+    motor->mech_angle_prev_valid = 0U;
     motor->phase_resistance = phase_resistance;
     motor->pole_pairs = pole_pairs;
     motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_angle_accum_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_angle_prev_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_angle_prev_valid = 1U;
     motor->direction = direction;
 
     motor->alpha = 0.0f;
@@ -514,6 +557,8 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
         dt_sec = 0.001f;
     }
 
+    FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
+
     electrical_angle = FOC_MechanicalToElectricalAngle(motor, mech_angle_rad);
     motor->electrical_phase_angle = electrical_angle;
     voltage_limit = FOC_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
@@ -538,4 +583,44 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
     }
 
     FOC_ApplyElectricalAngle(motor, motor->electrical_phase_angle);
+}
+
+void FOC_AngleControlStep(foc_motor_t *motor,
+                          foc_angle_loop_t *angle_loop,
+                          foc_current_loop_t *current_loop,
+                          float angle_ref_rad,
+                          float phase_a_current,
+                          float phase_b_current,
+                          float phase_c_current,
+                          float mech_angle_rad,
+                          float dt_sec,
+                          foc_torque_mode_t torque_mode)
+{
+    float torque_ref_current;
+
+    if ((motor == 0) || (angle_loop == 0))
+    {
+        return;
+    }
+
+    if (dt_sec <= 0.0f)
+    {
+        dt_sec = 0.001f;
+    }
+
+    FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
+    torque_ref_current = FOC_PIDRun(&angle_loop->angle_pid,
+                                    angle_ref_rad,
+                                    (motor ->direction == FOC_DIR_REVERSED ? -1.0f : 1.0f) * motor->mech_angle_accum_rad,
+                                    dt_sec);
+
+    FOC_TorqueControlStep(motor,
+                          current_loop,
+                          torque_ref_current,
+                          phase_a_current,
+                          phase_b_current,
+                          phase_c_current,
+                          mech_angle_rad,
+                          dt_sec,
+                          torque_mode);
 }
