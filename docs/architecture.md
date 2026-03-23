@@ -7,7 +7,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 ### Core Architecture
 - **Microcontroller**: GD32F303CC (ARM Cortex-M4, 120MHz)
 - **Real-time Framework**: Timer-based multi-rate task scheduling
-- **Control Algorithm**: Torque-control FOC with position-loop framework extension
+- **Control Algorithm**: Torque-control FOC with position/speed loop framework extension
 - **Feedback**: Current sensing + position encoder
 
 ### Software Layers
@@ -15,7 +15,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 #### Application Layer
 - `main.c`: System initialization and main loop
 - `timer1_algorithm.c`: Multi-rate task scheduler
-- `foc_control.c`: FOC voltage synthesis, startup calibration, torque-control API, and position-loop entry
+- `foc_control.c`: FOC voltage synthesis, startup calibration, torque/current control API, and position/speed loop entry
 - `sensor.c`: Current and angle acquisition/filter path
 
 #### Driver Layer (Utilities/)
@@ -67,7 +67,8 @@ TIMER1 (1kHz)
 
 TIMER2 (24kHz master)
 ├── Drives TIMER0 slave synchronization for PWM base timing
-└── Provides trigger chain reference for sampling timing
+├── Provides trigger chain reference for sampling timing
+└── Drives SVPWM interpolation callback for high-rate duty update
 
 TIMER3 (compare trigger)
 └── Generates ADC external trigger event (current sampling phase alignment)
@@ -83,7 +84,7 @@ TIMER3 (compare trigger)
 
 ### Control Loop
 ```
-ADC Samples → Current Calculation/Filtering → FOC Control API (torque / current-loop / angle-loop entry) → PWM Duty Cycle
+ADC Samples → Current Calculation/Filtering → FOC Control API (torque / current-loop / angle-loop / speed-loop entry) → PWM Duty Cycle
     ↑                                                       ↓
 Position Encoder ←───────────────────────────────────── Motor Driver
 ```

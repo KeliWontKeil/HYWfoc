@@ -13,6 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - (none yet)
 
+## [0.2.7] - 2026-03-23
+
+### Changed
+- Added SVPWM linear interpolation path driven by TIMER2 update interrupt callback to improve duty-cycle continuity.
+- Added current-loop feedforward + PID implementation on `iq` channel with low-current PID bypass (`|iq_ref| < 0.1A`).
+- Added speed-loop API (`FOC_SpeedControlStep`) as cascade outer loop over torque/current loop.
+- Updated main control integration with speed-loop PID initialization and runtime entry.
+
+### Fixed
+- Unified motor direction semantics to signed `1/0/-1` across definitions, APIs, and direction-related calculations.
+- Corrected direction-mapping inconsistency that caused effective sign inversion in some control paths.
+
+### Notes
+- Current hardware validation shows improved behavior with TIMER2-driven interpolation compared with prior interrupt path.
+- Speed-loop gains are initialized with conservative defaults and may require hardware tuning.
+
 ## [0.2.6] - 2026-03-23
 
 ### Changed

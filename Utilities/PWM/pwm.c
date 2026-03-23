@@ -1,5 +1,4 @@
 #include "pwm.h"
-#include "interrupt_priority.h"
 
 /* Private variables */
 static uint8_t current_duty[PWM_CHANNEL_COUNT] = {
@@ -15,14 +14,6 @@ void PWM_GPIO_Config(void);
 void PWM_Timer_Config(uint32_t prescaler, uint32_t period);
 static uint16_t PWM_CalculateCompareValue(uint8_t duty_percent, uint32_t period);
 static uint16_t PWM_CalculateCompareValueFloat(float duty, uint32_t period);
-
-#if defined(GD32F30X_HD)
-#define PWM_TIMER0_UPDATE_IRQn TIMER0_UP_IRQn
-#elif defined(GD32F30X_CL)
-#define PWM_TIMER0_UPDATE_IRQn TIMER0_UP_TIMER9_IRQn
-#else
-#error "No TIMER0 update IRQ vector found for current GD32 variant"
-#endif
 
 void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent)
 {
@@ -289,9 +280,6 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_channel_output_shadow_config(PWM_TIMER0_PERIPH, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
     
     timer_auto_reload_shadow_enable(PWM_TIMER0_PERIPH);
-
-    timer_interrupt_enable(PWM_TIMER0_PERIPH, TIMER_INT_UP);
-    NVIC_CONFIG(PWM_TIMER0_UPDATE_IRQn, TIMER0_UP_PRIORITY_GROUP, TIMER0_UP_PRIORITY_SUBGROUP);
     
     #ifdef PWM_DEAD_TIME
     if (PWM_DEAD_TIME > 0)

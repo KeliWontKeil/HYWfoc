@@ -123,6 +123,30 @@ static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_
     motor->mech_angle_prev_rad = mech_angle_rad;
 }
 
+static void FOC_UpdateMechanicalSpeed(foc_motor_t *motor, float dt_sec)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    if (dt_sec <= 0.0f)
+    {
+        dt_sec = 0.001f;
+    }
+
+    if (motor->mech_speed_prev_valid == 0U)
+    {
+        motor->mech_speed_accum_prev_rad = motor->mech_angle_accum_rad;
+        motor->mech_speed_rad_s = 0.0f;
+        motor->mech_speed_prev_valid = 1U;
+        return;
+    }
+
+    motor->mech_speed_rad_s = (motor->mech_angle_accum_rad - motor->mech_speed_accum_prev_rad) / dt_sec;
+    motor->mech_speed_accum_prev_rad = motor->mech_angle_accum_rad;
+}
+
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,
                  float ki,
@@ -279,7 +303,7 @@ static void FOC_ApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
                  &motor->duty_b,
                  &motor->duty_c);
 
-    /* Duty update is executed in TIMER0 update ISR via SVPWM linear interpolation. */
+    /* Duty update is executed by the TIMER2 callback via SVPWM linear interpolation. */
 }
 
 static uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
@@ -517,12 +541,17 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mech_angle_accum_rad = 0.0f;
     motor->mech_angle_prev_rad = 0.0f;
     motor->mech_angle_prev_valid = 0U;
+    motor->mech_speed_rad_s = 0.0f;
+    motor->mech_speed_accum_prev_rad = 0.0f;
+    motor->mech_speed_prev_valid = 0U;
     motor->phase_resistance = phase_resistance;
     motor->pole_pairs = pole_pairs;
     motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
     motor->mech_angle_accum_rad = mech_angle_at_elec_zero_rad;
     motor->mech_angle_prev_rad = mech_angle_at_elec_zero_rad;
     motor->mech_angle_prev_valid = 1U;
+    motor->mech_speed_accum_prev_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_speed_prev_valid = 1U;
     motor->direction = direction;
 
     motor->alpha = 0.0f;
@@ -576,6 +605,7 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
     }
 
     FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
+    FOC_UpdateMechanicalSpeed(motor, dt_sec);
 
     motor->electrical_phase_angle = FOC_MechanicalToElectricalAngle(motor, mech_angle_rad);
     voltage_limit = FOC_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
@@ -631,6 +661,50 @@ void FOC_AngleControlStep(foc_motor_t *motor,
     torque_ref_current = FOC_PIDRun(&angle_loop->angle_pid,
                                     angle_ref_rad,
                                     direction_sign * motor->mech_angle_accum_rad,
+                                    dt_sec);
+
+    FOC_TorqueControlStep(motor,
+                          current_loop,
+                          torque_ref_current,
+                          phase_a_current,
+                          phase_b_current,
+                          phase_c_current,
+                          mech_angle_rad,
+                          dt_sec,
+                          torque_mode);
+}
+
+void FOC_SpeedControlStep(foc_motor_t *motor,
+                          foc_speed_loop_t *speed_loop,
+                          foc_current_loop_t *current_loop,
+                          float speed_ref_rad_s,
+                          float phase_a_current,
+                          float phase_b_current,
+                          float phase_c_current,
+                          float mech_angle_rad,
+                          float dt_sec,
+                          foc_torque_mode_t torque_mode)
+{
+    float torque_ref_current;
+    float direction_sign;
+
+    if ((motor == 0) || (speed_loop == 0))
+    {
+        return;
+    }
+
+    if (dt_sec <= 0.0f)
+    {
+        dt_sec = 0.001f;
+    }
+
+    FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
+    FOC_UpdateMechanicalSpeed(motor, dt_sec);
+
+    direction_sign = FOC_GetDirectionSign(motor->direction);
+    torque_ref_current = FOC_PIDRun(&speed_loop->speed_pid,
+                                    speed_ref_rad_s,
+                                    direction_sign * motor->mech_speed_rad_s,
                                     dt_sec);
 
     FOC_TorqueControlStep(motor,

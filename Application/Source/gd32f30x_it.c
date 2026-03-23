@@ -33,16 +33,6 @@ OF SUCH DAMAGE.
 */
 
 #include "gd32f30x_it.h"
-#include "svpwm.h"
-
-static void TIMER0_Update_ISR_Common(void)
-{
-    if (timer_interrupt_flag_get(TIMER0, TIMER_INT_FLAG_UP) != RESET)
-    {
-        timer_interrupt_flag_clear(TIMER0, TIMER_INT_FLAG_UP);
-        SVPWM_InterpolationISR();
-    }
-}
 
 /*!
     \brief      this function handles NMI exception
@@ -190,20 +180,10 @@ void TIMER1_IRQHandler(void)
     Timer1_IRQHandler_Internal();
 }
 
-/*!
-    \brief      TIMER0 update interrupt service routine (CL: shared with TIMER9)
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void TIMER0_UP_IRQHandler(void)
+void TIMER2_IRQHandler(void)
 {
-    TIMER0_Update_ISR_Common();
-}
-
-void TIMER0_UP_TIMER9_IRQHandler(void)
-{
-    TIMER0_Update_ISR_Common();
+    extern void Timer2_IRQHandler_Internal(void);
+    Timer2_IRQHandler_Internal();
 }
 
 /*!

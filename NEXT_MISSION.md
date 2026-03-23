@@ -5,7 +5,7 @@
 - 在开始编码前，请先阅读 `dev-guidelines/rules/` 目录下对应语言（`cn/` 或 `en/`）的规则文件。
 
 ## 版本
-- **当前版本**：v0.2.7-dev
+- **当前版本**：v0.2.8-dev
 
 ## 参考文档
 - 规则文件（核心）：`dev-guidelines/rules/cn/`、`dev-guidelines/rules/en/`

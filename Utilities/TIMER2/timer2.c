@@ -28,6 +28,9 @@ void Timer2_Init(uint32_t prescaler, uint32_t period)
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_initpara.repetitioncounter = 0;
     timer_init(TIMER2_PERIPH, &timer_initpara);
+
+    timer_interrupt_enable(TIMER2_PERIPH, TIMER_INT_UP);
+    NVIC_CONFIG(TIMER2_IRQn, TIMER2_PRIORITY_GROUP, TIMER2_PRIORITY_SUBGROUP);
     
     /* Configure TIMER2 as master to trigger TIMER0 and ADC */
     timer_master_slave_mode_config(TIMER2_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
@@ -73,14 +76,21 @@ void Timer2_SetCallback(timer2_callback_t callback)
     timer2_callback = callback;
 }
 
-/*! 
-    \brief      TIMER2 interrupt service routine implementation (reserved)
+/*!
+    \brief      TIMER2 interrupt service routine implementation
     \param[in]  none
     \param[out] none
     \retval     none
 */
 void Timer2_IRQHandler_Internal(void)
 {
+    if (timer_interrupt_flag_get(TIMER2_PERIPH, TIMER_INT_FLAG_UP) == RESET)
+    {
+        return;
+    }
+
+    timer_interrupt_flag_clear(TIMER2_PERIPH, TIMER_INT_FLAG_UP);
+
     if (timer2_callback != 0)
     {
         timer2_callback();
