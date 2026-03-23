@@ -20,6 +20,9 @@
 #define TIMER2_PRIORITY_GROUP      0
 #define TIMER2_PRIORITY_SUBGROUP   0
 
+#define TIMER0_UP_PRIORITY_GROUP      1
+#define TIMER0_UP_PRIORITY_SUBGROUP   1
+
 /* ADC interrupt priorities */
 #define ADC0_1_PRIORITY_GROUP      0
 #define ADC0_1_PRIORITY_SUBGROUP   0

@@ -9,6 +9,17 @@
 #define SVPWM_PI_BY_3        (SVPWM_PI / 3.0f)
 
 static svpwm_output_t s_output;
+static float s_duty_a_current = 0.5f;
+static float s_duty_b_current = 0.5f;
+static float s_duty_c_current = 0.5f;
+static float s_duty_a_target = 0.5f;
+static float s_duty_b_target = 0.5f;
+static float s_duty_c_target = 0.5f;
+static float s_duty_a_step = 0.0f;
+static float s_duty_b_step = 0.0f;
+static float s_duty_c_step = 0.0f;
+static uint16_t s_interp_steps_total = 1U;
+static uint16_t s_interp_step_index = 0U;
 
 static float SVPWM_Clamp01(float value)
 {
@@ -68,10 +79,23 @@ void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent)
     PWM_SetDutyCycle(PWM_CHANNEL_2, 0);
     PWM_Start();
 
+    s_interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;
+    s_interp_step_index = s_interp_steps_total;
+
     s_output.sector = 0;
     s_output.duty_a = 0.5f;
     s_output.duty_b = 0.5f;
     s_output.duty_c = 0.5f;
+
+    s_duty_a_current = 0.5f;
+    s_duty_b_current = 0.5f;
+    s_duty_c_current = 0.5f;
+    s_duty_a_target = 0.5f;
+    s_duty_b_target = 0.5f;
+    s_duty_c_target = 0.5f;
+    s_duty_a_step = 0.0f;
+    s_duty_b_step = 0.0f;
+    s_duty_c_step = 0.0f;
 }
 
 void SVPWM_Update(float phase_a,
@@ -228,10 +252,39 @@ void SVPWM_Update(float phase_a,
     *duty_c = SVPWM_Clamp01(*duty_c);
     *sector_out = sector_id;
 
+    s_duty_a_target = *duty_a;
+    s_duty_b_target = *duty_b;
+    s_duty_c_target = *duty_c;
+
+    s_duty_a_step = (s_duty_a_target - s_duty_a_current) / (float)s_interp_steps_total;
+    s_duty_b_step = (s_duty_b_target - s_duty_b_current) / (float)s_interp_steps_total;
+    s_duty_c_step = (s_duty_c_target - s_duty_c_current) / (float)s_interp_steps_total;
+    s_interp_step_index = 0U;
+
     s_output.sector = *sector_out;
     s_output.duty_a = *duty_a;
     s_output.duty_b = *duty_b;
     s_output.duty_c = *duty_c;
+}
+
+void SVPWM_InterpolationISR(void)
+{
+    if (s_interp_step_index < s_interp_steps_total)
+    {
+        s_duty_a_current += s_duty_a_step;
+        s_duty_b_current += s_duty_b_step;
+        s_duty_c_current += s_duty_c_step;
+        s_interp_step_index++;
+
+        if (s_interp_step_index >= s_interp_steps_total)
+        {
+            s_duty_a_current = s_duty_a_target;
+            s_duty_b_current = s_duty_b_target;
+            s_duty_c_current = s_duty_c_target;
+        }
+    }
+
+    PWM_SetDutyCycleTripleFloat(s_duty_a_current, s_duty_b_current, s_duty_c_current);
 }
 
 const svpwm_output_t* SVPWM_GetOutput(void)

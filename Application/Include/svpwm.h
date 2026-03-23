@@ -21,6 +21,7 @@ void SVPWM_Update(float phase_a,
                   float *duty_a,
                   float *duty_b,
                   float *duty_c);
+void SVPWM_InterpolationISR(void);
 const svpwm_output_t* SVPWM_GetOutput(void);
 
 #endif /* _SVPWM_H_ */

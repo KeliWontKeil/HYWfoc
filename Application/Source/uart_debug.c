@@ -129,14 +129,15 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
     \param[out] none
     \retval     none
 */
-void UART_Debug_OutputOscilloscope(void)
+void UART_Debug_OutputOscilloscope(float iq)
 {
     sensor_data_t* sensor = Sensor_GetData();
-    printf("ab %.2f %.2f %.2f %.2f cd \r\n",
+    printf("ab %.2f %.2f %.2f %.2f %.2f cd \r\n",
         sensor->current_a.output_value,
         sensor->current_b.output_value,
         sensor->current_c.output_value,
-        sensor->mech_angle_rad.output_value);
+        sensor->mech_angle_rad.output_value,
+        iq);
 
     /*printf("ab %.3f %.3f %.3f %u cd \r\n",
         svpwm->duty_a,

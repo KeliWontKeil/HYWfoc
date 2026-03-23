@@ -11,12 +11,12 @@
 #define FOC_CALIB_LOCK_SAMPLE_COUNT 24U
 #define FOC_CALIB_STEP_SETTLE_MS 8U
 #define FOC_CALIB_STEP_SAMPLE_COUNT 6U
-#define FOC_CALIB_STEP_ELEC_RAD (FOC_TWO_PI / 10.0f)
+#define FOC_CALIB_STEP_ELEC_RAD (FOC_TWO_PI / 20.0f)
 #define FOC_CALIB_STEP_COUNT 20U
 
-#define FOC_DIR_UNDEFINED 0U
-#define FOC_DIR_NORMAL 1U
-#define FOC_DIR_REVERSED 2U
+#define FOC_DIR_UNDEFINED 0
+#define FOC_DIR_NORMAL 1
+#define FOC_DIR_REVERSED -1
 #define FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED (-1.0f)
 #define FOC_POLE_PAIRS_UNDEFINED 0U
 
@@ -24,7 +24,7 @@ typedef struct {
     float phase_resistance;
     uint8_t pole_pairs;
     float mech_angle_at_elec_zero_rad;
-    uint8_t direction; /* 1: normal, 2: reversed, 0: undefined */
+    int8_t direction; /* 1: normal, -1: reversed, 0: undefined */
     float vbus_voltage;
 
     /* Control-loop targets */
@@ -32,6 +32,10 @@ typedef struct {
     float ud;
     float uq;
     float set_voltage;
+
+    /* Current-loop debug states */
+    float iq_target;
+    float iq_measured;
 
     /* Position-loop states */
     float mech_angle_accum_rad;
@@ -79,7 +83,7 @@ void FOC_MotorInit(foc_motor_t *motor,
                    float phase_resistance,
                    uint8_t pole_pairs,
                    float mech_angle_at_elec_zero_rad,
-                   uint8_t direction);
+                   int8_t direction);
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,
                  float ki,
@@ -90,7 +94,7 @@ float FOC_PIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec);
 
 void FOC_CurrentLoopStep(foc_motor_t *motor,
                          foc_current_loop_t *loop,
-                                                 float current_ref,
+                                                 float iq_ref,
                                                  float phase_a_current,
                                                  float phase_b_current,
                                                  float phase_c_current,
@@ -116,6 +120,6 @@ void FOC_AngleControlStep(foc_motor_t *motor,
                           float dt_sec,
                           foc_torque_mode_t torque_mode);
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor);
-void FOC_OpenLoopStep(foc_motor_t *motor, float dt_sec);
+void FOC_OpenLoopStep(foc_motor_t *motor,float voltage, float turn_speed);
 
 #endif /* _FOC_CONTROL_H_ */

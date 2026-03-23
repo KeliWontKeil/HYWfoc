@@ -42,6 +42,10 @@ void ADC0_1_IRQHandler(void);
 void USART1_IRQHandler(void);
 /* this function handles TIMER1 interrupt */
 void TIMER1_IRQHandler(void);
+/* this function handles TIMER0 update interrupt (HD naming) */
+void TIMER0_UP_IRQHandler(void);
+/* this function handles TIMER0 update interrupt (CL/XD naming, shared with TIMER9) */
+void TIMER0_UP_TIMER9_IRQHandler(void);
 /* this function handles DMA0 Channel0 interrupt */
 void DMA0_Channel0_IRQHandler(void);
 

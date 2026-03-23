@@ -112,9 +112,9 @@ static void Sensor_ReadADC(void)
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
 
         float zero_offset = sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value + sensor_data.current_c.filtered_value;
-        sensor_data.current_a.filtered_value -= zero_offset / 3.0f;
-        sensor_data.current_b.filtered_value -= zero_offset / 3.0f;
-        sensor_data.current_c.filtered_value -= zero_offset / 3.0f;
+        sensor_data.current_a.filtered_value -= (zero_offset / 3.0f);
+        sensor_data.current_b.filtered_value -= (zero_offset / 3.0f);
+        sensor_data.current_c.filtered_value -= (zero_offset / 3.0f);
 
         sensor_data.adc_valid = 1;
     }
@@ -141,6 +141,7 @@ static void Sensor_ReadEncoder(void)
 
         /* Apply Kalman filtering */
         //Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
+        angle_rad -= fmodf(angle_rad, 0.002);
         sensor_data.mech_angle_rad.raw_value = angle_rad;
         sensor_data.mech_angle_rad.filtered_value = angle_rad;
         sensor_data.mech_angle_rad.output_value = angle_rad;

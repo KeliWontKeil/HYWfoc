@@ -46,10 +46,10 @@ int main(void)
     FOC_MotorInit(&g_motor, 12.0f, 11.4f, 13.2f, 7, FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED, FOC_DIR_UNDEFINED);
 
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
-    FOC_PIDInit(&g_torque_current_loop.current_mag_pid, 10.0f, 0.0f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
+    FOC_PIDInit(&g_torque_current_loop.current_mag_pid, 60.0f, 10.0f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
     FOC_PIDInit(&g_angle_loop.angle_pid, 2.0f, 2.0f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
 
-    printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction, g_motor.pole_pairs);
+    printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction , g_motor.pole_pairs);
     delay_1ms(1000);
     
     Timer1_Algorithm_Start();
@@ -57,9 +57,9 @@ int main(void)
     while (1)
     {
         //UART_Debug_OutputAll();
-        UART_Debug_OutputOscilloscope();
-        //printf("elec angle: %.4f rad\r\n", g_motor.electrical_phase_angle);
-        delay_1ms(10);
+        UART_Debug_OutputOscilloscope(g_motor.iq_measured);
+        //printf(" %.2f\r\n", g_motor.iq_target);
+        delay_1ms(20);
     }
 }
 
@@ -81,19 +81,22 @@ static void LED_Blink_1Hz(void)
 
 static void Motor_Control_Loop(void)
 {
+    static uint8_t i = 0;
+
     Sensor_ReadAll();
     sensor_data_t *sensor = Sensor_GetData();
 
-    //FOC_OpenLoopStep(&g_motor, 0.5f);
+    //FOC_OpenLoopStep(&g_motor, 8.0f, 0.25f);
     FOC_TorqueControlStep(&g_motor,
                           &g_torque_current_loop,
-                          1.0f,
+                          0.6f,
                           sensor->current_a.output_value,
                           sensor->current_b.output_value,
                           sensor->current_c.output_value,
                           sensor->mech_angle_rad.output_value,
                           0.001f,
-                          FOC_TORQUE_MODE_CURRENT_PID);
+                          FOC_TORQUE_MODE_OPEN_LOOP);
+
     /*FOC_AngleControlStep(&g_motor,
                           &g_angle_loop,
                           &g_torque_current_loop,

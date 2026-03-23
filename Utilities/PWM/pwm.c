@@ -1,4 +1,5 @@
 #include "pwm.h"
+#include "interrupt_priority.h"
 
 /* Private variables */
 static uint8_t current_duty[PWM_CHANNEL_COUNT] = {
@@ -13,6 +14,15 @@ static uint16_t pwm_period = 0;
 void PWM_GPIO_Config(void);
 void PWM_Timer_Config(uint32_t prescaler, uint32_t period);
 static uint16_t PWM_CalculateCompareValue(uint8_t duty_percent, uint32_t period);
+static uint16_t PWM_CalculateCompareValueFloat(float duty, uint32_t period);
+
+#if defined(GD32F30X_HD)
+#define PWM_TIMER0_UPDATE_IRQn TIMER0_UP_IRQn
+#elif defined(GD32F30X_CL)
+#define PWM_TIMER0_UPDATE_IRQn TIMER0_UP_TIMER9_IRQn
+#else
+#error "No TIMER0 update IRQ vector found for current GD32 variant"
+#endif
 
 void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent)
 {
@@ -97,6 +107,50 @@ void PWM_SetDutyCycle(pwm_channel_t channel, uint8_t duty_percent)
     
     /* Configure channel output pulse value */
     timer_channel_output_pulse_value_config(PWM_TIMER0_PERIPH, timer_channel, compare_value);
+}
+
+void PWM_SetDutyCycleFloat(pwm_channel_t channel, float duty)
+{
+    uint16_t compare_value;
+    uint16_t timer_channel;
+
+    if (channel >= PWM_CHANNEL_COUNT)
+    {
+        return;
+    }
+
+    compare_value = PWM_CalculateCompareValueFloat(duty, pwm_period);
+    current_duty[channel] = (uint8_t)(duty * 100.0f);
+
+    switch (channel)
+    {
+        case PWM_CHANNEL_0:
+            timer_channel = TIMER_CH_0;
+            break;
+        case PWM_CHANNEL_1:
+            timer_channel = TIMER_CH_1;
+            break;
+        case PWM_CHANNEL_2:
+            timer_channel = TIMER_CH_2;
+            break;
+        default:
+            return;
+    }
+
+    timer_channel_output_pulse_value_config(PWM_TIMER0_PERIPH, timer_channel, compare_value);
+}
+
+void PWM_SetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c)
+{
+    timer_channel_output_pulse_value_config(PWM_TIMER0_PERIPH,
+                                            TIMER_CH_0,
+                                            PWM_CalculateCompareValueFloat(duty_a, pwm_period));
+    timer_channel_output_pulse_value_config(PWM_TIMER0_PERIPH,
+                                            TIMER_CH_1,
+                                            PWM_CalculateCompareValueFloat(duty_b, pwm_period));
+    timer_channel_output_pulse_value_config(PWM_TIMER0_PERIPH,
+                                            TIMER_CH_2,
+                                            PWM_CalculateCompareValueFloat(duty_c, pwm_period));
 }
 
 /*!
@@ -202,7 +256,7 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_deinit(PWM_TIMER0_PERIPH);
     
     timer_initpara.prescaler         = prescaler;
-    timer_initpara.alignedmode       = TIMER_COUNTER_CENTER_UP;  /* Central aligned mode for FOC */
+    timer_initpara.alignedmode       = TIMER_COUNTER_CENTER_BOTH;  /* Central aligned mode for FOC */
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
     timer_initpara.period            = period;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
@@ -235,6 +289,9 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_channel_output_shadow_config(PWM_TIMER0_PERIPH, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
     
     timer_auto_reload_shadow_enable(PWM_TIMER0_PERIPH);
+
+    timer_interrupt_enable(PWM_TIMER0_PERIPH, TIMER_INT_UP);
+    NVIC_CONFIG(PWM_TIMER0_UPDATE_IRQn, TIMER0_UP_PRIORITY_GROUP, TIMER0_UP_PRIORITY_SUBGROUP);
     
     #ifdef PWM_DEAD_TIME
     if (PWM_DEAD_TIME > 0)
@@ -256,5 +313,32 @@ static uint16_t PWM_CalculateCompareValue(uint8_t duty_percent, uint32_t period)
         compare_value = period;
     }
     
+    return (uint16_t)compare_value;
+}
+
+static uint16_t PWM_CalculateCompareValueFloat(float duty, uint32_t period)
+{
+    float duty_limited;
+    uint32_t compare_value;
+
+    if (duty < 0.0f)
+    {
+        duty_limited = 0.0f;
+    }
+    else if (duty > 1.0f)
+    {
+        duty_limited = 1.0f;
+    }
+    else
+    {
+        duty_limited = duty;
+    }
+
+    compare_value = (uint32_t)(duty_limited * (float)(period + 1U));
+    if (compare_value > period)
+    {
+        compare_value = period;
+    }
+
     return (uint16_t)compare_value;
 }
