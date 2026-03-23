@@ -5,9 +5,9 @@ static void LED_Blink_1Hz(void);
 static void Motor_Control_Loop(void);
 
 static foc_motor_t g_motor;
-static foc_current_loop_t g_torque_current_loop;
-static foc_angle_loop_t g_angle_loop;
-static foc_speed_loop_t g_speed_loop;
+static foc_pid_t g_torque_current_pid;
+static foc_pid_t g_angle_pid;
+static foc_pid_t g_speed_pid;
 
 int main(void)
 {
@@ -48,11 +48,9 @@ int main(void)
     FOC_MotorInit(&g_motor, 12.0f, 11.4f, 6.1f, 7, FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED, FOC_DIR_UNDEFINED);
 
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
-    FOC_PIDInit(&g_torque_current_loop.current_mag_pid, 1.0f, 0.2f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
-    FOC_PIDInit(&g_angle_loop.angle_pid, 6.0f, 1.0f, 0.01f, -g_motor.set_voltage, g_motor.set_voltage);
-    FOC_PIDInit(&g_speed_loop.angle_pid, 3.0f, 0.5f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
-    g_speed_loop.angle_ref_accum_rad = 0.0f;
-    g_speed_loop.angle_ref_valid = 0U;
+    FOC_PIDInit(&g_torque_current_pid, 1.0f, 0.2f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
+    FOC_PIDInit(&g_angle_pid, 6.0f, 1.0f, 0.01f, -g_motor.set_voltage, g_motor.set_voltage);
+    FOC_PIDInit(&g_speed_pid, 3.0f, 0.5f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
 
     printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction , g_motor.pole_pairs);
     delay_1ms(1000);
@@ -91,7 +89,7 @@ static void Motor_Control_Loop(void)
 
     //FOC_OpenLoopStep(&g_motor, 8.0f, 0.25f);
     /*FOC_TorqueControlStep(&g_motor,
-                          &g_torque_current_loop,
+                          &g_torque_current_pid,
                           0.6f,
                           sensor->current_a.output_value,
                           sensor->current_b.output_value,
@@ -101,8 +99,8 @@ static void Motor_Control_Loop(void)
                           FOC_TORQUE_MODE_CURRENT_PID);*/
 
     FOC_SpeedControlStep(&g_motor,
-                         &g_speed_loop,
-                         &g_torque_current_loop,
+                         &g_speed_pid,
+                         &g_torque_current_pid,
                          16.0f,
                          sensor->current_a.output_value,
                          sensor->current_b.output_value,
@@ -112,8 +110,8 @@ static void Motor_Control_Loop(void)
                          FOC_TORQUE_MODE_CURRENT_PID);
 
     /*FOC_AngleControlStep(&g_motor,
-                          &g_angle_loop,
-                          &g_torque_current_loop,
+                          &g_angle_pid,
+                          &g_torque_current_pid,
                           3.14f,
                           sensor->current_a.output_value,
                           sensor->current_b.output_value,

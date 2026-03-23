@@ -27,17 +27,17 @@ typedef struct {
     int8_t direction; /* 1: normal, -1: reversed, 0: undefined */
     float vbus_voltage;
 
-    /* Control-loop targets */
+    /* Control targets */
     float electrical_phase_angle;
     float ud;
     float uq;
     float set_voltage;
 
-    /* Current-loop debug states */
+    /* Current debug states */
     float iq_target;
     float iq_measured;
 
-    /* Position-loop states */
+    /* Position states */
     float mech_angle_accum_rad;
     float mech_angle_prev_rad;
     uint8_t mech_angle_prev_valid;
@@ -64,20 +64,6 @@ typedef struct {
     float out_max;
 } foc_pid_t;
 
-typedef struct {
-    foc_pid_t current_mag_pid;
-} foc_current_loop_t;
-
-typedef struct {
-    foc_pid_t angle_pid;
-} foc_angle_loop_t;
-
-typedef struct {
-    foc_pid_t angle_pid;
-    float angle_ref_accum_rad;
-    uint8_t angle_ref_valid;
-} foc_speed_loop_t;
-
 typedef enum {
     FOC_TORQUE_MODE_OPEN_LOOP = 0,
     FOC_TORQUE_MODE_CURRENT_PID = 1
@@ -99,7 +85,7 @@ void FOC_PIDInit(foc_pid_t *pid,
 float FOC_PIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec);
 
 void FOC_CurrentLoopStep(foc_motor_t *motor,
-                         foc_current_loop_t *loop,
+                                                 foc_pid_t *current_pid,
                                                  float iq_ref,
                                                  float phase_a_current,
                                                  float phase_b_current,
@@ -107,7 +93,7 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
                                                  float electrical_angle,
                          float dt_sec);
 void FOC_TorqueControlStep(foc_motor_t *motor,
-                           foc_current_loop_t *loop,
+                                                     foc_pid_t *current_pid,
                                                      float torque_ref_current,
                                                      float phase_a_current,
                                                      float phase_b_current,
@@ -116,8 +102,8 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
                            float dt_sec,
                            foc_torque_mode_t mode);
 void FOC_AngleControlStep(foc_motor_t *motor,
-                          foc_angle_loop_t *angle_loop,
-                          foc_current_loop_t *current_loop,
+                                                    foc_pid_t *angle_pid,
+                                                    foc_pid_t *current_pid,
                           float angle_ref_rad,
                           float phase_a_current,
                           float phase_b_current,
@@ -126,8 +112,8 @@ void FOC_AngleControlStep(foc_motor_t *motor,
                           float dt_sec,
                           foc_torque_mode_t torque_mode);
 void FOC_SpeedControlStep(foc_motor_t *motor,
-                          foc_speed_loop_t *speed_loop,
-                          foc_current_loop_t *current_loop,
+                                                    foc_pid_t *speed_pid,
+                                                    foc_pid_t *current_pid,
                           float speed_ref_rad_s,
                           float phase_a_current,
                           float phase_b_current,

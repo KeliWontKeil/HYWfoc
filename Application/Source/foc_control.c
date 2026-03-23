@@ -5,6 +5,9 @@
 #include "systick.h"
 #include <math.h>
 
+#define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (FOC_TWO_PI * 4.0f)
+#define FOC_SPEED_MECH_REBASE_RAD 2048.0f
+
 static float FOC_WrapRad(float angle)
 {
     while (angle >= FOC_TWO_PI)
@@ -123,16 +126,21 @@ static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_
     motor->mech_angle_prev_rad = mech_angle_rad;
 }
 
-static void FOC_UpdateSpeedAngleReference(foc_motor_t *motor,
-                                          foc_speed_loop_t *speed_loop,
-                                          float speed_ref_rad_s,
-                                          float dt_sec)
+static float FOC_UpdateSpeedAngleError(foc_motor_t *motor,
+                                       float speed_ref_rad_s,
+                                       float dt_sec)
 {
+    static float speed_err_accum_rad = 0.0f;
+    static float prev_mech_signed_rad = 0.0f;
+    static uint8_t speed_state_valid = 0U;
     float direction_sign;
+    float mech_signed_rad;
+    float mech_delta_rad;
+    float speed_cmd_delta_rad;
 
-    if ((motor == 0) || (speed_loop == 0))
+    if (motor == 0)
     {
-        return;
+        return 0.0f;
     }
 
     if (dt_sec <= 0.0f)
@@ -141,16 +149,35 @@ static void FOC_UpdateSpeedAngleReference(foc_motor_t *motor,
     }
 
     direction_sign = FOC_GetDirectionSign(motor->direction);
+    mech_signed_rad = direction_sign * motor->mech_angle_accum_rad;
 
-    if (speed_loop->angle_ref_valid == 0U)
+    if (speed_state_valid == 0U)
     {
-        speed_loop->angle_ref_accum_rad = direction_sign * motor->mech_angle_accum_rad;
-        speed_loop->angle_ref_valid = 1U;
-        return;
+        prev_mech_signed_rad = mech_signed_rad;
+        speed_err_accum_rad = 0.0f;
+        speed_state_valid = 1U;
+        return 0.0f;
     }
 
+    if ((mech_signed_rad > FOC_SPEED_MECH_REBASE_RAD) ||
+        (mech_signed_rad < -FOC_SPEED_MECH_REBASE_RAD))
+    {
+        prev_mech_signed_rad -= mech_signed_rad;
+        mech_signed_rad = 0.0f;
+    }
+
+    mech_delta_rad = mech_signed_rad - prev_mech_signed_rad;
+    prev_mech_signed_rad = mech_signed_rad;
+
     /* 1kHz loop: rad/s * dt(s) => rad increment per control cycle */
-    speed_loop->angle_ref_accum_rad += speed_ref_rad_s * dt_sec;
+    speed_cmd_delta_rad = speed_ref_rad_s * dt_sec;
+    speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
+
+    speed_err_accum_rad = FOC_ClampFloat(speed_err_accum_rad,
+                                         -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
+                                         FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
+
+    return speed_err_accum_rad;
 }
 
 void FOC_PIDInit(foc_pid_t *pid,
@@ -209,7 +236,7 @@ float FOC_PIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec)
 }
 
 void FOC_CurrentLoopStep(foc_motor_t *motor,
-                         foc_current_loop_t *loop,
+                         foc_pid_t *current_pid,
                          float iq_ref,
                          float phase_a_current,
                          float phase_b_current,
@@ -226,7 +253,7 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
     float uq_pid;
     float uq_cmd;
 
-    if ((motor == 0) || (loop == 0))
+    if ((motor == 0) || (current_pid == 0))
     {
         return;
     }
@@ -249,7 +276,7 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
 
     if (fabsf(iq_ref) >= 0.5f)
     {
-        uq_pid = FOC_PIDRun(&loop->current_mag_pid, iq_ref, iq_measured, dt_sec);
+        uq_pid = FOC_PIDRun(current_pid, iq_ref, iq_measured, dt_sec);
     }
 
     uq_cmd = uq_ff + uq_pid;
@@ -584,7 +611,7 @@ void FOC_OpenLoopStep(foc_motor_t *motor,float voltage, float turn_speed)
 }
 
 void FOC_TorqueControlStep(foc_motor_t *motor,
-                           foc_current_loop_t *loop,
+                           foc_pid_t *current_pid,
                            float torque_ref_current,
                            float phase_a_current,
                            float phase_b_current,
@@ -610,10 +637,10 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
     motor->electrical_phase_angle = FOC_MechanicalToElectricalAngle(motor, mech_angle_rad);
     voltage_limit = FOC_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
 
-    if ((mode == FOC_TORQUE_MODE_CURRENT_PID) && (loop != 0))
+    if ((mode == FOC_TORQUE_MODE_CURRENT_PID) && (current_pid != 0))
     {
         FOC_CurrentLoopStep(motor,
-                            loop,
+                            current_pid,
                             torque_ref_current,
                             phase_a_current,
                             phase_b_current,
@@ -633,8 +660,8 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
 }
 
 void FOC_AngleControlStep(foc_motor_t *motor,
-                          foc_angle_loop_t *angle_loop,
-                          foc_current_loop_t *current_loop,
+                          foc_pid_t *angle_pid,
+                          foc_pid_t *current_pid,
                           float angle_ref_rad,
                           float phase_a_current,
                           float phase_b_current,
@@ -646,7 +673,7 @@ void FOC_AngleControlStep(foc_motor_t *motor,
     float torque_ref_current;
     float direction_sign;
 
-    if ((motor == 0) || (angle_loop == 0))
+    if ((motor == 0) || (angle_pid == 0))
     {
         return;
     }
@@ -658,13 +685,13 @@ void FOC_AngleControlStep(foc_motor_t *motor,
 
     FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
     direction_sign = FOC_GetDirectionSign(motor->direction);
-    torque_ref_current = FOC_PIDRun(&angle_loop->angle_pid,
+    torque_ref_current = FOC_PIDRun(angle_pid,
                                     angle_ref_rad,
                                     direction_sign * motor->mech_angle_accum_rad,
                                     dt_sec);
 
     FOC_TorqueControlStep(motor,
-                          current_loop,
+                          current_pid,
                           torque_ref_current,
                           phase_a_current,
                           phase_b_current,
@@ -675,8 +702,8 @@ void FOC_AngleControlStep(foc_motor_t *motor,
 }
 
 void FOC_SpeedControlStep(foc_motor_t *motor,
-                          foc_speed_loop_t *speed_loop,
-                          foc_current_loop_t *current_loop,
+                          foc_pid_t *speed_pid,
+                          foc_pid_t *current_pid,
                           float speed_ref_rad_s,
                           float phase_a_current,
                           float phase_b_current,
@@ -686,10 +713,9 @@ void FOC_SpeedControlStep(foc_motor_t *motor,
                           foc_torque_mode_t torque_mode)
 {
     float torque_ref_current;
-    float direction_sign;
-    float mech_angle_accum_signed;
+    float speed_angle_error_rad;
 
-    if ((motor == 0) || (speed_loop == 0))
+    if ((motor == 0) || (speed_pid == 0))
     {
         return;
     }
@@ -700,18 +726,15 @@ void FOC_SpeedControlStep(foc_motor_t *motor,
     }
 
     FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
-    FOC_UpdateSpeedAngleReference(motor, speed_loop, speed_ref_rad_s, dt_sec);
+    speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, speed_ref_rad_s, dt_sec);
 
-    direction_sign = FOC_GetDirectionSign(motor->direction);
-    mech_angle_accum_signed = direction_sign * motor->mech_angle_accum_rad;
-
-    torque_ref_current = FOC_PIDRun(&speed_loop->angle_pid,
-                                    speed_loop->angle_ref_accum_rad,
-                                    mech_angle_accum_signed,
+    torque_ref_current = FOC_PIDRun(speed_pid,
+                                    speed_angle_error_rad,
+                                    0.0f,
                                     dt_sec);
 
     FOC_TorqueControlStep(motor,
-                          current_loop,
+                          current_pid,
                           torque_ref_current,
                           phase_a_current,
                           phase_b_current,
