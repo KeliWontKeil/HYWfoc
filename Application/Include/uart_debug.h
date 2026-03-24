@@ -8,6 +8,11 @@
 #ifndef _UART_DEBUG_H_
 #define _UART_DEBUG_H_
 
+#include "foc_platform_api.h"
+#include "control_scheduler.h"
+#include "sensor.h"
+
+#include <stdio.h>
 #include <stdint.h>
 
 /* Function prototypes */

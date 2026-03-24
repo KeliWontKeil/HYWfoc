@@ -1,8 +1,9 @@
 #include "sensor.h"
 
+#define SENSOR_ANGLE_TO_RAD (2.0f * 3.1415926535f / 4096.0f)
+
 /* Private variables */
 static sensor_data_t sensor_data;
-static uint16_t timer_period = 0;
 
 /* Private function prototypes */
 static void Sensor_ReadADC(void);
@@ -16,18 +17,7 @@ static void Sensor_ReadEncoder(void);
 */
 void Sensor_Init(uint8_t pwm_freq_kHz)
 {
-    timer_period = 120000 / pwm_freq_kHz - 1;
-
-    /* Initialize I2C and AS5600 */
-    AS5600_Init();
-    
-    /* Initialize TIMER3 as ADC sample trigger timer (mid-point compare event). */
-    Timer3_Init(0, timer_period - 1);
-    Timer3_Start();
-
-    /* Initialize ADC for synchronous current sampling */
-    ADC_Init();
-    ADC_Start();
+    FOC_Platform_SensorInputInit(pwm_freq_kHz);
 
     /* Initialize scalar Kalman filters: (R, P0, Q, x0). */
     Kalman_Init(&sensor_data.current_a, 0.15f, 0.0f, 0.025f, 0.0f);
@@ -46,7 +36,8 @@ void Sensor_Init(uint8_t pwm_freq_kHz)
 void Sensor_SetZeroOffset(void)
 {
     uint16_t i;
-    float sample[2];
+    float current_a = 0.0f;
+    float current_b = 0.0f;
     float sum_a = 0.0f;
     float sum_b = 0.0f;
     float avg_a;
@@ -54,12 +45,12 @@ void Sensor_SetZeroOffset(void)
 
     for (i = 0; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
     {
-        if (ADC_GetAverageSample(sample, CURRENT, ADC_AVG_DEFAULT_COUNT) == ADC_STATUS_OK)
+        if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
         {
-            sum_a += sample[0];
-            sum_b += sample[1];
+            sum_a += current_a;
+            sum_b += current_b;
         }
-        delay_1ms(1);
+        FOC_Platform_WaitMs(1U);
     }
 
     avg_a = sum_a / (float)SENSOR_ZERO_CALIB_SAMPLES;
@@ -100,18 +91,20 @@ void Sensor_ReadAll(void)
 */
 static void Sensor_ReadADC(void)
 {
-    float adc_currents[2];
+    float current_a = 0.0f;
+    float current_b = 0.0f;
+    float zero_offset;
 
     /* Use averaged ADC values over one control period (default 24 samples at 24kHz). */
-    if (ADC_GetAverageSample(adc_currents, CURRENT, ADC_AVG_DEFAULT_COUNT) == ADC_STATUS_OK)
+    if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
     {
         /* Apply Kalman filtering */
-        Kalman_Update(&sensor_data.current_a, adc_currents[0]);
-        Kalman_Update(&sensor_data.current_b, adc_currents[1]);
+        Kalman_Update(&sensor_data.current_a, current_a);
+        Kalman_Update(&sensor_data.current_b, current_b);
         /* For 3-phase, we can estimate phase C as -(A + B) */
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
 
-        float zero_offset = sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value + sensor_data.current_c.filtered_value;
+        zero_offset = sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value + sensor_data.current_c.filtered_value;
         sensor_data.current_a.filtered_value -= (zero_offset / 3.0f);
         sensor_data.current_b.filtered_value -= (zero_offset / 3.0f);
         sensor_data.current_c.filtered_value -= (zero_offset / 3.0f);
@@ -133,11 +126,12 @@ static void Sensor_ReadADC(void)
 static void Sensor_ReadEncoder(void)
 {
     uint16_t angle;
+    float angle_rad;
 
     /* Read encoder angle register via decoupled AS5600 interface. */
-    if (AS5600_ReadAngle(&angle) == I2C_OK)
+    if (FOC_Platform_ReadEncoderRawAngle(&angle) != 0U)
     {
-        float angle_rad = (float)angle * AS5600_ANGLE_TO_RAD;
+        angle_rad = (float)angle * SENSOR_ANGLE_TO_RAD;
 
         /* Apply Kalman filtering */
         //Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
@@ -167,9 +161,7 @@ sensor_data_t* Sensor_GetData(void)
 
 void Sensor_ADCSampleTimeOffset(float percent)
 {
-    /* Adjust ADC sampling time by changing the compare value of TIMER3 (ADC trigger timer) */
-    uint16_t compare_value = (uint16_t)(timer_period * percent / 100);
-    timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, compare_value);
+    FOC_Platform_SetSensorSampleOffsetPercent(percent);
 }
 
 /*!

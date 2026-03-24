@@ -11,6 +11,8 @@ alwaysApply: false
 - Macros: `UPPERCASE_WITH_UNDERSCORES`
 - Types: `xxx_t` suffix
 - Follow existing patterns unless refactoring
+- Prefer functional semantic names at upper layers (L1/L2/L3) instead of direct peripheral names (e.g. avoid `Usart1`/`Timer1` in abstraction APIs).
+- For unavoidable cross-layer shared params/callbacks/enums, define them in a dedicated shared header rather than exposing level-2 module types directly in platform API headers.
 
 ## Brace Style (K&R Style)
 - **Braces must occupy their own line, never on the same line as statements**
@@ -38,6 +40,11 @@ void Function(void) {
 - Clean API via header files
 - Avoid cross-module globals
 
+## Header Include Policy
+- For non-self-contained modules, place primary dependency includes in the corresponding `.h` file instead of scattering them in `.c` files.
+- `.c` files should prefer including only their module header; add extra includes in `.c` only for unavoidable cyclic-dependency or implementation-private cases.
+- The goal is to keep dependency structure visible at header level for architecture review and portability.
+
 ## Priority & Source of Truth
 - **Primary source**: actual code (`.c/.h` files) is authoritative
 - Secondary reference: documentation under `docs/`
@@ -55,13 +62,13 @@ void Function(void) {
 - Prefer ISR forwarding to module handler functions for complex logic
 
 ## Timing & Scheduling
-- Use 1kHz/100Hz/10Hz/1Hz task slots in `timer1_algorithm.c`
+- Use 1kHz/100Hz/10Hz/1Hz task slots in `control_scheduler.c`
 - Use DWT timing for execution measurement
 - Initialize timers via parameterized APIs (Timer1/Timer2/PWM)
 
 ## Execution Time & 1kHz Budget
 - Ensure any 1kHz task completes well under 1ms
-- Use `Timer1_EnableDWT()` / `Timer1_GetExecutionTime()` to validate
+- Use `ControlScheduler_EnableDWT()` / `ControlScheduler_GetExecutionCycles()` to validate
 - Avoid blocking delays (`delay_1ms()`) in initialization/calibration paths unless necessary
 - If blocking delays are used, document execution time impact and ensure no interference with real-time tasks
 

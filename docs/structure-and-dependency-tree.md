@@ -1,7 +1,7 @@
 # Project Structure and Dependency Tree
 
 ## Purpose
-This document gives a quick visual view of current folder layout and layered dependency paths after v0.3.1-dev refactor.
+This document gives a quick visual view of current folder layout and layered dependency paths after v0.3.2 refactor.
 
 ## File Tree (Current Core)
 ```text
@@ -77,12 +77,13 @@ main.c
 └── foc_app.c
     ├── foc_control.c
     │   └── foc_platform_api.c (mechanical angle read / wait bridge)
+    ├── control_scheduler.c
+    │   └── foc_platform_api.c (cycle-counter API bridge)
     ├── sensor.c
     │   └── foc_platform_api.c (ADC/encoder read wrappers)
     ├── svpwm.c
     ├── uart_debug.c
     └── foc_platform_api.c
-        ├── control_scheduler.c
         ├── timer1.c
         ├── timer2.c
         ├── timer3.c

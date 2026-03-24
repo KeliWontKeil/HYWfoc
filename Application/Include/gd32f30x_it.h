@@ -10,6 +10,7 @@
 
 #include "gd32f30x.h"
 #include "main.h"
+#include "foc_irq_api.h"
 #include "systick.h"
 #include "LED.h"
 #include "usart1.h"

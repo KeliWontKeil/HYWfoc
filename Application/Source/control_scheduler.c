@@ -3,7 +3,7 @@
 static volatile uint16_t g_sched_tick_counter = 0;
 static uint32_t g_sched_execution_cycles = 0;
 
-static ControlScheduler_Callback_t g_sched_callbacks[CONTROL_SCHED_RATE_COUNT] = {NULL};
+static FOC_SchedulerCallback_t g_sched_callbacks[FOC_SCHEDULER_RATE_COUNT] = {NULL};
 
 void ControlScheduler_Init(void)
 {
@@ -14,12 +14,7 @@ void ControlScheduler_Init(void)
 
 void ControlScheduler_EnableDWT(void)
 {
-    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0)
-    {
-        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-        DWT->CYCCNT = 0;
-        DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-    }
+    FOC_Platform_EnableCycleCounter();
 }
 
 void ControlScheduler_RunTick(void)
@@ -33,24 +28,24 @@ void ControlScheduler_RunTick(void)
         dwt_enabled = 1;
     }
 
-    start_cycles = DWT->CYCCNT;
+    start_cycles = FOC_Platform_ReadCycleCounter();
     g_sched_tick_counter++;
 
-    if (g_sched_callbacks[CONTROL_SCHED_RATE_1KHZ] != NULL)
+    if (g_sched_callbacks[FOC_SCHEDULER_RATE_CONTROL_1KHZ] != NULL)
     {
-        g_sched_callbacks[CONTROL_SCHED_RATE_1KHZ]();
+        g_sched_callbacks[FOC_SCHEDULER_RATE_CONTROL_1KHZ]();
     }
-    if ((g_sched_tick_counter % 10U) == 0U && g_sched_callbacks[CONTROL_SCHED_RATE_100HZ] != NULL)
+    if ((g_sched_tick_counter % 10U) == 0U && g_sched_callbacks[FOC_SCHEDULER_RATE_SERVICE_100HZ] != NULL)
     {
-        g_sched_callbacks[CONTROL_SCHED_RATE_100HZ]();
+        g_sched_callbacks[FOC_SCHEDULER_RATE_SERVICE_100HZ]();
     }
-    if ((g_sched_tick_counter % 100U) == 0U && g_sched_callbacks[CONTROL_SCHED_RATE_10HZ] != NULL)
+    if ((g_sched_tick_counter % 100U) == 0U && g_sched_callbacks[FOC_SCHEDULER_RATE_MONITOR_10HZ] != NULL)
     {
-        g_sched_callbacks[CONTROL_SCHED_RATE_10HZ]();
+        g_sched_callbacks[FOC_SCHEDULER_RATE_MONITOR_10HZ]();
     }
-    if (g_sched_tick_counter == 1000U && g_sched_callbacks[CONTROL_SCHED_RATE_1HZ] != NULL)
+    if (g_sched_tick_counter == 1000U && g_sched_callbacks[FOC_SCHEDULER_RATE_HEARTBEAT_1HZ] != NULL)
     {
-        g_sched_callbacks[CONTROL_SCHED_RATE_1HZ]();
+        g_sched_callbacks[FOC_SCHEDULER_RATE_HEARTBEAT_1HZ]();
     }
 
     if (g_sched_tick_counter >= 1000U)
@@ -58,7 +53,7 @@ void ControlScheduler_RunTick(void)
         g_sched_tick_counter = 0U;
     }
 
-    g_sched_execution_cycles = DWT->CYCCNT - start_cycles;
+    g_sched_execution_cycles = FOC_Platform_ReadCycleCounter() - start_cycles;
 }
 
 uint32_t ControlScheduler_GetExecutionCycles(void)
@@ -76,17 +71,17 @@ void ControlScheduler_ResetTickCounter(void)
     g_sched_tick_counter = 0U;
 }
 
-void ControlScheduler_SetCallback(ControlScheduler_Rate_t rate, ControlScheduler_Callback_t callback)
+void ControlScheduler_SetCallback(FOC_SchedulerRate_t rate, FOC_SchedulerCallback_t callback)
 {
-    if (rate < CONTROL_SCHED_RATE_COUNT)
+    if (rate < FOC_SCHEDULER_RATE_COUNT)
     {
         g_sched_callbacks[rate] = callback;
     }
 }
 
-void ControlScheduler_ClearCallback(ControlScheduler_Rate_t rate)
+void ControlScheduler_ClearCallback(FOC_SchedulerRate_t rate)
 {
-    if (rate < CONTROL_SCHED_RATE_COUNT)
+    if (rate < FOC_SCHEDULER_RATE_COUNT)
     {
         g_sched_callbacks[rate] = NULL;
     }
@@ -96,7 +91,7 @@ void ControlScheduler_ClearAllCallbacks(void)
 {
     uint8_t i;
 
-    for (i = 0U; i < (uint8_t)CONTROL_SCHED_RATE_COUNT; i++)
+    for (i = 0U; i < (uint8_t)FOC_SCHEDULER_RATE_COUNT; i++)
     {
         g_sched_callbacks[i] = NULL;
     }

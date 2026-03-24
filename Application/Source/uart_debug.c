@@ -6,14 +6,6 @@
 */
 
 #include "uart_debug.h"
-#include "foc_platform_api.h"
-
-#include <stdio.h>
-
-#include "adc.h"
-#include "as5600.h"
-#include "usart1.h"
-#include "control_scheduler.h"
 
 /* Private function prototypes */
 static void UART_Debug_SendFormattedFloat(const char *label, float value, const char *unit);
@@ -37,16 +29,17 @@ void UART_Debug_Init(void)
 */
 void UART_Debug_OutputCurrent(void)
 {
-    adc_sample_t sample;
+    sensor_data_t *sensor;
 
-    if (ADC_GetAllSamples(&sample) == ADC_STATUS_OK)
+    sensor = Sensor_GetData();
+    if ((sensor != 0) && (sensor->adc_valid != 0U))
     {
-        UART_Debug_SendFormattedFloat("Phase A Current", sample.phase_a_current, "A");
-        UART_Debug_SendFormattedFloat("Phase B Current", sample.phase_b_current, "A");
+        UART_Debug_SendFormattedFloat("Phase A Current", sensor->current_a.output_value, "A");
+        UART_Debug_SendFormattedFloat("Phase B Current", sensor->current_b.output_value, "A");
     }
     else
     {
-        USART1_SendString("ADC: Error reading current samples\r\n");
+        FOC_Platform_TelemetryWrite("ADC: Error reading current samples\r\n");
     }
 }
 
@@ -58,22 +51,17 @@ void UART_Debug_OutputCurrent(void)
 */
 void UART_Debug_OutputEncoderAngle(void)
 {
-    uint16_t angle_raw;
+    sensor_data_t *sensor;
 
-    //magnet_status = AS5600_CheckMagnet();
-    //if (magnet_status == AS5600_MAGNET_OK) {
-        if (AS5600_ReadRawAngle(&angle_raw) == I2C_OK)
-        {
-            float angle_rad = (float)angle_raw * AS5600_ANGLE_TO_RAD;
-            UART_Debug_SendFormattedFloat("Encoder Angle", angle_rad, "rad");
-        }
-        else
-        {
-            USART1_SendString("AS5600: Error reading angle\r\n");
-        }
-    /*} else {
-        USART1_SendString("AS5600: Magnet status error\r\n");
-    }*/
+    sensor = Sensor_GetData();
+    if ((sensor != 0) && (sensor->encoder_valid != 0U))
+    {
+        UART_Debug_SendFormattedFloat("Encoder Angle", sensor->mech_angle_rad.raw_value, "rad");
+    }
+    else
+    {
+        FOC_Platform_TelemetryWrite("AS5600: Error reading angle\r\n");
+    }
 }
 
 /*!
@@ -84,42 +72,44 @@ void UART_Debug_OutputEncoderAngle(void)
 */
 void UART_Debug_OutputAll(void)
 {
-    foc_debug_feedback_t feedback;
+    sensor_data_t *sensor;
+    uint32_t exec_time;
+    char buffer[64];
 
-    if (FOC_Platform_ReadDebugFeedback(&feedback) == 0U)
+    sensor = Sensor_GetData();
+    if (sensor == 0)
     {
-        USART1_SendString("Feedback: Data read failed\r\n");
+        FOC_Platform_TelemetryWrite("Feedback: Data read failed\r\n");
         return;
     }
     
     /* Output filtered sensor data */
-    if (feedback.adc_valid)
+    if (sensor->adc_valid)
     {
-        UART_Debug_SendFormattedFloat("Current A (filtered)", feedback.phase_current_a, "A");
-        UART_Debug_SendFormattedFloat("Current B (filtered)", feedback.phase_current_b, "A");
-        UART_Debug_SendFormattedFloat("Current C (filtered)", feedback.phase_current_c, "A");
+        UART_Debug_SendFormattedFloat("Current A (filtered)", sensor->current_a.output_value, "A");
+        UART_Debug_SendFormattedFloat("Current B (filtered)", sensor->current_b.output_value, "A");
+        UART_Debug_SendFormattedFloat("Current C (filtered)", sensor->current_c.output_value, "A");
     }
     else
     {
-        USART1_SendString("ADC: Data not valid\r\n");
+        FOC_Platform_TelemetryWrite("ADC: Data not valid\r\n");
     }
     
-    if (feedback.encoder_valid)
+    if (sensor->encoder_valid)
     {
-        UART_Debug_SendFormattedFloat("Encoder Angle", feedback.mech_angle_raw_rad, "rad");
-        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", feedback.mech_angle_filtered_rad, "rad");
+        UART_Debug_SendFormattedFloat("Encoder Angle", sensor->mech_angle_rad.raw_value, "rad");
+        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", sensor->mech_angle_rad.output_value, "rad");
     }
     else
     {
-        USART1_SendString("Encoder: Data not valid\r\n");
+        FOC_Platform_TelemetryWrite("Encoder: Data not valid\r\n");
     }
     
     /* Output algorithm execution time */
-    uint32_t exec_time = ControlScheduler_GetExecutionCycles();
-    char buffer[64];
+    exec_time = ControlScheduler_GetExecutionCycles();
     snprintf(buffer, sizeof(buffer), "Algorithm execution time: %.3f us\r\n", exec_time / 120.0f);
-    USART1_SendString(buffer);
-    USART1_SendString("\r\n");
+    FOC_Platform_TelemetryWrite(buffer);
+    FOC_Platform_TelemetryWrite("\r\n");
 }
 
 /*!
@@ -134,7 +124,7 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
 {
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "%s: %.3f %s\r\n", label, value, unit);
-    USART1_SendString(buffer);
+    FOC_Platform_TelemetryWrite(buffer);
 }
 
 /*!
@@ -145,17 +135,18 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
 */
 void UART_Debug_OutputOscilloscope(float iq)
 {
-    foc_debug_feedback_t feedback;
+    sensor_data_t *sensor;
 
-    if (FOC_Platform_ReadDebugFeedback(&feedback) == 0U)
+    sensor = Sensor_GetData();
+    if ((sensor == 0) || (sensor->adc_valid == 0U))
     {
         return;
     }
 
     printf("ab %.2f %.2f %.2f %.2f cd \r\n",
-        feedback.phase_current_a,
-        feedback.phase_current_b,
-        feedback.phase_current_c,
+        sensor->current_a.output_value,
+        sensor->current_b.output_value,
+        sensor->current_c.output_value,
         iq);
 
     /*printf("ab %.3f %.3f %.3f %u cd \r\n",
@@ -167,8 +158,8 @@ void UART_Debug_OutputOscilloscope(float iq)
 
 int fputc(int ch,FILE *p) 
 {
- 
-    USART1_SendByte((uint8_t)ch);
+    (void)p;
+    FOC_Platform_TelemetryWriteByte((uint8_t)ch);
     return ch;
 }
 

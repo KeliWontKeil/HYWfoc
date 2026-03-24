@@ -14,7 +14,7 @@
 - Compiler: ARM Compiler 5 (AC5)
 - Optimization: Balance speed and size
 - Debug: ST-LINK with SWD interface
-- Control scheduler: TIMER1 update interrupt at 1kHz
+- Control tick source: TIMER1 update interrupt at 1kHz (bound via `FOC_Platform_BindControlTickCallback`)
 - PWM base: TIMER0 center-aligned output synchronized by TIMER2 (24kHz)
 - ADC trigger: TIMER3 compare event
 
@@ -69,6 +69,8 @@
 ### Code Organization
 - One function per responsibility
 - Header files for APIs
+- For non-self-contained modules, place primary dependency includes in `.h` to keep dependency structure visible
+- Keep `.c` includes minimal; only add `.c`-local includes for cyclic-dependency or implementation-private needs
 - Static functions for internal use
 - Consistent indentation (4 spaces)
 

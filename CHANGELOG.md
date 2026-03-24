@@ -8,14 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Refactored application entry into layered architecture: `main.c` now delegates to `foc_app` (`FOC_App_Init/Start/Loop`).
-- Added semantic platform abstraction module (`foc_platform_api`) and GD32 IRQ forwarding module (`foc_irq_api_gd32`).
-- Replaced legacy `timer1_algorithm` with `control_scheduler` and kept TIMER1 init/start/callback binding in platform layer.
-- Migrated upper-layer feedback consumption to semantic DTOs (`foc_control_feedback_t`, `foc_debug_feedback_t`) to reduce direct sensor-structure coupling.
-- Slimmed multiple public headers to reduce low-level dependency leakage from upper layers.
+- (none yet)
 
 ### Fixed
-- Removed implicit-function-declaration warning in platform layer debug wave publish path by restoring explicit module include dependencies.
+- (none yet)
+
+## [0.3.2] - 2026-03-24
+
+### Changed
+- Finalized layered refactor for scheduler ownership: `ControlScheduler_Init` and task callback registration are now owned by application layer, while platform layer only encapsulates control-tick source init/bind/start.
+- Completed sensor-path decoupling: sensor acquisition now reads raw device values via level-3 platform API wrappers, and level-2 `sensor` keeps processing/filter/structuring responsibilities.
+- Introduced shared type hub `foc_shared_types.h` and centralized cross-module public types (`sensor_data_t`, `kalman_filter_t`, `foc_motor_t`, `foc_pid_t`, `foc_torque_mode_t`, scheduler callback/rate types).
+- Renamed IRQ forwarding implementation source from `foc_irq_api_gd32.c` to `foc_irq_api.c` and synchronized project/docs references.
+- Updated API and IRQ naming toward functional semantics and reduced peripheral-oriented names at upper layers.
+
+### Fixed
+- Resolved scheduler/platform coupling compile errors caused by header-only include removal by reassigning lifecycle boundaries instead of adding superficial include fixes.
+- Restored build consistency after refactor by aligning callback binding path with the new control-tick source API.
+
+### Notes
+- Hardware build and flash verification passed for this release.
 
 ## [0.3.0] - 2026-03-23
 

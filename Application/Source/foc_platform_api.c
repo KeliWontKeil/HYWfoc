@@ -1,20 +1,11 @@
 #include "foc_platform_api.h"
 
-#include <stddef.h>
+#define CONTROL_LOOP_TICK_HZ                   1000U
+#define CONTROL_LOOP_TIMER_PRESCALER           11999U
+#define CONTROL_LOOP_TIMER_PERIOD              9U
+#define PLATFORM_BASE_CLOCK_KHZ                120000U
 
-#include "systick.h"
-#include "LED.h"
-#include "usart1.h"
-#include "timer1.h"
-#include "timer2.h"
-#include "sensor.h"
-#include "svpwm.h"
-#include "as5600.h"
-#include "uart_debug.h"
-
-#define CONTROL_SCHED_TICK_HZ 1000U
-#define TIMER1_PRESCALER_FOR_1KHZ 11999U
-#define TIMER1_PERIOD_FOR_1KHZ 9U
+static uint16_t g_platform_sensor_timer_period = 0U;
 
 void FOC_Platform_RuntimeInit(void)
 {
@@ -47,24 +38,22 @@ void FOC_Platform_HighRateClockInit(uint16_t pwm_freq_khz)
         pwm_freq_khz = 24U;
     }
 
-    period = (120000U / (uint32_t)pwm_freq_khz) - 1U;
+    period = (PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U;
     Timer2_Init(0U, period);
 }
 
-void FOC_Platform_ControlSchedulerInit(void)
+void FOC_Platform_ControlTickSourceInit(void)
 {
-    (void)CONTROL_SCHED_TICK_HZ;
-    Timer1_Init(TIMER1_PRESCALER_FOR_1KHZ, TIMER1_PERIOD_FOR_1KHZ);
-    ControlScheduler_Init();
-    Timer1_SetCallback(ControlScheduler_RunTick);
+    (void)CONTROL_LOOP_TICK_HZ;
+    Timer1_Init(CONTROL_LOOP_TIMER_PRESCALER, CONTROL_LOOP_TIMER_PERIOD);
 }
 
-void FOC_Platform_RegisterControlSchedulerCallback(ControlScheduler_Rate_t rate, ControlScheduler_Callback_t callback)
+void FOC_Platform_BindControlTickCallback(FOC_SchedulerCallback_t callback)
 {
-    ControlScheduler_SetCallback(rate, callback);
+    Timer1_SetCallback(callback);
 }
 
-void FOC_Platform_StartControlScheduler(void)
+void FOC_Platform_StartControlTickSource(void)
 {
     Timer1_Start();
 }
@@ -89,65 +78,68 @@ void FOC_Platform_TelemetryWrite(const char *str)
     USART1_SendString(str);
 }
 
-void FOC_Platform_FeedbackPipelineInit(uint8_t pwm_freq_khz)
+void FOC_Platform_TelemetryWriteByte(uint8_t byte)
 {
-    Sensor_Init(pwm_freq_khz);
+    USART1_SendByte(byte);
 }
 
-void FOC_Platform_RefreshFeedbackSample(void)
+void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 {
-    Sensor_ReadAll();
+    if (pwm_freq_khz == 0U)
+    {
+        pwm_freq_khz = 24U;
+    }
+
+    g_platform_sensor_timer_period = (uint16_t)((PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U);
+
+    AS5600_Init();
+    Timer3_Init(0U, (uint32_t)g_platform_sensor_timer_period - 1U);
+    Timer3_Start();
+    ADC_Init();
+    ADC_Start();
 }
 
-uint8_t FOC_Platform_ReadControlFeedback(foc_control_feedback_t *feedback)
+uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b)
 {
-    sensor_data_t *sensor;
+    float sample[2];
 
-    if (feedback == NULL)
+    if ((phase_current_a == 0) || (phase_current_b == 0))
     {
         return 0U;
     }
 
-    sensor = Sensor_GetData();
-    if (sensor == NULL)
+    if (ADC_GetAverageSample(sample, CURRENT, ADC_AVG_DEFAULT_COUNT) != ADC_STATUS_OK)
     {
         return 0U;
     }
 
-    feedback->phase_current_a = sensor->current_a.output_value;
-    feedback->phase_current_b = sensor->current_b.output_value;
-    feedback->phase_current_c = sensor->current_c.output_value;
-    feedback->mech_angle_rad = sensor->mech_angle_rad.output_value;
-    feedback->adc_valid = sensor->adc_valid;
-    feedback->encoder_valid = sensor->encoder_valid;
+    *phase_current_a = sample[0];
+    *phase_current_b = sample[1];
 
     return 1U;
 }
 
-uint8_t FOC_Platform_ReadDebugFeedback(foc_debug_feedback_t *feedback)
+uint8_t FOC_Platform_ReadEncoderRawAngle(uint16_t *angle_raw)
 {
-    sensor_data_t *sensor;
-
-    if (feedback == NULL)
+    if (angle_raw == 0)
     {
         return 0U;
     }
 
-    sensor = Sensor_GetData();
-    if (sensor == NULL)
+    if (AS5600_ReadAngle(angle_raw) != I2C_OK)
     {
         return 0U;
     }
-
-    feedback->phase_current_a = sensor->current_a.output_value;
-    feedback->phase_current_b = sensor->current_b.output_value;
-    feedback->phase_current_c = sensor->current_c.output_value;
-    feedback->mech_angle_raw_rad = sensor->mech_angle_rad.raw_value;
-    feedback->mech_angle_filtered_rad = sensor->mech_angle_rad.output_value;
-    feedback->adc_valid = sensor->adc_valid;
-    feedback->encoder_valid = sensor->encoder_valid;
 
     return 1U;
+}
+
+void FOC_Platform_SetSensorSampleOffsetPercent(float percent)
+{
+    uint16_t compare_value;
+
+    compare_value = (uint16_t)((float)g_platform_sensor_timer_period * percent / 100.0f);
+    timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, compare_value);
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
@@ -159,23 +151,13 @@ uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
         return 0U;
     }
 
-    if (AS5600_ReadAngle(&angle_raw) != I2C_OK)
+    if (FOC_Platform_ReadEncoderRawAngle(&angle_raw) == 0U)
     {
         return 0U;
     }
 
     *angle_rad = (float)angle_raw * AS5600_ANGLE_TO_RAD;
     return 1U;
-}
-
-void FOC_Platform_ModulationInit(uint16_t freq_khz, uint8_t deadtime_percent)
-{
-    SVPWM_Init(freq_khz, deadtime_percent);
-}
-
-void FOC_Platform_PublishDebugWave(float iq)
-{
-    UART_Debug_OutputOscilloscope(iq);
 }
 
 void FOC_Platform_WaitMs(uint32_t ms)
@@ -186,4 +168,20 @@ void FOC_Platform_WaitMs(uint32_t ms)
     }
 
     delay_1ms((uint16_t)ms);
+}
+
+void FOC_Platform_EnableCycleCounter(void)
+{
+    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U)
+    {
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    }
+
+    DWT->CYCCNT = 0U;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+uint32_t FOC_Platform_ReadCycleCounter(void)
+{
+    return DWT->CYCCNT;
 }

@@ -1,7 +1,6 @@
 #ifndef _MATH_TRANSFORMS_H_
 #define _MATH_TRANSFORMS_H_
 
-#include "gd32f30x.h"
 #include <math.h>
 
 void Math_ClarkeTransform(float a, float b, float c, float *alpha, float *beta);

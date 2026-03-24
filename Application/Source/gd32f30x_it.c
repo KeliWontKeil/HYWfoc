@@ -33,7 +33,6 @@ OF SUCH DAMAGE.
 */
 
 #include "gd32f30x_it.h"
-#include "foc_irq_api.h"
 
 /*!
     \brief      this function handles NMI exception
@@ -150,7 +149,7 @@ void SysTick_Handler(void)
 */
 void ADC0_1_IRQHandler(void)
 {
-    FOC_IRQ_OnAdc0_1();
+    FOC_IRQ_OnCurrentSampleReady();
 }
 
 /*!
@@ -161,7 +160,7 @@ void ADC0_1_IRQHandler(void)
 */
 void USART1_IRQHandler(void)
 {
-    FOC_IRQ_OnUsart1();
+    FOC_IRQ_OnTelemetryEvent();
 }
 
 /*!
@@ -172,12 +171,12 @@ void USART1_IRQHandler(void)
 */
 void TIMER1_IRQHandler(void)
 {
-    FOC_IRQ_OnTimer1();
+    FOC_IRQ_OnControlTick();
 }
 
 void TIMER2_IRQHandler(void)
 {
-    FOC_IRQ_OnTimer2();
+    FOC_IRQ_OnHighRateTick();
 }
 
 /*!
@@ -188,5 +187,5 @@ void TIMER2_IRQHandler(void)
 */
 void DMA0_Channel0_IRQHandler(void)
 {
-    FOC_IRQ_OnDma0Channel0();
+    FOC_IRQ_OnCurrentSampleTransferDone();
 }

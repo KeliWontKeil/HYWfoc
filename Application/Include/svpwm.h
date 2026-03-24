@@ -2,6 +2,8 @@
 #define _SVPWM_H_
 
 #include <stdint.h>
+#include <math.h>
+
 #include "pwm.h"
 
 typedef struct {

@@ -20,7 +20,7 @@ virtualFolder:
         - path: Application/Source/math_transforms.c
         - path: Application/Source/foc_control.c
         - path: Application/Source/foc_app.c
-        - path: Application/Source/foc_irq_api_gd32.c
+        - path: Application/Source/foc_irq_api.c
         - path: Application/Source/foc_platform_api.c
       folders: []
     - name: CMSIS

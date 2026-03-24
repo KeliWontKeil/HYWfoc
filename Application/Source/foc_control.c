@@ -1,8 +1,4 @@
 #include "foc_control.h"
-#include "foc_platform_api.h"
-#include "svpwm.h"
-#include "pwm.h"
-#include <math.h>
 
 #define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (FOC_TWO_PI * 4.0f)
 #define FOC_SPEED_MECH_REBASE_RAD 2048.0f

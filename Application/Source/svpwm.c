@@ -1,5 +1,4 @@
 #include "svpwm.h"
-#include <math.h>
 
 #define SVPWM_SQRT3          1.7320508f
 #define SVPWM_SQRT3_BY_2     0.8660254f

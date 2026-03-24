@@ -4,7 +4,7 @@
 This project implements Field Oriented Control (FOC) for motor control on the GD32F303CC microcontroller. It provides a framework for high-performance motor control applications with ADC current sampling, PWM output, and sensor integration.
 
 ## Version
-Current Version: v0.3.1-dev
+Current Version: v0.3.2
 - Framework initialization with basic peripherals
 - UART debug module for monitoring
 - Radian-unit unification across encoder, sensor filter, and FOC math path
@@ -14,7 +14,9 @@ Current Version: v0.3.1-dev
 - Speed-loop refactored to position-style cascade (speed reference integration -> angle PID -> torque current reference)
 - SVPWM linear interpolation enabled by high-rate TIMER2 callback path for smoother voltage output
 - Four-level dependency refactor completed for core control path (`main` -> `foc_app` -> logic/platform API -> utilities)
-- Scheduler logic renamed to `control_scheduler` and decoupled from TIMER1 hardware init/bind
+- Scheduler ownership finalized: app layer owns scheduler task registration; platform layer only owns control-tick source binding
+- Shared cross-module public types centralized in `foc_shared_types.h`
+- IRQ forwarding implementation file renamed to `foc_irq_api.c`
 - Low-speed sensored FOC core functionality is completed for current stage (except precise current-control performance tuning)
 
 ## Features
@@ -78,6 +80,7 @@ This project uses AI-assisted development with manual hardware validation:
 - [Architecture](docs/architecture.md) - System design and module relationships
 - [Hardware](docs/hardware.md) - Pin mappings and connections
 - [Development Guide](docs/development.md) - Development procedures and rules
+- [Structure and Dependency Tree](docs/structure-and-dependency-tree.md) - Current folder tree and layered dependency map
 
 ## Contributing
 - Follow the rules in `dev-guidelines/`
