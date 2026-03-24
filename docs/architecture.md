@@ -22,8 +22,8 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - `sensor.c`: Current and angle acquisition/filter path
 
 #### Level 3: Platform Abstraction
-- `foc_platform_api.c`: Semantic platform API for runtime/clock/scheduler/feedback/telemetry/modulation
-- `foc_irq_api_gd32.c`: Unified IRQ forwarding API implementation for GD32 target
+- `foc_platform_api.c`: Semantic platform API for runtime/clock/scheduler/telemetry and L4 sensor-device read wrappers
+- `foc_irq_api.c`: Unified IRQ forwarding API implementation for GD32 target
 
 #### Level 4: Driver Layer (Utilities/)
 - **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
@@ -138,25 +138,30 @@ main.c
 
 foc_app.c
 ├── foc_control.c
+├── sensor.c
+├── svpwm.c
+├── uart_debug.c
 └── foc_platform_api.c
 
 foc_control.c
 └── foc_platform_api.c (semantic read/wait bridge)
 
+sensor.c
+└── foc_platform_api.c (L4 sensor-device wrappers)
+
 foc_platform_api.c
 ├── control_scheduler.c
-├── uart_debug.c
 ├── timer1.c
 ├── timer2.c
+├── timer3.c
 ├── usart1.c
 ├── systick.c
 ├── LED.c
-├── sensor.c
-├── svpwm.c
+├── adc.c
 └── as5600.c
 
 gd32f30x_it.c
-└── foc_irq_api_gd32.c
+└── foc_irq_api.c
 ```
 
 ## Safety Considerations

@@ -2,7 +2,12 @@
 #define _FOC_CONTROL_H_
 
 #include <stdint.h>
+#include <math.h>
+
+#include "foc_shared_types.h"
 #include "math_transforms.h"
+#include "foc_platform_api.h"
+#include "svpwm.h"
 
 #define FOC_TWO_PI 6.2831852f
 #define FOC_CALIB_SETTLE_MS 4U
@@ -19,55 +24,6 @@
 #define FOC_DIR_REVERSED -1
 #define FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED (-1.0f)
 #define FOC_POLE_PAIRS_UNDEFINED 0U
-
-typedef struct {
-    float phase_resistance;
-    uint8_t pole_pairs;
-    float mech_angle_at_elec_zero_rad;
-    int8_t direction; /* 1: normal, -1: reversed, 0: undefined */
-    float vbus_voltage;
-
-    /* Control targets */
-    float electrical_phase_angle;
-    float ud;
-    float uq;
-    float set_voltage;
-
-    /* Current debug states */
-    float iq_target;
-    float iq_measured;
-
-    /* Position states */
-    float mech_angle_accum_rad;
-    float mech_angle_prev_rad;
-    uint8_t mech_angle_prev_valid;
-
-    /* Intermediate and output states */
-    float alpha;
-    float beta;
-    float phase_a;
-    float phase_b;
-    float phase_c;
-    float duty_a;
-    float duty_b;
-    float duty_c;
-    uint8_t sector;
-} foc_motor_t;
-
-typedef struct {
-    float kp;
-    float ki;
-    float kd;
-    float integral;
-    float prev_error;
-    float out_min;
-    float out_max;
-} foc_pid_t;
-
-typedef enum {
-    FOC_TORQUE_MODE_OPEN_LOOP = 0,
-    FOC_TORQUE_MODE_CURRENT_PID = 1
-} foc_torque_mode_t;
 
 void FOC_MotorInit(foc_motor_t *motor,
                    float vbus_voltage,
