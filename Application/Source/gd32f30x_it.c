@@ -33,6 +33,7 @@ OF SUCH DAMAGE.
 */
 
 #include "gd32f30x_it.h"
+#include "foc_irq_api.h"
 
 /*!
     \brief      this function handles NMI exception
@@ -149,9 +150,7 @@ void SysTick_Handler(void)
 */
 void ADC0_1_IRQHandler(void)
 {
-    /* Call ADC interrupt handler from ADC module */
-    extern void ADC_IRQHandler_Internal(void);
-    ADC_IRQHandler_Internal();
+    FOC_IRQ_OnAdc0_1();
 }
 
 /*!
@@ -162,9 +161,7 @@ void ADC0_1_IRQHandler(void)
 */
 void USART1_IRQHandler(void)
 {
-    /* Call USART1 interrupt handler from USART module */
-    extern void USART1_IRQHandler_Internal(void);
-    USART1_IRQHandler_Internal();
+    FOC_IRQ_OnUsart1();
 }
 
 /*!
@@ -175,15 +172,12 @@ void USART1_IRQHandler(void)
 */
 void TIMER1_IRQHandler(void)
 {
-    /* Call TIMER1 interrupt handler from simplified timer1 module */
-    extern void Timer1_IRQHandler_Internal(void);
-    Timer1_IRQHandler_Internal();
+    FOC_IRQ_OnTimer1();
 }
 
 void TIMER2_IRQHandler(void)
 {
-    extern void Timer2_IRQHandler_Internal(void);
-    Timer2_IRQHandler_Internal();
+    FOC_IRQ_OnTimer2();
 }
 
 /*!
@@ -194,7 +188,5 @@ void TIMER2_IRQHandler(void)
 */
 void DMA0_Channel0_IRQHandler(void)
 {
-    /* Call DMA0 interrupt handler from ADC module */
-    extern void ADC_DMA_IRQHandler_Internal(void);
-    ADC_DMA_IRQHandler_Internal();
+    FOC_IRQ_OnDma0Channel0();
 }

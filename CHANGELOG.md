@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- (none yet)
+- Refactored application entry into layered architecture: `main.c` now delegates to `foc_app` (`FOC_App_Init/Start/Loop`).
+- Added semantic platform abstraction module (`foc_platform_api`) and GD32 IRQ forwarding module (`foc_irq_api_gd32`).
+- Replaced legacy `timer1_algorithm` with `control_scheduler` and kept TIMER1 init/start/callback binding in platform layer.
+- Migrated upper-layer feedback consumption to semantic DTOs (`foc_control_feedback_t`, `foc_debug_feedback_t`) to reduce direct sensor-structure coupling.
+- Slimmed multiple public headers to reduce low-level dependency leakage from upper layers.
 
 ### Fixed
-- (none yet)
+- Removed implicit-function-declaration warning in platform layer debug wave publish path by restoring explicit module include dependencies.
 
 ## [0.3.0] - 2026-03-23
 

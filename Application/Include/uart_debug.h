@@ -8,14 +8,7 @@
 #ifndef _UART_DEBUG_H_
 #define _UART_DEBUG_H_
 
-#include "adc.h"
-#include "as5600.h"
 #include <stdint.h>
-#include <stdio.h>
-#include "usart1.h"
-#include "timer1_algorithm.h"
-#include "sensor.h"
-#include "svpwm.h"
 
 /* Function prototypes */
 void UART_Debug_Init(void);

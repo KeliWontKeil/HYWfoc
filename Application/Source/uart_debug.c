@@ -6,6 +6,14 @@
 */
 
 #include "uart_debug.h"
+#include "foc_platform_api.h"
+
+#include <stdio.h>
+
+#include "adc.h"
+#include "as5600.h"
+#include "usart1.h"
+#include "control_scheduler.h"
 
 /* Private function prototypes */
 static void UART_Debug_SendFormattedFloat(const char *label, float value, const char *unit);
@@ -76,24 +84,30 @@ void UART_Debug_OutputEncoderAngle(void)
 */
 void UART_Debug_OutputAll(void)
 {
-    sensor_data_t* sensor = Sensor_GetData();
+    foc_debug_feedback_t feedback;
+
+    if (FOC_Platform_ReadDebugFeedback(&feedback) == 0U)
+    {
+        USART1_SendString("Feedback: Data read failed\r\n");
+        return;
+    }
     
     /* Output filtered sensor data */
-    if (sensor->adc_valid)
+    if (feedback.adc_valid)
     {
-        UART_Debug_SendFormattedFloat("Current A (filtered)", sensor->current_a.output_value, "A");
-        UART_Debug_SendFormattedFloat("Current B (filtered)", sensor->current_b.output_value, "A");
-        UART_Debug_SendFormattedFloat("Current C (filtered)", sensor->current_c.output_value, "A");
+        UART_Debug_SendFormattedFloat("Current A (filtered)", feedback.phase_current_a, "A");
+        UART_Debug_SendFormattedFloat("Current B (filtered)", feedback.phase_current_b, "A");
+        UART_Debug_SendFormattedFloat("Current C (filtered)", feedback.phase_current_c, "A");
     }
     else
     {
         USART1_SendString("ADC: Data not valid\r\n");
     }
     
-    if (sensor->encoder_valid)
+    if (feedback.encoder_valid)
     {
-        UART_Debug_SendFormattedFloat("Encoder Angle", sensor->mech_angle_rad.raw_value, "rad");
-        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", sensor->mech_angle_rad.output_value, "rad");
+        UART_Debug_SendFormattedFloat("Encoder Angle", feedback.mech_angle_raw_rad, "rad");
+        UART_Debug_SendFormattedFloat("Encoder Angle (filtered)", feedback.mech_angle_filtered_rad, "rad");
     }
     else
     {
@@ -101,7 +115,7 @@ void UART_Debug_OutputAll(void)
     }
     
     /* Output algorithm execution time */
-    uint32_t exec_time = Timer1_GetExecutionTime();
+    uint32_t exec_time = ControlScheduler_GetExecutionCycles();
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "Algorithm execution time: %.3f us\r\n", exec_time / 120.0f);
     USART1_SendString(buffer);
@@ -131,11 +145,17 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
 */
 void UART_Debug_OutputOscilloscope(float iq)
 {
-    sensor_data_t* sensor = Sensor_GetData();
+    foc_debug_feedback_t feedback;
+
+    if (FOC_Platform_ReadDebugFeedback(&feedback) == 0U)
+    {
+        return;
+    }
+
     printf("ab %.2f %.2f %.2f %.2f cd \r\n",
-        sensor->current_a.output_value,
-        sensor->current_b.output_value,
-        sensor->current_c.output_value,
+        feedback.phase_current_a,
+        feedback.phase_current_b,
+        feedback.phase_current_c,
         iq);
 
     /*printf("ab %.3f %.3f %.3f %u cd \r\n",

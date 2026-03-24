@@ -12,13 +12,20 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 
 ### Software Layers
 
-#### Application Layer
-- `main.c`: System initialization and main loop
-- `timer1_algorithm.c`: Multi-rate task scheduler
+#### Level 1: Application Entry
+- `main.c`: Thin entry point, only calls `FOC_App_Init/Start/Loop`
+- `foc_app.c`: App orchestration (init sequence, callback registration, main-loop debug publish)
+
+#### Level 2: Control Logic
 - `foc_control.c`: FOC voltage synthesis, startup calibration, torque/current control API, and position/speed loop entry
+- `control_scheduler.c`: Multi-rate scheduler logic (1kHz/100Hz/10Hz/1Hz callback slots)
 - `sensor.c`: Current and angle acquisition/filter path
 
-#### Driver Layer (Utilities/)
+#### Level 3: Platform Abstraction
+- `foc_platform_api.c`: Semantic platform API for runtime/clock/scheduler/feedback/telemetry/modulation
+- `foc_irq_api_gd32.c`: Unified IRQ forwarding API implementation for GD32 target
+
+#### Level 4: Driver Layer (Utilities/)
 - **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
   - Dual-channel ADC for phase current measurement
   - DMA transfer for low-latency data acquisition
@@ -60,10 +67,11 @@ The system uses a hierarchical timing framework:
 
 ```
 TIMER1 (1kHz)
-├── Algorithm_1kHz_Task() - FOC open-loop step + sensor update
-├── Algorithm_100Hz_Task() - Medium-rate extension slot
-├── Algorithm_10Hz_Task() - Slow monitoring slot
-└── Algorithm_1Hz_Task() - Status updates (LED heartbeat)
+├── Timer1 IRQ -> IRQ API -> ControlScheduler_RunTick()
+├── 1kHz callback slot: control loop + sensor refresh
+├── 100Hz callback slot: medium-rate extension slot
+├── 10Hz callback slot: slow monitoring slot
+└── 1Hz callback slot: status updates (LED heartbeat)
 
 TIMER2 (24kHz master)
 ├── Drives TIMER0 slave synchronization for PWM base timing
@@ -126,24 +134,29 @@ I2C ←→ AS5600 Encoder
 
 ```
 main.c
+└── foc_app.c
+
+foc_app.c
+├── foc_control.c
+└── foc_platform_api.c
+
+foc_control.c
+└── foc_platform_api.c (semantic read/wait bridge)
+
+foc_platform_api.c
+├── control_scheduler.c
+├── uart_debug.c
+├── timer1.c
+├── timer2.c
+├── usart1.c
 ├── systick.c
 ├── LED.c
-├── USART1.c
-├── TIMER1.c
-├── TIMER2.c
-├── SVPWM.c
-├── foc_control.c
-└── sensor.c
+├── sensor.c
+├── svpwm.c
+└── as5600.c
 
-timer1_algorithm.c
-├── TIMER1.c
-└── DWT (for timing)
-
-sensor.c
-├── ADC.c
-├── TIMER3.c
-├── AS5600.c
-└── I2C0.c
+gd32f30x_it.c
+└── foc_irq_api_gd32.c
 ```
 
 ## Safety Considerations

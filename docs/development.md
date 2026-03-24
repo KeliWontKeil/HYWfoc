@@ -20,7 +20,7 @@
 
 ### Control Period Contract
 - Open-loop speed conversion in `FOC_OpenLoopStep` currently assumes a 1ms control period.
-- If Timer1 frequency is changed, update speed-to-angle conversion accordingly to keep speed command consistent.
+- If control scheduler tick frequency is changed, update speed-to-angle conversion accordingly to keep speed command consistent.
 
 ## Development Workflow
 
@@ -32,7 +32,7 @@
 ### 2. Implementation Phase
 - Follow coding rules in `dev-guidelines/rules/`
 - Use appropriate language version (en/cn)
-- Implement in feature branches
+- Default to direct implementation on `main` unless a dedicated branch is explicitly requested
 - Regular commits with descriptive messages
 
 ### 3. Testing Phase
@@ -101,8 +101,8 @@
 ## Performance Optimization
 
 ### Profiling Techniques
-- Use `Timer1_EnableDWT()` for cycle counting
-- Check `Timer1_GetExecutionTime()` in tasks
+- Use `ControlScheduler_EnableDWT()` for cycle counting
+- Check `ControlScheduler_GetExecutionCycles()` in tasks
 - Monitor stack usage
 - Analyze disassembly for bottlenecks
 
@@ -116,11 +116,8 @@
 
 ### Branch Strategy
 ```
-main (stable releases)
-├── develop (integration branch)
-│   ├── feature/* (new features)
-│   ├── bugfix/* (bug fixes)
-│   └── release/* (release preparation)
+main (default development and releases)
+├── feature/* (optional, when explicitly required)
 └── hotfix/* (emergency fixes)
 ```
 

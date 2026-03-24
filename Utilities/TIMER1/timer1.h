@@ -10,7 +10,8 @@
 #define TIMER1_IRQn             TIMER1_IRQn
 
 /* Interrupt handler callback type */
-typedef void (*timer1_callback_t)(void);
+#define TIMER1_CALLBACK_TYPE(name) void (*name)(void)
+typedef TIMER1_CALLBACK_TYPE(timer1_callback_t);
 
 /* Function prototypes */
 void Timer1_Init(uint32_t prescaler, uint32_t period);

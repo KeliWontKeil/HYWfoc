@@ -1,8 +1,7 @@
 #include "foc_control.h"
+#include "foc_platform_api.h"
 #include "svpwm.h"
 #include "pwm.h"
-#include "as5600.h"
-#include "systick.h"
 #include <math.h>
 
 #define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (FOC_TWO_PI * 4.0f)
@@ -67,15 +66,7 @@ static uint8_t FOC_ClampPolePairs(int32_t pole_pairs)
 
 static uint8_t FOC_ReadMechanicalAngleRad(float *angle_rad)
 {
-    uint16_t angle_raw;
-
-    if ((angle_rad == 0) || (AS5600_ReadAngle(&angle_raw) != I2C_OK))
-    {
-        return 0U;
-    }
-
-    *angle_rad = (float)angle_raw * AS5600_ANGLE_TO_RAD;
-    return 1U;
+    return FOC_Platform_ReadMechanicalAngleRad(angle_rad);
 }
 
 static float FOC_MechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad)
@@ -355,7 +346,7 @@ static uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     }
 
     FOC_ApplyElectricalAngle(motor, electrical_angle);
-    delay_1ms(settle_ms);
+    FOC_Platform_WaitMs(settle_ms);
 
     for (i = 0U; i < sample_count; i++)
     {
@@ -368,7 +359,7 @@ static uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
 
         sin_sum += sinf(sample_rad);
         cos_sum += cosf(sample_rad);
-        delay_1ms(FOC_CALIB_SETTLE_MS);
+        FOC_Platform_WaitMs(FOC_CALIB_SETTLE_MS);
     }
 
     if ((fabsf(sin_sum) < 1e-6f) && (fabsf(cos_sum) < 1e-6f))
@@ -442,7 +433,7 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     *pole_pairs_est = FOC_ClampPolePairs((int32_t)(fabsf(sum_d_elec / sum_d_mech) + 0.5f));
 
     FOC_ApplyElectricalAngle(motor, 0.0f);
-    delay_1ms(FOC_CALIB_STEP_SETTLE_MS);
+    FOC_Platform_WaitMs(FOC_CALIB_STEP_SETTLE_MS);
 
     for (i = FOC_CALIB_STEP_COUNT; i > 0; i--)
     {
