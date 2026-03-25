@@ -71,6 +71,7 @@ void FOC_Platform_StartHighRateClock(void)
 void FOC_Platform_TelemetryInit(void)
 {
     USART1_Init();
+    USART2_Init();
 }
 
 void FOC_Platform_TelemetryWrite(const char *str)

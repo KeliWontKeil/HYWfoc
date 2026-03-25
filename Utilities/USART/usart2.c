@@ -10,6 +10,7 @@ static volatile uint16_t rx_tail = 0;
 static volatile uint16_t tx_head = 0;
 static volatile uint16_t tx_tail = 0;
 static volatile uint8_t tx_busy = 0;
+static volatile uint8_t loopback_enabled = 0;
 static usart2_rx_callback_t rx_callback = NULL;
 
 /* Private function prototypes */
@@ -59,6 +60,18 @@ void USART2_Init(void)
     
     /* Configure NVIC for USART2 */
     NVIC_CONFIG(USART2_IRQn, USART2_PRIORITY_GROUP, USART2_PRIORITY_SUBGROUP);
+
+    USART2_LoopbackEnable();
+}
+
+void USART2_LoopbackEnable(void)
+{
+    loopback_enabled = 1;
+}
+
+void USART2_LoopbackDisable(void)
+{
+    loopback_enabled = 0;
 }
 
 /*!
@@ -253,6 +266,11 @@ static void USART2_HandlerInternal(void)
             {
                 rx_callback(data);
             }
+
+            if (loopback_enabled != 0U)
+            {
+                USART2_SendByte(data);
+            }
         }
         
         usart_interrupt_flag_clear(USART2_PERIPH, USART_INT_FLAG_RBNE);
@@ -278,13 +296,7 @@ static void USART2_HandlerInternal(void)
     }
 }
 
-/*!
-    \brief      USART2 interrupt handler (to be called from gd32f30x_it.c)
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void USART2_IRQHandler(void)
+void USART2_IRQHandler_Internal(void)
 {
     USART2_HandlerInternal();
 }

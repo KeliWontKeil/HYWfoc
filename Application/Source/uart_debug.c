@@ -1,10 +1,3 @@
-/*!
-    \file    uart_debug.c
-    \brief   UART debug module implementation for outputting motor control debug information
-
-    \version 2026-03-13, V1.0.0, UART debug for GD32F303CC FOC project
-*/
-
 #include "uart_debug.h"
 
 /* Private function prototypes */
@@ -133,9 +126,9 @@ static void UART_Debug_SendFormattedFloat(const char *label, float value, const 
     \param[out] none
     \retval     none
 */
-void UART_Debug_OutputOscilloscope(float iq)
+void UART_Debug_OutputOscilloscope(sensor_data_t *sensor , foc_motor_t *motor)
 {
-    sensor_data_t *sensor;
+    
 
     sensor = Sensor_GetData();
     if ((sensor == 0) || (sensor->adc_valid == 0U))
@@ -143,11 +136,12 @@ void UART_Debug_OutputOscilloscope(float iq)
         return;
     }
 
-    printf("ab %.2f %.2f %.2f %.2f cd \r\n",
+    printf("ab %.2f %.2f %.2f %.3f cd \r\n",
         sensor->current_a.output_value,
         sensor->current_b.output_value,
-        sensor->current_c.output_value,
-        iq);
+        //sensor->current_c.output_value,
+        motor->mech_angle_accum_rad,
+        sensor->mech_angle_rad.output_value);
 
     /*printf("ab %.3f %.3f %.3f %u cd \r\n",
         svpwm->duty_a,

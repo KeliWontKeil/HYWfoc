@@ -59,5 +59,6 @@ void USART1_SetRxCallback(usart_rx_callback_t callback);
 
 /* Interrupt handler (to be called from vector table) */
 void USART1_IRQHandler(void);
+void USART1_IRQHandler_Internal(void);
 
 #endif /* _USART_H_ */

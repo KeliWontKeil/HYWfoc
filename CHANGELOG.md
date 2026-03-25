@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- (none yet)
+- Split PID call paths for angle loop and current loop by introducing dedicated wrapper APIs (`FOC_AngleLoopPIDRun`, `FOC_CurrentLoopPIDRun`) while keeping control behavior consistent.
+- Added minimum mechanical-angle accumulation threshold to suppress ultra-small disturbance accumulation in multi-turn angle state update.
+- Refactored app-layer init constants to macro-configurable parameters (`FOC_APP_PWM_FREQ_KHZ`, `FOC_APP_CONTROL_DT_SEC`, `FOC_APP_TARGET_ANGLE_RAD`, etc.) without changing timer trigger-chain logic.
+- Enabled USART2 initialization in platform telemetry init path and added temporary interrupt loopback echo support for USART2 bring-up.
+- Updated interrupt forwarding path to include USART2 internal IRQ handler routing in `gd32f30x_it.c`.
 
 ### Fixed
-- (none yet)
+- Fixed project source list inconsistency by removing stale `foc_irq_api.c` entry and including `usart2.c` in EIDE build sources.
 
 ## [0.3.2] - 2026-03-24
 

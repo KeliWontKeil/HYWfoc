@@ -10,10 +10,10 @@
 
 #include "gd32f30x.h"
 #include "main.h"
-#include "foc_irq_api.h"
 #include "systick.h"
 #include "LED.h"
 #include "usart1.h"
+#include "usart2.h"
 #include "timer1.h"
 #include "timer2.h"
 #include "adc.h"
@@ -41,6 +41,8 @@ void SysTick_Handler(void);
 void ADC0_1_IRQHandler(void);
 /* this function handles USART1 interrupt */
 void USART1_IRQHandler(void);
+/* this function handles USART2 interrupt */
+void USART2_IRQHandler(void);
 /* this function handles TIMER1 interrupt */
 void TIMER1_IRQHandler(void);
 /* this function handles TIMER2 interrupt */

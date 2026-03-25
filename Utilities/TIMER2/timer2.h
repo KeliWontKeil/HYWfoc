@@ -23,6 +23,8 @@ typedef void (*timer2_callback_t)(void);
 void Timer2_Init(uint32_t prescaler, uint32_t period);
 void Timer2_Start(void);
 void Timer2_Stop(void);
+
 void Timer2_SetCallback(timer2_callback_t callback);
+void Timer2_IRQHandler_Internal(void);
 
 #endif /* _TIMER2_H_ */

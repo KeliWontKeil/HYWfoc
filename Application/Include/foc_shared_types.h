@@ -52,6 +52,7 @@ typedef struct {
     float mech_angle_accum_rad;
     float mech_angle_prev_rad;
     uint8_t mech_angle_prev_valid;
+    int32_t mech_turn_count;
 
     float alpha;
     float beta;

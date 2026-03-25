@@ -1,10 +1,3 @@
-/*!
-    \file    uart_debug.h
-    \brief   UART debug module for outputting motor control debug information
-
-    \version 2026-03-13, V1.0.0, UART debug for GD32F303CC FOC project
-*/
-
 #ifndef _UART_DEBUG_H_
 #define _UART_DEBUG_H_
 
@@ -20,7 +13,7 @@ void UART_Debug_Init(void);
 void UART_Debug_OutputCurrent(void);
 void UART_Debug_OutputEncoderAngle(void);
 void UART_Debug_OutputAll(void);
-void UART_Debug_OutputOscilloscope(float iq);
+void UART_Debug_OutputOscilloscope(sensor_data_t *sensor , foc_motor_t *motor);
 
 #endif /* _UART_DEBUG_H_ */
 

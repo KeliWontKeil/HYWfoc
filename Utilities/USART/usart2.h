@@ -52,6 +52,8 @@ typedef struct {
 
 /* Function prototypes */
 void USART2_Init(void);
+void USART2_LoopbackEnable(void);
+void USART2_LoopbackDisable(void);
 usart2_status_t USART2_SendByte(uint8_t data);
 usart2_status_t USART2_SendString(const char *str);
 usart2_status_t USART2_SendData(const uint8_t *data, uint16_t len);
@@ -72,5 +74,6 @@ void USART2_SetRxCallback(usart2_rx_callback_t callback);
 
 /* Interrupt handler (to be called from vector table) */
 void USART2_IRQHandler(void);
+void USART2_IRQHandler_Internal(void);
 
 #endif /* _USART2_H_ */

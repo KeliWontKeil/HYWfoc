@@ -20,10 +20,10 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - `foc_control.c`: FOC voltage synthesis, startup calibration, torque/current control API, and position/speed loop entry
 - `control_scheduler.c`: Multi-rate scheduler logic (1kHz/100Hz/10Hz/1Hz callback slots)
 - `sensor.c`: Current and angle acquisition/filter path
+- `foc_app.c`: Application-level initialization parameters are macro-configurable (PWM frequency, control dt, target angle, loop delay)
 
 #### Level 3: Platform Abstraction
 - `foc_platform_api.c`: Semantic platform API for runtime/clock/control-tick-source/telemetry and L4 sensor-device read wrappers
-- `foc_irq_api.c`: Unified IRQ forwarding API implementation for GD32 target
 
 #### Level 4: Driver Layer (Utilities/)
 - **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
@@ -34,7 +34,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - Timer-based PWM with configurable frequency and duty cycle
   - Dead time insertion for safe switching
   - Brake functionality for emergency stop
-- **USART**: Serial communication with ring buffers and interrupt handling
+- **USART**: Dual serial communication with interrupt handling and temporary loopback echo test
   - Configurable baud rate and data format
   - Circular buffer for reliable data reception
   - Interrupt-driven transmission and reception
@@ -65,9 +65,9 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 ### Task Scheduling
 The system uses a hierarchical timing framework:
 
-```
+```text
 TIMER1 (1kHz)
-├── Timer1 IRQ -> IRQ API -> ControlScheduler_RunTick()
+├── Timer1 IRQ -> Timer1_IRQHandler_Internal() -> ControlScheduler_RunTick()
 ├── 1kHz callback slot: control loop + sensor refresh
 ├── 100Hz callback slot: medium-rate extension slot
 ├── 10Hz callback slot: slow monitoring slot
@@ -114,7 +114,8 @@ FOC_MotorInit()
 
 ### Communication Flow
 ```
-USART1 ←→ Debug Output
+USART1 ←→ Debug Output + Loopback Echo Test
+USART2 ←→ Command Channel Bring-up + Loopback Echo Test
 I2C ←→ AS5600 Encoder
 ```
 
@@ -155,13 +156,19 @@ foc_platform_api.c
 ├── timer2.c
 ├── timer3.c
 ├── usart1.c
+├── usart2.c
 ├── systick.c
 ├── LED.c
 ├── adc.c
 └── as5600.c
 
 gd32f30x_it.c
-└── foc_irq_api.c
+├── adc internal IRQ handler
+├── usart1 internal IRQ handler
+├── usart2 internal IRQ handler
+├── timer1 internal IRQ handler
+├── timer2 internal IRQ handler
+└── dma internal IRQ handler
 ```
 
 ## Safety Considerations

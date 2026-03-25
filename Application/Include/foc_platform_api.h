@@ -7,6 +7,7 @@
 #include "systick.h"
 #include "LED.h"
 #include "usart1.h"
+#include "usart2.h"
 #include "timer1.h"
 #include "timer2.h"
 #include "timer3.h"

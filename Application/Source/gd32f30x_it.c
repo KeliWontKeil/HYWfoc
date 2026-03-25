@@ -149,7 +149,7 @@ void SysTick_Handler(void)
 */
 void ADC0_1_IRQHandler(void)
 {
-    FOC_IRQ_OnCurrentSampleReady();
+    ADC_IRQHandler_Internal();
 }
 
 /*!
@@ -160,7 +160,12 @@ void ADC0_1_IRQHandler(void)
 */
 void USART1_IRQHandler(void)
 {
-    FOC_IRQ_OnTelemetryEvent();
+    USART1_IRQHandler_Internal();
+}
+
+void USART2_IRQHandler(void)
+{
+    USART2_IRQHandler_Internal();
 }
 
 /*!
@@ -171,12 +176,12 @@ void USART1_IRQHandler(void)
 */
 void TIMER1_IRQHandler(void)
 {
-    FOC_IRQ_OnControlTick();
+    Timer1_IRQHandler_Internal();
 }
 
 void TIMER2_IRQHandler(void)
 {
-    FOC_IRQ_OnHighRateTick();
+    Timer2_IRQHandler_Internal();
 }
 
 /*!
@@ -187,5 +192,5 @@ void TIMER2_IRQHandler(void)
 */
 void DMA0_Channel0_IRQHandler(void)
 {
-    FOC_IRQ_OnCurrentSampleTransferDone();
+    ADC_DMA_IRQHandler_Internal();
 }

@@ -1,7 +1,7 @@
 # Project Structure and Dependency Tree
 
 ## Purpose
-This document gives a quick visual view of current folder layout and layered dependency paths after v0.3.2 refactor.
+This document gives a quick visual view of current folder layout and layered dependency paths after v0.3.3 development updates.
 
 ## File Tree (Current Core)
 ```text
@@ -11,7 +11,6 @@ FOC_VSCODE/
 │   │   ├── main.h
 │   │   ├── foc_app.h
 │   │   ├── foc_platform_api.h
-│   │   ├── foc_irq_api.h
 │   │   ├── control_scheduler.h
 │   │   ├── foc_control.h
 │   │   ├── uart_debug.h
@@ -20,7 +19,6 @@ FOC_VSCODE/
 │       ├── main.c
 │       ├── foc_app.c
 │       ├── foc_platform_api.c
-│       ├── foc_irq_api.c
 │       ├── control_scheduler.c
 │       ├── foc_control.c
 │       ├── sensor.c
@@ -62,7 +60,6 @@ L2 Control Logic
 
 L3 Platform Abstraction
 ├── foc_platform_api.c
-└── foc_irq_api.c
 
 L4 Utilities Drivers
 ├── adc.c / as5600.c / i2c.c
@@ -90,16 +87,17 @@ main.c
         ├── adc.c
         ├── as5600.c
         ├── usart1.c
+        ├── usart2.c
         ├── led.c
         └── systick.c
 
 gd32f30x_it.c
-└── foc_irq_api.c
-    ├── adc internal IRQ handler
-    ├── usart1 internal IRQ handler
-    ├── timer1 internal IRQ handler
-    ├── timer2 internal IRQ handler
-    └── dma internal IRQ handler
+├── adc internal IRQ handler
+├── usart1 internal IRQ handler
+├── usart2 internal IRQ handler
+├── timer1 internal IRQ handler
+├── timer2 internal IRQ handler
+└── dma internal IRQ handler
 ```
 
 ## Review Checklist
