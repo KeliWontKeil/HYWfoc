@@ -11,7 +11,6 @@
 static uint32_t adc_buffer[ADC_BUFFER_SIZE]; /* DMA buffer: each word packs ADC0(low16) + ADC1(high16) */
 static volatile uint8_t adc_initialized = 0;
 static volatile uint8_t dma_complete = 0;
-static volatile uint8_t adc_debug_pin_state = 0;
 static float zero_offset_a = 0.0f;  /* Zero current calibration offset for phase A */
 static float zero_offset_b = 0.0f;  /* Zero current calibration offset for phase B */
 
@@ -43,11 +42,6 @@ void ADC_Init(void)
     uint32_t packed_mid;
 
     /* Initialize all peripherals */
-    rcu_periph_clock_enable(ADC_DEBUG_GPIO_RCU);
-    gpio_init(ADC_DEBUG_GPIO_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, ADC_DEBUG_GPIO_PIN);
-    gpio_bit_reset(ADC_DEBUG_GPIO_PORT, ADC_DEBUG_GPIO_PIN);
-    adc_debug_pin_state = 0U;
-
     ADC_GPIO_Config();
     ADC_DMA_Config();
     ADC_Config();
@@ -555,8 +549,6 @@ void ADC_DMA_IRQHandler_Internal(void)
     {
         dma_interrupt_flag_clear(DMA0, DMA_CH0, DMA_INT_FLAG_FTF);
         dma_complete = 1;
-        adc_debug_pin_state ^= 1U;
-        gpio_bit_write(ADC_DEBUG_GPIO_PORT, ADC_DEBUG_GPIO_PIN, (bit_status)adc_debug_pin_state);
     }
 }
 

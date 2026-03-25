@@ -37,7 +37,7 @@ void FOC_App_Init(void)
     FOC_Platform_TelemetryWrite("Control debug telemetry enabled\r\n");
     FOC_Platform_TelemetryWrite("Init feedback pipeline...\r\n\r\n");
 
-    Sensor_Init(FOC_APP_SENSOR_SAMPLE_FREQ_KHZ);
+    Sensor_Init(FOC_APP_SENSOR_SAMPLE_FREQ_KHZ,96.0f);
 
     /* Initialize SVPWM output and interpolation callback. */
     SVPWM_Init(FOC_APP_PWM_FREQ_KHZ, 2U);
@@ -45,11 +45,11 @@ void FOC_App_Init(void)
     FOC_Platform_StartHighRateClock();
 
     /* Initialize motor model and targets. */
-    FOC_MotorInit(&g_motor, 12.0f, 11.4f, 6.1f, 7, 3.22, FOC_DIR_NORMAL);
+    FOC_MotorInit(&g_motor, 12.0f, 11.4f, 13.2f, 7, 3.157, FOC_DIR_REVERSED);
 
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
     FOC_PIDInit(&g_torque_current_pid, 0.0f, 0.0f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
-    FOC_PIDInit(&g_angle_pid, 3.0f, 1.0f, 0.01f, -g_motor.set_voltage, g_motor.set_voltage);
+    FOC_PIDInit(&g_angle_pid, 2.0f, 0.8f, 0.01f, -g_motor.set_voltage, g_motor.set_voltage);
     FOC_PIDInit(&g_speed_pid, 3.0f, 0.5f, 0.0f, -g_motor.set_voltage, g_motor.set_voltage);
 
     printf("mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n", g_motor.mech_angle_at_elec_zero_rad, g_motor.direction, g_motor.pole_pairs);

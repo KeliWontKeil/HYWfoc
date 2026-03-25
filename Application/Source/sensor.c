@@ -15,7 +15,7 @@ static void Sensor_ReadEncoder(void);
     \param[out] none
     \retval     none
 */
-void Sensor_Init(uint8_t pwm_freq_kHz)
+void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent)
 {
     FOC_Platform_SensorInputInit(pwm_freq_kHz);
 
@@ -29,7 +29,7 @@ void Sensor_Init(uint8_t pwm_freq_kHz)
     sensor_data.encoder_valid = 0;
 
     Sensor_SetZeroOffset();
-    Sensor_ADCSampleTimeOffset(96.0f);
+    Sensor_ADCSampleTimeOffset(adc_sample_offset_percent);
 
 }
 
@@ -135,7 +135,7 @@ static void Sensor_ReadEncoder(void)
 
         /* Apply Kalman filtering */
         //Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
-        angle_rad -= fmodf(angle_rad, 0.002);
+        //angle_rad -= fmodf(angle_rad, 0.01);
         sensor_data.mech_angle_rad.raw_value = angle_rad;
         sensor_data.mech_angle_rad.filtered_value = angle_rad;
         sensor_data.mech_angle_rad.output_value = angle_rad;

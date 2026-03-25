@@ -33,11 +33,6 @@
 #define ADC_GPIO_PA7_PORT     GPIOA
 #define ADC_GPIO_PA7_PIN      GPIO_PIN_7
 
-/* Debug IO: use USART2 RXD pin (PB11) as ADC EOC toggle output */
-#define ADC_DEBUG_GPIO_RCU     RCU_GPIOB
-#define ADC_DEBUG_GPIO_PORT    GPIOB
-#define ADC_DEBUG_GPIO_PIN     GPIO_PIN_11
-
 /* ADC configuration */
 #define ADC_SAMPLE_TIME       ADC_SAMPLETIME_55POINT5  /* Maximum resolution */
 #define ADC_RESOLUTION        ADC_RESOLUTION_12B       /* 12-bit resolution */
@@ -102,11 +97,6 @@ void ADC_SetTriggerFrequency(uint32_t frequency_hz);
 /* DMA interrupt handler (called from ISR) */
 void ADC_DMA_IRQHandler_Internal(void);
 void ADC_IRQHandler_Internal(void);
-
-/* Private functions (not to be called externally) */
-static void ADC_GPIO_Config(void);
-static void ADC_DMA_Config(void);
-static void ADC_Config(void);
 
 #endif /* _ADC_H_ */
 

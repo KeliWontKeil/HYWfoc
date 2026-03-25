@@ -3,9 +3,9 @@
 
 /*!
     \file    usart2.h
-    \brief   USART2 module for serial communication (motor control parameter interface)
+    \brief   USART2 module for basic serial communication
 
-    \version 2026-3-11, V1.0.0, USART2 motor control parameter interface
+    \version 2026-3-11, V1.0.0
 */
 
 #include "gd32f30x.h"
@@ -26,6 +26,11 @@
 #define USART2_PARITY          USART_PM_NONE
 #define USART2_HARDWARE_FLOW   USART_RTS_DISABLE
 
+/* USART2 TX DMA: mapped to DMA0 Channel1 on GD32F30x */
+#define USART2_TX_DMA_PERIPH   DMA0
+#define USART2_TX_DMA_RCU      RCU_DMA0
+#define USART2_TX_DMA_CHANNEL  DMA_CH1
+
 /* Buffer sizes */
 #define USART2_RX_BUFFER_SIZE  128
 #define USART2_TX_BUFFER_SIZE  128
@@ -38,22 +43,8 @@ typedef enum {
     USART2_STATUS_BUFFER_FULL
 } usart2_status_t;
 
-typedef struct {
-    uint8_t cmd;
-    uint8_t len;
-    uint8_t payload[64];
-    uint8_t checksum;
-} usart2_protocol_frame_t;
-
-#define USART2_PROTOCOL_SOF0         0xABU
-#define USART2_PROTOCOL_SOF1         0xCDU
-#define USART2_PROTOCOL_EOF          0xEFU
-#define USART2_PROTOCOL_MAX_PAYLOAD  64U
-
 /* Function prototypes */
 void USART2_Init(void);
-void USART2_LoopbackEnable(void);
-void USART2_LoopbackDisable(void);
 usart2_status_t USART2_SendByte(uint8_t data);
 usart2_status_t USART2_SendString(const char *str);
 usart2_status_t USART2_SendData(const uint8_t *data, uint16_t len);
@@ -61,10 +52,6 @@ uint8_t USART2_ReceiveByte(void);
 uint16_t USART2_ReadBuffer(uint8_t *buffer, uint16_t max_len);
 uint8_t USART2_IsDataAvailable(void);
 void USART2_ClearBuffers(void);
-
-usart2_status_t USART2_ProtocolSendFrame(uint8_t cmd, const uint8_t *payload, uint8_t len);
-uint16_t USART2_ProtocolReadRaw(uint8_t *buffer, uint16_t max_len);
-uint8_t USART2_ProtocolTryParse(usart2_protocol_frame_t *frame);
 
 /* Interrupt callback type */
 typedef void (*usart2_rx_callback_t)(uint8_t data);

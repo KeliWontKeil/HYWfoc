@@ -3,9 +3,9 @@
 
 /*!
     \file    usart.h
-    \brief   USART module for serial communication
+    \brief   USART1 module for basic serial communication
 
-    \version 2026-3-9, V1.0.0, USART1 loopback implementation
+    \version 2026-3-9, V1.0.0
 */
 
 #include "gd32f30x.h"
@@ -28,6 +28,11 @@
 #define USART1_PARITY          USART_PM_NONE
 #define USART1_HARDWARE_FLOW   USART_RTS_DISABLE
 
+/* USART1 TX DMA: mapped to DMA0 Channel6 on GD32F30x */
+#define USART1_TX_DMA_PERIPH   DMA0
+#define USART1_TX_DMA_RCU      RCU_DMA0
+#define USART1_TX_DMA_CHANNEL  DMA_CH6
+
 /* Buffer sizes */
 #define USART1_RX_BUFFER_SIZE  128
 #define USART1_TX_BUFFER_SIZE  128
@@ -42,8 +47,6 @@ typedef enum {
 
 /* Function prototypes */
 void USART1_Init(void);
-void USART1_LoopbackEnable(void);
-void USART1_LoopbackDisable(void);
 usart_status_t USART1_SendByte(uint8_t data);
 usart_status_t USART1_SendString(const char *str);
 usart_status_t USART1_SendData(const uint8_t *data, uint16_t len);

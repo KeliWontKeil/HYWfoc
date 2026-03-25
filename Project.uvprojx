@@ -383,6 +383,26 @@
           <GroupName>Application</GroupName>
           <Files>
             <File>
+              <FileName>control_scheduler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\control_scheduler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_platform_api.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_platform_api.c</FilePath>
+            </File>
+            <File>
               <FileName>gd32f30x_it.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\gd32f30x_it.c</FilePath>
@@ -393,14 +413,9 @@
               <FilePath>.\Application\Source\main.c</FilePath>
             </File>
             <File>
-              <FileName>systick.c</FileName>
+              <FileName>math_transforms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Application\Source\systick.c</FilePath>
-            </File>
-            <File>
-              <FileName>timer1_algorithm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\timer1_algorithm.c</FilePath>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
             </File>
             <File>
               <FileName>sensor.c</FileName>
@@ -408,24 +423,19 @@
               <FilePath>.\Application\Source\sensor.c</FilePath>
             </File>
             <File>
-              <FileName>uart_debug.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\uart_debug.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\foc_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>math_transforms.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\math_transforms.c</FilePath>
-            </File>
-            <File>
               <FileName>svpwm.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>systick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\systick.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1010,6 +1020,26 @@
           <GroupName>Application</GroupName>
           <Files>
             <File>
+              <FileName>control_scheduler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\control_scheduler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_platform_api.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_platform_api.c</FilePath>
+            </File>
+            <File>
               <FileName>gd32f30x_it.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\gd32f30x_it.c</FilePath>
@@ -1020,14 +1050,9 @@
               <FilePath>.\Application\Source\main.c</FilePath>
             </File>
             <File>
-              <FileName>systick.c</FileName>
+              <FileName>math_transforms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Application\Source\systick.c</FilePath>
-            </File>
-            <File>
-              <FileName>timer1_algorithm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\timer1_algorithm.c</FilePath>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
             </File>
             <File>
               <FileName>sensor.c</FileName>
@@ -1035,24 +1060,19 @@
               <FilePath>.\Application\Source\sensor.c</FilePath>
             </File>
             <File>
-              <FileName>uart_debug.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\uart_debug.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\foc_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>math_transforms.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\math_transforms.c</FilePath>
-            </File>
-            <File>
               <FileName>svpwm.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>systick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\systick.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1637,6 +1657,26 @@
           <GroupName>Application</GroupName>
           <Files>
             <File>
+              <FileName>control_scheduler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\control_scheduler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_platform_api.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\foc_platform_api.c</FilePath>
+            </File>
+            <File>
               <FileName>gd32f30x_it.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\gd32f30x_it.c</FilePath>
@@ -1647,14 +1687,9 @@
               <FilePath>.\Application\Source\main.c</FilePath>
             </File>
             <File>
-              <FileName>systick.c</FileName>
+              <FileName>math_transforms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Application\Source\systick.c</FilePath>
-            </File>
-            <File>
-              <FileName>timer1_algorithm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\timer1_algorithm.c</FilePath>
+              <FilePath>.\Application\Source\math_transforms.c</FilePath>
             </File>
             <File>
               <FileName>sensor.c</FileName>
@@ -1662,24 +1697,19 @@
               <FilePath>.\Application\Source\sensor.c</FilePath>
             </File>
             <File>
-              <FileName>uart_debug.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\uart_debug.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\foc_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>math_transforms.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Application\Source\math_transforms.c</FilePath>
-            </File>
-            <File>
               <FileName>svpwm.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Application\Source\svpwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>systick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\systick.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Application\Source\uart_debug.c</FilePath>
             </File>
           </Files>
         </Group>

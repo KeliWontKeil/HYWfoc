@@ -10,7 +10,7 @@
 #define SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT  0.15f
 
 /* Function prototypes */
-void Sensor_Init(uint8_t pwm_freq_kHz);
+void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent);
 void Sensor_ReadAll(void);
 void Sensor_SetZeroOffset(void);
 void Sensor_ADCSampleTimeOffset(float percent);

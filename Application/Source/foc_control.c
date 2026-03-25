@@ -266,6 +266,13 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, float target, float measurement
     }
 
     error = target - measurement;
+    if (fabsf(error) <= FOC_ANGLE_HOLD_PID_DEADBAND_RAD)
+    {
+        pid->integral = 0.0f;
+        pid->prev_error = 0.0f;
+        return 0.0f;
+    }
+
     pid->integral += error * dt_sec;
     pid->integral = FOC_ClampFloat(pid->integral,
                                    -FOC_ANGLE_HOLD_INTEGRAL_LIMIT,

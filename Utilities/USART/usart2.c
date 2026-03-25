@@ -4,13 +4,10 @@
 
 /* Private variables */
 static uint8_t rx_buffer[USART2_RX_BUFFER_SIZE];
-static uint8_t tx_buffer[USART2_TX_BUFFER_SIZE];
+static uint8_t tx_dma_buffer[USART2_TX_BUFFER_SIZE];
 static volatile uint16_t rx_head = 0;
 static volatile uint16_t rx_tail = 0;
-static volatile uint16_t tx_head = 0;
-static volatile uint16_t tx_tail = 0;
-static volatile uint8_t tx_busy = 0;
-static volatile uint8_t loopback_enabled = 0;
+static volatile uint8_t rx_irq_enabled = 0;
 static usart2_rx_callback_t rx_callback = NULL;
 
 /* Private function prototypes */
@@ -18,11 +15,11 @@ static uint8_t USART2_BufferIsFull(uint16_t head, uint16_t tail, uint16_t size);
 static uint8_t USART2_BufferIsEmpty(uint16_t head, uint16_t tail);
 static void USART2_EnableInterrupts(void);
 static void USART2_DisableInterrupts(void);
-static void USART2_HandlerInternal(void);
-static uint8_t USART2_ProtocolChecksum(const uint8_t *data, uint8_t len);
+static void USART2_DMATxConfig(void);
+static usart2_status_t USART2_DMATxTransfer(const uint8_t *data, uint16_t len);
 
 /*!
-    \brief      Initialize USART2 for motor control parameter communication
+    \brief      Initialize USART2 basic communication
     \param[in]  none
     \param[out] none
     \retval     none
@@ -35,7 +32,7 @@ void USART2_Init(void)
     
     /* Configure GPIO pins for USART2 */
     gpio_init(USART2_GPIO, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, USART2_TX_PIN);
-    gpio_init(USART2_GPIO, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, USART2_RX_PIN);
+    gpio_init(USART2_GPIO, GPIO_MODE_IPU, GPIO_OSPEED_50MHZ, USART2_RX_PIN);
     
     /* USART parameter configuration */
     usart_deinit(USART2_PERIPH);
@@ -57,21 +54,12 @@ void USART2_Init(void)
     
     /* Enable USART receive interrupt */
     usart_interrupt_enable(USART2_PERIPH, USART_INT_RBNE);
+    rx_irq_enabled = 1U;
     
     /* Configure NVIC for USART2 */
     NVIC_CONFIG(USART2_IRQn, USART2_PRIORITY_GROUP, USART2_PRIORITY_SUBGROUP);
 
-    USART2_LoopbackEnable();
-}
-
-void USART2_LoopbackEnable(void)
-{
-    loopback_enabled = 1;
-}
-
-void USART2_LoopbackDisable(void)
-{
-    loopback_enabled = 0;
+    USART2_DMATxConfig();
 }
 
 /*!
@@ -82,28 +70,7 @@ void USART2_LoopbackDisable(void)
 */
 usart2_status_t USART2_SendByte(uint8_t data)
 {
-    USART2_DisableInterrupts();
-    
-    /* Check if TX buffer is full */
-    if (USART2_BufferIsFull(tx_head, tx_tail, USART2_TX_BUFFER_SIZE))
-    {
-        USART2_EnableInterrupts();
-        return USART2_STATUS_BUFFER_FULL;
-    }
-    
-    /* Add data to TX buffer */
-    tx_buffer[tx_head] = data;
-    tx_head = (tx_head + 1) % USART2_TX_BUFFER_SIZE;
-    
-    /* If transmitter is idle, start transmission */
-    if (!tx_busy)
-    {
-        tx_busy = 1;
-        usart_interrupt_enable(USART2_PERIPH, USART_INT_TBE);
-    }
-    
-    USART2_EnableInterrupts();
-    return USART2_STATUS_OK;
+    return USART2_DMATxTransfer(&data, 1U);
 }
 
 /*!
@@ -114,45 +81,40 @@ usart2_status_t USART2_SendByte(uint8_t data)
 */
 usart2_status_t USART2_SendString(const char *str)
 {
-    usart2_status_t status;
-    
-    while (*str)
+    if (str == NULL)
     {
-        status = USART2_SendByte(*str++);
-        if (status != USART2_STATUS_OK)
-        {
-            return status;
-        }
+        return USART2_STATUS_ERROR;
     }
-    
-    return USART2_STATUS_OK;
+
+    return USART2_SendData((const uint8_t *)str, (uint16_t)strlen(str));
 }
 
 usart2_status_t USART2_SendData(const uint8_t *data, uint16_t len)
 {
-    uint16_t i;
+    uint16_t offset = 0U;
 
     if (data == NULL)
     {
         return USART2_STATUS_ERROR;
     }
 
-    for (i = 0; i < len; i++)
+    while (offset < len)
     {
-        usart2_status_t status = USART2_SendByte(data[i]);
-        if (status == USART2_STATUS_OK)
+        uint16_t chunk = len - offset;
+
+        if (chunk > USART2_TX_BUFFER_SIZE)
         {
-            continue;
+            chunk = USART2_TX_BUFFER_SIZE;
         }
 
-        if (status == USART2_STATUS_BUFFER_FULL)
+        memcpy(tx_dma_buffer, &data[offset], chunk);
+
+        if (USART2_DMATxTransfer(tx_dma_buffer, chunk) != USART2_STATUS_OK)
         {
-            __NOP();
-            i--;
-            continue;
+            return USART2_STATUS_ERROR;
         }
 
-        return status;
+        offset += chunk;
     }
 
     return USART2_STATUS_OK;
@@ -221,12 +183,9 @@ void USART2_ClearBuffers(void)
     
     rx_head = 0;
     rx_tail = 0;
-    tx_head = 0;
-    tx_tail = 0;
-    tx_busy = 0;
     
     memset(rx_buffer, 0, sizeof(rx_buffer));
-    memset(tx_buffer, 0, sizeof(tx_buffer));
+    memset(tx_dma_buffer, 0, sizeof(tx_dma_buffer));
     
     USART2_EnableInterrupts();
 }
@@ -248,7 +207,7 @@ void USART2_SetRxCallback(usart2_rx_callback_t callback)
     \param[out] none
     \retval     none
 */
-static void USART2_HandlerInternal(void)
+void USART2_IRQHandler_Internal(void)
 {
     /* Receive buffer not empty interrupt */
     if (usart_interrupt_flag_get(USART2_PERIPH, USART_INT_FLAG_RBNE) != RESET)
@@ -260,89 +219,15 @@ static void USART2_HandlerInternal(void)
         {
             rx_buffer[rx_head] = data;
             rx_head = (rx_head + 1) % USART2_RX_BUFFER_SIZE;
-            
-            /* Call callback if set */
+
             if (rx_callback != NULL)
             {
                 rx_callback(data);
             }
-
-            if (loopback_enabled != 0U)
-            {
-                USART2_SendByte(data);
-            }
         }
-        
+
         usart_interrupt_flag_clear(USART2_PERIPH, USART_INT_FLAG_RBNE);
     }
-    
-    /* Transmit buffer empty interrupt */
-    if (usart_interrupt_flag_get(USART2_PERIPH, USART_INT_FLAG_TBE) != RESET)
-    {
-        if (!USART2_BufferIsEmpty(tx_head, tx_tail))
-        {
-            /* Send next byte */
-            usart_data_transmit(USART2_PERIPH, tx_buffer[tx_tail]);
-            tx_tail = (tx_tail + 1) % USART2_TX_BUFFER_SIZE;
-        }
-        else
-        {
-            /* No more data to send, disable TBE interrupt */
-            usart_interrupt_disable(USART2_PERIPH, USART_INT_TBE);
-            tx_busy = 0;
-        }
-        
-        usart_interrupt_flag_clear(USART2_PERIPH, USART_INT_FLAG_TBE);
-    }
-}
-
-void USART2_IRQHandler_Internal(void)
-{
-    USART2_HandlerInternal();
-}
-
-usart2_status_t USART2_ProtocolSendFrame(uint8_t cmd, const uint8_t *payload, uint8_t len)
-{
-    uint8_t frame[2 + 1 + 1 + USART2_PROTOCOL_MAX_PAYLOAD + 1 + 1];
-    uint8_t checksum_input[1 + 1 + USART2_PROTOCOL_MAX_PAYLOAD];
-    uint16_t index = 0;
-    uint8_t i;
-
-    if ((len > USART2_PROTOCOL_MAX_PAYLOAD) || ((len > 0U) && (payload == NULL)))
-    {
-        return USART2_STATUS_ERROR;
-    }
-
-    frame[index++] = USART2_PROTOCOL_SOF0;
-    frame[index++] = USART2_PROTOCOL_SOF1;
-    frame[index++] = len;
-    frame[index++] = cmd;
-
-    checksum_input[0] = len;
-    checksum_input[1] = cmd;
-
-    for (i = 0; i < len; i++)
-    {
-        frame[index++] = payload[i];
-        checksum_input[2U + i] = payload[i];
-    }
-
-    frame[index++] = USART2_ProtocolChecksum(checksum_input, (uint8_t)(2U + len));
-    frame[index++] = USART2_PROTOCOL_EOF;
-
-    return USART2_SendData(frame, index);
-}
-
-uint16_t USART2_ProtocolReadRaw(uint8_t *buffer, uint16_t max_len)
-{
-    return USART2_ReadBuffer(buffer, max_len);
-}
-
-uint8_t USART2_ProtocolTryParse(usart2_protocol_frame_t *frame)
-{
-    (void)frame;
-    /* Reserved for future protocol parser implementation. */
-    return 0;
 }
 
 /*!
@@ -370,6 +255,58 @@ static uint8_t USART2_BufferIsEmpty(uint16_t head, uint16_t tail)
     return head == tail;
 }
 
+static void USART2_DMATxConfig(void)
+{
+    dma_parameter_struct dma_init_struct;
+
+    rcu_periph_clock_enable(USART2_TX_DMA_RCU);
+    dma_deinit(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL);
+    dma_struct_para_init(&dma_init_struct);
+
+    dma_init_struct.direction = DMA_MEMORY_TO_PERIPHERAL;
+    dma_init_struct.memory_addr = (uint32_t)tx_dma_buffer;
+    dma_init_struct.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
+    dma_init_struct.memory_width = DMA_MEMORY_WIDTH_8BIT;
+    dma_init_struct.number = 0U;
+    dma_init_struct.periph_addr = (uint32_t)&USART_DATA(USART2_PERIPH);
+    dma_init_struct.periph_inc = DMA_PERIPH_INCREASE_DISABLE;
+    dma_init_struct.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
+    dma_init_struct.priority = DMA_PRIORITY_HIGH;
+
+    dma_init(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL, &dma_init_struct);
+    dma_circulation_disable(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL);
+}
+
+static usart2_status_t USART2_DMATxTransfer(const uint8_t *data, uint16_t len)
+{
+    if ((data == NULL) || (len == 0U))
+    {
+        return USART2_STATUS_ERROR;
+    }
+
+    dma_channel_disable(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL);
+    dma_memory_address_config(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL, (uint32_t)data);
+    dma_transfer_number_config(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL, len);
+    dma_flag_clear(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL, DMA_FLAG_G);
+
+    usart_dma_transmit_config(USART2_PERIPH, USART_TRANSMIT_DMA_ENABLE);
+    dma_channel_enable(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL);
+
+    while (dma_flag_get(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL, DMA_FLAG_FTF) == RESET)
+    {
+    }
+
+    dma_flag_clear(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL, DMA_FLAG_G);
+    dma_channel_disable(USART2_TX_DMA_PERIPH, USART2_TX_DMA_CHANNEL);
+    usart_dma_transmit_config(USART2_PERIPH, USART_TRANSMIT_DMA_DISABLE);
+
+    while (usart_flag_get(USART2_PERIPH, USART_FLAG_TC) == RESET)
+    {
+    }
+
+    return USART2_STATUS_OK;
+}
+
 /*!
     \brief      Disable USART2 interrupts (for critical sections)
     \param[in]  none
@@ -378,8 +315,10 @@ static uint8_t USART2_BufferIsEmpty(uint16_t head, uint16_t tail)
 */
 static void USART2_DisableInterrupts(void)
 {
-    usart_interrupt_disable(USART2_PERIPH, USART_INT_RBNE);
-    usart_interrupt_disable(USART2_PERIPH, USART_INT_TBE);
+    if (rx_irq_enabled != 0U)
+    {
+        usart_interrupt_disable(USART2_PERIPH, USART_INT_RBNE);
+    }
 }
 
 /*!
@@ -390,22 +329,8 @@ static void USART2_DisableInterrupts(void)
 */
 static void USART2_EnableInterrupts(void)
 {
-    usart_interrupt_enable(USART2_PERIPH, USART_INT_RBNE);
-    if (tx_busy)
+    if (rx_irq_enabled != 0U)
     {
-        usart_interrupt_enable(USART2_PERIPH, USART_INT_TBE);
+        usart_interrupt_enable(USART2_PERIPH, USART_INT_RBNE);
     }
-}
-
-static uint8_t USART2_ProtocolChecksum(const uint8_t *data, uint8_t len)
-{
-    uint8_t i;
-    uint8_t checksum = 0;
-
-    for (i = 0; i < len; i++)
-    {
-        checksum ^= data[i];
-    }
-
-    return checksum;
 }
