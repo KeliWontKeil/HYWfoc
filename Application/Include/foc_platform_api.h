@@ -4,18 +4,14 @@
 #include <stdint.h>
 #include "foc_shared_types.h"
 
-#include "systick.h"
-#include "LED.h"
-#include "usart1.h"
-#include "usart2.h"
-#include "timer1.h"
-#include "timer2.h"
-#include "timer3.h"
-#include "adc.h"
-#include "as5600.h"
-
 #define FOC_PLATFORM_HIGH_RATE_CALLBACK_TYPE(name) void (*name)(void)
 typedef FOC_PLATFORM_HIGH_RATE_CALLBACK_TYPE(FOC_Platform_HighRateCallback_t);
+
+typedef enum {
+	FOC_PLATFORM_PWM_CHANNEL_0 = 0,
+	FOC_PLATFORM_PWM_CHANNEL_1,
+	FOC_PLATFORM_PWM_CHANNEL_2
+} foc_platform_pwm_channel_t;
 
 void FOC_Platform_RuntimeInit(void);
 void FOC_Platform_IndicatorInit(void);
@@ -41,5 +37,10 @@ void FOC_Platform_WaitMs(uint32_t ms);
 
 void FOC_Platform_EnableCycleCounter(void);
 uint32_t FOC_Platform_ReadCycleCounter(void);
+
+void FOC_Platform_PWMInit(uint8_t freq_khz, uint8_t deadtime_percent);
+void FOC_Platform_PWMStart(void);
+void FOC_Platform_PWMSetDutyCycle(foc_platform_pwm_channel_t channel, uint8_t duty_percent);
+void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c);
 
 #endif /* FOC_PLATFORM_API_H */

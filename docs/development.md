@@ -54,6 +54,15 @@
 
 ## Coding Standards
 
+### Dependency Layer Contract
+- L1 Application layer: only externally callable app APIs (for `main`).
+- L2 Algorithm layer: FOC algorithm/task/status/debug/protocol logic.
+- L3 Advanced peripheral layer: convert low-level raw data/interfaces into structured interfaces.
+- L4 Peripheral layer: chip-specific Utilities drivers only.
+- Special dependency layer: unified upper API, shared structs, parameter/config macros, algorithm feature-cut macros.
+- Mandatory rule: L1/L2/L3 can call L4 only through special dependency layer.
+- Mandatory rule: L4 must not depend on L1/L2/L3.
+
 ### Language Rules
 - C99 with ARM extensions
 - Include `<stddef.h>` for NULL
@@ -73,6 +82,10 @@
 - Keep `.c` includes minimal; only add `.c`-local includes for cyclic-dependency or implementation-private needs
 - Static functions for internal use
 - Consistent indentation (4 spaces)
+- Keep control-layer boundaries explicit: `foc_control.c` for runtime control algorithms, `foc_control_init.c` for startup/init calibration only
+- Keep pure scalar math utilities (`wrap/clamp/pi constants`) in `math_transforms` rather than control modules
+- New module design must explicitly declare layer ownership in header comments or module docs
+- Public headers at L2/L3 should avoid exposing L4 driver headers
 
 ## Debugging Procedures
 

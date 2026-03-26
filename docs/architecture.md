@@ -12,20 +12,23 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 
 ### Software Layers
 
-#### Level 1: Application Entry
-- `main.c`: Thin entry point, only calls `FOC_App_Init/Start/Loop`
-- `foc_app.c`: App orchestration (init sequence, callback registration, main-loop debug publish)
+#### Level 1: Application Layer
+- `foc_app.c`: public app entry for `main.c` (`FOC_App_Init/Start/Loop`)
+- `main.c`: thin bootstrap, calls only level-1 API
 
-#### Level 2: Control Logic
-- `foc_control.c`: FOC voltage synthesis, startup calibration, torque/current control API, and position/speed loop entry
-- `control_scheduler.c`: Multi-rate scheduler logic (1kHz/100Hz/10Hz/1Hz callback slots)
-- `sensor.c`: Current and angle acquisition/filter path
-- `foc_app.c`: Application-level initialization parameters are macro-configurable (PWM frequency, control dt, target angle, loop delay)
+#### Level 2: Algorithm Layer
+- `foc_control.c`: FOC runtime control algorithms
+- `foc_control_init.c`: startup calibration and motor init algorithm flow
+- `control_scheduler.c`: task scheduling logic
+- `uart_debug.c`: debug output policy and formatting
+- Protocol/Task/State modules (planned): parser, command executor, status monitor
 
-#### Level 3: Platform Abstraction
-- `foc_platform_api.c`: Semantic platform API for runtime/clock/control-tick-source/telemetry and L4 sensor-device read wrappers
+#### Level 3: Advanced Peripheral Layer
+- `sensor.c`: converts raw peripheral data to structured sensor outputs
+- `svpwm.c`: converts voltage/vector command to structured PWM duty request
+- Serial parser adapter (planned): parses stream/buffer to structured protocol frames
 
-#### Level 4: Driver Layer (Utilities/)
+#### Level 4: Peripheral Layer (Utilities)
 - **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
   - Dual-channel ADC for phase current measurement
   - DMA transfer for low-latency data acquisition
@@ -34,10 +37,10 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - Timer-based PWM with configurable frequency and duty cycle
   - Dead time insertion for safe switching
   - Brake functionality for emergency stop
-- **USART**: Dual serial communication with interrupt handling and temporary loopback echo test
+- **USART**: Dual serial communication with RX interrupt + DMA TX path
   - Configurable baud rate and data format
   - Circular buffer for reliable data reception
-  - Interrupt-driven transmission and reception
+  - DMA-based non-TBE transmission and interrupt-based reception
 - **I2C**: Hardware I2C driver for sensor communication
   - Master mode operation with clock stretching support
   - Error handling and recovery mechanisms
@@ -55,6 +58,16 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - I2C interface with automatic gain control
   - Zero position calibration and offset compensation
   - Native radian conversion API for control-path consistency
+
+#### Special Dependency Layer
+- Purpose: unify cross-layer APIs, shared structs, parameter configuration, and algorithm feature-cut macros.
+- Current candidates:
+  - `foc_platform_api.[ch]` (unified upper API)
+  - `foc_shared_types.h` (shared public structures)
+  - config headers (planned): control/debug/protocol/task macro switches
+- Contract:
+  - L1/L2/L3 must access L4 only via this layer.
+  - L4 must not depend on L1/L2/L3.
 
 #### Hardware Abstraction Layer
 - GD32F30x standard peripheral library
@@ -114,8 +127,8 @@ FOC_MotorInit()
 
 ### Communication Flow
 ```
-USART1 ←→ Debug Output + Loopback Echo Test
-USART2 ←→ Command Channel Bring-up + Loopback Echo Test
+USART1 ←→ Debug Output Channel (DMA TX)
+USART2 ←→ Secondary Serial Channel (DMA TX + RX IRQ callback)
 I2C ←→ AS5600 Encoder
 ```
 
@@ -135,32 +148,22 @@ I2C ←→ AS5600 Encoder
 
 ```
 main.c
-└── foc_app.c
+└── L1: foc_app.c
 
-foc_app.c
-├── foc_control.c
-├── control_scheduler.c
-├── sensor.c
-├── svpwm.c
-├── uart_debug.c
-└── foc_platform_api.c
+L1: foc_app.c
+└── L2/L3 modules via public headers
 
-foc_control.c
-└── foc_platform_api.c (semantic read/wait bridge)
+L2: foc_control.c / foc_control_init.c / control_scheduler.c / uart_debug.c
+└── Special layer API/types/macros
 
-sensor.c
-└── foc_platform_api.c (L4 sensor-device wrappers)
+L3: sensor.c / svpwm.c / serial parser adapter(planned)
+└── Special layer API/types/macros
 
-foc_platform_api.c
-├── timer1.c
-├── timer2.c
-├── timer3.c
-├── usart1.c
-├── usart2.c
-├── systick.c
-├── LED.c
-├── adc.c
-└── as5600.c
+Special layer: foc_platform_api.c + foc_shared_types.h + config headers(planned)
+└── L4 Utilities only
+
+L4: Utilities/*
+└── chip-specific low-level drivers only
 
 gd32f30x_it.c
 ├── adc internal IRQ handler
@@ -170,6 +173,12 @@ gd32f30x_it.c
 ├── timer2 internal IRQ handler
 └── dma internal IRQ handler
 ```
+
+## Current Gap Check (against target layering)
+- `foc_platform_api.h` currently includes multiple L4 headers directly, which leaks peripheral symbols to upper layers.
+- `svpwm` PWM calls are routed through special layer API; direct `pwm.h` dependency has been removed.
+- `foc_control.h` currently includes `foc_platform_api.h` and `svpwm.h`; algorithm-layer public header exposure should be narrowed to shared types and algorithm APIs.
+- ISR glue (`gd32f30x_it.h`) includes utility headers directly; this is acceptable only if treated as special-layer boundary file.
 
 ## Safety Considerations
 - Interrupt-safe data handling

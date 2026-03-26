@@ -11,12 +11,12 @@ alwaysApply: true
 - Minor-version cadence: commit before starting the next minor-version development cycle so user changes are included
 - Branch policy: commit directly on `main` by default; do not create a new branch unless explicitly requested
 - Commit messages: Use conventional commits format
-- Tags: Create version tags for each release
+- Tags: Create version tags only when explicitly requested by the user
 
 ## AI-Assisted Development Process
 1. **Planning**: Define requirements in NEXT_MISSION.md
 2. **Implementation**: AI generates code, manual review
-3. **Compilation**: AI ensures code compiles without errors/warnings
+3. **Compilation**: AI should run EIDE tasks or terminal build commands and ensure no errors and no newly introduced warnings
 4. **Documentation**: Update guides after each iteration
 5. **Release**: Tag version and merge to main
 
@@ -24,11 +24,11 @@ alwaysApply: true
 - Hardware debugging is mandatory for embedded systems
 - Use ST-LINK for flashing and debugging
 - Manual code tuning required due to toolchain limitations
-- AI does NOT perform debugging or flashing operations
+- AI may run build/flash tooling when explicitly requested by the user; hardware behavior judgment and closed-loop validation remain user-owned
 - Debugging issues should be reported in iteration requirements for AI guidance
 
 ## Quality Gates
-- Zero compiler warnings in production builds
+- No newly introduced compiler warnings in production builds; known legacy warnings may be temporarily accepted if documented with cause and mitigation plan
 - Code review required for all changes
 - Hardware validation before merge
 - Documentation updates mandatory

@@ -39,11 +39,15 @@ void Function(void) {
 - Each `Utilities/*` module is self-contained
 - Clean API via header files
 - Avoid cross-module globals
+- Dependency layering uses: L1 application, L2 algorithm, L3 advanced peripheral, L4 peripheral + special dependency layer
+- L1/L2/L3 may access L4 only through the special dependency layer
+- L4 must not depend on L1/L2/L3
 
 ## Header Include Policy
 - For non-self-contained modules, place primary dependency includes in the corresponding `.h` file instead of scattering them in `.c` files.
 - `.c` files should prefer including only their module header; add extra includes in `.c` only for unavoidable cyclic-dependency or implementation-private cases.
 - The goal is to keep dependency structure visible at header level for architecture review and portability.
+- Public headers in L2/L3 must not include `Utilities/*` headers directly; expose them via special-layer wrappers.
 
 ## Priority & Source of Truth
 - **Primary source**: actual code (`.c/.h` files) is authoritative
@@ -80,8 +84,8 @@ void Function(void) {
 ## Build & Flash
 - Primary toolchain: Keil μVision 5 + ARM Compiler 5 (AC5)
 - Development: VS Code + EIDE extension for compilation
-- Flash/debug: ST-LINK (manual operation by user, AI does not perform flashing or debugging)
-- Treat warnings as potential issues and resolve them
+- Flash/debug: ST-LINK (AI may execute tooling commands when user-requested; hardware behavior judgment and acceptance remain user-owned)
+- Warning policy: target zero warnings; if legacy warnings exist, do not add new ones and document cause/mitigation
 
 ## Iteration & Documentation Contract
 - Only consider a change a new iteration when user explicitly requests "进行下一次迭代"

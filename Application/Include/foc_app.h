@@ -6,8 +6,8 @@
 #include "foc_platform_api.h"
 #include "control_scheduler.h"
 #include "foc_control.h"
+#include "foc_control_init.h"
 #include "sensor.h"
-#include "svpwm.h"
 #include "uart_debug.h"
 
 #define FOC_APP_PWM_FREQ_KHZ                24U

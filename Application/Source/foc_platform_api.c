@@ -1,5 +1,16 @@
 #include "foc_platform_api.h"
 
+#include "systick.h"
+#include "LED.h"
+#include "usart1.h"
+#include "usart2.h"
+#include "timer1.h"
+#include "timer2.h"
+#include "timer3.h"
+#include "adc.h"
+#include "as5600.h"
+#include "pwm.h"
+
 #define CONTROL_LOOP_TICK_HZ                   1000U
 #define CONTROL_LOOP_TIMER_PRESCALER           11999U
 #define CONTROL_LOOP_TIMER_PERIOD              9U
@@ -185,4 +196,24 @@ void FOC_Platform_EnableCycleCounter(void)
 uint32_t FOC_Platform_ReadCycleCounter(void)
 {
     return DWT->CYCCNT;
+}
+
+void FOC_Platform_PWMInit(uint8_t freq_khz, uint8_t deadtime_percent)
+{
+    PWM_Init(freq_khz, deadtime_percent);
+}
+
+void FOC_Platform_PWMStart(void)
+{
+    PWM_Start();
+}
+
+void FOC_Platform_PWMSetDutyCycle(foc_platform_pwm_channel_t channel, uint8_t duty_percent)
+{
+    PWM_SetDutyCycle((pwm_channel_t)channel, duty_percent);
+}
+
+void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c)
+{
+    PWM_SetDutyCycleTripleFloat(duty_a, duty_b, duty_c);
 }

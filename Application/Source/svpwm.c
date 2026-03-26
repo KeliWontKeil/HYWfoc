@@ -1,4 +1,5 @@
 #include "svpwm.h"
+#include "foc_platform_api.h"
 
 #define SVPWM_SQRT3          1.7320508f
 #define SVPWM_SQRT3_BY_2     0.8660254f
@@ -72,11 +73,11 @@ static uint8_t SVPWM_DetermineSector(float alpha, float beta)
 void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent)
 {
     /* Initialize PWM (TIMER0 as slave) */
-    PWM_Init(freq_kHz, deadtime_percent);
-    PWM_SetDutyCycle(PWM_CHANNEL_0, 0);
-    PWM_SetDutyCycle(PWM_CHANNEL_1, 0);
-    PWM_SetDutyCycle(PWM_CHANNEL_2, 0);
-    PWM_Start();
+    FOC_Platform_PWMInit((uint8_t)freq_kHz, deadtime_percent);
+    FOC_Platform_PWMSetDutyCycle(FOC_PLATFORM_PWM_CHANNEL_0, 0U);
+    FOC_Platform_PWMSetDutyCycle(FOC_PLATFORM_PWM_CHANNEL_1, 0U);
+    FOC_Platform_PWMSetDutyCycle(FOC_PLATFORM_PWM_CHANNEL_2, 0U);
+    FOC_Platform_PWMStart();
 
     s_interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;
     s_interp_step_index = s_interp_steps_total;
@@ -283,7 +284,7 @@ void SVPWM_InterpolationISR(void)
         }
     }
 
-    PWM_SetDutyCycleTripleFloat(s_duty_a_current, s_duty_b_current, s_duty_c_current);
+    FOC_Platform_PWMSetDutyCycleTripleFloat(s_duty_a_current, s_duty_b_current, s_duty_c_current);
 }
 
 const svpwm_output_t* SVPWM_GetOutput(void)

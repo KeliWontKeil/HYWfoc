@@ -20,8 +20,8 @@ virtualFolder:
         - path: Application/Source/math_transforms.c
         - path: Application/Source/foc_control.c
         - path: Application/Source/foc_app.c
-        - path: Application/Source/foc_irq_api.c
         - path: Application/Source/foc_platform_api.c
+        - path: Application/Source/foc_control_init.c
       folders: []
     - name: CMSIS
       files:
@@ -112,6 +112,7 @@ targets:
       - <virtual_root>/Utilities/TIMER.c
       - <virtual_root>/Utilities/i2c.c
       - <virtual_root>/Utilities/usart.c
+      - <virtual_root>/Application/foc_irq_api.c
     toolchain: AC5
     toolchainConfigMap:
       AC5:

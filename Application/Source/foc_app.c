@@ -28,7 +28,7 @@ void FOC_App_Init(void)
 
     FOC_Platform_TelemetryInit();
     FOC_Platform_TelemetryWrite("\r\n=== GD32F303CC FOC System Started ===\r\n");
-    FOC_Platform_TelemetryWrite("USART1 Loopback Enabled\r\n");
+    FOC_Platform_TelemetryWrite("USART1 telemetry channel enabled\r\n");
     FOC_Platform_TelemetryWrite("High-rate modulation clock active at configured PWM frequency\r\n");
     FOC_Platform_TelemetryWrite("PWM bridge running in center-aligned complementary mode\r\n");
     FOC_Platform_TelemetryWrite("Control scheduler running at 1kHz with heartbeat callback\r\n");

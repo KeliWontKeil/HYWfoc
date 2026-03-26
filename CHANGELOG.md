@@ -8,14 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Split PID call paths for angle loop and current loop by introducing dedicated wrapper APIs (`FOC_AngleLoopPIDRun`, `FOC_CurrentLoopPIDRun`) while keeping control behavior consistent.
-- Added minimum mechanical-angle accumulation threshold to suppress ultra-small disturbance accumulation in multi-turn angle state update.
-- Refactored app-layer init constants to macro-configurable parameters (`FOC_APP_PWM_FREQ_KHZ`, `FOC_APP_CONTROL_DT_SEC`, `FOC_APP_TARGET_ANGLE_RAD`, etc.) without changing timer trigger-chain logic.
-- Enabled USART2 initialization in platform telemetry init path and added temporary interrupt loopback echo support for USART2 bring-up.
-- Updated interrupt forwarding path to include USART2 internal IRQ handler routing in `gd32f30x_it.c`.
+- Moved scalar math helpers and constants into `math_transforms` (`Math_WrapRad`, `Math_WrapRadDelta`, `Math_ClampFloat`, `MATH_PI`, `MATH_TWO_PI`).
+- Split control-layer responsibilities by introducing `foc_control_init` for motor initialization/calibration while keeping `foc_control` focused on runtime control algorithms.
+- Added L2 internal bridge header `foc_control_internal.h` to share control-only helpers with init/calibration module.
+
+## [0.3.3] - 2026-03-25
+
+### Changed
+- Completed speed/speed-angle decoupling updates and stabilized transition behavior in the outer-loop control path.
+- Removed USART protocol/loopback coupling and migrated USART1/USART2 TX paths from TBE interrupt sending to DMA-based sending.
+- Simplified USART interrupt paths to focus on RX callback and buffer handling.
 
 ### Fixed
-- Fixed project source list inconsistency by removing stale `foc_irq_api.c` entry and including `usart2.c` in EIDE build sources.
+- Removed ADC debug pin usage on PB11 to eliminate conflict with USART2 RX and avoid pseudo-UART interrupt noise.
+- Restored ADC init/start in platform sensor-input initialization after resolving the PB11 conflict.
 
 ## [0.3.2] - 2026-03-24
 

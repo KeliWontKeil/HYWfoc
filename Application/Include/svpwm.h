@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "pwm.h"
-
 typedef struct {
     uint8_t sector;
     float duty_a;
