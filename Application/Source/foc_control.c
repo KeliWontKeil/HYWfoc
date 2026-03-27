@@ -2,10 +2,61 @@
 
 #define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (MATH_TWO_PI * 4.0f)
 #define FOC_SPEED_MECH_REBASE_RAD 2048.0f
+#define FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD      0.001f
+#define FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT           0.2f
+#define FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD         0.002f
+#define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD    0.40f
+#define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD      0.60f
 
 static float g_speed_err_accum_rad = 0.0f;
 static float g_prev_mech_signed_rad = 0.0f;
 static uint8_t g_speed_state_valid = 0U;
+static foc_control_runtime_config_t g_foc_runtime_cfg = {
+    FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD,
+    FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT,
+    FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD,
+    FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD,
+    FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD
+};
+
+void FOC_ControlConfigResetDefault(void)
+{
+    g_foc_runtime_cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
+    g_foc_runtime_cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
+    g_foc_runtime_cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
+    g_foc_runtime_cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
+    g_foc_runtime_cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+}
+
+const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(void)
+{
+    return &g_foc_runtime_cfg;
+}
+
+void FOC_ControlSetMinMechAngleAccumDeltaRad(float value)
+{
+    g_foc_runtime_cfg.min_mech_angle_accum_delta_rad = (value < 0.0f) ? 0.0f : value;
+}
+
+void FOC_ControlSetAngleHoldIntegralLimit(float value)
+{
+    g_foc_runtime_cfg.angle_hold_integral_limit = (value < 0.0f) ? 0.0f : value;
+}
+
+void FOC_ControlSetAngleHoldPidDeadbandRad(float value)
+{
+    g_foc_runtime_cfg.angle_hold_pid_deadband_rad = (value < 0.0f) ? 0.0f : value;
+}
+
+void FOC_ControlSetSpeedAngleTransitionStartRad(float value)
+{
+    g_foc_runtime_cfg.speed_angle_transition_start_rad = (value < 0.0f) ? 0.0f : value;
+}
+
+void FOC_ControlSetSpeedAngleTransitionEndRad(float value)
+{
+    g_foc_runtime_cfg.speed_angle_transition_end_rad = (value < 0.0f) ? 0.0f : value;
+}
 
 static float FOC_PIDRunCore(foc_pid_t *pid, float target, float measurement, float dt_sec)
 {
@@ -86,7 +137,7 @@ static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_
     }
 
     delta = Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_prev_rad);
-    if (fabsf(delta) >= FOC_MIN_MECH_ANGLE_ACCUM_DELTA_RAD)
+    if (fabsf(delta) >= g_foc_runtime_cfg.min_mech_angle_accum_delta_rad)
     {
         motor->mech_angle_accum_rad += delta;
     }
@@ -209,7 +260,7 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, float target, float measurement
     }
 
     error = target - measurement;
-    if (fabsf(error) <= FOC_ANGLE_HOLD_PID_DEADBAND_RAD)
+    if (fabsf(error) <= g_foc_runtime_cfg.angle_hold_pid_deadband_rad)
     {
         pid->integral = 0.0f;
         pid->prev_error = 0.0f;
@@ -218,8 +269,8 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, float target, float measurement
 
     pid->integral += error * dt_sec;
     pid->integral = Math_ClampFloat(pid->integral,
-                                    -FOC_ANGLE_HOLD_INTEGRAL_LIMIT,
-                                    FOC_ANGLE_HOLD_INTEGRAL_LIMIT);
+                                    -g_foc_runtime_cfg.angle_hold_integral_limit,
+                                    g_foc_runtime_cfg.angle_hold_integral_limit);
 
     derivative = (error - pid->prev_error) / dt_sec;
     output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
@@ -231,8 +282,8 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, float target, float measurement
         float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;
         pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
         pid->integral = Math_ClampFloat(pid->integral,
-                                        -FOC_ANGLE_HOLD_INTEGRAL_LIMIT,
-                                        FOC_ANGLE_HOLD_INTEGRAL_LIMIT);
+                                        -g_foc_runtime_cfg.angle_hold_integral_limit,
+                                        g_foc_runtime_cfg.angle_hold_integral_limit);
     }
 
     pid->prev_error = error;
@@ -479,23 +530,24 @@ void FOC_SpeedAngleControlStep(foc_motor_t *motor,
     angle_error_rad = angle_ref_rad - mech_signed_total_rad;
     abs_angle_error_rad = fabsf(angle_error_rad);
 
-    transition_span_rad = FOC_SPEED_ANGLE_TRANSITION_END_RAD - FOC_SPEED_ANGLE_TRANSITION_START_RAD;
+    transition_span_rad = g_foc_runtime_cfg.speed_angle_transition_end_rad -
+                          g_foc_runtime_cfg.speed_angle_transition_start_rad;
     if (transition_span_rad < 1e-6f)
     {
         transition_span_rad = 1e-6f;
     }
 
-    if (abs_angle_error_rad <= FOC_SPEED_ANGLE_TRANSITION_START_RAD)
+    if (abs_angle_error_rad <= g_foc_runtime_cfg.speed_angle_transition_start_rad)
     {
         speed_blend = 0.0f;
     }
-    else if (abs_angle_error_rad >= FOC_SPEED_ANGLE_TRANSITION_END_RAD)
+    else if (abs_angle_error_rad >= g_foc_runtime_cfg.speed_angle_transition_end_rad)
     {
         speed_blend = 1.0f;
     }
     else
     {
-        speed_blend = (abs_angle_error_rad - FOC_SPEED_ANGLE_TRANSITION_START_RAD) / transition_span_rad;
+        speed_blend = (abs_angle_error_rad - g_foc_runtime_cfg.speed_angle_transition_start_rad) / transition_span_rad;
     }
 
     speed_ref_rad_s = (angle_error_rad >= 0.0f) ? fabsf(angle_position_speed_rad_s) : -fabsf(angle_position_speed_rad_s);

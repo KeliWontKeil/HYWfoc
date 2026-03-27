@@ -15,7 +15,9 @@ FOC_VSCODE/
 │   │   ├── foc_control.h
 │   │   ├── foc_control_init.h
 │   │   ├── foc_control_internal.h
-│   │   ├── uart_debug.h
+│   │   ├── command_manager.h
+│   │   ├── protocol_parser.h
+│   │   ├── debug_stream.h
 │   │   └── ...
 │   └── Source/
 │       ├── main.c
@@ -26,7 +28,9 @@ FOC_VSCODE/
 │       ├── foc_control_init.c
 │       ├── math_transforms.c
 │       ├── sensor.c
-│       ├── uart_debug.c
+│       ├── command_manager.c
+│       ├── protocol_parser.c
+│       ├── debug_stream.c
 │       └── ...
 ├── Utilities/
 │   ├── ADC/
@@ -61,12 +65,13 @@ L2 Algorithm Layer
 ├── foc_control.c
 ├── foc_control_init.c
 ├── control_scheduler.c
-└── uart_debug.c
+└── command_manager.c
 
 L3 Advanced Peripheral Layer
 ├── sensor.c
 ├── svpwm.c
-└── serial parser adapter (planned)
+├── debug_stream.c
+└── protocol_parser.c
 
 Special Dependency Layer
 ├── foc_platform_api.c/.h
@@ -77,7 +82,8 @@ Special Dependency Layer
 L4 Utilities Drivers
 ├── adc.c / as5600.c / i2c.c
 ├── pwm.c / timer1.c / timer2.c
-├── usart1.c / led.c / systick.c
+├── usart1.c / usart2.c / comm_frame_mux.c
+├── led.c / systick.c
 └── other utility modules
 ```
 

@@ -33,6 +33,13 @@
 #define USART1_TX_DMA_RCU      RCU_DMA0
 #define USART1_TX_DMA_CHANNEL  DMA_CH6
 
+/* USART1 RX DMA: mapped to DMA0 Channel5 on GD32F30x */
+#define USART1_RX_DMA_PERIPH   DMA0
+#define USART1_RX_DMA_RCU      RCU_DMA0
+#define USART1_RX_DMA_CHANNEL  DMA_CH5
+
+#define USART1_RX_DMA_BUFFER_SIZE 128U
+
 /* Buffer sizes */
 #define USART1_RX_BUFFER_SIZE  128
 #define USART1_TX_BUFFER_SIZE  128
@@ -50,15 +57,17 @@ void USART1_Init(void);
 usart_status_t USART1_SendByte(uint8_t data);
 usart_status_t USART1_SendString(const char *str);
 usart_status_t USART1_SendData(const uint8_t *data, uint16_t len);
-uint8_t USART1_ReceiveByte(void);
-uint8_t USART1_IsDataAvailable(void);
+uint8_t USART1_IsFrameReady(void);
+uint16_t USART1_ReadFrame(uint8_t *buffer, uint16_t max_len);
 void USART1_ClearBuffers(void);
 
 /* Interrupt callback type */
 typedef void (*usart_rx_callback_t)(uint8_t data);
+typedef void (*usart1_idle_callback_t)(void);
 
 /* Callback registration */
 void USART1_SetRxCallback(usart_rx_callback_t callback);
+void USART1_SetIdleCallback(usart1_idle_callback_t callback);
 
 /* Interrupt handler (to be called from vector table) */
 void USART1_IRQHandler(void);

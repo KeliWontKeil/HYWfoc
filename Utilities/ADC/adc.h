@@ -87,6 +87,8 @@ adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t
 adc_status_t ADC_GetAllSamples(adc_sample_t *sample);
 adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t count);
 adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count);
+adc_status_t ADC_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b, uint16_t avg_count);
+uint8_t ADC_ReadPhaseCurrentABOk(float *phase_current_a, float *phase_current_b, uint16_t avg_count);
 
 float ADC_RawToVoltage(uint16_t raw_value);
 float ADC_VoltageToCurrent(float voltage);

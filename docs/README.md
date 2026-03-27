@@ -4,9 +4,11 @@
 This project implements Field Oriented Control (FOC) for motor control on the GD32F303CC microcontroller. It provides a framework for high-performance motor control applications with ADC current sampling, PWM output, and sensor integration.
 
 ## Version
-Current Version: v0.3.4-dev
+Current Version: v0.3.5
 - Framework initialization with basic peripherals
-- UART debug module for monitoring
+- Dual-path debug stream module for monitoring (semantic low-rate + osc high-rate)
+- Command manager and runtime state/diagnostic module are integrated
+- Protocol parser + command execution chain is integrated (frame parse -> cache -> dispatch)
 - Radian-unit unification across encoder, sensor filter, and FOC math path
 - Startup calibration for zero electrical angle, direction, and pole pairs
 - Torque-control API path with open-loop mode available and closed-loop mode ready for tuning
@@ -31,7 +33,7 @@ Current Version: v0.3.4-dev
 - **Sensor Integration**: AS5600 magnetic encoder via I2C
 - **Timing Framework**: Multi-rate scheduling via control scheduler (1kHz/100Hz/10Hz/1Hz)
 - **Trigger Chain**: TIMER2 master + TIMER3 compare trigger for ADC timing alignment
-- **Communication**: USART1 + USART2 with DMA TX and RX interrupt callback path
+- **Communication**: USART1 + USART2 with DMA TX, DMA RX + IDLE callback, and frame mux dispatch path
 
 ## Hardware Requirements
 - GD32F303CC microcontroller
@@ -83,6 +85,7 @@ This project uses AI-assisted development with manual hardware validation:
 - [Hardware](docs/hardware.md) - Pin mappings and connections
 - [Development Guide](docs/development.md) - Development procedures and rules
 - [Structure and Dependency Tree](docs/structure-and-dependency-tree.md) - Current folder tree and layered dependency map
+- [Protocol and Runtime Parameters (Bilingual)](docs/protocol-parameters-bilingual.md) - Command protocol and configurable parameter set
 
 ## Contributing
 - Follow the rules in `dev-guidelines/`

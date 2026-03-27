@@ -47,3 +47,15 @@ void Reset_LED(uint8_t LEDX)
 			break;
 	}
 }
+
+void LED_SetState(uint8_t led_index, uint8_t on)
+{
+	if (on != 0U)
+	{
+		Set_LED(led_index);
+	}
+	else
+	{
+		Reset_LED(led_index);
+	}
+}

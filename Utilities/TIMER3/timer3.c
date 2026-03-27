@@ -56,3 +56,11 @@ void Timer3_Stop(void)
 {
     timer_disable(TIMER3_PERIPH);
 }
+
+void Timer3_SetSampleOffsetPercent(uint16_t period, float percent)
+{
+    uint16_t compare_value;
+
+    compare_value = (uint16_t)((float)period * percent / 100.0f);
+    timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, compare_value);
+}

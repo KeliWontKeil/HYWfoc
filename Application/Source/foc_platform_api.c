@@ -4,6 +4,7 @@
 #include "LED.h"
 #include "usart1.h"
 #include "usart2.h"
+#include "comm_frame_mux.h"
 #include "timer1.h"
 #include "timer2.h"
 #include "timer3.h"
@@ -30,24 +31,12 @@ void FOC_Platform_IndicatorInit(void)
 
 void FOC_Platform_SetHeartbeatIndicator(uint8_t on)
 {
-    if (on != 0U)
-    {
-        Set_LED(3);
-    }
-    else
-    {
-        Reset_LED(3);
-    }
+    LED_SetState(3U, on);
 }
 
 void FOC_Platform_HighRateClockInit(uint16_t pwm_freq_khz)
 {
     uint32_t period;
-
-    if (pwm_freq_khz == 0U)
-    {
-        pwm_freq_khz = 24U;
-    }
 
     period = (PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U;
     Timer2_Init(0U, period);
@@ -79,29 +68,55 @@ void FOC_Platform_StartHighRateClock(void)
     Timer2_Start();
 }
 
-void FOC_Platform_TelemetryInit(void)
+void FOC_Platform_CommInit(const FOC_Platform_CommConfig_t *config)
 {
+    comm_frame_mux_config_t mux_config;
+
     USART1_Init();
     USART2_Init();
+
+    mux_config.source_mask = (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL;
+    mux_config.arbitration_policy = (uint8_t)FOC_PLATFORM_COMM_ARB_ROUND_ROBIN;
+
+    if (config != NULL)
+    {
+        if ((config->source_mask & (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL) != 0U)
+        {
+            mux_config.source_mask = (uint8_t)(config->source_mask & (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL);
+        }
+        mux_config.arbitration_policy = config->arbitration_policy;
+    }
+
+    CommFrameMux_Init(&mux_config);
 }
 
-void FOC_Platform_TelemetryWrite(const char *str)
+void FOC_Platform_SetCommRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+{
+    CommFrameMux_SetRxTriggerCallback((comm_frame_mux_rx_trigger_callback_t)callback);
+}
+
+void FOC_Platform_DebugOutput(const char *str)
 {
     USART1_SendString(str);
 }
 
-void FOC_Platform_TelemetryWriteByte(uint8_t byte)
+void FOC_Platform_FeedbackOutput(uint8_t status_code)
 {
-    USART1_SendByte(byte);
+    USART2_SendByte(status_code);
+}
+
+uint8_t FOC_Platform_CommHasPendingFrame(void)
+{
+    return CommFrameMux_HasPendingFrame();
+}
+
+uint16_t FOC_Platform_ReceiveFrame(uint8_t *buffer, uint16_t max_len)
+{
+    return CommFrameMux_TryDequeueFrame(buffer, max_len);
 }
 
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 {
-    if (pwm_freq_khz == 0U)
-    {
-        pwm_freq_khz = 24U;
-    }
-
     g_platform_sensor_timer_period = (uint16_t)((PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U);
 
     AS5600_Init();
@@ -113,82 +128,34 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b)
 {
-    float sample[2];
-
-    if ((phase_current_a == 0) || (phase_current_b == 0))
-    {
-        return 0U;
-    }
-
-    if (ADC_GetAverageSample(sample, CURRENT, ADC_AVG_DEFAULT_COUNT) != ADC_STATUS_OK)
-    {
-        return 0U;
-    }
-
-    *phase_current_a = sample[0];
-    *phase_current_b = sample[1];
-
-    return 1U;
+    return ADC_ReadPhaseCurrentABOk(phase_current_a, phase_current_b, ADC_AVG_DEFAULT_COUNT);
 }
 
 uint8_t FOC_Platform_ReadEncoderRawAngle(uint16_t *angle_raw)
 {
-    if (angle_raw == 0)
-    {
-        return 0U;
-    }
-
-    if (AS5600_ReadAngle(angle_raw) != I2C_OK)
-    {
-        return 0U;
-    }
-
-    return 1U;
-}
-
-void FOC_Platform_SetSensorSampleOffsetPercent(float percent)
-{
-    uint16_t compare_value;
-
-    compare_value = (uint16_t)((float)g_platform_sensor_timer_period * percent / 100.0f);
-    timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, compare_value);
+    return AS5600_ReadAngleOk(angle_raw);
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
 {
-    uint16_t angle_raw;
-
-    if (angle_rad == NULL)
-    {
-        return 0U;
-    }
-
-    if (FOC_Platform_ReadEncoderRawAngle(&angle_raw) == 0U)
-    {
-        return 0U;
-    }
-
-    *angle_rad = (float)angle_raw * AS5600_ANGLE_TO_RAD;
-    return 1U;
+    return AS5600_ReadAngleRadOk(angle_rad);
 }
+
+void FOC_Platform_SetSensorSampleOffsetPercent(float percent)
+{
+    Timer3_SetSampleOffsetPercent(g_platform_sensor_timer_period, percent);
+}
+
 
 void FOC_Platform_WaitMs(uint32_t ms)
 {
-    if (ms > 0xFFFFU)
-    {
-        ms = 0xFFFFU;
-    }
-
-    delay_1ms((uint16_t)ms);
+    delay_1ms(ms);
 }
+
 
 void FOC_Platform_EnableCycleCounter(void)
 {
-    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U)
-    {
-        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    }
-
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0U;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
@@ -197,6 +164,7 @@ uint32_t FOC_Platform_ReadCycleCounter(void)
 {
     return DWT->CYCCNT;
 }
+
 
 void FOC_Platform_PWMInit(uint8_t freq_khz, uint8_t deadtime_percent)
 {

@@ -13,5 +13,6 @@
 void Timer3_Init(uint32_t prescaler, uint32_t period);
 void Timer3_Start(void);
 void Timer3_Stop(void);
+void Timer3_SetSampleOffsetPercent(uint16_t period, float percent);
 
 #endif /* _TIMER3_H_ */

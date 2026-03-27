@@ -12,6 +12,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Split control-layer responsibilities by introducing `foc_control_init` for motor initialization/calibration while keeping `foc_control` focused on runtime control algorithms.
 - Added L2 internal bridge header `foc_control_internal.h` to share control-only helpers with init/calibration module.
 
+## [0.3.5] - 2026-03-27
+
+### Added
+- Added command and runtime-state management module (`command_manager`) with unified command dispatch, parameter read/write, and init/runtime diagnostics.
+- Added protocol parser module (`protocol_parser`) with frame extraction, structured command cache, parse-pending trigger model, and single-char feedback path.
+- Added dual debug stream module (`debug_stream`) supporting semantic low-rate output and high-rate osc payload output.
+- Added USART frame multiplexer (`comm_frame_mux`) with source mask and round-robin arbitration.
+- Added protocol and parameter bilingual reference documentation (`docs/protocol-parameters-bilingual.md`).
+
+### Changed
+- Completed P0 communication base: USART1/USART2 moved to DMA RX + IDLE event frame capture with double-buffer strategy and DMA TX output path.
+- Reworked platform communication API to transport-agnostic frame interfaces (`FOC_Platform_CommInit`, `FOC_Platform_ReceiveFrame`, `FOC_Platform_SetCommRxTriggerCallback`).
+- Updated app loop communication path to non-blocking pending-poll processing with one-frame-per-step budget.
+- Updated architecture and structure docs to reflect new module boundaries and communication flow.
+
+### Fixed
+- Unified invalid-command and invalid-parameter error accounting/reporting path.
+- Fixed frame parsing robustness on mixed DMA chunks by extracting valid head-tail frame window before parse.
+
+### Notes
+- Build and flash validation passed on GD32F30X_CL target in this release cycle.
+
 ## [0.3.3] - 2026-03-25
 
 ### Changed

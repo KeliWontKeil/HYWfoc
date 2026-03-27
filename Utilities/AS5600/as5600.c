@@ -68,6 +68,29 @@ i2c_status_t AS5600_ReadAngle(uint16_t *angle)
     return AS5600_ReadRegister16(AS5600_REG_ANGLE_H, angle);
 }
 
+uint8_t AS5600_ReadAngleOk(uint16_t *angle)
+{
+    return (AS5600_ReadAngle(angle) == I2C_OK) ? 1U : 0U;
+}
+
+uint8_t AS5600_ReadAngleRadOk(float *angle_rad)
+{
+    uint16_t angle_raw;
+
+    if (angle_rad == 0)
+    {
+        return 0U;
+    }
+
+    if (AS5600_ReadAngleOk(&angle_raw) == 0U)
+    {
+        return 0U;
+    }
+
+    *angle_rad = AS5600_RawAngleToRad(angle_raw);
+    return 1U;
+}
+
 i2c_status_t AS5600_ReadMagnitude(uint16_t *magnitude)
 {
     return AS5600_ReadRegister16(AS5600_REG_MAGNITUDE_H, magnitude);

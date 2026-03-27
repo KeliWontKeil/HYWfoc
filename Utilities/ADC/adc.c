@@ -357,6 +357,30 @@ adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t 
     return ADC_STATUS_OK;
 }
 
+adc_status_t ADC_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b, uint16_t avg_count)
+{
+    float sample[2];
+
+    if ((phase_current_a == NULL) || (phase_current_b == NULL))
+    {
+        return ADC_STATUS_ERROR;
+    }
+
+    if (ADC_GetAverageSample(sample, CURRENT, avg_count) != ADC_STATUS_OK)
+    {
+        return ADC_STATUS_ERROR;
+    }
+
+    *phase_current_a = sample[0];
+    *phase_current_b = sample[1];
+    return ADC_STATUS_OK;
+}
+
+uint8_t ADC_ReadPhaseCurrentABOk(float *phase_current_a, float *phase_current_b, uint16_t avg_count)
+{
+    return (ADC_ReadPhaseCurrentAB(phase_current_a, phase_current_b, avg_count) == ADC_STATUS_OK) ? 1U : 0U;
+}
+
 /*!
     \brief      Convert raw ADC value to voltage
     \param[in]  raw_value: raw ADC value (0-4095)

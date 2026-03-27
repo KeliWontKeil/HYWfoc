@@ -18,5 +18,6 @@
 void LED_Init(void);
 void Set_LED(uint8_t LEDX);
 void Reset_LED(uint8_t LEDX);
+void LED_SetState(uint8_t led_index, uint8_t on);
 
 #endif

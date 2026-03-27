@@ -11,11 +11,21 @@
 #include "foc_platform_api.h"
 #include "svpwm.h"
 
-#define FOC_MIN_MECH_ANGLE_ACCUM_DELTA_RAD 0.001f
-#define FOC_ANGLE_HOLD_INTEGRAL_LIMIT 1.0f
-#define FOC_ANGLE_HOLD_PID_DEADBAND_RAD 0.002f
-#define FOC_SPEED_ANGLE_TRANSITION_START_RAD 0.40f
-#define FOC_SPEED_ANGLE_TRANSITION_END_RAD 0.60f
+typedef struct {
+    float min_mech_angle_accum_delta_rad;
+    float angle_hold_integral_limit;
+    float angle_hold_pid_deadband_rad;
+    float speed_angle_transition_start_rad;
+    float speed_angle_transition_end_rad;
+} foc_control_runtime_config_t;
+
+void FOC_ControlConfigResetDefault(void);
+const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(void);
+void FOC_ControlSetMinMechAngleAccumDeltaRad(float value);
+void FOC_ControlSetAngleHoldIntegralLimit(float value);
+void FOC_ControlSetAngleHoldPidDeadbandRad(float value);
+void FOC_ControlSetSpeedAngleTransitionStartRad(float value);
+void FOC_ControlSetSpeedAngleTransitionEndRad(float value);
 
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,

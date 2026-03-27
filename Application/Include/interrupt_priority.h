@@ -22,11 +22,11 @@
 
 /* ADC interrupt priorities */
 #define ADC0_1_PRIORITY_GROUP      0
-#define ADC0_1_PRIORITY_SUBGROUP   0
+#define ADC0_1_PRIORITY_SUBGROUP   1
 
 /* ADC DMA interrupt priorities */
 #define ADC_DMA_PRIORITY_GROUP     0
-#define ADC_DMA_PRIORITY_SUBGROUP  0
+#define ADC_DMA_PRIORITY_SUBGROUP  2
 
 /* USART interrupt priorities */
 #define USART1_PRIORITY_GROUP      3

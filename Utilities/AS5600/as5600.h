@@ -94,6 +94,8 @@ void AS5600_Init(void);
 as5600_magnet_status_t AS5600_CheckMagnet(void);
 i2c_status_t AS5600_ReadRawAngle(uint16_t *angle);
 i2c_status_t AS5600_ReadAngle(uint16_t *angle);
+uint8_t AS5600_ReadAngleOk(uint16_t *angle);
+uint8_t AS5600_ReadAngleRadOk(float *angle_rad);
 i2c_status_t AS5600_ReadMagnitude(uint16_t *magnitude);
 i2c_status_t AS5600_ReadStatus(uint8_t *status);
 i2c_status_t AS5600_ReadAGC(uint8_t *agc);

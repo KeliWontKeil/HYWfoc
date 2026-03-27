@@ -20,13 +20,13 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - `foc_control.c`: FOC runtime control algorithms
 - `foc_control_init.c`: startup calibration and motor init algorithm flow
 - `control_scheduler.c`: task scheduling logic
-- `uart_debug.c`: debug output policy and formatting
-- Protocol/Task/State modules (planned): parser, command executor, status monitor
+- `command_manager.c`: command execution and runtime parameter management
+- `debug_stream.c`: low/high frequency debug output policy and formatting
 
 #### Level 3: Advanced Peripheral Layer
 - `sensor.c`: converts raw peripheral data to structured sensor outputs
 - `svpwm.c`: converts voltage/vector command to structured PWM duty request
-- Serial parser adapter (planned): parses stream/buffer to structured protocol frames
+- `protocol_parser.c`: parses transport-agnostic frame buffer to structured command frames
 
 #### Level 4: Peripheral Layer (Utilities)
 - **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
@@ -37,10 +37,10 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - Timer-based PWM with configurable frequency and duty cycle
   - Dead time insertion for safe switching
   - Brake functionality for emergency stop
-- **USART**: Dual serial communication with RX interrupt + DMA TX path
+- **USART**: Dual serial communication with DMA RX + IDLE event + DMA TX path
   - Configurable baud rate and data format
-  - Circular buffer for reliable data reception
-  - DMA-based non-TBE transmission and interrupt-based reception
+  - Double buffer frame capture for reliable burst reception
+  - Frame mux for unified dequeue across multiple USART sources
 - **I2C**: Hardware I2C driver for sensor communication
   - Master mode operation with clock stretching support
   - Error handling and recovery mechanisms
@@ -128,7 +128,8 @@ FOC_MotorInit()
 ### Communication Flow
 ```
 USART1 ←→ Debug Output Channel (DMA TX)
-USART2 ←→ Secondary Serial Channel (DMA TX + RX IRQ callback)
+USART1/USART2 RX → DMA + IDLE → CommFrameMux → ProtocolParser
+USART2 ←→ Protocol feedback short code channel
 I2C ←→ AS5600 Encoder
 ```
 
@@ -153,10 +154,10 @@ main.c
 L1: foc_app.c
 └── L2/L3 modules via public headers
 
-L2: foc_control.c / foc_control_init.c / control_scheduler.c / uart_debug.c
+L2: foc_control.c / foc_control_init.c / control_scheduler.c / command_manager.c
 └── Special layer API/types/macros
 
-L3: sensor.c / svpwm.c / serial parser adapter(planned)
+L3: sensor.c / svpwm.c / debug_stream.c / protocol_parser.c
 └── Special layer API/types/macros
 
 Special layer: foc_platform_api.c + foc_shared_types.h + config headers(planned)
@@ -179,6 +180,15 @@ gd32f30x_it.c
 - `svpwm` PWM calls are routed through special layer API; direct `pwm.h` dependency has been removed.
 - `foc_control.h` currently includes `foc_platform_api.h` and `svpwm.h`; algorithm-layer public header exposure should be narrowed to shared types and algorithm APIs.
 - ISR glue (`gd32f30x_it.h`) includes utility headers directly; this is acceptable only if treated as special-layer boundary file.
+
+## Rectification Decision Snapshot (2026-03-27)
+- Implemented in code (this round):
+  - Cross-layer leak fix: `foc_control_init.c` no longer directly includes device driver headers; mechanical-angle conversion is accessed via special-layer API.
+  - Protocol robustness and consistency: frame extraction from DMA chunks and unified command/parameter error accounting paths.
+- Design only (not implemented this round):
+  - Public header slimming for `foc_app.h` and `foc_control.h` (dependency minimization and include migration plan).
+- Deferred (not implemented this round):
+  - Diagnostics phase-2 (fault grading, recovery strategy, and output throttling policy).
 
 ## Safety Considerations
 - Interrupt-safe data handling
