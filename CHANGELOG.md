@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-03-28
+
+### Changed
+- Completed P1.2 scheduler standardization: task-rate naming is unified to `FOC_TaskRate_t`, scheduler dividers are configured through centralized config macros, and old compatibility aliases were removed.
+- Continued P1.3 macro/config convergence: domain configuration headers are connected through `foc_config.h`, and command/protocol/debug/runtime defaults were further migrated from implementation files into config headers.
+- Advanced P1.4 header-boundary convergence: public headers were slimmed to reduce cross-layer exposure, and includes were moved to source files where implementation ownership belongs.
+- Completed feature-cut macro introduction for diagnostics and control algorithms: diagnostics output/statistics can be trimmed independently, and control algorithm build set supports `FULL`, `SPEED_ONLY`, and `SPEED_ANGLE_ONLY` with explicit compile-time guards.
+
+### Documentation
+- Refreshed mission planning document for `v0.3.6`: removed completed tasks and reordered unfinished tasks by priority and execution dependency.
+- Updated project README version section to reflect current delivery baseline and focus.
+
 ### Changed
 - Moved scalar math helpers and constants into `math_transforms` (`Math_WrapRad`, `Math_WrapRadDelta`, `Math_ClampFloat`, `MATH_PI`, `MATH_TWO_PI`).
 - Split control-layer responsibilities by introducing `foc_control_init` for motor initialization/calibration while keeping `foc_control` focused on runtime control algorithms.
