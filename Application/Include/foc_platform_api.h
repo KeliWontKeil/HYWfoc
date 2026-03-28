@@ -50,7 +50,6 @@ uint16_t FOC_Platform_ReceiveFrame(uint8_t *buffer, uint16_t max_len);
 
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz);
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b);
-uint8_t FOC_Platform_ReadEncoderRawAngle(uint16_t *angle_raw);
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad);
 void FOC_Platform_SetSensorSampleOffsetPercent(float percent);
 void FOC_Platform_WaitMs(uint32_t ms);

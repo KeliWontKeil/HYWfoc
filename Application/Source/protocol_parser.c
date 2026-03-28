@@ -3,9 +3,7 @@
 #include <string.h>
 
 #include "foc_platform_api.h"
-
-#define PROTOCOL_PARSER_RX_MAX_LEN 128U
-#define PROTOCOL_PARSER_MIN_FRAME_LEN 4U
+#include "foc_config.h"
 
 static protocol_command_t g_latest_command;
 static protocol_parser_result_t g_last_result = PROTOCOL_PARSER_RESULT_NO_FRAME;

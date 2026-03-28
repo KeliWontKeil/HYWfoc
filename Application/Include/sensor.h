@@ -2,7 +2,6 @@
 #define _SENSOR_H_
 
 #include "foc_shared_types.h"
-#include "foc_platform_api.h"
 #include <math.h>
 
 

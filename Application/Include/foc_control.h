@@ -4,12 +4,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "foc_control_init.h"
-#include "foc_control_internal.h"
 #include "foc_shared_types.h"
-#include "math_transforms.h"
-#include "foc_platform_api.h"
-#include "svpwm.h"
 
 typedef struct {
     float min_mech_angle_accum_delta_rad;

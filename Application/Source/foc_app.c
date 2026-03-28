@@ -1,9 +1,22 @@
 #include "foc_app.h"
 
+#include <stdio.h>
+
+#include "foc_platform_api.h"
+#include "control_scheduler.h"
+#include "foc_control.h"
+#include "foc_control_init.h"
+#include "sensor.h"
+#include "protocol_parser.h"
+#include "command_manager.h"
+#include "debug_stream.h"
+#include "svpwm.h"
+
 /* Internal function prototypes */
 static void LED_Blink_1Hz(void);
 static void Motor_Control_Loop(void);
 static void Monitor_Task_Trigger(void);
+static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data);
 static void FOC_App_ApplyPidRuntimeParams(void);
 static void FOC_App_ProcessCommStep(void);
 
@@ -28,9 +41,9 @@ void FOC_App_Init(void)
     ControlScheduler_Init();
 
     FOC_Platform_BindControlTickCallback(ControlScheduler_RunTick);
-    ControlScheduler_SetCallback(FOC_SCHEDULER_RATE_HEARTBEAT_1HZ, LED_Blink_1Hz);
-    ControlScheduler_SetCallback(FOC_SCHEDULER_RATE_CONTROL_1KHZ, Motor_Control_Loop);
-    ControlScheduler_SetCallback(FOC_SCHEDULER_RATE_MONITOR_10HZ, Monitor_Task_Trigger);
+    ControlScheduler_SetCallback(FOC_TASK_RATE_HEARTBEAT, LED_Blink_1Hz);
+    ControlScheduler_SetCallback(FOC_TASK_RATE_FAST_CONTROL, Motor_Control_Loop);
+    ControlScheduler_SetCallback(FOC_TASK_RATE_MONITOR, Monitor_Task_Trigger);
 
     {
         FOC_Platform_CommConfig_t comm_config;
@@ -43,7 +56,7 @@ void FOC_App_Init(void)
     CommandManager_Init();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMMAND, 1U);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMM, 1U);
-    FOC_Platform_DebugOutput("\r\n=== GD32F303CC FOC System Started ===\r\n");
+    FOC_Platform_DebugOutput("\r\n=== FOC System Started ===\r\n");
     FOC_Platform_DebugOutput("USART1 telemetry channel enabled\r\n");
     FOC_Platform_DebugOutput("High-rate modulation clock active at configured PWM frequency\r\n");
     FOC_Platform_DebugOutput("PWM bridge running in center-aligned complementary mode\r\n");
@@ -59,7 +72,7 @@ void FOC_App_Init(void)
     DebugStream_Init();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_DEBUG, 1U);
 
-    Sensor_Init(FOC_APP_SENSOR_SAMPLE_FREQ_KHZ,96.0f);
+    Sensor_Init(FOC_APP_SENSOR_SAMPLE_FREQ_KHZ, FOC_APP_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     Sensor_ReadAll();
     sensor = Sensor_GetData();
     if (sensor != 0)
@@ -73,14 +86,20 @@ void FOC_App_Init(void)
     }
 
     /* Initialize SVPWM output and interpolation callback. */
-    SVPWM_Init(FOC_APP_PWM_FREQ_KHZ, 2U);
+    SVPWM_Init(FOC_APP_PWM_FREQ_KHZ, FOC_APP_SVPWM_DEADTIME_PERCENT_DEFAULT);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_PWM, 1U);
 
     FOC_Platform_RegisterHighRateCallback(SVPWM_InterpolationISR);
     FOC_Platform_StartHighRateClock();
 
     /* Initialize motor model and targets. */
-    FOC_MotorInit(&g_motor, 12.0f, 11.4f, 13.2f, 7, 3.157, FOC_DIR_REVERSED);
+    FOC_MotorInit(&g_motor,
+                  FOC_APP_MOTOR_INIT_VBUS_DEFAULT,
+                  FOC_APP_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
+                  FOC_APP_MOTOR_INIT_PHASE_RES_DEFAULT,
+                  FOC_APP_MOTOR_INIT_POLE_PAIRS_DEFAULT,
+                  FOC_APP_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
+                  FOC_APP_MOTOR_INIT_DIRECTION_DEFAULT);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_MOTOR, 1U);
 
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
@@ -114,7 +133,7 @@ void FOC_App_Init(void)
 
     CommandManager_FinalizeInitDiagnostics();
 
-    FOC_Platform_WaitMs(1000U);
+    //FOC_Platform_WaitMs(1000U);
 }
 
 void FOC_App_Start(void)
@@ -216,17 +235,42 @@ static void Motor_Control_Loop(void)
         CommandManager_ClearDirtyFlag();
     }
 
+    FOC_App_RunControlAlgorithm(sensor);
+}
+
+static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
+{
+#if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)
+    FOC_SpeedControlStep(&g_motor,
+                         &g_speed_pid,
+                         &g_torque_current_pid,
+                         CommandManager_GetAngleSpeedRadS(),
+                         sensor_data,
+                         FOC_APP_CONTROL_DT_SEC,
+                         FOC_TORQUE_MODE_CURRENT_PID);
+#elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
+    FOC_SpeedAngleControlStep(&g_motor,
+                              &g_speed_pid,
+                              &g_angle_pid,
+                              &g_torque_current_pid,
+                              CommandManager_GetTargetAngleRad(),
+                              CommandManager_GetAngleSpeedRadS(),
+                              sensor_data,
+                              FOC_APP_CONTROL_DT_SEC,
+                              FOC_TORQUE_MODE_CURRENT_PID);
+#elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
+    /* FULL build keeps both parallel algorithms and runtime mode switching. */
     if (CommandManager_GetControlMode() == COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY)
     {
         FOC_SpeedControlStep(&g_motor,
                              &g_speed_pid,
                              &g_torque_current_pid,
                              CommandManager_GetAngleSpeedRadS(),
-                             sensor,
+                             sensor_data,
                              FOC_APP_CONTROL_DT_SEC,
                              FOC_TORQUE_MODE_CURRENT_PID);
     }
-    else if(CommandManager_GetControlMode() == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
+    else
     {
         FOC_SpeedAngleControlStep(&g_motor,
                                   &g_speed_pid,
@@ -234,10 +278,13 @@ static void Motor_Control_Loop(void)
                                   &g_torque_current_pid,
                                   CommandManager_GetTargetAngleRad(),
                                   CommandManager_GetAngleSpeedRadS(),
-                                  sensor,
+                                  sensor_data,
                                   FOC_APP_CONTROL_DT_SEC,
                                   FOC_TORQUE_MODE_CURRENT_PID);
     }
+#else
+#error "Unsupported FOC_BUILD_CONTROL_ALGO_SET"
+#endif
 }
 
 static void FOC_App_ApplyPidRuntimeParams(void)

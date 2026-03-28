@@ -6,29 +6,7 @@
 #include "foc_control.h"
 #include "protocol_parser.h"
 #include "debug_stream.h"
-
-#define COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD      3.14f
-#define COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S     16.0f
-#define COMMAND_MANAGER_DEFAULT_SEMANTIC_DIV          5U
-#define COMMAND_MANAGER_DEFAULT_OSC_DIV               1U
-#define COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK        DEBUG_STREAM_OSC_DEFAULT_PARAM_MASK
-#define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED      1U
-#define COMMAND_MANAGER_DEFAULT_OSC_ENABLED           0U
-
-#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP         0.0f
-#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI         0.0f
-#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD         0.0f
-#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP           2.0f
-#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KI           0.8f
-#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KD           0.01f
-#define COMMAND_MANAGER_DEFAULT_PID_SPEED_KP           3.0f
-#define COMMAND_MANAGER_DEFAULT_PID_SPEED_KI           0.5f
-#define COMMAND_MANAGER_DEFAULT_PID_SPEED_KD           0.0f
-#define COMMAND_MANAGER_DEFAULT_CONTROL_MODE            COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE
-#define COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE            COMMAND_MANAGER_ENABLED_ENABLE
-
-#define COMMAND_MANAGER_REPLY_BUFFER_LEN              128U
-#define COMMAND_MANAGER_SENSOR_FAULT_THRESHOLD        50U
+#include "foc_config.h"
 
 typedef struct {
     float target_angle_rad;
@@ -70,6 +48,18 @@ static const char *CommandManager_GetFaultName(command_manager_fault_code_t faul
 static void CommandManager_OutputDiag(const char *level, const char *module, const char *detail);
 static void CommandManager_OutputParam(char subcommand, float value);
 static uint8_t CommandManager_IsInRange(float value, float min_value, float max_value);
+
+#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#define CMD_DIAG_OUTPUT(text) FOC_Platform_DebugOutput(text)
+#else
+#define CMD_DIAG_OUTPUT(text) ((void)0)
+#endif
+
+#if (FOC_FEATURE_DIAG_STATS == 1U)
+#define CMD_DIAG_STATS_INC(field_name) do { g_runtime_state.field_name++; } while (0)
+#else
+#define CMD_DIAG_STATS_INC(field_name) ((void)0)
+#endif
 
 void CommandManager_Init(void)
 {
@@ -131,16 +121,16 @@ void CommandManager_Process(void)
 
         if (exec_result == COMMAND_EXEC_RESULT_PARAM_ERROR)
         {
-            g_runtime_state.param_error_count++;
+            CMD_DIAG_STATS_INC(param_error_count);
             g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_PARAM_INVALID;
         }
         else
         {
-            g_runtime_state.protocol_error_count++;
+            CMD_DIAG_STATS_INC(protocol_error_count);
             g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_PROTOCOL_FRAME;
         }
 
-        FOC_Platform_DebugOutput("ERR fallback: keep previous params\r\n");
+        CMD_DIAG_OUTPUT("ERR fallback: keep previous params\r\n");
     }
     else
     {
@@ -179,7 +169,6 @@ void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success)
 
 void CommandManager_FinalizeInitDiagnostics(void)
 {
-    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
     uint16_t missing_mask = (uint16_t)(COMMAND_MANAGER_INIT_REQUIRED_MASK & (~g_runtime_state.init_check_mask));
 
     if (g_runtime_state.init_check_mask == 0U)
@@ -204,23 +193,29 @@ void CommandManager_FinalizeInitDiagnostics(void)
         g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_INIT_FAILED;
     }
 
-    if (missing_mask != 0U)
+#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
     {
+        char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+        if (missing_mask != 0U)
+        {
+            snprintf(out,
+                     sizeof(out),
+                     "diag.init.missing=0x%04X required=0x%04X\r\n",
+                     (unsigned int)missing_mask,
+                     (unsigned int)COMMAND_MANAGER_INIT_REQUIRED_MASK);
+            FOC_Platform_DebugOutput(out);
+        }
+
         snprintf(out,
                  sizeof(out),
-                 "diag.init.missing=0x%04X required=0x%04X\r\n",
-                 (unsigned int)missing_mask,
-                 (unsigned int)COMMAND_MANAGER_INIT_REQUIRED_MASK);
+                 "diag.init.result=%u checks=0x%04X fails=0x%04X\r\n",
+                 (unsigned int)g_runtime_state.init_diag,
+                 (unsigned int)g_runtime_state.init_check_mask,
+                 (unsigned int)g_runtime_state.init_fail_mask);
         FOC_Platform_DebugOutput(out);
     }
-
-    snprintf(out,
-             sizeof(out),
-             "diag.init.result=%u checks=0x%04X fails=0x%04X\r\n",
-             (unsigned int)g_runtime_state.init_diag,
-             (unsigned int)g_runtime_state.init_check_mask,
-             (unsigned int)g_runtime_state.init_fail_mask);
-    FOC_Platform_DebugOutput(out);
+#endif
 }
 
 void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid)
@@ -235,7 +230,7 @@ void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_
         return;
     }
 
-    g_runtime_state.control_skip_count++;
+    CMD_DIAG_STATS_INC(control_skip_count);
     g_runtime_state.sensor_invalid_consecutive++;
 
     if (adc_valid == 0U)
@@ -247,7 +242,7 @@ void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_
         g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_SENSOR_ENCODER_INVALID;
     }
 
-    if (g_runtime_state.sensor_invalid_consecutive >= COMMAND_MANAGER_SENSOR_FAULT_THRESHOLD)
+    if (g_runtime_state.sensor_invalid_consecutive >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
     {
         if (g_runtime_state.system_state != COMMAND_MANAGER_SYSTEM_FAULT)
         {
@@ -265,19 +260,17 @@ void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_
 
 void CommandManager_ReportProtocolFrameError(void)
 {
-    g_runtime_state.protocol_error_count++;
+    CMD_DIAG_STATS_INC(protocol_error_count);
     g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_PROTOCOL_FRAME;
 }
 
 void CommandManager_ReportControlLoopSkip(void)
 {
-    g_runtime_state.control_skip_count++;
+    CMD_DIAG_STATS_INC(control_skip_count);
 }
 
 uint8_t CommandManager_RecoverFaultAndReinit(void)
 {
-    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-
     g_runtime_state.sensor_invalid_consecutive = 0U;
     g_runtime_state.protocol_error_count = 0U;
     g_runtime_state.param_error_count = 0U;
@@ -290,12 +283,17 @@ uint8_t CommandManager_RecoverFaultAndReinit(void)
 
     FOC_ControlConfigResetDefault();
 
-    snprintf(out,
-             sizeof(out),
-             "diag.reinit=SOFT_DIAG_RESET state=%u fault=%s\r\n",
-             (unsigned int)g_runtime_state.system_state,
-             CommandManager_GetFaultName(g_runtime_state.last_fault_code));
-    FOC_Platform_DebugOutput(out);
+#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+    {
+        char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+        snprintf(out,
+                 sizeof(out),
+                 "diag.reinit=SOFT_DIAG_RESET state=%u fault=%s\r\n",
+                 (unsigned int)g_runtime_state.system_state,
+                 CommandManager_GetFaultName(g_runtime_state.last_fault_code));
+        FOC_Platform_DebugOutput(out);
+    }
+#endif
 
     return 1U;
 }
@@ -330,7 +328,8 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV:
-        if ((value < 1.0f) || (value > 1000.0f))
+        if ((value < COMMAND_MANAGER_PARAM_REPORT_DIV_MIN) ||
+            (value > COMMAND_MANAGER_PARAM_REPORT_DIV_MAX))
         {
             return 0U;
         }
@@ -338,7 +337,8 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_SUBCMD_OSC_DIV:
-        if ((value < 1.0f) || (value > 1000.0f))
+        if ((value < COMMAND_MANAGER_PARAM_REPORT_DIV_MIN) ||
+            (value > COMMAND_MANAGER_PARAM_REPORT_DIV_MAX))
         {
             return 0U;
         }
@@ -346,7 +346,7 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_ENABLE:
-        g_params.semantic_enable = (value != 0.0f) ? 1U : 0U;
+        g_params.semantic_enable = (value != 0.0f) ? COMMAND_MANAGER_ENABLED_ENABLE : COMMAND_MANAGER_ENABLED_DISABLE;
         break;
 
     case COMMAND_MANAGER_SUBCMD_OSC_ENABLE:
@@ -354,7 +354,8 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_SUBCMD_OSC_PARAM_MASK:
-        if ((value < 0.0f) || (value > 65535.0f))
+        if ((value < COMMAND_MANAGER_PARAM_OSC_MASK_MIN) ||
+            (value > COMMAND_MANAGER_PARAM_OSC_MASK_MAX))
         {
             return 0U;
         }
@@ -492,10 +493,29 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_SUBCMD_CONTROL_MODE:
-        if ((value < 0.0f) || (value > 1.0f))
+        if ((value < COMMAND_MANAGER_PARAM_CONTROL_MODE_MIN) ||
+            (value > COMMAND_MANAGER_PARAM_CONTROL_MODE_MAX))
         {
             return 0U;
         }
+#if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)
+        if ((uint8_t)value != COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY)
+        {
+            return 0U;
+        }
+#elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
+        if ((uint8_t)value != COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
+        {
+            return 0U;
+        }
+#elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
+        /* FULL build allows runtime switching between two parallel algorithms. */
+        if (((uint8_t)value != COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY) &&
+            ((uint8_t)value != COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE))
+        {
+            return 0U;
+        }
+#endif
         g_params.control_mode = (uint8_t)value;
         break;
 
@@ -755,9 +775,9 @@ uint8_t CommandManager_IsMotorEnabled(void)
 
 static void CommandManager_ReportInitDiag(void)
 {
-    FOC_Platform_DebugOutput("diag.command_manager=READY\r\n");
-    FOC_Platform_DebugOutput("diag.protocol_exec=NOT_EXECUTED\r\n");
-    FOC_Platform_DebugOutput("diag.fallback=KEEP_LAST_VALID\r\n");
+    CMD_DIAG_OUTPUT("diag.command_manager=READY\r\n");
+    CMD_DIAG_OUTPUT("diag.protocol_exec=NOT_EXECUTED\r\n");
+    CMD_DIAG_OUTPUT("diag.fallback=KEEP_LAST_VALID\r\n");
 }
 
 static command_exec_result_t CommandManager_Execute(const protocol_command_t *cmd)
@@ -805,24 +825,29 @@ static command_exec_result_t CommandManager_Execute(const protocol_command_t *cm
 
     if (cmd->command == COMMAND_MANAGER_CMD_READ_STATE)
     {
-        char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
         const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
-
-        snprintf(out,
-                 sizeof(out),
-                 "STATE SYS=%u COMM=%u REPORT=%u DIRTY=%u LAST=%u INIT=%u FAULT=%s SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n",
-                 (unsigned int)state->system_state,
-                 (unsigned int)state->comm_state,
-                 (unsigned int)state->report_mode,
-                 (unsigned int)state->params_dirty,
-                 (unsigned int)state->last_exec_ok,
-                 (unsigned int)state->init_diag,
-                 CommandManager_GetFaultName(state->last_fault_code),
-                 (unsigned int)state->sensor_invalid_consecutive,
-                 (unsigned long)state->protocol_error_count,
-                 (unsigned long)state->param_error_count,
-                 (unsigned long)state->control_skip_count);
-        FOC_Platform_DebugOutput(out);
+#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+        {
+            char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+            snprintf(out,
+                     sizeof(out),
+                     "STATE SYS=%u COMM=%u REPORT=%u DIRTY=%u LAST=%u INIT=%u FAULT=%s SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n",
+                     (unsigned int)state->system_state,
+                     (unsigned int)state->comm_state,
+                     (unsigned int)state->report_mode,
+                     (unsigned int)state->params_dirty,
+                     (unsigned int)state->last_exec_ok,
+                     (unsigned int)state->init_diag,
+                     CommandManager_GetFaultName(state->last_fault_code),
+                     (unsigned int)state->sensor_invalid_consecutive,
+                     (unsigned long)state->protocol_error_count,
+                     (unsigned long)state->param_error_count,
+                     (unsigned long)state->control_skip_count);
+            FOC_Platform_DebugOutput(out);
+        }
+#else
+        (void)state;
+#endif
         return COMMAND_EXEC_RESULT_OK;
     }
 
@@ -832,6 +857,7 @@ static command_exec_result_t CommandManager_Execute(const protocol_command_t *cm
         {
             if (CommandManager_RecoverFaultAndReinit() != 0U)
             {
+#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
                 const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
                 char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -844,6 +870,7 @@ static command_exec_result_t CommandManager_Execute(const protocol_command_t *cm
                          (unsigned long)state->param_error_count,
                          (unsigned long)state->control_skip_count);
                 FOC_Platform_DebugOutput(out);
+#endif
                 return COMMAND_EXEC_RESULT_OK;
             }
 
@@ -988,6 +1015,7 @@ static const char *CommandManager_GetFaultName(command_manager_fault_code_t faul
 
 static void CommandManager_OutputDiag(const char *level, const char *module, const char *detail)
 {
+#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
     snprintf(out,
@@ -997,6 +1025,11 @@ static void CommandManager_OutputDiag(const char *level, const char *module, con
              (module != 0) ? module : "general",
              (detail != 0) ? detail : "none");
     FOC_Platform_DebugOutput(out);
+#else
+    (void)level;
+    (void)module;
+    (void)detail;
+#endif
 }
 
 static void CommandManager_OutputParam(char subcommand, float value)

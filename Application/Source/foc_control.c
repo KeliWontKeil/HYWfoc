@@ -1,12 +1,10 @@
 #include "foc_control.h"
 
-#define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (MATH_TWO_PI * 4.0f)
-#define FOC_SPEED_MECH_REBASE_RAD 2048.0f
-#define FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD      0.001f
-#define FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT           0.2f
-#define FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD         0.002f
-#define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD    0.40f
-#define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD      0.60f
+#include "foc_control_internal.h"
+#include "foc_config.h"
+#include "foc_shared_types.h"
+#include "math_transforms.h"
+#include "svpwm.h"
 
 static float g_speed_err_accum_rad = 0.0f;
 static float g_prev_mech_signed_rad = 0.0f;
@@ -303,7 +301,6 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
     float iq_measured;
     float voltage_limit;
     float uq_ff;
-    float uq_pid;
     float uq_cmd;
 
     if ((motor == 0) || (current_pid == 0) || (sensor == 0))
@@ -325,11 +322,7 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
 
     voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
     uq_ff = iq_ref * motor->phase_resistance;
-    uq_pid = 0.0f;
-
-    uq_pid = FOC_CurrentLoopPIDRun(current_pid, iq_ref, iq_measured, dt_sec);
-
-    uq_cmd = uq_ff + uq_pid;
+    uq_cmd = uq_ff + FOC_CurrentLoopPIDRun(current_pid, iq_ref, iq_measured, dt_sec);
 
     motor->electrical_phase_angle = Math_WrapRad(electrical_angle);
     motor->ud = 0.0f;
@@ -391,10 +384,9 @@ void FOC_ControlApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
 
 void FOC_OpenLoopStep(foc_motor_t *motor,float voltage, float turn_speed)
 {
-    float delta_theta;
-
-    delta_theta = MATH_TWO_PI * turn_speed * motor->pole_pairs * 0.001f * motor->direction;
-    motor->electrical_phase_angle = Math_WrapRad(motor->electrical_phase_angle + delta_theta);
+    motor->electrical_phase_angle = Math_WrapRad(
+        motor->electrical_phase_angle +
+        MATH_TWO_PI * turn_speed * motor->pole_pairs * 0.001f * motor->direction);
 
     motor->ud = 0.0f;
     motor->uq = Math_ClampFloat(voltage, 0.0f, motor->set_voltage);
@@ -459,21 +451,18 @@ void FOC_SpeedControlStep(foc_motor_t *motor,
 {
     float torque_ref_current;
     float speed_angle_error_rad;
-    float mech_angle_rad;
 
     if ((motor == 0) || (speed_pid == 0) || (sensor == 0))
     {
         return;
     }
 
-    mech_angle_rad = sensor->mech_angle_rad.output_value;
-
     if (dt_sec <= 0.0f)
     {
         dt_sec = 0.001f;
     }
 
-    FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
+    FOC_UpdateAccumulatedMechanicalAngle(motor, sensor->mech_angle_rad.output_value);
     speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, speed_ref_rad_s, dt_sec);
 
     torque_ref_current = FOC_PIDRunCore(speed_pid,
@@ -502,7 +491,6 @@ void FOC_SpeedAngleControlStep(foc_motor_t *motor,
     float torque_ref_current;
     float torque_ref_speed;
     float torque_ref_hold;
-    float mech_angle_rad;
     float mech_signed_total_rad;
     float angle_error_rad;
     float abs_angle_error_rad;
@@ -516,8 +504,6 @@ void FOC_SpeedAngleControlStep(foc_motor_t *motor,
         return;
     }
 
-    mech_angle_rad = sensor->mech_angle_rad.output_value;
-
     if (dt_sec <= 0.0f)
     {
         dt_sec = 0.001f;
@@ -525,7 +511,7 @@ void FOC_SpeedAngleControlStep(foc_motor_t *motor,
 
     angle_ref_rad *= motor->direction;
 
-    FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
+    FOC_UpdateAccumulatedMechanicalAngle(motor, sensor->mech_angle_rad.output_value);
     mech_signed_total_rad = motor->direction * motor->mech_angle_accum_rad;
     angle_error_rad = angle_ref_rad - mech_signed_total_rad;
     abs_angle_error_rad = fabsf(angle_error_rad);
@@ -550,8 +536,7 @@ void FOC_SpeedAngleControlStep(foc_motor_t *motor,
         speed_blend = (abs_angle_error_rad - g_foc_runtime_cfg.speed_angle_transition_start_rad) / transition_span_rad;
     }
 
-    speed_ref_rad_s = (angle_error_rad >= 0.0f) ? fabsf(angle_position_speed_rad_s) : -fabsf(angle_position_speed_rad_s);
-    speed_ref_rad_s *= speed_blend;
+    speed_ref_rad_s = ((angle_error_rad >= 0.0f) ? fabsf(angle_position_speed_rad_s) : -fabsf(angle_position_speed_rad_s)) * speed_blend;
 
     if (speed_blend < 1e-4f)
     {

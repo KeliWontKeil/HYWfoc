@@ -11,11 +11,7 @@
 #include "adc.h"
 #include "as5600.h"
 #include "pwm.h"
-
-#define CONTROL_LOOP_TICK_HZ                   1000U
-#define CONTROL_LOOP_TIMER_PRESCALER           11999U
-#define CONTROL_LOOP_TIMER_PERIOD              9U
-#define PLATFORM_BASE_CLOCK_KHZ                120000U
+#include "foc_config.h"
 
 static uint16_t g_platform_sensor_timer_period = 0U;
 
@@ -38,14 +34,13 @@ void FOC_Platform_HighRateClockInit(uint16_t pwm_freq_khz)
 {
     uint32_t period;
 
-    period = (PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U;
+    period = (FOC_PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U;
     Timer2_Init(0U, period);
 }
 
 void FOC_Platform_ControlTickSourceInit(void)
 {
-    (void)CONTROL_LOOP_TICK_HZ;
-    Timer1_Init(CONTROL_LOOP_TIMER_PRESCALER, CONTROL_LOOP_TIMER_PERIOD);
+    Timer1_Init(FOC_PLATFORM_CONTROL_TIMER_PRESCALER, FOC_PLATFORM_CONTROL_TIMER_PERIOD);
 }
 
 void FOC_Platform_BindControlTickCallback(FOC_SchedulerCallback_t callback)
@@ -117,7 +112,7 @@ uint16_t FOC_Platform_ReceiveFrame(uint8_t *buffer, uint16_t max_len)
 
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 {
-    g_platform_sensor_timer_period = (uint16_t)((PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U);
+    g_platform_sensor_timer_period = (uint16_t)((FOC_PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U);
 
     AS5600_Init();
     Timer3_Init(0U, (uint32_t)g_platform_sensor_timer_period - 1U);
@@ -129,11 +124,6 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b)
 {
     return ADC_ReadPhaseCurrentABOk(phase_current_a, phase_current_b, ADC_AVG_DEFAULT_COUNT);
-}
-
-uint8_t FOC_Platform_ReadEncoderRawAngle(uint16_t *angle_raw)
-{
-    return AS5600_ReadAngleOk(angle_raw);
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)

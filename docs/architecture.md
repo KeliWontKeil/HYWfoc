@@ -64,7 +64,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - Current candidates:
   - `foc_platform_api.[ch]` (unified upper API)
   - `foc_shared_types.h` (shared public structures)
-  - config headers (planned): control/debug/protocol/task macro switches
+  - config headers (implemented): `foc_config.h` + domain headers (`foc_config_control.h`, `foc_config_command.h`, `foc_config_protocol.h`, `foc_config_debug.h`, `foc_config_task.h`, `foc_config_diag.h`, `foc_config_range.h`, `foc_config_platform.h`, `foc_config_app.h`, `foc_config_sensor.h`, `foc_config_svpwm.h`)
 - Contract:
   - L1/L2/L3 must access L4 only via this layer.
   - L4 must not depend on L1/L2/L3.
@@ -160,7 +160,7 @@ L2: foc_control.c / foc_control_init.c / control_scheduler.c / command_manager.c
 L3: sensor.c / svpwm.c / debug_stream.c / protocol_parser.c
 └── Special layer API/types/macros
 
-Special layer: foc_platform_api.c + foc_shared_types.h + config headers(planned)
+Special layer: foc_platform_api.c + foc_shared_types.h + config headers
 └── L4 Utilities only
 
 L4: Utilities/*

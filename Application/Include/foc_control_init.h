@@ -5,8 +5,6 @@
 
 #include "foc_shared_types.h"
 #include "math_transforms.h"
-#include "foc_control_internal.h"
-#include "foc_platform_api.h"
 
 #define FOC_CALIB_SETTLE_MS 4U
 #define FOC_CALIB_MIN_MECH_STEP_RAD 0.0015f
@@ -16,12 +14,6 @@
 #define FOC_CALIB_STEP_SAMPLE_COUNT 6U
 #define FOC_CALIB_STEP_ELEC_RAD (MATH_TWO_PI / 20.0f)
 #define FOC_CALIB_STEP_COUNT 20U
-
-#define FOC_DIR_UNDEFINED 0
-#define FOC_DIR_NORMAL 1
-#define FOC_DIR_REVERSED -1
-#define FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED (-1.0f)
-#define FOC_POLE_PAIRS_UNDEFINED 0U
 
 void FOC_MotorInit(foc_motor_t *motor,
                    float vbus_voltage,

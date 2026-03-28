@@ -1,0 +1,11 @@
+#ifndef FOC_CONFIG_MODULATION_H
+#define FOC_CONFIG_MODULATION_H
+
+#include "math_transforms.h"
+
+#define FOC_SVPWM_SQRT3 1.7320508f
+#define FOC_SVPWM_SQRT3_BY_2 MATH_SQRT3_BY_2
+#define FOC_SVPWM_EPSILON 1e-6f
+#define FOC_SVPWM_PI_BY_3 (MATH_PI / 3.0f)
+
+#endif /* FOC_CONFIG_MODULATION_H */

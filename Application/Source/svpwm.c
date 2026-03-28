@@ -1,12 +1,8 @@
 #include "svpwm.h"
 #include "foc_platform_api.h"
+#include "foc_config.h"
 
-#define SVPWM_SQRT3          1.7320508f
-#define SVPWM_SQRT3_BY_2     0.8660254f
-#define SVPWM_EPSILON        1e-6f
-#define SVPWM_PI             3.1415926f
-#define SVPWM_TWO_PI         (2.0f * SVPWM_PI)
-#define SVPWM_PI_BY_3        (SVPWM_PI / 3.0f)
+#define SVPWM_TWO_PI         MATH_TWO_PI
 
 static svpwm_output_t s_output;
 static float s_duty_a_current = 0.5f;
@@ -39,8 +35,8 @@ static float SVPWM_Clamp01(float value)
 static uint8_t SVPWM_DetermineSector(float alpha, float beta)
 {
     float u1 = beta;
-    float u2 = SVPWM_SQRT3_BY_2 * alpha - 0.5f * beta;
-    float u3 = -SVPWM_SQRT3_BY_2 * alpha - 0.5f * beta;
+    float u2 = FOC_SVPWM_SQRT3_BY_2 * alpha - 0.5f * beta;
+    float u3 = -FOC_SVPWM_SQRT3_BY_2 * alpha - 0.5f * beta;
     uint8_t code = 0;
 
     if (u1 > 0.0f)
@@ -125,7 +121,7 @@ void SVPWM_Update(float phase_a,
         return;
     }
 
-    if (vbus_voltage <= SVPWM_EPSILON)
+    if (vbus_voltage <= FOC_SVPWM_EPSILON)
     {
         *sector_out = 0U;
         *duty_a = 0.5f;
@@ -146,10 +142,10 @@ void SVPWM_Update(float phase_a,
 
     /* Reconstruct alpha-beta from inverse Clarke output (three-phase voltages). */
     alpha = phase_a;
-    beta = (phase_b - phase_c) / SVPWM_SQRT3;
+    beta = (phase_b - phase_c) / FOC_SVPWM_SQRT3;
     magnitude = sqrtf(alpha * alpha + beta * beta);
 
-    if (magnitude < SVPWM_EPSILON)
+    if (magnitude < FOC_SVPWM_EPSILON)
     {
         *sector_out = 0U;
         *duty_a = 0.5f;
@@ -177,16 +173,16 @@ void SVPWM_Update(float phase_a,
     sector_id = SVPWM_DetermineSector(alpha, beta);
     if (sector_id == 0U)
     {
-        sector_id = (uint8_t)(theta / SVPWM_PI_BY_3) + 1U;
+        sector_id = (uint8_t)(theta / FOC_SVPWM_PI_BY_3) + 1U;
         if (sector_id > 6U)
         {
             sector_id = 6U;
         }
     }
 
-    theta_sector = theta - (float)(sector_id - 1U) * SVPWM_PI_BY_3;
+    theta_sector = theta - (float)(sector_id - 1U) * FOC_SVPWM_PI_BY_3;
 
-    t1 = magnitude * sinf(SVPWM_PI_BY_3 - theta_sector);
+    t1 = magnitude * sinf(FOC_SVPWM_PI_BY_3 - theta_sector);
     t2 = magnitude * sinf(theta_sector);
 
     if (t1 < 0.0f)

@@ -6,8 +6,6 @@
 #include "control_scheduler.h"
 #include "foc_platform_api.h"
 
-#define DEBUG_STREAM_OSC_PAYLOAD_LEN 80U
-
 static void DebugStream_OutputSemanticTelemetry(const sensor_data_t *sensor);
 static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor, const foc_motor_t *motor);
 static void DebugStream_AppendOscParam(char *buffer, uint16_t buffer_len, uint16_t *offset, float value, uint8_t *has_param);

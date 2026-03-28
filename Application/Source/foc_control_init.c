@@ -1,5 +1,8 @@
 #include "foc_control_init.h"
 
+#include "foc_platform_api.h"
+#include "foc_control_internal.h"
+
 static uint8_t FOC_ClampPolePairs(int32_t pole_pairs)
 {
     if (pole_pairs < 1)

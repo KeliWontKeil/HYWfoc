@@ -1,6 +1,6 @@
 #include "sensor.h"
-
-#define SENSOR_ANGLE_TO_RAD (2.0f * 3.1415926535f / 4096.0f)
+#include "foc_platform_api.h"
+#include "foc_config.h"
 
 /* Private variables */
 static sensor_data_t sensor_data;
@@ -20,9 +20,21 @@ void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent)
     FOC_Platform_SensorInputInit(pwm_freq_kHz);
 
     /* Initialize scalar Kalman filters: (R, P0, Q, x0). */
-    Kalman_Init(&sensor_data.current_a, 0.15f, 0.0f, 0.025f, 0.0f);
-    Kalman_Init(&sensor_data.current_b, 0.15f, 0.0f, 0.02f, 0.0f);
-    Kalman_Init(&sensor_data.mech_angle_rad, 1.0f, 5.0f, 0.05f, 0.0f);
+    Kalman_Init(&sensor_data.current_a,
+                FOC_SENSOR_KALMAN_CURRENT_A_MEAS_ERR,
+                FOC_SENSOR_KALMAN_CURRENT_A_EST_ERR,
+                FOC_SENSOR_KALMAN_CURRENT_A_PROC_NOISE,
+                FOC_SENSOR_KALMAN_CURRENT_A_INIT);
+    Kalman_Init(&sensor_data.current_b,
+                FOC_SENSOR_KALMAN_CURRENT_B_MEAS_ERR,
+                FOC_SENSOR_KALMAN_CURRENT_B_EST_ERR,
+                FOC_SENSOR_KALMAN_CURRENT_B_PROC_NOISE,
+                FOC_SENSOR_KALMAN_CURRENT_B_INIT);
+    Kalman_Init(&sensor_data.mech_angle_rad,
+                FOC_SENSOR_KALMAN_ANGLE_MEAS_ERR,
+                FOC_SENSOR_KALMAN_ANGLE_EST_ERR,
+                FOC_SENSOR_KALMAN_ANGLE_PROC_NOISE,
+                FOC_SENSOR_KALMAN_ANGLE_INIT);
 
     /* Initialize status flags */
     sensor_data.adc_valid = 0;
@@ -125,14 +137,11 @@ static void Sensor_ReadADC(void)
 */
 static void Sensor_ReadEncoder(void)
 {
-    uint16_t angle;
     float angle_rad;
 
     /* Read encoder angle register via decoupled AS5600 interface. */
-    if (FOC_Platform_ReadEncoderRawAngle(&angle) != 0U)
+    if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
     {
-        angle_rad = (float)angle * SENSOR_ANGLE_TO_RAD;
-
         /* Apply Kalman filtering */
         //Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
         //angle_rad -= fmodf(angle_rad, 0.01);

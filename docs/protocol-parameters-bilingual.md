@@ -37,12 +37,14 @@ EN:
 - `R`: read one parameter
 - `R + X`: read all parameters
 - `Q`: read runtime state summary
+- `F + C`: clear fault counters and soft diagnostic re-init
 
 中文：
 - `W`：写单参数
 - `R`：读单参数
 - `R + X`：读全部参数
 - `Q`：读运行状态摘要
+- `F + C`：清故障计数并执行软诊断重置
 
 ## 4. Sub-command Mapping / 子命令映射
 
@@ -54,6 +56,7 @@ EN:
 | H | debug_high_frequency_divider | High-frequency oscilloscope output divider |
 | Y | debug_low_frequency_enabled | Enable low-frequency semantic output (0/1) |
 | Z | debug_high_frequency_enabled | Enable high-frequency output (0/1) |
+| O | debug_high_frequency_mask | High-frequency field mask (bitmask) |
 | C | pid_current_kp | Current loop PID Kp |
 | I | pid_current_ki | Current loop PID Ki |
 | J | pid_current_kd | Current loop PID Kd |
@@ -68,6 +71,8 @@ EN:
 | E | control_angle_hold_pid_deadband_rad | Deadband for angle hold PID |
 | F | control_speed_angle_transition_start_rad | Speed-angle blend start threshold |
 | T | control_speed_angle_transition_end_rad | Speed-angle blend end threshold |
+| D | control_mode | Control mode selector (0: speed+angle, 1: speed-only) |
+| Q | motor_enable | Motor enable gate (0/1) |
 | X | (read-all sentinel) | Only used with read command |
 
 ## 5. Default Runtime Parameters / 默认运行参数

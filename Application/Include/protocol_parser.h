@@ -2,13 +2,7 @@
 #define PROTOCOL_PARSER_H
 
 #include <stdint.h>
-
-#define PROTOCOL_PARSER_FRAME_HEAD_DEFAULT 'a'
-#define PROTOCOL_PARSER_FRAME_TAIL_DEFAULT 'b'
-
-#define PROTOCOL_PARSER_STATUS_OK_CHAR 'O'
-#define PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR 'E'
-#define PROTOCOL_PARSER_STATUS_TIMEOUT_CHAR 'T'
+#include "foc_config.h"
 
 typedef struct {
     char command;

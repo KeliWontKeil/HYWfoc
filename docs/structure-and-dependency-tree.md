@@ -10,6 +10,8 @@ FOC_VSCODE/
 │   ├── Include/
 │   │   ├── main.h
 │   │   ├── foc_app.h
+│   │   ├── foc_config.h
+│   │   ├── foc_config_*.h
 │   │   ├── foc_platform_api.h
 │   │   ├── control_scheduler.h
 │   │   ├── foc_control.h
@@ -77,7 +79,7 @@ Special Dependency Layer
 ├── foc_platform_api.c/.h
 ├── foc_shared_types.h
 ├── math_transforms.c/.h
-└── config headers (planned)
+└── config headers (implemented, domain-split)
 
 L4 Utilities Drivers
 ├── adc.c / as5600.c / i2c.c

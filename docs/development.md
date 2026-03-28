@@ -60,6 +60,9 @@
 - L3 Advanced peripheral layer: convert low-level raw data/interfaces into structured interfaces.
 - L4 Peripheral layer: chip-specific Utilities drivers only.
 - Special dependency layer: unified upper API, shared structs, parameter/config macros, algorithm feature-cut macros.
+- Config convergence rule: prefer `foc_config.h` domain headers as the single source for runtime defaults, command characters, and range limits.
+- Control algorithm trimming rule: `speed-only` and `speed-angle` are parallel algorithms. Default build should keep both (`FULL`) and allow runtime mode switch; single-algorithm build is an explicit trimming option only.
+- Domain layout now includes: command/protocol/debug/task/diag + range/platform/app/sensor/svpwm.
 - Mandatory rule: L1/L2/L3 can call L4 only through special dependency layer.
 - Mandatory rule: L4 must not depend on L1/L2/L3.
 

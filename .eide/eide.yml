@@ -14,7 +14,6 @@ virtualFolder:
         - path: Application/Source/main.c
         - path: Application/Source/systick.c
         - path: Application/Source/control_scheduler.c
-        - path: Application/Source/uart_debug.c
         - path: Application/Source/sensor.c
         - path: Application/Source/svpwm.c
         - path: Application/Source/math_transforms.c
@@ -22,6 +21,10 @@ virtualFolder:
         - path: Application/Source/foc_app.c
         - path: Application/Source/foc_platform_api.c
         - path: Application/Source/foc_control_init.c
+        - path: Application/Source/protocol_parser.c
+        - path: Application/Source/command_manager.c
+        - path: Application/Source/debug_stream.c
+        - path: Application/Source/retarget.c
       folders: []
     - name: CMSIS
       files:
@@ -70,6 +73,7 @@ virtualFolder:
         - path: Utilities/USART/usart1.c
         - path: Utilities/TIMER3/timer3.c
         - path: Utilities/USART/usart2.c
+        - path: Utilities/USART/comm_frame_mux.c
       folders: []
     - name: ::CMSIS
       files: []
