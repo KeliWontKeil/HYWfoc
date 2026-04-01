@@ -6,18 +6,17 @@
 /* Sensor sampling phase offset percent in one PWM period (0.0f ~ 100.0f). */
 #define FOC_APP_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 96.0f
 
-/* AS5600 12-bit raw angle to radian conversion factor. */
-//#define FOC_SENSOR_ANGLE_TO_RAD (MATH_TWO_PI / 4096.0f)
-
 /* Kalman default parameters: (measurement_error, estimate_error, process_noise, initial). */
 #define FOC_SENSOR_KALMAN_CURRENT_A_MEAS_ERR 0.15f
 #define FOC_SENSOR_KALMAN_CURRENT_A_EST_ERR 0.0f
 #define FOC_SENSOR_KALMAN_CURRENT_A_PROC_NOISE 0.025f
 #define FOC_SENSOR_KALMAN_CURRENT_A_INIT 0.0f
+
 #define FOC_SENSOR_KALMAN_CURRENT_B_MEAS_ERR 0.15f
 #define FOC_SENSOR_KALMAN_CURRENT_B_EST_ERR 0.0f
 #define FOC_SENSOR_KALMAN_CURRENT_B_PROC_NOISE 0.02f
 #define FOC_SENSOR_KALMAN_CURRENT_B_INIT 0.0f
+
 #define FOC_SENSOR_KALMAN_ANGLE_MEAS_ERR 1.0f
 #define FOC_SENSOR_KALMAN_ANGLE_EST_ERR 5.0f
 #define FOC_SENSOR_KALMAN_ANGLE_PROC_NOISE 0.05f

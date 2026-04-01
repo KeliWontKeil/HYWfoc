@@ -117,6 +117,8 @@ targets:
       - <virtual_root>/Utilities/i2c.c
       - <virtual_root>/Utilities/usart.c
       - <virtual_root>/Application/foc_irq_api.c
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:
@@ -256,6 +258,8 @@ targets:
         - RTE/_GD32F30X_HD
       libList: []
     excludeList: []
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:
@@ -386,6 +390,8 @@ targets:
         - RTE/_GD32F30X_XD
       libList: []
     excludeList: []
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:

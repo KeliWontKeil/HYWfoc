@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added trim-able undervoltage protection feature switch (`FOC_FEATURE_UNDERVOLTAGE_PROTECTION`) in startup config.
+- Added platform placeholder API `FOC_Platform_UndervoltageProtect(vbus_voltage)` with no-op implementation for current hardware.
+- Added FOC-side undervoltage fault logic path in control loop with trip/recover thresholds and fault-state propagation via command manager.
+
+### Documentation
+- Updated project README to describe the undervoltage protection placeholder path and current hardware limitation.
+
 ## [0.3.6] - 2026-03-28
 
 ### Changed

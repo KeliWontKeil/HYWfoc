@@ -60,7 +60,7 @@
 - L3 Advanced peripheral layer: convert low-level raw data/interfaces into structured interfaces.
 - L4 Peripheral layer: chip-specific Utilities drivers only.
 - Special dependency layer: unified upper API, shared structs, parameter/config macros, algorithm feature-cut macros.
-- Config convergence rule: prefer `foc_config.h` domain headers as the single source for runtime defaults, command characters, and range limits.
+- **Config Convergence Rule**: See [copilot-instructions.md](../copilot-instructions.md#mandatory-dependency-contract) for single-source config principle. All runtime defaults, command parameters, and range limits belong in `foc_config_*.h` domain headers, never scattered in .c files.
 - Control algorithm trimming rule: `speed-only` and `speed-angle` are parallel algorithms. Default build should keep both (`FULL`) and allow runtime mode switch; single-algorithm build is an explicit trimming option only.
 - Domain layout now includes: command/protocol/debug/task/diag + range/platform/app/sensor/svpwm.
 - Mandatory rule: L1/L2/L3 can call L4 only through special dependency layer.
@@ -73,10 +73,12 @@
 - Minimize floating-point operations
 
 ### Naming Conventions
+**See** [copilot-instructions.md - Naming & Code Style](../copilot-instructions.md#naming--code-style) for the authoritative definitions:
 - Functions: `ModuleName_FunctionName`
 - Variables: `camelCase`
 - Macros: `UPPER_CASE`
 - Types: `type_name_t`
+- Structs: `Module_Struct`
 
 ### Code Organization
 - One function per responsibility

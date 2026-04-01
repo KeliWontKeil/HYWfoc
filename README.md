@@ -25,6 +25,7 @@ Current Version: v0.3.6
 - Scheduler task-rate API has been standardized to `FOC_TaskRate_t` with centralized divider configuration
 - Domain config convergence is in progress through `foc_config.h` and split config headers
 - Algorithm trimming supports `FULL` build (runtime switchable) and explicit single-algorithm builds
+- Undervoltage protection logic is integrated in FOC control flow (trip/recover thresholds + fault path), while platform actuator API remains trim-able and currently no-op on this hardware
 
 ## Features
 - **FOC Open-loop Core**: Inverse Park + Inverse Clarke + SVPWM output path

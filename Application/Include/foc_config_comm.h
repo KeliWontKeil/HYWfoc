@@ -17,7 +17,11 @@
 #define COMMAND_MANAGER_CMD_FAULT_CONTROL 'F'
 #define COMMAND_MANAGER_SUBCMD_FAULT_CLEAR_REINIT 'C'
 
-/* Parameter sub-command definitions. */
+/*
+ * Parameter sub-command definitions.
+ * NOTE: L/H names keep historical "DIV" naming for protocol compatibility,
+ * while runtime value semantics are frequency in Hz.
+ */
 #define COMMAND_MANAGER_SUBCMD_TARGET_ANGLE 'A'
 #define COMMAND_MANAGER_SUBCMD_ANGLE_SPEED 'S'
 #define COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV 'L'

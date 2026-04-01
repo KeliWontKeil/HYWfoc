@@ -70,9 +70,7 @@ void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent)
 {
     /* Initialize PWM (TIMER0 as slave) */
     FOC_Platform_PWMInit((uint8_t)freq_kHz, deadtime_percent);
-    FOC_Platform_PWMSetDutyCycle(FOC_PLATFORM_PWM_CHANNEL_0, 0U);
-    FOC_Platform_PWMSetDutyCycle(FOC_PLATFORM_PWM_CHANNEL_1, 0U);
-    FOC_Platform_PWMSetDutyCycle(FOC_PLATFORM_PWM_CHANNEL_2, 0U);
+    FOC_Platform_PWMSetDutyCycleTripleFloat(0.0f, 0.0f, 0.0f);
     FOC_Platform_PWMStart();
 
     s_interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;

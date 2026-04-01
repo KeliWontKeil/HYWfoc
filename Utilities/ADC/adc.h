@@ -33,6 +33,10 @@
 #define ADC_GPIO_PA7_PORT     GPIOA
 #define ADC_GPIO_PA7_PIN      GPIO_PIN_7
 
+#define FOC_ISR_VIS_ADC_DMA_GPIO_RCU RCU_GPIOB
+#define FOC_ISR_VIS_ADC_DMA_GPIO_PORT GPIOB
+#define FOC_ISR_VIS_ADC_DMA_GPIO_PIN GPIO_PIN_8
+
 /* ADC configuration */
 #define ADC_SAMPLE_TIME       ADC_SAMPLETIME_55POINT5  /* Maximum resolution */
 #define ADC_RESOLUTION        ADC_RESOLUTION_12B       /* 12-bit resolution */

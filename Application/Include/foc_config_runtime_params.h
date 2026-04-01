@@ -2,19 +2,7 @@
 #define FOC_CONFIG_RUNTIME_PARAMS_H
 
 #include "foc_config_telemetry.h"
-
-/* Control mode options. */
-#define COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE 0U
-#define COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY 1U
-#define COMMAND_MANAGER_ENABLED_DISABLE 0U
-#define COMMAND_MANAGER_ENABLED_ENABLE 1U
-
-/* Runtime parameter defaults. */
-#define COMMAND_MANAGER_DEFAULT_SEMANTIC_DIV 5U
-#define COMMAND_MANAGER_DEFAULT_OSC_DIV 1U
-#define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED 1U
-#define COMMAND_MANAGER_DEFAULT_OSC_ENABLED 0U
-#define COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK DEBUG_STREAM_OSC_DEFAULT_PARAM_MASK
+#include "foc_config_timing.h"
 
 /* Command runtime parameter ranges (unit: rad / rad/s / PID gains). */
 #define COMMAND_MANAGER_PARAM_TARGET_ANGLE_MIN_RAD (-12.566f)
@@ -50,9 +38,9 @@
 #define COMMAND_MANAGER_PARAM_PID_SPEED_KD_MIN (0.0f)
 #define COMMAND_MANAGER_PARAM_PID_SPEED_KD_MAX (10.0f)
 
-/* Divider range: used by semantic and osc stream decimation. */
-#define COMMAND_MANAGER_PARAM_REPORT_DIV_MIN (1.0f)
-#define COMMAND_MANAGER_PARAM_REPORT_DIV_MAX (1000.0f)
+/* Report frequency range (Hz), bounded by monitor task trigger rate. */
+#define COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ (1.0f)
+#define COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ ((float)FOC_SCHEDULER_MONITOR_HZ)
 
 /* Osc parameter mask range (16-bit payload mask). */
 #define COMMAND_MANAGER_PARAM_OSC_MASK_MIN (0.0f)

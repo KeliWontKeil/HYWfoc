@@ -13,6 +13,15 @@ static volatile uint8_t timer1_initialized = 0;
 */
 void Timer1_Init(uint32_t prescaler, uint32_t period)
 {
+#if (FOC_ISR_VIS_TIMER1_TOGGLE_ENABLE == 1U)
+    rcu_periph_clock_enable(FOC_ISR_VIS_TIMER1_GPIO_RCU);
+    gpio_init(FOC_ISR_VIS_TIMER1_GPIO_PORT,
+              GPIO_MODE_OUT_PP,
+              GPIO_OSPEED_50MHZ,
+              FOC_ISR_VIS_TIMER1_GPIO_PIN);
+    gpio_bit_reset(FOC_ISR_VIS_TIMER1_GPIO_PORT, FOC_ISR_VIS_TIMER1_GPIO_PIN);
+#endif
+
     /* Enable TIMER1 clock */
     rcu_periph_clock_enable(TIMER1_RCU);
     
@@ -88,6 +97,15 @@ void Timer1_IRQHandler_Internal(void)
     {
         /* Clear interrupt flag */
         timer_interrupt_flag_clear(TIMER1_PERIPH, TIMER_INT_FLAG_UP);
+
+        if (gpio_output_bit_get(FOC_ISR_VIS_TIMER1_GPIO_PORT, FOC_ISR_VIS_TIMER1_GPIO_PIN) != RESET)
+        {
+            gpio_bit_reset(FOC_ISR_VIS_TIMER1_GPIO_PORT, FOC_ISR_VIS_TIMER1_GPIO_PIN);
+        }
+        else
+        {
+            gpio_bit_set(FOC_ISR_VIS_TIMER1_GPIO_PORT, FOC_ISR_VIS_TIMER1_GPIO_PIN);
+        }
         
         /* Call callback function if set */
         if (timer1_callback != 0)

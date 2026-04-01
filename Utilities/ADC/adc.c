@@ -46,6 +46,15 @@ void ADC_Init(void)
     ADC_DMA_Config();
     ADC_Config();
 
+#if (FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE == 1U)
+    rcu_periph_clock_enable(FOC_ISR_VIS_ADC_DMA_GPIO_RCU);
+    gpio_init(FOC_ISR_VIS_ADC_DMA_GPIO_PORT,
+              GPIO_MODE_OUT_PP,
+              GPIO_OSPEED_50MHZ,
+              FOC_ISR_VIS_ADC_DMA_GPIO_PIN);
+    gpio_bit_reset(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN);
+#endif
+
     /* Prefill DMA buffer to mid-scale so early reads are stable before full DMA history is collected. */
     mid_raw = (uint32_t)(ADC_MAX_VALUE / 2.0f);
     packed_mid = (mid_raw & 0xFFFFU) | ((mid_raw & 0xFFFFU) << 16U);
@@ -573,6 +582,15 @@ void ADC_DMA_IRQHandler_Internal(void)
     {
         dma_interrupt_flag_clear(DMA0, DMA_CH0, DMA_INT_FLAG_FTF);
         dma_complete = 1;
+
+        if (gpio_output_bit_get(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN) != RESET)
+        {
+            gpio_bit_reset(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN);
+        }
+        else
+        {
+            gpio_bit_set(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN);
+        }
     }
 }
 

@@ -25,9 +25,14 @@ void FOC_Platform_IndicatorInit(void)
     LED_Init();
 }
 
+void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on)
+{
+    LED_SetState(led_index, on);
+}
+
 void FOC_Platform_SetHeartbeatIndicator(uint8_t on)
 {
-    LED_SetState(3U, on);
+    FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, on);
 }
 
 void FOC_Platform_HighRateClockInit(uint16_t pwm_freq_khz)
@@ -142,6 +147,20 @@ void FOC_Platform_WaitMs(uint32_t ms)
     delay_1ms(ms);
 }
 
+void FOC_Platform_UndervoltageProtect(float vbus_voltage)
+{
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == 1U)
+    /*
+     * Hook point reserved for future hardware undervoltage protection action.
+     * Current board does not support this control path yet.
+     */
+    (void)vbus_voltage;
+#else
+    /* Feature is trimmed out by configuration. */
+    (void)vbus_voltage;
+#endif
+}
+
 
 void FOC_Platform_EnableCycleCounter(void)
 {
@@ -164,11 +183,6 @@ void FOC_Platform_PWMInit(uint8_t freq_khz, uint8_t deadtime_percent)
 void FOC_Platform_PWMStart(void)
 {
     PWM_Start();
-}
-
-void FOC_Platform_PWMSetDutyCycle(foc_platform_pwm_channel_t channel, uint8_t duty_percent)
-{
-    PWM_SetDutyCycle((pwm_channel_t)channel, duty_percent);
 }
 
 void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c)

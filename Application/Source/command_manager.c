@@ -11,8 +11,8 @@
 typedef struct {
     float target_angle_rad;
     float angle_speed_rad_s;
-    uint16_t semantic_div;
-    uint16_t osc_div;
+    uint16_t semantic_freq_hz;
+    uint16_t osc_freq_hz;
     uint16_t osc_param_mask;
     uint8_t semantic_enable;
     uint8_t osc_enable;
@@ -79,8 +79,8 @@ void CommandManager_Init(void)
 
     g_params.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
     g_params.angle_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
-    g_params.semantic_div = COMMAND_MANAGER_DEFAULT_SEMANTIC_DIV;
-    g_params.osc_div = COMMAND_MANAGER_DEFAULT_OSC_DIV;
+    g_params.semantic_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
+    g_params.osc_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
     g_params.osc_param_mask = COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK;
     g_params.semantic_enable = COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED;
     g_params.osc_enable = COMMAND_MANAGER_DEFAULT_OSC_ENABLED;
@@ -258,6 +258,26 @@ void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_
     }
 }
 
+void CommandManager_ReportUndervoltageFault(float vbus_voltage)
+{
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == 1U)
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    g_runtime_state.system_state = COMMAND_MANAGER_SYSTEM_FAULT;
+    g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_UNDERVOLTAGE;
+    CMD_DIAG_STATS_INC(control_skip_count);
+
+    snprintf(out,
+             sizeof(out),
+             "vbus undervoltage: %.3fV < %.3fV",
+             vbus_voltage,
+             FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT);
+    CommandManager_OutputDiag("ERR", "protection", out);
+#else
+    (void)vbus_voltage;
+#endif
+}
+
 void CommandManager_ReportProtocolFrameError(void)
 {
     CMD_DIAG_STATS_INC(protocol_error_count);
@@ -328,21 +348,21 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV:
-        if ((value < COMMAND_MANAGER_PARAM_REPORT_DIV_MIN) ||
-            (value > COMMAND_MANAGER_PARAM_REPORT_DIV_MAX))
+        if ((value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ) ||
+            (value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ))
         {
             return 0U;
         }
-        g_params.semantic_div = (uint16_t)value;
+        g_params.semantic_freq_hz = (uint16_t)value;
         break;
 
     case COMMAND_MANAGER_SUBCMD_OSC_DIV:
-        if ((value < COMMAND_MANAGER_PARAM_REPORT_DIV_MIN) ||
-            (value > COMMAND_MANAGER_PARAM_REPORT_DIV_MAX))
+        if ((value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ) ||
+            (value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ))
         {
             return 0U;
         }
-        g_params.osc_div = (uint16_t)value;
+        g_params.osc_freq_hz = (uint16_t)value;
         break;
 
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_ENABLE:
@@ -549,11 +569,11 @@ uint8_t CommandManager_ReadParam(char subcommand, float *value_out)
         break;
 
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV:
-        *value_out = (float)g_params.semantic_div;
+        *value_out = (float)g_params.semantic_freq_hz;
         break;
 
     case COMMAND_MANAGER_SUBCMD_OSC_DIV:
-        *value_out = (float)g_params.osc_div;
+        *value_out = (float)g_params.osc_freq_hz;
         break;
 
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_ENABLE:
@@ -698,14 +718,14 @@ uint8_t CommandManager_IsOscilloscopeReportEnabled(void)
     return g_params.osc_enable;
 }
 
-uint16_t CommandManager_GetSemanticReportDivider(void)
+uint16_t CommandManager_GetSemanticReportFrequencyHz(void)
 {
-    return g_params.semantic_div;
+    return g_params.semantic_freq_hz;
 }
 
-uint16_t CommandManager_GetOscilloscopeReportDivider(void)
+uint16_t CommandManager_GetOscilloscopeReportFrequencyHz(void)
 {
-    return g_params.osc_div;
+    return g_params.osc_freq_hz;
 }
 
 uint16_t CommandManager_GetOscilloscopeParameterMask(void)
@@ -916,9 +936,9 @@ static const char *CommandManager_GetParamName(char subcommand)
     case COMMAND_MANAGER_SUBCMD_ANGLE_SPEED:
         return "angle_position_speed_rad_s";
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV:
-        return "semantic_report_divider";
+        return "semantic_report_frequency_hz";
     case COMMAND_MANAGER_SUBCMD_OSC_DIV:
-        return "oscilloscope_report_divider";
+        return "oscilloscope_report_frequency_hz";
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_ENABLE:
         return "semantic_report_enabled";
     case COMMAND_MANAGER_SUBCMD_OSC_ENABLE:
@@ -1002,6 +1022,8 @@ static const char *CommandManager_GetFaultName(command_manager_fault_code_t faul
         return "SENSOR_ADC_INVALID";
     case COMMAND_MANAGER_FAULT_SENSOR_ENCODER_INVALID:
         return "SENSOR_ENCODER_INVALID";
+    case COMMAND_MANAGER_FAULT_UNDERVOLTAGE:
+        return "UNDERVOLTAGE";
     case COMMAND_MANAGER_FAULT_PROTOCOL_FRAME:
         return "PROTOCOL_FRAME";
     case COMMAND_MANAGER_FAULT_PARAM_INVALID:

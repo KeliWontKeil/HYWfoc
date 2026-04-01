@@ -9,6 +9,10 @@
 #define TIMER1_RCU              RCU_TIMER1
 #define TIMER1_IRQn             TIMER1_IRQn
 
+#define FOC_ISR_VIS_TIMER1_GPIO_RCU RCU_GPIOB
+#define FOC_ISR_VIS_TIMER1_GPIO_PORT GPIOB
+#define FOC_ISR_VIS_TIMER1_GPIO_PIN GPIO_PIN_9
+
 /* Interrupt handler callback type */
 #define TIMER1_CALLBACK_TYPE(name) void (*name)(void)
 typedef TIMER1_CALLBACK_TYPE(timer1_callback_t);

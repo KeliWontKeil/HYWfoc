@@ -48,29 +48,68 @@ void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent)
 void Sensor_SetZeroOffset(void)
 {
     uint16_t i;
+    uint16_t valid_samples = 0U;
     float current_a = 0.0f;
     float current_b = 0.0f;
     float sum_a = 0.0f;
     float sum_b = 0.0f;
     float avg_a;
     float avg_b;
+    float min_a = 1e9f;
+    float max_a = -1e9f;
+    float min_b = 1e9f;
+    float max_b = -1e9f;
+    float spread_a;
+    float spread_b;
 
-    for (i = 0; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
+    for (i = 0U; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
     {
         if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
         {
             sum_a += current_a;
             sum_b += current_b;
+            valid_samples++;
+
+            if (current_a < min_a)
+            {
+                min_a = current_a;
+            }
+            if (current_a > max_a)
+            {
+                max_a = current_a;
+            }
+            if (current_b < min_b)
+            {
+                min_b = current_b;
+            }
+            if (current_b > max_b)
+            {
+                max_b = current_b;
+            }
         }
         FOC_Platform_WaitMs(1U);
     }
 
-    avg_a = sum_a / (float)SENSOR_ZERO_CALIB_SAMPLES;
-    avg_b = sum_b / (float)SENSOR_ZERO_CALIB_SAMPLES;
+    if (valid_samples < SENSOR_ZERO_CALIB_MIN_VALID_SAMPLES)
+    {
+        sensor_data.current_a.zero_offset = 0.0f;
+        sensor_data.current_b.zero_offset = 0.0f;
+        return;
+    }
 
-    /* Avoid calibrating with real current present at startup. */
-    if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT) &&
-        (fabsf(avg_b) <= SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT))
+    avg_a = sum_a / (float)valid_samples;
+    avg_b = sum_b / (float)valid_samples;
+    spread_a = max_a - min_a;
+    spread_b = max_b - min_b;
+
+    /*
+     * Accept startup zero calibration when samples are stable and within a safe
+     * absolute range. This avoids false rejection caused by sensor bias.
+     */
+    if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
+        (fabsf(avg_b) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
+        (spread_a <= SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT) &&
+        (spread_b <= SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT))
     {
         sensor_data.current_a.zero_offset = avg_a;
         sensor_data.current_b.zero_offset = avg_b;
@@ -105,7 +144,7 @@ static void Sensor_ReadADC(void)
 {
     float current_a = 0.0f;
     float current_b = 0.0f;
-    float zero_offset;
+    float common_mode;
 
     /* Use averaged ADC values over one control period (default 24 samples at 24kHz). */
     if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
@@ -113,13 +152,19 @@ static void Sensor_ReadADC(void)
         /* Apply Kalman filtering */
         Kalman_Update(&sensor_data.current_a, current_a);
         Kalman_Update(&sensor_data.current_b, current_b);
-        /* For 3-phase, we can estimate phase C as -(A + B) */
-        sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
+        /* For 3-phase, we can estimate phase C as -(A + B). */
+        sensor_data.current_c.filtered_value = -(sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value);
 
-        zero_offset = sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value + sensor_data.current_c.filtered_value;
-        sensor_data.current_a.filtered_value -= (zero_offset / 3.0f);
-        sensor_data.current_b.filtered_value -= (zero_offset / 3.0f);
-        sensor_data.current_c.filtered_value -= (zero_offset / 3.0f);
+        common_mode = (sensor_data.current_a.filtered_value +
+                   sensor_data.current_b.filtered_value +
+                   sensor_data.current_c.filtered_value) / 3.0f;
+        sensor_data.current_a.filtered_value -= common_mode;
+        sensor_data.current_b.filtered_value -= common_mode;
+        sensor_data.current_c.filtered_value -= common_mode;
+
+        sensor_data.current_a.output_value = sensor_data.current_a.filtered_value - sensor_data.current_a.zero_offset;
+        sensor_data.current_b.output_value = sensor_data.current_b.filtered_value - sensor_data.current_b.zero_offset;
+        sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
 
         sensor_data.adc_valid = 1;
     }

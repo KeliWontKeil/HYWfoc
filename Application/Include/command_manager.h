@@ -34,6 +34,7 @@ typedef enum {
     COMMAND_MANAGER_FAULT_NONE = 0,
     COMMAND_MANAGER_FAULT_SENSOR_ADC_INVALID,
     COMMAND_MANAGER_FAULT_SENSOR_ENCODER_INVALID,
+    COMMAND_MANAGER_FAULT_UNDERVOLTAGE,
     COMMAND_MANAGER_FAULT_PROTOCOL_FRAME,
     COMMAND_MANAGER_FAULT_PARAM_INVALID,
     COMMAND_MANAGER_FAULT_INIT_FAILED
@@ -78,6 +79,7 @@ void CommandManager_Process(void);
 void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success);
 void CommandManager_FinalizeInitDiagnostics(void);
 void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid);
+void CommandManager_ReportUndervoltageFault(float vbus_voltage);
 void CommandManager_ReportProtocolFrameError(void);
 void CommandManager_ReportControlLoopSkip(void);
 
@@ -92,8 +94,8 @@ float CommandManager_GetAngleSpeedRadS(void);
 
 uint8_t CommandManager_IsSemanticReportEnabled(void);
 uint8_t CommandManager_IsOscilloscopeReportEnabled(void);
-uint16_t CommandManager_GetSemanticReportDivider(void);
-uint16_t CommandManager_GetOscilloscopeReportDivider(void);
+uint16_t CommandManager_GetSemanticReportFrequencyHz(void);
+uint16_t CommandManager_GetOscilloscopeReportFrequencyHz(void);
 uint16_t CommandManager_GetOscilloscopeParameterMask(void);
 
 void CommandManager_ClearDirtyFlag(void);
