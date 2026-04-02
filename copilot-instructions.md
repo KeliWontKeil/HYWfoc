@@ -8,7 +8,7 @@ description: "GD32F303CC FOC motor control project. Use when: implementing contr
 
 **GD32F303CC FOC Project** implements Field-Oriented Control for motor drive on a GD32F303CC ARM Cortex-M4 microcontroller (120MHz). The system provides torque, speed, and position control APIs with real-time task scheduling, ADC current sensing, 3-phase PWM output, and I2C sensor integration (AS5600 magnetic encoder).
 
-**Current Version**: v0.3.6 (Low-speed sensored FOC complete; P1 cleanup phase; P2 library stage pending)
+**Current Version**: v0.3.8 (Low-speed sensored FOC complete; L3 communication aggregation and config split completed)
 
 ### Key Build Outputs
 - **Toolchain**: ARM Compiler 5.06 update 6 via EIDE extension
@@ -52,7 +52,7 @@ RTE/                      # CMSIS runtime config
 | **Special (Config & Shared)** | `foc_config.h` + domain headers, `foc_shared_types.h` | Unified defaults, shared structs, feature macros | All layers |
 
 **Config Convergence Rule** (Single Source Principle): 
-- Use `foc_config.h` domain headers (`foc_config_control.h`, `foc_config_task.h`, `foc_config_debug.h`, `foc_config_platform.h`, `foc_config_hardware.h`, etc.) as the **single source** for all configuration parameters.
+- Use `foc_config.h` with `foc_cfg_symbol_defs.h`, `foc_cfg_feature_switches.h`, `foc_cfg_init_values.h`, and `foc_cfg_compile_limits.h` as the **single source** for all configuration parameters.
 - Apply this rule to **three categories**:
   1. **Runtime defaults** (e.g., `TORQUE_LIMIT`, `SPEED_MAX`) → config_control.h
   2. **Command/Protocol parameters** (e.g., baud rates, frame sizes, timeout values) → config_comms.h
@@ -93,7 +93,7 @@ See [Timing Architecture](docs/architecture.md) for full details.
 
 1. Edit target file in `Application/Source/` (e.g., `foc_control.c`)
 2. Follow layer contract: read sensor via L3 interface, call platform API for PWM
-3. Add config macros to appropriate `foc_config_*.h` header **before** hardcoding values
+3. Add config macros to appropriate `foc_cfg_*.h` header **before** hardcoding values
 4. Rebuild: `eide.project.build` (incremental compilation)
 5. Validate: ROM/RAM usage + target hardware behavior
 
@@ -106,7 +106,7 @@ See [Timing Architecture](docs/architecture.md) for full details.
 
 ### Feature Build Variants
 
-**Control algorithm trimming** (see `foc_config_control.h`):
+**Control algorithm trimming** (see `foc_cfg_feature_switches.h`):
 - `FULL`: Both speed-only and speed-angle modes (default, runtime switch)
 - Single-algorithm build: Explicit feature cut (trim-to-one only)
 

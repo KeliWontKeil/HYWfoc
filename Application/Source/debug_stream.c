@@ -31,7 +31,7 @@ void DebugStream_Init(void)
 
 void DebugStream_Process(const sensor_data_t *sensor, const foc_motor_t *motor)
 {
-#if (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == 1)
+#if (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE)
     if (CommandManager_IsSemanticReportEnabled() != 0U)
     {
         uint16_t semantic_freq_hz = CommandManager_GetSemanticReportFrequencyHz();
@@ -51,7 +51,7 @@ void DebugStream_Process(const sensor_data_t *sensor, const foc_motor_t *motor)
     }
 #endif
 
-#if (DEBUG_STREAM_ENABLE_OSC_REPORT == 1)
+#if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE)
     if (CommandManager_IsOscilloscopeReportEnabled() != 0U)
     {
         uint16_t osc_freq_hz;

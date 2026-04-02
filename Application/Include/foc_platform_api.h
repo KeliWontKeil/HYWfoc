@@ -7,21 +7,6 @@
 #define FOC_PLATFORM_HIGH_RATE_CALLBACK_TYPE(name) void (*name)(void)
 typedef FOC_PLATFORM_HIGH_RATE_CALLBACK_TYPE(FOC_Platform_HighRateCallback_t);
 
-typedef enum {
-	FOC_PLATFORM_COMM_SOURCE_USART1 = (1U << 0),
-	FOC_PLATFORM_COMM_SOURCE_USART2 = (1U << 1),
-	FOC_PLATFORM_COMM_SOURCE_ALL = (FOC_PLATFORM_COMM_SOURCE_USART1 | FOC_PLATFORM_COMM_SOURCE_USART2)
-} foc_platform_comm_source_t;
-
-typedef enum {
-	FOC_PLATFORM_COMM_ARB_ROUND_ROBIN = 0
-} foc_platform_comm_arb_policy_t;
-
-typedef struct {
-	uint8_t source_mask;
-	uint8_t arbitration_policy;
-} FOC_Platform_CommConfig_t;
-
 typedef void (*FOC_Platform_CommRxTriggerCallback_t)(void);
 
 void FOC_Platform_RuntimeInit(void);
@@ -36,12 +21,17 @@ void FOC_Platform_StartControlTickSource(void);
 void FOC_Platform_RegisterHighRateCallback(FOC_Platform_HighRateCallback_t callback);
 void FOC_Platform_StartHighRateClock(void);
 
-void FOC_Platform_CommInit(const FOC_Platform_CommConfig_t *config);
-void FOC_Platform_SetCommRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+void FOC_Platform_CommInit(void);
+void FOC_Platform_CommSource1_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+void FOC_Platform_CommSource2_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+void FOC_Platform_CommSource3_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+void FOC_Platform_CommSource4_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+uint16_t FOC_Platform_CommSource1_ReadFrame(uint8_t *buffer, uint16_t max_len);
+uint16_t FOC_Platform_CommSource2_ReadFrame(uint8_t *buffer, uint16_t max_len);
+uint16_t FOC_Platform_CommSource3_ReadFrame(uint8_t *buffer, uint16_t max_len);
+uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffer, uint16_t max_len);
 void FOC_Platform_DebugOutput(const char *str);
 void FOC_Platform_FeedbackOutput(uint8_t status_code);
-uint8_t FOC_Platform_CommHasPendingFrame(void);
-uint16_t FOC_Platform_ReceiveFrame(uint8_t *buffer, uint16_t max_len);
 
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz);
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b);

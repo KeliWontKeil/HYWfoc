@@ -149,9 +149,16 @@ static void Sensor_ReadADC(void)
     /* Use averaged ADC values over one control period (default 24 samples at 24kHz). */
     if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
     {
+#if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
         /* Apply Kalman filtering */
         Kalman_Update(&sensor_data.current_a, current_a);
         Kalman_Update(&sensor_data.current_b, current_b);
+#else
+        sensor_data.current_a.raw_value = current_a;
+        sensor_data.current_a.filtered_value = current_a;
+        sensor_data.current_b.raw_value = current_b;
+        sensor_data.current_b.filtered_value = current_b;
+#endif
         /* For 3-phase, we can estimate phase C as -(A + B). */
         sensor_data.current_c.filtered_value = -(sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value);
 
@@ -187,13 +194,15 @@ static void Sensor_ReadEncoder(void)
     /* Read encoder angle register via decoupled AS5600 interface. */
     if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
     {
-        /* Apply Kalman filtering */
-        //Kalman_Update(&sensor_data.mech_angle_rad, angle_rad);
-        //angle_rad -= fmodf(angle_rad, 0.01);
+#if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
+        /* Apply Kalman filtering with wraparound compensation for 0-360 discontinuity. */
+        Kalman_Update_Angle(&sensor_data.mech_angle_rad, angle_rad);
+        sensor_data.mech_angle_rad.output_value = sensor_data.mech_angle_rad.filtered_value;
+#else
         sensor_data.mech_angle_rad.raw_value = angle_rad;
         sensor_data.mech_angle_rad.filtered_value = angle_rad;
         sensor_data.mech_angle_rad.output_value = angle_rad;
-
+#endif
         sensor_data.encoder_valid = 1;
     }
     else
@@ -266,6 +275,7 @@ void Kalman_Update(kalman_filter_t* filter, float measurement)
         filter->filtered_value = measurement;
         filter->kalman_gain = 1.0f;
         filter->estimate_error = 0.0f;  /* No uncertainty */
+        filter->output_value = filter->filtered_value - filter->zero_offset;
         return;
     }
 
@@ -279,4 +289,65 @@ void Kalman_Update(kalman_filter_t* filter, float measurement)
     filter->estimate_error = (1.0f - filter->kalman_gain) * filter->estimate_error;
 
     filter->output_value = filter->filtered_value - filter->zero_offset;  /* Apply zero offset to get final output */
+}
+
+/*!
+    \brief      Update Kalman filter for angle with wraparound handling (0-2pi discontinuity).
+    \param[in]  filter: Kalman filter structure pointer
+    \param[in]  measurement: New measurement value (angle in radians)
+    \param[out] none
+    \retval     none
+    \note       Uses Math_WrapRadDelta to handle 2pi discontinuity without jitter.
+*/
+void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
+{
+    float denominator;
+    float err_direct;
+    float err_plus_turn;
+    float err_minus_turn;
+    float selected_measurement;
+
+    if (filter == 0)
+    {
+        return;
+    }
+
+    /*
+     * Select the nearest equivalent measurement on the circle to avoid
+     * 0/2pi discontinuity (no skip-update branch, so output won't latch at 0).
+     */
+    err_direct = fabsf(measurement - filter->filtered_value);
+    err_plus_turn = fabsf((measurement + FOC_MATH_TWO_PI) - filter->filtered_value);
+    err_minus_turn = fabsf((measurement - FOC_MATH_TWO_PI) - filter->filtered_value);
+
+    selected_measurement = measurement;
+    if ((err_plus_turn < err_direct) && (err_plus_turn <= err_minus_turn))
+    {
+        selected_measurement = measurement + FOC_MATH_TWO_PI;
+    }
+    else if ((err_minus_turn < err_direct) && (err_minus_turn < err_plus_turn))
+    {
+        selected_measurement = measurement - FOC_MATH_TWO_PI;
+    }
+
+    filter->estimate_error += filter->process_noise;
+    denominator = filter->estimate_error + filter->measurement_error;
+
+    if (denominator < 1e-6f)
+    {
+        filter->filtered_value = selected_measurement;
+        filter->kalman_gain = 1.0f;
+        filter->estimate_error = 0.0f;
+    }
+    else
+    {
+        filter->kalman_gain = filter->estimate_error / denominator;
+        filter->filtered_value = filter->filtered_value +
+                                 filter->kalman_gain * (selected_measurement - filter->filtered_value);
+        filter->estimate_error = (1.0f - filter->kalman_gain) * filter->estimate_error;
+    }
+
+    /* Publish angle in principal range expected by upper control layers. */
+    filter->filtered_value = Math_WrapRad(filter->filtered_value);
+    filter->output_value = filter->filtered_value;
 }

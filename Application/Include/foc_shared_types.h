@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+/* Unified mathematical constants: single source of truth for the project. */
+#define FOC_MATH_PI 3.1415926f
+#define FOC_MATH_TWO_PI 6.2831852f
+#define FOC_MATH_SQRT3 1.7320508f
+#define FOC_MATH_SQRT3_BY_2 0.8660254f
+#define FOC_MATH_PI_BY_3 1.0471975f
+#define FOC_MATH_EPSILON 1e-6f
+
 #define FOC_DIR_UNDEFINED 0
 #define FOC_DIR_NORMAL 1
 #define FOC_DIR_REVERSED -1

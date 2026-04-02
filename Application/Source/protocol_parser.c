@@ -5,9 +5,21 @@
 #include "foc_platform_api.h"
 #include "foc_config.h"
 
+#define PROTOCOL_PARSER_COMM_SOURCE_1 1U
+#define PROTOCOL_PARSER_COMM_SOURCE_2 2U
+#define PROTOCOL_PARSER_COMM_SOURCE_3 3U
+#define PROTOCOL_PARSER_COMM_SOURCE_4 4U
+
+#define PROTOCOL_PARSER_COMM_SRC1_BIT (1U << 0)
+#define PROTOCOL_PARSER_COMM_SRC2_BIT (1U << 1)
+#define PROTOCOL_PARSER_COMM_SRC3_BIT (1U << 2)
+#define PROTOCOL_PARSER_COMM_SRC4_BIT (1U << 3)
+
 static protocol_command_t g_latest_command;
 static protocol_parser_result_t g_last_result = PROTOCOL_PARSER_RESULT_NO_FRAME;
 static volatile uint8_t g_parse_pending = 0U;
+static volatile uint8_t g_comm_trigger_mask = 0U;
+static volatile uint8_t g_preferred_comm_source = 0U;
 
 static uint8_t ProtocolParser_ParseSignedFloat(const char *text, float *value_out);
 static uint8_t ProtocolParser_ExtractFrame(const uint8_t *rx_data,
@@ -15,14 +27,27 @@ static uint8_t ProtocolParser_ExtractFrame(const uint8_t *rx_data,
                                            const uint8_t **frame_start,
                                            uint16_t *frame_len);
 static uint8_t ProtocolParser_ParseFrame(const uint8_t *frame, uint16_t len, protocol_command_t *out_cmd);
-static void ProtocolParser_OnCommRxTrigger(void);
+static uint8_t ProtocolParser_SourceToBit(uint8_t source);
+static uint16_t ProtocolParser_ReadFrameFromSource(uint8_t source, uint8_t *buffer, uint16_t max_len);
+static uint16_t ProtocolParser_TryReadTriggeredSources(uint8_t *buffer, uint16_t max_len, uint8_t *source_used);
+static uint16_t ProtocolParser_TryReadAnySource(uint8_t *buffer, uint16_t max_len, uint8_t *source_used);
+static void ProtocolParser_OnCommSource1RxTrigger(void);
+static void ProtocolParser_OnCommSource2RxTrigger(void);
+static void ProtocolParser_OnCommSource3RxTrigger(void);
+static void ProtocolParser_OnCommSource4RxTrigger(void);
 
 void ProtocolParser_Init(void)
 {
     memset(&g_latest_command, 0, sizeof(g_latest_command));
     g_last_result = PROTOCOL_PARSER_RESULT_NO_FRAME;
     g_parse_pending = 0U;
-    FOC_Platform_SetCommRxTriggerCallback(ProtocolParser_OnCommRxTrigger);
+    g_comm_trigger_mask = 0U;
+    g_preferred_comm_source = 0U;
+
+    FOC_Platform_CommSource1_SetRxTriggerCallback(ProtocolParser_OnCommSource1RxTrigger);
+    FOC_Platform_CommSource2_SetRxTriggerCallback(ProtocolParser_OnCommSource2RxTrigger);
+    FOC_Platform_CommSource3_SetRxTriggerCallback(ProtocolParser_OnCommSource3RxTrigger);
+    FOC_Platform_CommSource4_SetRxTriggerCallback(ProtocolParser_OnCommSource4RxTrigger);
 }
 
 void ProtocolParser_TriggerParse(void)
@@ -41,6 +66,7 @@ void ProtocolParser_Process(void)
     const uint8_t *payload = 0;
     uint16_t payload_len = 0U;
     uint16_t len;
+    uint8_t source_used = 0U;
 
     if (g_parse_pending == 0U)
     {
@@ -48,12 +74,26 @@ void ProtocolParser_Process(void)
         return;
     }
 
-    len = FOC_Platform_ReceiveFrame(frame, PROTOCOL_PARSER_RX_MAX_LEN);
+    len = ProtocolParser_TryReadTriggeredSources(frame,
+                                                 PROTOCOL_PARSER_RX_MAX_LEN,
+                                                 &source_used);
     if (len == 0U)
     {
-        g_parse_pending = 0U;
+        len = ProtocolParser_TryReadAnySource(frame,
+                                              PROTOCOL_PARSER_RX_MAX_LEN,
+                                              &source_used);
+    }
+
+    if (len == 0U)
+    {
+        g_parse_pending = (g_comm_trigger_mask != 0U) ? 1U : 0U;
         g_last_result = PROTOCOL_PARSER_RESULT_NO_FRAME;
         return;
+    }
+
+    if (source_used != 0U)
+    {
+        g_preferred_comm_source = source_used;
     }
 
     if ((ProtocolParser_ExtractFrame(frame, len, &payload, &payload_len) != 0U) &&
@@ -71,7 +111,7 @@ void ProtocolParser_Process(void)
         FOC_Platform_FeedbackOutput((uint8_t)PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR);
     }
 
-    g_parse_pending = FOC_Platform_CommHasPendingFrame();
+    g_parse_pending = 1U;
 }
 
 const protocol_command_t *ProtocolParser_GetLatestCommand(void)
@@ -236,7 +276,159 @@ static uint8_t ProtocolParser_ParseSignedFloat(const char *text, float *value_ou
     return 1U;
 }
 
-static void ProtocolParser_OnCommRxTrigger(void)
+static uint8_t ProtocolParser_SourceToBit(uint8_t source)
 {
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_1)
+    {
+        return PROTOCOL_PARSER_COMM_SRC1_BIT;
+    }
+
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_2)
+    {
+        return PROTOCOL_PARSER_COMM_SRC2_BIT;
+    }
+
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_3)
+    {
+        return PROTOCOL_PARSER_COMM_SRC3_BIT;
+    }
+
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_4)
+    {
+        return PROTOCOL_PARSER_COMM_SRC4_BIT;
+    }
+
+    return 0U;
+}
+
+static uint16_t ProtocolParser_ReadFrameFromSource(uint8_t source, uint8_t *buffer, uint16_t max_len)
+{
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_1)
+    {
+        return FOC_Platform_CommSource1_ReadFrame(buffer, max_len);
+    }
+
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_2)
+    {
+        return FOC_Platform_CommSource2_ReadFrame(buffer, max_len);
+    }
+
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_3)
+    {
+        return FOC_Platform_CommSource3_ReadFrame(buffer, max_len);
+    }
+
+    if (source == PROTOCOL_PARSER_COMM_SOURCE_4)
+    {
+        return FOC_Platform_CommSource4_ReadFrame(buffer, max_len);
+    }
+
+    return 0U;
+}
+
+static uint16_t ProtocolParser_TryReadTriggeredSources(uint8_t *buffer, uint16_t max_len, uint8_t *source_used)
+{
+    uint16_t len;
+    uint8_t source;
+    uint8_t source_bit;
+
+    if ((buffer == 0) || (source_used == 0))
+    {
+        return 0U;
+    }
+
+    *source_used = 0U;
+
+    if (g_preferred_comm_source != 0U)
+    {
+        source_bit = ProtocolParser_SourceToBit(g_preferred_comm_source);
+        if ((source_bit != 0U) && ((g_comm_trigger_mask & source_bit) != 0U))
+        {
+            len = ProtocolParser_ReadFrameFromSource(g_preferred_comm_source, buffer, max_len);
+            if (len > 0U)
+            {
+                *source_used = g_preferred_comm_source;
+                return len;
+            }
+            g_comm_trigger_mask = (uint8_t)(g_comm_trigger_mask & (uint8_t)(~source_bit));
+        }
+    }
+
+    for (source = PROTOCOL_PARSER_COMM_SOURCE_1; source <= PROTOCOL_PARSER_COMM_SOURCE_4; source++)
+    {
+        if (source == g_preferred_comm_source)
+        {
+            continue;
+        }
+
+        source_bit = ProtocolParser_SourceToBit(source);
+        if ((g_comm_trigger_mask & source_bit) == 0U)
+        {
+            continue;
+        }
+
+        len = ProtocolParser_ReadFrameFromSource(source, buffer, max_len);
+        if (len > 0U)
+        {
+            *source_used = source;
+            return len;
+        }
+
+        g_comm_trigger_mask = (uint8_t)(g_comm_trigger_mask & (uint8_t)(~source_bit));
+    }
+
+    return 0U;
+}
+
+static uint16_t ProtocolParser_TryReadAnySource(uint8_t *buffer, uint16_t max_len, uint8_t *source_used)
+{
+    uint16_t len;
+    uint8_t source;
+
+    if ((buffer == 0) || (source_used == 0))
+    {
+        return 0U;
+    }
+
+    *source_used = 0U;
+
+    for (source = PROTOCOL_PARSER_COMM_SOURCE_1; source <= PROTOCOL_PARSER_COMM_SOURCE_4; source++)
+    {
+        len = ProtocolParser_ReadFrameFromSource(source, buffer, max_len);
+        if (len > 0U)
+        {
+            *source_used = source;
+            return len;
+        }
+    }
+
+    return 0U;
+}
+
+static void ProtocolParser_OnCommSource1RxTrigger(void)
+{
+    g_comm_trigger_mask = (uint8_t)(g_comm_trigger_mask | PROTOCOL_PARSER_COMM_SRC1_BIT);
+    g_preferred_comm_source = PROTOCOL_PARSER_COMM_SOURCE_1;
+    ProtocolParser_TriggerParse();
+}
+
+static void ProtocolParser_OnCommSource2RxTrigger(void)
+{
+    g_comm_trigger_mask = (uint8_t)(g_comm_trigger_mask | PROTOCOL_PARSER_COMM_SRC2_BIT);
+    g_preferred_comm_source = PROTOCOL_PARSER_COMM_SOURCE_2;
+    ProtocolParser_TriggerParse();
+}
+
+static void ProtocolParser_OnCommSource3RxTrigger(void)
+{
+    g_comm_trigger_mask = (uint8_t)(g_comm_trigger_mask | PROTOCOL_PARSER_COMM_SRC3_BIT);
+    g_preferred_comm_source = PROTOCOL_PARSER_COMM_SOURCE_3;
+    ProtocolParser_TriggerParse();
+}
+
+static void ProtocolParser_OnCommSource4RxTrigger(void)
+{
+    g_comm_trigger_mask = (uint8_t)(g_comm_trigger_mask | PROTOCOL_PARSER_COMM_SRC4_BIT);
+    g_preferred_comm_source = PROTOCOL_PARSER_COMM_SOURCE_4;
     ProtocolParser_TriggerParse();
 }

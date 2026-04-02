@@ -9,5 +9,6 @@
 #define MAIN_H
 
 #include "gd32f30x.h"
+#include "foc_app.h"
 
 #endif /* MAIN_H */

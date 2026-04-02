@@ -40,7 +40,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - **USART**: Dual serial communication with DMA RX + IDLE event + DMA TX path
   - Configurable baud rate and data format
   - Double buffer frame capture for reliable burst reception
-  - Frame mux for unified dequeue across multiple USART sources
+  - Per-source frame API exposed to upper layer for L3 aggregation
 - **I2C**: Hardware I2C driver for sensor communication
   - Master mode operation with clock stretching support
   - Error handling and recovery mechanisms
@@ -64,7 +64,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - Current candidates:
   - `foc_platform_api.[ch]` (unified upper API)
   - `foc_shared_types.h` (shared public structures)
-  - config headers (implemented): `foc_config.h` + domain headers (`foc_config_control.h`, `foc_config_command.h`, `foc_config_protocol.h`, `foc_config_debug.h`, `foc_config_task.h`, `foc_config_diag.h`, `foc_config_range.h`, `foc_config_platform.h`, `foc_config_app.h`, `foc_config_sensor.h`, `foc_config_svpwm.h`)
+  - config headers (implemented): `foc_config.h` + `foc_cfg_symbol_defs.h` + `foc_cfg_feature_switches.h` + `foc_cfg_init_values.h` + `foc_cfg_compile_limits.h`
 - Contract:
   - L1/L2/L3 must access L4 only via this layer.
   - L4 must not depend on L1/L2/L3.
@@ -128,7 +128,7 @@ FOC_MotorInit()
 ### Communication Flow
 ```
 USART1 ←→ Debug Output Channel (DMA TX)
-USART1/USART2 RX → DMA + IDLE → CommFrameMux → ProtocolParser
+USART1/USART2 RX → DMA + IDLE → ProtocolParser (L3 source aggregation)
 USART2 ←→ Protocol feedback short code channel
 I2C ←→ AS5600 Encoder
 ```
@@ -176,7 +176,8 @@ gd32f30x_it.c
 ```
 
 ## Current Gap Check (against target layering)
-- `foc_platform_api.h` currently includes multiple L4 headers directly, which leaks peripheral symbols to upper layers.
+- Communication frame aggregation has been moved from L4 utility mux into L3 `protocol_parser`; this is aligned with layered ownership intent.
+- `foc_platform_api.h` now keeps communication surface as per-source APIs and no longer exposes mux-specific utility abstractions.
 - `svpwm` PWM calls are routed through special layer API; direct `pwm.h` dependency has been removed.
 - `foc_control.h` currently includes `foc_platform_api.h` and `svpwm.h`; algorithm-layer public header exposure should be narrowed to shared types and algorithm APIs.
 - ISR glue (`gd32f30x_it.h`) includes utility headers directly; this is acceptable only if treated as special-layer boundary file.

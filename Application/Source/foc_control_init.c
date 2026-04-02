@@ -269,9 +269,9 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->phase_a = 0.0f;
     motor->phase_b = 0.0f;
     motor->phase_c = 0.0f;
-    motor->duty_a = 0.5f;
-    motor->duty_b = 0.5f;
-    motor->duty_c = 0.5f;
+    motor->duty_a = 0.0f;
+    motor->duty_b = 0.0f;
+    motor->duty_c = 0.0f;
     motor->sector = 0U;
 
     FOC_CalibrateElectricalAngleAndDirection(motor);

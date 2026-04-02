@@ -32,7 +32,8 @@ void ControlScheduler_RunTick(void)
     start_cycles = FOC_Platform_ReadCycleCounter();
     g_sched_tick_counter++;
 
-    if (g_sched_callbacks[FOC_TASK_RATE_FAST_CONTROL] != NULL)
+    if ((g_sched_tick_counter % FOC_SCHEDULER_CONTROL_DIVIDER) == 0U &&
+        g_sched_callbacks[FOC_TASK_RATE_FAST_CONTROL] != NULL)
     {
         g_sched_callbacks[FOC_TASK_RATE_FAST_CONTROL]();
     }

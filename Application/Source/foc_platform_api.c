@@ -4,7 +4,6 @@
 #include "LED.h"
 #include "usart1.h"
 #include "usart2.h"
-#include "comm_frame_mux.h"
 #include "timer1.h"
 #include "timer2.h"
 #include "timer3.h"
@@ -37,15 +36,14 @@ void FOC_Platform_SetHeartbeatIndicator(uint8_t on)
 
 void FOC_Platform_HighRateClockInit(uint16_t pwm_freq_khz)
 {
-    uint32_t period;
-
-    period = (FOC_PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U;
-    Timer2_Init(0U, period);
+    /* TIMER2 update frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
+    Timer2_Init(9U, (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * (uint32_t)pwm_freq_khz)) - 1U);
 }
 
 void FOC_Platform_ControlTickSourceInit(void)
 {
-    Timer1_Init(FOC_PLATFORM_CONTROL_TIMER_PRESCALER, FOC_PLATFORM_CONTROL_TIMER_PERIOD);
+    /* TIMER1 control tick frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
+    Timer1_Init(9U, (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * FOC_PLATFORM_CONTROL_TIMER_FREQ_KHZ)) - 1U);
 }
 
 void FOC_Platform_BindControlTickCallback(FOC_SchedulerCallback_t callback)
@@ -68,31 +66,54 @@ void FOC_Platform_StartHighRateClock(void)
     Timer2_Start();
 }
 
-void FOC_Platform_CommInit(const FOC_Platform_CommConfig_t *config)
+void FOC_Platform_CommInit(void)
 {
-    comm_frame_mux_config_t mux_config;
-
     USART1_Init();
     USART2_Init();
-
-    mux_config.source_mask = (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL;
-    mux_config.arbitration_policy = (uint8_t)FOC_PLATFORM_COMM_ARB_ROUND_ROBIN;
-
-    if (config != NULL)
-    {
-        if ((config->source_mask & (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL) != 0U)
-        {
-            mux_config.source_mask = (uint8_t)(config->source_mask & (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL);
-        }
-        mux_config.arbitration_policy = config->arbitration_policy;
-    }
-
-    CommFrameMux_Init(&mux_config);
 }
 
-void FOC_Platform_SetCommRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+void FOC_Platform_CommSource1_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
 {
-    CommFrameMux_SetRxTriggerCallback((comm_frame_mux_rx_trigger_callback_t)callback);
+    USART1_SetIdleCallback((usart1_idle_callback_t)callback);
+}
+
+void FOC_Platform_CommSource2_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+{
+    USART2_SetIdleCallback((usart2_idle_callback_t)callback);
+}
+
+__attribute__((weak)) void FOC_Platform_CommSource3_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+{
+    (void)callback;
+}
+
+__attribute__((weak)) void FOC_Platform_CommSource4_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+{
+    (void)callback;
+}
+
+uint16_t FOC_Platform_CommSource1_ReadFrame(uint8_t *buffer, uint16_t max_len)
+{
+    return USART1_ReadFrame(buffer, max_len);
+}
+
+uint16_t FOC_Platform_CommSource2_ReadFrame(uint8_t *buffer, uint16_t max_len)
+{
+    return USART2_ReadFrame(buffer, max_len);
+}
+
+__attribute__((weak)) uint16_t FOC_Platform_CommSource3_ReadFrame(uint8_t *buffer, uint16_t max_len)
+{
+    (void)buffer;
+    (void)max_len;
+    return 0U;
+}
+
+__attribute__((weak)) uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffer, uint16_t max_len)
+{
+    (void)buffer;
+    (void)max_len;
+    return 0U;
 }
 
 void FOC_Platform_DebugOutput(const char *str)
@@ -105,22 +126,13 @@ void FOC_Platform_FeedbackOutput(uint8_t status_code)
     USART2_SendByte(status_code);
 }
 
-uint8_t FOC_Platform_CommHasPendingFrame(void)
-{
-    return CommFrameMux_HasPendingFrame();
-}
-
-uint16_t FOC_Platform_ReceiveFrame(uint8_t *buffer, uint16_t max_len)
-{
-    return CommFrameMux_TryDequeueFrame(buffer, max_len);
-}
-
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 {
-    g_platform_sensor_timer_period = (uint16_t)((FOC_PLATFORM_BASE_CLOCK_KHZ / (uint32_t)pwm_freq_khz) - 1U);
+    /* TIMER3 sampling frequency follows PWM by the same timer equation. */
+    g_platform_sensor_timer_period = (uint16_t)((FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * (uint32_t)pwm_freq_khz)) - 1U);
 
     AS5600_Init();
-    Timer3_Init(0U, (uint32_t)g_platform_sensor_timer_period - 1U);
+    Timer3_Init(9U, (uint32_t)g_platform_sensor_timer_period);
     Timer3_Start();
     ADC_Init();
     ADC_Start();
@@ -149,7 +161,7 @@ void FOC_Platform_WaitMs(uint32_t ms)
 
 void FOC_Platform_UndervoltageProtect(float vbus_voltage)
 {
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == 1U)
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
     /*
      * Hook point reserved for future hardware undervoltage protection action.
      * Current board does not support this control path yet.

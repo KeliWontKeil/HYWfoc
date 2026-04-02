@@ -15,6 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - Updated project README to describe the undervoltage protection placeholder path and current hardware limitation.
 
+## [0.3.8] - 2026-04-02
+
+### Changed
+- Completed communication path refactor: multi-source frame aggregation is now implemented in L3 `protocol_parser` with trigger-source-priority behavior.
+- Reworked platform communication APIs in `foc_platform_api` to one global init plus four explicit source read/trigger interfaces.
+- Reorganized configuration architecture into the `foc_cfg_*` split (`symbol_defs`, `feature_switches`, `init_values`, `compile_limits`) and converged includes through `foc_config.h`.
+- Unified scheduler/control timing semantics using dedicated control-rate macros and divider-based callback gating.
+- Unified project-wide mathematical constants into `foc_shared_types.h` and aligned control/SVPWM/sensor math usage.
+
+### Removed
+- Removed legacy L4 communication multiplexer module (`Utilities/USART/comm_frame_mux.[ch]`).
+- Removed deprecated legacy `foc_config_*` header set in favor of the `foc_cfg_*` split.
+
+### Documentation
+- Updated architecture and dependency-tree documents to reflect L3 communication aggregation and current L4 module set.
+- Refreshed mission baseline to v0.3.8 and rewrote next-iteration objectives.
+
 ## [0.3.6] - 2026-03-28
 
 ### Changed

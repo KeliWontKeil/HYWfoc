@@ -9,6 +9,12 @@
 static float g_speed_err_accum_rad = 0.0f;
 static float g_prev_mech_signed_rad = 0.0f;
 static uint8_t g_speed_state_valid = 0U;
+#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
+static uint8_t g_svpwm_lpf_state_valid = 0U;
+static float g_svpwm_lpf_phase_a = 0.0f;
+static float g_svpwm_lpf_phase_b = 0.0f;
+static float g_svpwm_lpf_phase_c = 0.0f;
+#endif
 static foc_control_runtime_config_t g_foc_runtime_cfg = {
     FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD,
     FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT,
@@ -108,10 +114,10 @@ float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angl
 
     mech_delta = Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_at_elec_zero_rad);
 
-    mech_delta_mod = fmodf(mech_delta, MATH_TWO_PI / (float)motor->pole_pairs);
+    mech_delta_mod = fmodf(mech_delta, FOC_MATH_TWO_PI / (float)motor->pole_pairs);
     if (mech_delta_mod < 0.0f)
     {
-        mech_delta_mod += MATH_TWO_PI / (float)motor->pole_pairs;
+        mech_delta_mod += FOC_MATH_TWO_PI / (float)motor->pole_pairs;
     }
 
     return Math_WrapRad(motor->direction * mech_delta_mod * (float)motor->pole_pairs);
@@ -159,6 +165,42 @@ static void FOC_ResetSpeedState(void)
     g_speed_err_accum_rad = 0.0f;
     g_prev_mech_signed_rad = 0.0f;
     g_speed_state_valid = 0U;
+}
+
+static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
+{
+#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
+    if ((phase_a == 0) || (phase_b == 0) || (phase_c == 0))
+    {
+        return;
+    }
+
+    if (g_svpwm_lpf_state_valid == 0U)
+    {
+        g_svpwm_lpf_phase_a = *phase_a;
+        g_svpwm_lpf_phase_b = *phase_b;
+        g_svpwm_lpf_phase_c = *phase_c;
+        g_svpwm_lpf_state_valid = 1U;
+        return;
+    }
+
+    *phase_a = Math_FirstOrderLpf(*phase_a,
+                                  &g_svpwm_lpf_phase_a,
+                                  FOC_SVPWM_PRE_LPF_ALPHA,
+                                  &g_svpwm_lpf_state_valid);
+    *phase_b = Math_FirstOrderLpf(*phase_b,
+                                  &g_svpwm_lpf_phase_b,
+                                  FOC_SVPWM_PRE_LPF_ALPHA,
+                                  &g_svpwm_lpf_state_valid);
+    *phase_c = Math_FirstOrderLpf(*phase_c,
+                                  &g_svpwm_lpf_phase_c,
+                                  FOC_SVPWM_PRE_LPF_ALPHA,
+                                  &g_svpwm_lpf_state_valid);
+#else
+    (void)phase_a;
+    (void)phase_b;
+    (void)phase_c;
+#endif
 }
 
 static float FOC_UpdateSpeedAngleError(foc_motor_t *motor,
@@ -303,10 +345,17 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
     float uq_ff;
     float uq_cmd;
 
-    if ((motor == 0) || (current_pid == 0) || (sensor == 0))
+    if ((motor == 0) || (sensor == 0))
     {
         return;
     }
+
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
+    if (current_pid == 0)
+    {
+        return;
+    }
+#endif
 
     Math_ClarkeTransform(sensor->current_a.output_value,
                          sensor->current_b.output_value,
@@ -322,7 +371,14 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
 
     voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
     uq_ff = iq_ref * motor->phase_resistance;
+
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
     uq_cmd = uq_ff + FOC_CurrentLoopPIDRun(current_pid, iq_ref, iq_measured, dt_sec);
+#else
+    (void)current_pid;
+    (void)dt_sec;
+    uq_cmd = uq_ff;
+#endif
 
     motor->electrical_phase_angle = Math_WrapRad(electrical_angle);
     motor->ud = 0.0f;
@@ -367,8 +423,34 @@ void FOC_ControlApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
                                 &motor->phase_b,
                                 &motor->phase_c);
 
+    FOC_ApplySvpwmPreLpf(&motor->phase_a,
+                         &motor->phase_b,
+                         &motor->phase_c);
+
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
 
+#if (FOC_ZERO_VECTOR_CLAMP_ENABLE == FOC_CFG_ENABLE)
+    if (voltage_command < FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V)
+    {
+        /* Zero vector clamping: lock all phases to 0.5 duty (neutral), no SVPWM calculation. */
+        motor->sector = 0U;
+        motor->duty_a = 0.5f;
+        motor->duty_b = 0.5f;
+        motor->duty_c = 0.5f;
+    }
+    else
+    {
+        SVPWM_Update(motor->phase_a,
+                     motor->phase_b,
+                     motor->phase_c,
+                     voltage_command,
+                     motor->vbus_voltage,
+                     &motor->sector,
+                     &motor->duty_a,
+                     &motor->duty_b,
+                     &motor->duty_c);
+    }
+#else
     SVPWM_Update(motor->phase_a,
                  motor->phase_b,
                  motor->phase_c,
@@ -378,6 +460,7 @@ void FOC_ControlApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
                  &motor->duty_a,
                  &motor->duty_b,
                  &motor->duty_c);
+#endif
 
     /* Duty update is executed by the TIMER2 callback via SVPWM linear interpolation. */
 }
@@ -386,7 +469,7 @@ void FOC_OpenLoopStep(foc_motor_t *motor,float voltage, float turn_speed)
 {
     motor->electrical_phase_angle = Math_WrapRad(
         motor->electrical_phase_angle +
-        MATH_TWO_PI * turn_speed * motor->pole_pairs * 0.001f * motor->direction);
+        FOC_MATH_TWO_PI * turn_speed * motor->pole_pairs * 0.001f * motor->direction);
 
     motor->ud = 0.0f;
     motor->uq = Math_ClampFloat(voltage, 0.0f, motor->set_voltage);

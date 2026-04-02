@@ -2,14 +2,13 @@
 #define _MATH_TRANSFORMS_H_
 
 #include <math.h>
-
-#define MATH_PI 3.1415926f
-#define MATH_TWO_PI 6.2831852f
-#define MATH_SQRT3_BY_2 0.8660254f
+#include <stdint.h>
+#include "foc_shared_types.h"
 
 float Math_WrapRad(float angle);
 float Math_WrapRadDelta(float angle);
 float Math_ClampFloat(float value, float min_val, float max_val);
+float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_valid);
 
 void Math_ClarkeTransform(float a, float b, float c, float *alpha, float *beta);
 void Math_InverseClarkeTransform(float alpha, float beta, float *a, float *b, float *c);

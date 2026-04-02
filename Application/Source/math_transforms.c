@@ -2,26 +2,26 @@
 
 float Math_WrapRad(float angle)
 {
-    while (angle >= MATH_TWO_PI)
+    while (angle >= FOC_MATH_TWO_PI)
     {
-        angle -= MATH_TWO_PI;
+        angle -= FOC_MATH_TWO_PI;
     }
     while (angle < 0.0f)
     {
-        angle += MATH_TWO_PI;
+        angle += FOC_MATH_TWO_PI;
     }
     return angle;
 }
 
 float Math_WrapRadDelta(float angle)
 {
-    while (angle > MATH_PI)
+    while (angle > FOC_MATH_PI)
     {
-        angle -= MATH_TWO_PI;
+        angle -= FOC_MATH_TWO_PI;
     }
-    while (angle < -MATH_PI)
+    while (angle < -FOC_MATH_PI)
     {
-        angle += MATH_TWO_PI;
+        angle += FOC_MATH_TWO_PI;
     }
     return angle;
 }
@@ -39,17 +39,39 @@ float Math_ClampFloat(float value, float min_val, float max_val)
     return value;
 }
 
+float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_valid)
+{
+    float alpha_clamped;
+
+    if ((state == 0) || (state_valid == 0))
+    {
+        return input;
+    }
+
+    alpha_clamped = Math_ClampFloat(alpha, 0.0f, 1.0f);
+
+    if (*state_valid == 0U)
+    {
+        *state = input;
+        *state_valid = 1U;
+        return input;
+    }
+
+    *state += alpha_clamped * (input - *state);
+    return *state;
+}
+
 void Math_ClarkeTransform(float a, float b, float c, float *alpha, float *beta)
 {
     *alpha = a;
-    *beta = MATH_SQRT3_BY_2 * (b - c);
+    *beta = FOC_MATH_SQRT3_BY_2 * (b - c);
 }
 
 void Math_InverseClarkeTransform(float alpha, float beta, float *a, float *b, float *c)
 {
     *a = alpha;
-    *b = -0.5f * alpha + MATH_SQRT3_BY_2 * beta;
-    *c = -0.5f * alpha - MATH_SQRT3_BY_2 * beta;
+    *b = -0.5f * alpha + FOC_MATH_SQRT3_BY_2 * beta;
+    *c = -0.5f * alpha - FOC_MATH_SQRT3_BY_2 * beta;
 }
 
 void Math_ParkTransform(float alpha, float beta, float theta,float *d, float *q)

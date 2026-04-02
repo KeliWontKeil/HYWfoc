@@ -11,7 +11,7 @@ FOC_VSCODE/
 │   │   ├── main.h
 │   │   ├── foc_app.h
 │   │   ├── foc_config.h
-│   │   ├── foc_config_*.h
+│   │   ├── foc_cfg_*.h
 │   │   ├── foc_platform_api.h
 │   │   ├── control_scheduler.h
 │   │   ├── foc_control.h
@@ -84,7 +84,7 @@ Special Dependency Layer
 L4 Utilities Drivers
 ├── adc.c / as5600.c / i2c.c
 ├── pwm.c / timer1.c / timer2.c
-├── usart1.c / usart2.c / comm_frame_mux.c
+├── usart1.c / usart2.c
 ├── led.c / systick.c
 └── other utility modules
 ```
@@ -114,8 +114,9 @@ gd32f30x_it.c
 ## Current Compliance Snapshot
 - Pass: `main.c` only calls app-layer entry.
 - Pass: Utilities do not include app/algorithm headers.
-- Risk: special-layer header still exposes L4 headers upward (`foc_platform_api.h`).
+- Pass: `foc_platform_api.h` no longer exposes L4 mux-specific abstractions.
 - Pass: L3 `svpwm` no longer directly includes L4 `pwm.h`; PWM access now routes through special layer API.
+- Pass: multi-source communication aggregation is now owned by L3 `protocol_parser`.
 
 ## Review Checklist
 - L1 should only depend on foc_app public API.

@@ -2,6 +2,7 @@
 #define _SENSOR_H_
 
 #include "foc_shared_types.h"
+#include "math_transforms.h"
 #include <math.h>
 
 
@@ -21,6 +22,7 @@ sensor_data_t* Sensor_GetData(void);
 /* Kalman filter functions */
 void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimate_error, float process_noise, float initial_value);
 void Kalman_Update(kalman_filter_t* filter, float measurement);
+void Kalman_Update_Angle(kalman_filter_t* filter, float measurement);
 
 #endif /* _SENSOR_H_ */
 

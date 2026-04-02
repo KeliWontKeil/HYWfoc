@@ -37,7 +37,7 @@ static uint8_t g_led_run_on = 1U;
 static uint8_t g_app_init_completed = 0U;
 static uint16_t g_led_run_blink_counter = 0U;
 static uint16_t g_led_comm_pulse_counter = 0U;
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == 1U)
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
 static uint8_t g_undervoltage_fault_latched = 0U;
 #endif
 
@@ -47,9 +47,9 @@ void FOC_App_Init(void)
 
     FOC_Platform_IndicatorInit();
     FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, 1U);
-    FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 0U);
-    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 0U);
-    FOC_Platform_HighRateClockInit(FOC_APP_PWM_FREQ_KHZ);
+    FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 1U);
+    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 1U);
+    FOC_Platform_HighRateClockInit(FOC_PWM_FREQ_KHZ);
 
     FOC_Platform_ControlTickSourceInit();
     ControlScheduler_Init();
@@ -59,13 +59,7 @@ void FOC_App_Init(void)
     ControlScheduler_SetCallback(FOC_TASK_RATE_FAST_CONTROL, Motor_Control_Loop);
     ControlScheduler_SetCallback(FOC_TASK_RATE_MONITOR, Monitor_Task_Trigger);
 
-    {
-        FOC_Platform_CommConfig_t comm_config;
-
-        comm_config.source_mask = (uint8_t)FOC_PLATFORM_COMM_SOURCE_ALL;
-        comm_config.arbitration_policy = (uint8_t)FOC_PLATFORM_COMM_ARB_ROUND_ROBIN;
-        FOC_Platform_CommInit(&comm_config);
-    }
+    FOC_Platform_CommInit();
 
     CommandManager_Init();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMMAND, 1U);
@@ -86,7 +80,7 @@ void FOC_App_Init(void)
     DebugStream_Init();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_DEBUG, 1U);
 
-    Sensor_Init(FOC_APP_SENSOR_SAMPLE_FREQ_KHZ, FOC_APP_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
+    Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     Sensor_ReadAll();
     sensor = Sensor_GetData();
     if (sensor != 0)
@@ -100,7 +94,7 @@ void FOC_App_Init(void)
     }
 
     /* Initialize SVPWM output and interpolation callback. */
-    SVPWM_Init(FOC_APP_PWM_FREQ_KHZ, FOC_APP_SVPWM_DEADTIME_PERCENT_DEFAULT);
+    SVPWM_Init(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_PWM, 1U);
 
     FOC_Platform_RegisterHighRateCallback(SVPWM_InterpolationISR);
@@ -108,12 +102,12 @@ void FOC_App_Init(void)
 
     /* Initialize motor model and targets. */
     FOC_MotorInit(&g_motor,
-                  FOC_APP_MOTOR_INIT_VBUS_DEFAULT,
-                  FOC_APP_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
-                  FOC_APP_MOTOR_INIT_PHASE_RES_DEFAULT,
-                  FOC_APP_MOTOR_INIT_POLE_PAIRS_DEFAULT,
-                  FOC_APP_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
-                  FOC_APP_MOTOR_INIT_DIRECTION_DEFAULT);
+                  FOC_MOTOR_INIT_VBUS_DEFAULT,
+                  FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
+                  FOC_MOTOR_INIT_PHASE_RES_DEFAULT,
+                  FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
+                  FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
+                  FOC_MOTOR_INIT_DIRECTION_DEFAULT);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_MOTOR, 1U);
 
     /* Initialize current-loop PID states (safe defaults for future closed-loop enabling). */
@@ -136,14 +130,14 @@ void FOC_App_Init(void)
                 -g_motor.set_voltage,
                 g_motor.set_voltage);
 
-        char startup_info[128];
-        snprintf(startup_info,
-                 sizeof(startup_info),
-                 "mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n",
-                 g_motor.mech_angle_at_elec_zero_rad,
-                 g_motor.direction,
-                 g_motor.pole_pairs);
-        FOC_Platform_DebugOutput(startup_info);
+    char startup_info[128];
+    snprintf(startup_info,
+            sizeof(startup_info),
+            "mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n",
+            g_motor.mech_angle_at_elec_zero_rad,
+            g_motor.direction,
+            g_motor.pole_pairs);
+    FOC_Platform_DebugOutput(startup_info);
 
     CommandManager_FinalizeInitDiagnostics();
     g_app_init_completed = 1U;
@@ -324,7 +318,7 @@ static uint8_t FOC_App_IsUndervoltageFaultActive(void)
     const float vbus_voltage = g_motor.vbus_voltage;
     FOC_Platform_UndervoltageProtect(vbus_voltage);
 
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == 1U)
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
     if ((g_undervoltage_fault_latched != 0U) &&
         (vbus_voltage >= FOC_UNDERVOLTAGE_RECOVER_VBUS_DEFAULT))
     {
@@ -358,7 +352,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                          &g_torque_current_pid,
                          CommandManager_GetAngleSpeedRadS(),
                          sensor_data,
-                         FOC_APP_CONTROL_DT_SEC,
+                         FOC_CONTROL_DT_SEC,
                          FOC_TORQUE_MODE_CURRENT_PID);
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
     FOC_SpeedAngleControlStep(&g_motor,
@@ -368,7 +362,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                               CommandManager_GetTargetAngleRad(),
                               CommandManager_GetAngleSpeedRadS(),
                               sensor_data,
-                              FOC_APP_CONTROL_DT_SEC,
+                              FOC_CONTROL_DT_SEC,
                               FOC_TORQUE_MODE_CURRENT_PID);
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
     /* FULL build keeps both parallel algorithms and runtime mode switching. */
@@ -379,7 +373,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                              &g_torque_current_pid,
                              CommandManager_GetAngleSpeedRadS(),
                              sensor_data,
-                             FOC_APP_CONTROL_DT_SEC,
+                             FOC_CONTROL_DT_SEC,
                              FOC_TORQUE_MODE_CURRENT_PID);
     }
     else
@@ -391,7 +385,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                                   CommandManager_GetTargetAngleRad(),
                                   CommandManager_GetAngleSpeedRadS(),
                                   sensor_data,
-                                  FOC_APP_CONTROL_DT_SEC,
+                                  FOC_CONTROL_DT_SEC,
                                   FOC_TORQUE_MODE_CURRENT_PID);
     }
 #else

@@ -49,13 +49,13 @@ static void CommandManager_OutputDiag(const char *level, const char *module, con
 static void CommandManager_OutputParam(char subcommand, float value);
 static uint8_t CommandManager_IsInRange(float value, float min_value, float max_value);
 
-#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
 #define CMD_DIAG_OUTPUT(text) FOC_Platform_DebugOutput(text)
 #else
 #define CMD_DIAG_OUTPUT(text) ((void)0)
 #endif
 
-#if (FOC_FEATURE_DIAG_STATS == 1U)
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
 #define CMD_DIAG_STATS_INC(field_name) do { g_runtime_state.field_name++; } while (0)
 #else
 #define CMD_DIAG_STATS_INC(field_name) ((void)0)
@@ -193,7 +193,7 @@ void CommandManager_FinalizeInitDiagnostics(void)
         g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_INIT_FAILED;
     }
 
-#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     {
         char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -260,7 +260,7 @@ void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_
 
 void CommandManager_ReportUndervoltageFault(float vbus_voltage)
 {
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == 1U)
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
     g_runtime_state.system_state = COMMAND_MANAGER_SYSTEM_FAULT;
@@ -303,7 +303,7 @@ uint8_t CommandManager_RecoverFaultAndReinit(void)
 
     FOC_ControlConfigResetDefault();
 
-#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     {
         char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
         snprintf(out,
@@ -846,7 +846,7 @@ static command_exec_result_t CommandManager_Execute(const protocol_command_t *cm
     if (cmd->command == COMMAND_MANAGER_CMD_READ_STATE)
     {
         const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
-#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
         {
             char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
             snprintf(out,
@@ -877,7 +877,7 @@ static command_exec_result_t CommandManager_Execute(const protocol_command_t *cm
         {
             if (CommandManager_RecoverFaultAndReinit() != 0U)
             {
-#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
                 const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
                 char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -1037,7 +1037,7 @@ static const char *CommandManager_GetFaultName(command_manager_fault_code_t faul
 
 static void CommandManager_OutputDiag(const char *level, const char *module, const char *detail)
 {
-#if (FOC_FEATURE_DIAG_OUTPUT == 1U)
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
     snprintf(out,
