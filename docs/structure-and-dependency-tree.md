@@ -49,7 +49,8 @@ FOC_VSCODE/
 │   ├── architecture.md
 │   ├── development.md
 │   ├── hardware.md
-│   └── structure-and-dependency-tree.md
+│   ├── structure-and-dependency-tree.md
+│   └── protocol-parameters-bilingual.md
 ├── dev-guidelines/
 │   ├── rules/
 │   └── skills/
@@ -67,12 +68,12 @@ L2 Algorithm Layer
 ├── foc_control.c
 ├── foc_control_init.c
 ├── control_scheduler.c
-└── command_manager.c
+├── command_manager.c
+└── debug_stream.c
 
 L3 Advanced Peripheral Layer
 ├── sensor.c
 ├── svpwm.c
-├── debug_stream.c
 └── protocol_parser.c
 
 Special Dependency Layer
@@ -117,6 +118,8 @@ gd32f30x_it.c
 - Pass: `foc_platform_api.h` no longer exposes L4 mux-specific abstractions.
 - Pass: L3 `svpwm` no longer directly includes L4 `pwm.h`; PWM access now routes through special layer API.
 - Pass: multi-source communication aggregation is now owned by L3 `protocol_parser`.
+- Pass: runtime FAULT path gates control-loop sensor read entry and disables monitor-task debug stream output.
+- Pass: I2C timeout/unlock path is contained in L4 driver with bounded loop waits (no app-layer ms wait coupling).
 
 ## Review Checklist
 - L1 should only depend on foc_app public API.

@@ -31,6 +31,13 @@ void DebugStream_Init(void)
 
 void DebugStream_Process(const sensor_data_t *sensor, const foc_motor_t *motor)
 {
+    const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
+
+    if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
+    {
+        return;
+    }
+
 #if (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE)
     if (CommandManager_IsSemanticReportEnabled() != 0U)
     {

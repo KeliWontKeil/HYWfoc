@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-03
+
+### Changed
+- Reworked I2C wait-timeout strategy to loop-budget polling in `i2c0` driver path, removing runtime dependency on millisecond tick waits for flag/STOP handling.
+- Reworked I2C unlock timing to bounded busy-loop delays (non-DWT) for SCL pulse and STOP generation path.
+- Added control-loop FAULT-state early gate in app runtime path to skip sensor refresh and avoid repeated encoder I2C access in invalid hardware states.
+- Added debug-stream FAULT-state gate to suppress semantic/osc periodic output while fault remains active.
+- Kept fault recovery path on command channel (`F+C`) for runtime reinit without power cycle.
+
+### Documentation
+- Updated root/docs version baseline to `v0.4.0`.
+- Aligned scheduler-rate descriptions to `1kHz/100Hz/200Hz/1Hz`.
+- Corrected protocol document channel mapping to current implementation (`USART1` unified TX feedback + debug text).
+- Synced protocol parameter defaults with code (`angle_speed_rad_s`, semantic enable default, speed PID defaults).
+- Rewrote mission plan for next iteration as architecture/organization/documentation-only scope (no business-logic changes).
+
 ### Added
 - Added trim-able undervoltage protection feature switch (`FOC_FEATURE_UNDERVOLTAGE_PROTECTION`) in startup config.
 - Added platform placeholder API `FOC_Platform_UndervoltageProtect(vbus_voltage)` with no-op implementation for current hardware.

@@ -4,8 +4,9 @@
 This folder contains architecture, hardware, development workflow, and protocol references for the GD32F303CC FOC project.
 
 ## Current Baseline
-- Version: v0.3.8
+- Version: v0.4.0
 - Code baseline: L3 communication aggregation is implemented in `protocol_parser`, and platform communication APIs are exposed as per-source interfaces.
+- Runtime baseline: fault state gates runtime sensor read chain and debug stream output; I2C timeout/recovery uses loop budgets in driver path.
 - Config baseline: project configuration converges through `foc_config.h` with `foc_cfg_*` split headers.
 
 ## Documents

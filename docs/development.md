@@ -15,6 +15,7 @@
 - Optimization: Balance speed and size
 - Debug: ST-LINK with SWD interface
 - Control tick source: TIMER1 update interrupt at 1kHz (bound via `FOC_Platform_BindControlTickCallback`)
+- Scheduler slots: 1kHz fast-control, 100Hz service, 200Hz monitor, 1Hz heartbeat
 - PWM base: TIMER0 center-aligned output synchronized by TIMER2 (24kHz)
 - ADC trigger: TIMER3 compare event
 
@@ -56,8 +57,8 @@
 
 ### Dependency Layer Contract
 - L1 Application layer: only externally callable app APIs (for `main`).
-- L2 Algorithm layer: FOC algorithm/task/status/debug/protocol logic.
-- L3 Advanced peripheral layer: convert low-level raw data/interfaces into structured interfaces.
+- L2 Algorithm layer: FOC algorithm/task/status/runtime management logic.
+- L3 Advanced peripheral layer: convert low-level raw data/interfaces into structured interfaces (sensor/SVPWM/protocol parsing).
 - L4 Peripheral layer: chip-specific Utilities drivers only.
 - Special dependency layer: unified upper API, shared structs, parameter/config macros, algorithm feature-cut macros.
 - **Config Convergence Rule**: See [copilot-instructions.md](../copilot-instructions.md#mandatory-dependency-contract) for single-source config principle. All runtime defaults, command parameters, and range limits belong in `foc_cfg_*.h` headers, never scattered in .c files.
@@ -110,9 +111,15 @@
 
 ### I2C Recovery Strategy
 - Keep bus recovery inside the I2C driver, not in application/debug call sites.
+- Runtime timeout/wait strategy should use bounded loop-budget counters and avoid millisecond blocking in control-critical paths.
 - Any I2C flag wait timeout should trigger immediate peripheral reconfiguration and bus unlock sequence.
 - STOP wait loops must always have timeout protection; do not use unbounded `while (STOP)` loops.
 - External modules should only handle returned status codes (`I2C_OK`, `I2C_TIMEOUT`, `I2C_NACK`, `I2C_ERROR`).
+
+### Fault-State Runtime Policy
+- Control loop should early-return in FAULT state and skip runtime sensor acquisition path.
+- Debug stream should be gated off in FAULT state; only command/recovery path is kept active.
+- Fault recovery should use command path (`F+C`) and then revalidate sensor/control chain.
 
 ### Redundant Checks Policy
 - Remove always-true or duplicate runtime checks from high-frequency paths.

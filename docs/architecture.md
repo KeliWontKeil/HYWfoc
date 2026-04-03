@@ -9,6 +9,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
 - **Real-time Framework**: Timer-based multi-rate task scheduling
 - **Control Algorithm**: Low-speed sensored FOC complete for current stage (torque/current/position/speed path available; precise current-control tuning remains next focus)
 - **Feedback**: Current sensing + position encoder
+- **Fault Runtime Policy**: FAULT state blocks runtime sensor-read chain and debug stream output, while keeping recovery command path available
 
 ### Software Layers
 
@@ -43,7 +44,7 @@ The GD32F303CC FOC project implements a real-time motor control system with the 
   - Per-source frame API exposed to upper layer for L3 aggregation
 - **I2C**: Hardware I2C driver for sensor communication
   - Master mode operation with clock stretching support
-  - Error handling and recovery mechanisms
+  - Loop-budget based timeout and unlock recovery flow (no runtime millisecond wait dependency)
   - Multi-device addressing capability
 - **Timer**: Hardware timer management (Timer0/1/2/3)
   - Configurable prescaler and auto-reload values
@@ -83,7 +84,7 @@ TIMER1 (1kHz)
 ├── Timer1 IRQ -> Timer1_IRQHandler_Internal() -> ControlScheduler_RunTick()
 ├── 1kHz callback slot: control loop + sensor refresh
 ├── 100Hz callback slot: medium-rate extension slot
-├── 10Hz callback slot: slow monitoring slot
+├── 200Hz callback slot: monitoring/debug scheduling slot
 └── 1Hz callback slot: status updates (LED heartbeat)
 
 TIMER2 (24kHz master)
@@ -98,7 +99,7 @@ TIMER3 (compare trigger)
 ### Execution Budget
 - **1kHz tasks**: < 1ms total execution time
 - **100Hz tasks**: < 10ms execution time
-- **10Hz tasks**: < 100ms execution time
+- **200Hz tasks**: < 5ms execution time
 - **1Hz tasks**: < 1s execution time
 
 ## Data Flow
@@ -127,9 +128,8 @@ FOC_MotorInit()
 
 ### Communication Flow
 ```
-USART1 ←→ Debug Output Channel (DMA TX)
+USART1 ←→ Unified output channel (debug text + feedback bytes)
 USART1/USART2 RX → DMA + IDLE → ProtocolParser (L3 source aggregation)
-USART2 ←→ Protocol feedback short code channel
 I2C ←→ AS5600 Encoder
 ```
 
@@ -181,6 +181,8 @@ gd32f30x_it.c
 - `svpwm` PWM calls are routed through special layer API; direct `pwm.h` dependency has been removed.
 - `foc_control.h` currently includes `foc_platform_api.h` and `svpwm.h`; algorithm-layer public header exposure should be narrowed to shared types and algorithm APIs.
 - ISR glue (`gd32f30x_it.h`) includes utility headers directly; this is acceptable only if treated as special-layer boundary file.
+- Runtime fault gating now cuts off `Sensor_ReadAll` invocation in control loop when system enters FAULT, preventing repeated I2C timeout pressure in invalid hardware states.
+- Runtime debug stream processing now exits immediately in FAULT, reducing invalid-state telemetry flood and bandwidth contention.
 
 ## Rectification Decision Snapshot (2026-03-27)
 - Implemented in code (this round):

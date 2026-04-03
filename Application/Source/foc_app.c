@@ -37,6 +37,9 @@ static uint8_t g_led_run_on = 1U;
 static uint8_t g_app_init_completed = 0U;
 static uint16_t g_led_run_blink_counter = 0U;
 static uint16_t g_led_comm_pulse_counter = 0U;
+#if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
+static uint8_t g_prev_control_mode = COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE;
+#endif
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
 static uint8_t g_undervoltage_fault_latched = 0U;
 #endif
@@ -74,10 +77,10 @@ void FOC_App_Init(void)
     FOC_Platform_DebugOutput("Control debug telemetry enabled\r\n");
     FOC_Platform_DebugOutput("Init feedback pipeline...\r\n\r\n");
 
-    ProtocolParser_Init();
+    //ProtocolParser_Init();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_PROTOCOL, 1U);
 
-    DebugStream_Init();
+    //DebugStream_Init();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_DEBUG, 1U);
 
     Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
@@ -140,6 +143,9 @@ void FOC_App_Init(void)
     FOC_Platform_DebugOutput(startup_info);
 
     CommandManager_FinalizeInitDiagnostics();
+#if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
+    g_prev_control_mode = CommandManager_GetControlMode();
+#endif
     g_app_init_completed = 1U;
     FOC_App_UpdateIndicators();
 
@@ -265,10 +271,18 @@ static void Motor_Control_Loop(void)
 {
     const command_manager_runtime_state_t *state;
 
-    Sensor_ReadAll();
-
-    sensor = Sensor_GetData();
     state = CommandManager_GetRuntimeState();
+
+    if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
+    {
+        /* Stop runtime I2C read path in fault state to avoid repeated bus timeout load. */
+        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
+        CommandManager_ReportControlLoopSkip();
+        return;
+    }
+
+    Sensor_ReadAll();
+    sensor = Sensor_GetData();
 
     if (sensor == 0)
     {
@@ -281,6 +295,12 @@ static void Motor_Control_Loop(void)
     if ((sensor->adc_valid == 0U) || (sensor->encoder_valid == 0U))
     {
         return;
+    }
+
+    if ((state != 0) && (state->params_dirty != 0U))
+    {
+        /* Apply sampling offset before motor/fault gates so protocol updates work in disabled state. */
+        Sensor_ADCSampleTimeOffset(CommandManager_GetSensorSampleOffsetPercent());
     }
 
     if (FOC_App_IsUndervoltageFaultActive() != 0U)
@@ -365,8 +385,27 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                               FOC_CONTROL_DT_SEC,
                               FOC_TORQUE_MODE_CURRENT_PID);
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
+    const uint8_t control_mode = CommandManager_GetControlMode();
+
+    if (control_mode != g_prev_control_mode)
+    {
+        if (control_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
+        {
+            FOC_ControlRebaseMechanicalAngleAccum(&g_motor, sensor_data->mech_angle_rad.output_value);
+        }
+
+        g_torque_current_pid.integral = 0.0f;
+        g_torque_current_pid.prev_error = 0.0f;
+        g_angle_pid.integral = 0.0f;
+        g_angle_pid.prev_error = 0.0f;
+        g_speed_pid.integral = 0.0f;
+        g_speed_pid.prev_error = 0.0f;
+        FOC_ControlResetSpeedLoopState();
+        g_prev_control_mode = control_mode;
+    }
+
     /* FULL build keeps both parallel algorithms and runtime mode switching. */
-    if (CommandManager_GetControlMode() == COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY)
+    if (control_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY)
     {
         FOC_SpeedControlStep(&g_motor,
                              &g_speed_pid,
@@ -376,7 +415,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                              FOC_CONTROL_DT_SEC,
                              FOC_TORQUE_MODE_CURRENT_PID);
     }
-    else
+    else if (control_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
     {
         FOC_SpeedAngleControlStep(&g_motor,
                                   &g_speed_pid,
