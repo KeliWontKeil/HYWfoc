@@ -113,6 +113,8 @@ Position Encoder ←────────────────────
 
 ### Sensor-Control Boundary
 - Sensor module is responsible for acquisition/filtering only.
+- Sensor data exposure now uses copy-style API to avoid external writable pointer aliasing.
+- Kalman helper functions are internal to `sensor.c` and are not part of public sensor API.
 - Control module accepts sampled phase currents and mechanical angle as API inputs.
 - Mechanical-to-electrical angle conversion is handled in FOC control layer using calibrated zero, direction, and pole pairs.
 
@@ -157,7 +159,7 @@ L1: foc_app.c
 L2: foc_control.c / foc_control_init.c / control_scheduler.c / command_manager.c
 └── Special layer API/types/macros
 
-L3: sensor.c / svpwm.c / debug_stream.c / protocol_parser.c
+L3: sensor.c / svpwm.c / protocol_parser.c
 └── Special layer API/types/macros
 
 Special layer: foc_platform_api.c + foc_shared_types.h + config headers
@@ -179,7 +181,8 @@ gd32f30x_it.c
 - Communication frame aggregation has been moved from L4 utility mux into L3 `protocol_parser`; this is aligned with layered ownership intent.
 - `foc_platform_api.h` now keeps communication surface as per-source APIs and no longer exposes mux-specific utility abstractions.
 - `svpwm` PWM calls are routed through special layer API; direct `pwm.h` dependency has been removed.
-- `foc_control.h` currently includes `foc_platform_api.h` and `svpwm.h`; algorithm-layer public header exposure should be narrowed to shared types and algorithm APIs.
+- `foc_control.h` has been narrowed to shared-type exposure and no longer carries unrelated platform/math includes.
+- Sensor module public API no longer exposes Kalman implementation helpers.
 - ISR glue (`gd32f30x_it.h`) includes utility headers directly; this is acceptable only if treated as special-layer boundary file.
 - Runtime fault gating now cuts off `Sensor_ReadAll` invocation in control loop when system enters FAULT, preventing repeated I2C timeout pressure in invalid hardware states.
 - Runtime debug stream processing now exits immediately in FAULT, reducing invalid-state telemetry flood and bandwidth contention.

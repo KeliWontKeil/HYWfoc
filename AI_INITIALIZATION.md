@@ -20,7 +20,7 @@ The project has been initialized with core modules:
 - I2C communication interface
 
 ### Development Rules
-Located in `dev-guidelines/rules/`:
+Located in `docs/engineering/dev-guidelines/rules/`:
 - `en/` and `cn/` versions available
 - Follow project-specific rules for GD32 development
 - Use embedded-general rules for ARM Cortex-M best practices
@@ -35,7 +35,7 @@ Located in `dev-guidelines/rules/`:
 ### Documentation
 - `docs/README.md`: Project overview and quick start
 - `docs/architecture.md`: System design and module relationships
-- `docs/hardware.md`: Pin mappings and connections
+- `examples/GD32F303_FOCExplore/hardware/hardware.md`: Pin mappings and connections
 - `docs/development.md`: Development procedures and rules
 
 ### Workflow for New Features
@@ -46,7 +46,7 @@ Located in `dev-guidelines/rules/`:
 5. Merge via pull request
 
 ### Common Tasks
-- Add new peripheral drivers in `Utilities/`
+- Add new peripheral drivers in `examples/GD32F303_FOCExplore/software/Utilities/`
 - Implement control algorithms in timer task slots
 - Add communication protocols
 - Integrate sensors and actuators

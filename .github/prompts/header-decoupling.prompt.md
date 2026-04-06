@@ -249,7 +249,7 @@ FOC_Control_Update(&state);  // ✅ Should compile
 - [ ] **Step 5**: Compile and verify (Phase 5)
 - [ ] **Step 6**: Update architecture documentation
 - [ ] **Step 7**: Add comments justifying any remaining exceptions
-- [ ] **Step 8**: Verify `dev-guidelines/rules/` alignment
+- [ ] **Step 8**: Verify `docs/engineering/dev-guidelines/rules/` alignment
 
 ---
 

@@ -1,130 +1,70 @@
 # Project Structure and Dependency Tree
 
 ## Purpose
-This document gives a quick visual view of current folder layout and layered dependency paths using the refined 4-layer + special-layer model.
+This document records the repository layout after library-first reorganization and the dependency direction constraints.
 
 ## File Tree (Current Core)
 ```text
 FOC_VSCODE/
-├── Application/
-│   ├── Include/
-│   │   ├── main.h
-│   │   ├── foc_app.h
-│   │   ├── foc_config.h
-│   │   ├── foc_cfg_*.h
-│   │   ├── foc_platform_api.h
-│   │   ├── control_scheduler.h
-│   │   ├── foc_control.h
-│   │   ├── foc_control_init.h
-│   │   ├── foc_control_internal.h
-│   │   ├── command_manager.h
-│   │   ├── protocol_parser.h
-│   │   ├── debug_stream.h
-│   │   └── ...
-│   └── Source/
-│       ├── main.c
-│       ├── foc_app.c
-│       ├── foc_platform_api.c
-│       ├── control_scheduler.c
-│       ├── foc_control.c
-│       ├── foc_control_init.c
-│       ├── math_transforms.c
-│       ├── sensor.c
-│       ├── command_manager.c
-│       ├── protocol_parser.c
-│       ├── debug_stream.c
-│       └── ...
-├── Utilities/
-│   ├── ADC/
-│   ├── AS5600/
-│   ├── I2C/
-│   ├── LED/
-│   ├── PWM/
-│   ├── TIMER1/
-│   ├── TIMER2/
-│   └── USART/
-├── Firmware/
-├── docs/
-│   ├── README.md
-│   ├── architecture.md
-│   ├── development.md
-│   ├── hardware.md
-│   ├── structure-and-dependency-tree.md
-│   └── protocol-parameters-bilingual.md
-├── dev-guidelines/
-│   ├── rules/
-│   └── skills/
-├── build/
-└── output/
+├── docs/                              # library-only documents
+├── foc/                               # reusable FOC library
+│   ├── include/                       # public headers + config headers
+│   ├── src/                           # L1/L2/L3 canonical sources
+│   └── port/                          # platform contract empty/stub template
+└── examples/
+	├── GD32F303_FOCExplore/
+	│   ├── hardware/
+	│   │   ├── README.md
+	│   │   └── hardware.md
+	│   └── software/                  # standalone project instance
+	│       ├── Application/           # board entry + ISR + platform API impl
+	│       ├── Utilities/             # driver layer for this board instance
+	│       ├── Firmware/              # vendor firmware bundled in instance
+	│       ├── Project.uvprojx
+	│       ├── Project.uvoptx
+	│       └── _legacy_from_root/     # temporary migration archive
+	└── uvision_EIDE/                  # historical reference example (to be retired)
 ```
 
 ## Layered Dependency Tree
 ```text
-L1 Application Layer
-└── main.c
-    └── foc_app.c
+L1/L2/L3 Core Library
+└── foc/src/*.c + foc/include/*.h
 
-L2 Algorithm Layer
-├── foc_control.c
-├── foc_control_init.c
-├── control_scheduler.c
-├── command_manager.c
-└── debug_stream.c
+Special Dependency Layer Contract
+├── foc/include/foc_platform_api.h
+├── foc/include/foc_shared_types.h
+└── foc/include/foc_cfg_*.h
 
-L3 Advanced Peripheral Layer
-├── sensor.c
-├── svpwm.c
-└── protocol_parser.c
-
-Special Dependency Layer
-├── foc_platform_api.c/.h
-├── foc_shared_types.h
-├── math_transforms.c/.h
-└── config headers (implemented, domain-split)
-
-L4 Utilities Drivers
-├── adc.c / as5600.c / i2c.c
-├── pwm.c / timer1.c / timer2.c
-├── usart1.c / usart2.c
-├── led.c / systick.c
-└── other utility modules
+Board-Specific Example Instance (GD32F303_FOCExplore)
+├── software/Application/*.c (main/isr/platform_api)
+├── software/Utilities/* (L4 drivers)
+└── software/Firmware/* (vendor library)
 ```
 
 ## Dependency Tree (Code-Level)
 ```text
-main.c -> foc_app.c
+example main.c -> foc_app API
 
-foc_app.c -> (L2/L3 public APIs)
+example project file -> foc/src canonical sources (external reference)
 
-L2 modules -> Special layer APIs/types/macros
-L3 modules -> Special layer APIs/types/macros
+foc/src -> foc/include
 
-Special layer -> Utilities/* (L4)
+foc (L1/L2/L3) -> foc_platform_api.h contract only
 
-Utilities/* -> GD32 std peripheral library
+example platform API implementation -> Utilities/* (L4)
 
-gd32f30x_it.c
-├── adc internal IRQ handler
-├── usart1 internal IRQ handler
-├── usart2 internal IRQ handler
-├── timer1 internal IRQ handler
-├── timer2 internal IRQ handler
-└── dma internal IRQ handler
+Utilities/* -> Firmware/* (vendor library)
 ```
 
 ## Current Compliance Snapshot
-- Pass: `main.c` only calls app-layer entry.
-- Pass: Utilities do not include app/algorithm headers.
-- Pass: `foc_platform_api.h` no longer exposes L4 mux-specific abstractions.
-- Pass: L3 `svpwm` no longer directly includes L4 `pwm.h`; PWM access now routes through special layer API.
-- Pass: multi-source communication aggregation is now owned by L3 `protocol_parser`.
-- Pass: runtime FAULT path gates control-loop sensor read entry and disables monitor-task debug stream output.
-- Pass: I2C timeout/unlock path is contained in L4 driver with bounded loop waits (no app-layer ms wait coupling).
+- Pass: L1/L2/L3 canonical sources are centralized in `foc`.
+- Pass: example project references library sources directly (no root wrapper dependency).
+- Pass: board-specific drivers and vendor firmware are bundled in example `software` for standalone build portability.
+- Pass: root `docs` is scoped to library-oriented documentation.
 
 ## Review Checklist
-- L1 should only depend on foc_app public API.
-- L2 should not directly include or call Utilities headers/APIs.
-- L3 should not directly include Utilities headers/APIs.
-- L1/L2/L3 must access L4 via Special Dependency Layer only.
-- L4 should remain hardware-focused and reusable.
-- `foc_control_internal.h` is an L2-only bridge header and should not be included by L1/L3/L4 modules.
+- `foc` must not directly include board driver headers.
+- example project must build with `software/Firmware` + `software/Utilities` + external `foc` reference.
+- platform differences must stay in example `Application/Source/foc_platform_api.c`.
+- library documents should remain in root `docs`; hardware/board docs should remain in each example instance.

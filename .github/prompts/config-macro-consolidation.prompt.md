@@ -188,7 +188,7 @@ Examples:
 - [ ] **Step 5**: Run uniqueness verification
 - [ ] **Step 6**: Compile + verify zero warnings
 - [ ] **Step 7**: Update CHANGELOG.md with consolidated macro list
-- [ ] **Step 8**: Update dev-guidelines/rules/ if new patterns established
+- [ ] **Step 8**: Update docs/engineering/dev-guidelines/rules/ if new patterns established
 
 ---
 

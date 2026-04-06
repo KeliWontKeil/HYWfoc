@@ -59,24 +59,22 @@ Current Version: v0.4.0
 
 ## Project Structure
 ```
-├── Application/          # Main application code
-│   ├── Include/         # Application headers
-│   └── Source/          # Application sources
-├── Utilities/           # Peripheral drivers
-│   ├── ADC/            # Current sampling
-│   ├── PWM/            # PWM generation
-│   ├── USART/          # Serial communication
-│   └── ...             # Other modules
-├── Firmware/           # Vendor libraries (read-only)
-├── docs/               # Documentation
-├── dev-guidelines/     # Development rules and skills
-├── build/              # Build artifacts (e.g. build/GD32F30X_CL/Project.hex)
+├── foc/                 # Reusable single-motor FOC library (L1-L3 + config + API contract)
+│   ├── include/         # Public headers and config headers
+│   ├── src/             # Core control/runtime sources
+│   └── port/            # Empty platform API template for new ports
+├── examples/            # Platform-specific example projects
+│   └── GD32F303_FOCExplore/
+│       ├── hardware/    # Board-level docs and hardware integration notes
+│       └── software/    # Standalone GD32 project (includes Firmware + Utilities)
+├── docs/               # FOC library documents (library-only)
 ```
 
 ## Quick Start
 1. Clone the repository
-2. Open in VS Code with EIDE extension
-3. Build project using EIDE: Build command
+2. Open `examples/GD32F303_FOCExplore/software/Project.uvprojx` in Keil uVision
+3. Or open the repo in VS Code + EIDE and target `examples/GD32F303_FOCExplore/software`
+4. Build project
 4. Flash using ST-LINK
 5. Monitor via USART1 (115200 baud)
 
@@ -91,13 +89,13 @@ This project uses AI-assisted development with manual hardware validation:
 
 ## Documentation
 - [Architecture](docs/architecture.md) - System design and module relationships
-- [Hardware](docs/hardware.md) - Pin mappings and connections
 - [Development Guide](docs/development.md) - Development procedures and rules
 - [Structure and Dependency Tree](docs/structure-and-dependency-tree.md) - Current folder tree and layered dependency map
 - [Protocol and Runtime Parameters (Bilingual)](docs/protocol-parameters-bilingual.md) - Command protocol and configurable parameter set
+- [Example Hardware Guide](examples/GD32F303_FOCExplore/hardware/hardware.md) - Pin mappings and board wiring for GD32F303_FOCExplore
 
 ## Contributing
-- Follow the rules in `dev-guidelines/`
+- Follow the rules in `docs/engineering/dev-guidelines/`
 - Use semantic versioning for releases
 - Hardware validation required for all changes
 - Update documentation for API changes

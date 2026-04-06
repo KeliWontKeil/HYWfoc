@@ -28,6 +28,12 @@
             "editor.insertSpaces": true,
             "editor.tabSize": 4,
             "editor.autoIndent": "advanced"
+        },
+        "chat.tools.terminal.autoApprove": {
+            "/^Set-Location \"d:\\\\project\\\\GD32F3 project\\\\FOC_VSCODE\"; git status --short; git show --stat --oneline -1; git tag -l \"v0\\.4\\.0\"$/": {
+                "approve": true,
+                "matchCommandLine": true
+            }
         }
     },
     "extensions": {

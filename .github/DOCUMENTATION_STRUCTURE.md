@@ -31,14 +31,16 @@ ProjectRoot/
 │   ├── README.md                    # 📘 Project quick start & overview
 │   ├── architecture.md              # 🏗️ System design & layering
 │   ├── development.md               # 👨‍💻 Development workflow & procedures
-│   ├── hardware.md                  # 🔌 Hardware config & pin mappings
+│   ├── engineering/
+│   │   └── dev-guidelines/
+│   │       └── rules/               # 📏 Coding standards (EN/CN)
 │   ├── protocol-parameters-bilingual.md   # 📡 Protocol reference (EN/CN)
 │   └── structure-and-dependency-tree.md   # 🔗 Include graph & data structures
 │
-└── dev-guidelines/
-    └── rules/
-        ├── en/                      # 🇬🇧 English coding standards
-        └── cn/                      # 🇨🇳 Chinese coding standards
+└── examples/
+    └── GD32F303_FOCExplore/
+        └── hardware/
+            └── hardware.md          # 🔌 Hardware config & pin mappings
 ```
 
 ---
@@ -70,11 +72,11 @@ ProjectRoot/
 | **README.md** | Project overview, features, quick start | New developers, stakeholders | Per release |
 | **architecture.md** | Layering contract, timing, data flow, module responsibilities | Developers, AI Agents | Per architectural change |
 | **development.md** | Build procedures, workflows, constraints, rules | Developers | Per process change |
-| **hardware.md** | Pin assignments, peripherals, clock config, constraints | Hardware engineers, developers | Per hardware change |
+| **examples/GD32F303_FOCExplore/hardware/hardware.md** | Pin assignments, peripherals, clock config, constraints | Hardware engineers, developers | Per hardware change |
 | **protocol-parameters-bilingual.md** | Protocol specification, commands, parameters | Developers, integrators | Per protocol update |
 | **structure-and-dependency-tree.md** | Include graph, type catalog, dependency analysis | Developers | Per structural change |
 
-### Category 4: Development Guidelines (dev-guidelines/rules/)
+### Category 4: Development Guidelines (docs/engineering/dev-guidelines/rules/)
 
 | Document Set | Purpose | Languages |
 |---|---|---|
@@ -89,7 +91,7 @@ ProjectRoot/
 1. Start here: [docs/README.md](../docs/README.md)
 2. Then read: [copilot-instructions.md](../copilot-instructions.md)
 3. Check current work: [NEXT_MISSION.md](../NEXT_MISSION.md)
-4. Review rules: [dev-guidelines/rules/en/](../dev-guidelines/rules/en/) or [cn/](../dev-guidelines/rules/cn/)
+4. Review rules: [docs/engineering/dev-guidelines/rules/en/](../docs/engineering/dev-guidelines/rules/en/) or [cn/](../docs/engineering/dev-guidelines/rules/cn/)
 
 ### For AI Agents
 1. Agent definitions: [.github/AGENTS.md](.github/AGENTS.md)

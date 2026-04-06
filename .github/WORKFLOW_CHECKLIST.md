@@ -221,7 +221,7 @@ Invoke each prompt via the corresponding agent. Example:
 | Architecture | [docs/architecture.md](../../docs/architecture.md) |
 | Current goals | [NEXT_MISSION.md](../../NEXT_MISSION.md) |
 | Build commands | EIDE tasks in VS Code |
-| Code conventions | [dev-guidelines/rules/](../../dev-guidelines/rules/) |
+| Code conventions | [docs/engineering/dev-guidelines/rules/](../../docs/engineering/dev-guidelines/rules/) |
 | Agent guide | [.github/AGENTS.md](.github/AGENTS.md) |
 | Copilot instructions | [copilot-instructions.md](../copilot-instructions.md) |
 
@@ -265,7 +265,7 @@ Invoke each prompt via the corresponding agent. Example:
 
 - **Stuck on agent selection?** → Check [.github/AGENTS.md](.github/AGENTS.md)
 - **Unclear requirements?** → Check [NEXT_MISSION.md](../../NEXT_MISSION.md)
-- **Code style questions?** → See [dev-guidelines/rules/](../../dev-guidelines/rules/)
+- **Code style questions?** → See [docs/engineering/dev-guidelines/rules/](../../docs/engineering/dev-guidelines/rules/)
 - **Build issues?** → See Troubleshooting section above
 - **Algorithm questions?** → Read [docs/architecture.md](../../docs/architecture.md) + foc-algorithm-review agent description
 

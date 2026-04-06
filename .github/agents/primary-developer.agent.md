@@ -31,7 +31,7 @@ You manage the **complete development lifecycle** across all project layers:
    - 4-layer dependency contract (L1/L2/L3→L4 only via `foc_platform_api` + `foc_shared_types.h`)
    - Naming conventions and code style (Module_Function, camelCase, UPPER_CASE)
    - Architecture constraints (1ms control period, ROM/RAM budget, ISR safety)
-   - Development workflow (use `dev-guidelines/rules/`, follow NEXT_MISSION.md phases)
+   - Development workflow (use `docs/engineering/dev-guidelines/rules/`, follow NEXT_MISSION.md phases)
 
 3. **Implement end-to-end**:
    - **Code changes**: Make all necessary file edits in minimal, focused chunks

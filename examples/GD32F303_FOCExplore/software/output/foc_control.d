@@ -1,0 +1,13 @@
+.\output\foc_control.o: ..\..\..\foc\src\foc_control.c
+.\output\foc_control.o: ..\..\..\foc\include\foc_control.h
+.\output\foc_control.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_shared_types.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_control_internal.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_config.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_cfg_symbol_defs.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_cfg_feature_switches.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_cfg_init_values.h
+.\output\foc_control.o: ..\..\..\foc\include\foc_cfg_compile_limits.h
+.\output\foc_control.o: ..\..\..\foc\include\math_transforms.h
+.\output\foc_control.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\math.h
+.\output\foc_control.o: ..\..\..\foc\include\svpwm.h

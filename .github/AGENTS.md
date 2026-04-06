@@ -157,7 +157,7 @@ Next → Verify build → Check docs alignment → Complete
 2. **Primary Developer** → move macros to `foc_config_*.h`, update includes
 3. **Architecture Review** → verify no layer violations in new structure
 4. **Primary Developer** → compile + verify zero warnings ✅
-5. **Documentation Compliance** → update `dev-guidelines/rules/` if new patterns established
+5. **Documentation Compliance** → update `docs/engineering/dev-guidelines/rules/` if new patterns established
 
 ### Workflow 4: P1.1 LED Visualization
 1. **Primary Developer** (with LED-specific prompt) → implement state machine
@@ -173,7 +173,7 @@ Next → Verify build → Check docs alignment → Complete
 - **Agent definitions**: `.github/agents/*.agent.md`
 - **Project phases**: [NEXT_MISSION.md](../../NEXT_MISSION.md)
 - **Build rules**: Tasks in `.vscode/tasks.json` or EIDE config
-- **Code conventions**: [dev-guidelines/rules/](../../dev-guidelines/rules/)
+- **Code conventions**: [docs/engineering/dev-guidelines/rules/](../../docs/engineering/dev-guidelines/rules/)
 
 ---
 

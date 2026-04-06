@@ -1,7 +1,9 @@
 # Documentation Index
 
 ## Scope
-This folder contains architecture, hardware, development workflow, and protocol references for the GD32F303CC FOC project.
+This folder stores FOC library documents only (architecture, API/contract, development workflow, and protocol references).
+
+Example-project documents are stored under each example instance, e.g. `examples/GD32F303_FOCExplore/hardware/` and `examples/GD32F303_FOCExplore/software/`.
 
 ## Current Baseline
 - Version: v0.4.0
@@ -11,17 +13,17 @@ This folder contains architecture, hardware, development workflow, and protocol 
 
 ## Documents
 - `architecture.md`: Layering model, timing architecture, data flow, and module dependency constraints.
-- `hardware.md`: Board-level pin mapping, peripheral wiring, and electrical constraints.
 - `development.md`: Build/debug workflow, coding standards, and validation requirements.
 - `structure-and-dependency-tree.md`: Current file tree and layered dependency snapshot.
 - `protocol-parameters-bilingual.md`: Command protocol and runtime parameter reference (Chinese/English).
+- `api-unused-interface-evaluation.md`: Unused API classification and keep/remove rationale.
+- `library-structuring-p1.md`: P1 library-structuring migration report and file mapping.
 
 ## Recommended Reading Order
 1. `architecture.md`
-2. `hardware.md`
-3. `development.md`
-4. `structure-and-dependency-tree.md`
-5. `protocol-parameters-bilingual.md`
+2. `development.md`
+3. `structure-and-dependency-tree.md`
+4. `protocol-parameters-bilingual.md`
 
 ## Maintenance Rules
 - Whenever API signatures, config headers, or layer ownership changes, update this folder in the same iteration.

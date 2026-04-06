@@ -34,7 +34,7 @@ Application/
     └── svpwm.c           # Voltage command → PWM duty conversion
 Utilities/                # L4 peripheral drivers (GD32-specific)
 docs/                     # Architecture, hardware, development guides
-dev-guidelines/rules/     # Coding standards (en/ and cn/ versions)
+docs/engineering/dev-guidelines/rules/  # Coding standards (en/ and cn/ versions)
 build/GD32F30X_CL/        # Compiler output (incremental)
 RTE/                      # CMSIS runtime config
 ```
@@ -112,7 +112,7 @@ See [Timing Architecture](docs/architecture.md) for full details.
 
 ## Coding Rules & Constraints
 
-**See** [dev-guidelines/rules/en/](dev-guidelines/rules/en/) (or `cn/` for Chinese).
+**See** [docs/engineering/dev-guidelines/rules/en/](docs/engineering/dev-guidelines/rules/en/) (or `cn/` for Chinese).
 
 Key highlights:
 - **Interrupt safety**: No blocking I/O in ISRs; use DMA or queues
@@ -126,7 +126,7 @@ Key highlights:
 |----------|---------|
 | [README.md](docs/README.md) | Quick start, feature summary, version history |
 | [architecture.md](docs/architecture.md) | Layering, timing, data flow, module contracts |
-| [hardware.md](docs/hardware.md) | Pin mappings, clock config, peripheral assignments |
+| [hardware.md](examples/GD32F303_FOCExplore/hardware/hardware.md) | Pin mappings, clock config, peripheral assignments |
 | [development.md](docs/development.md) | Build steps, debugging, release process |
 | [structure-and-dependency-tree.md](docs/structure-and-dependency-tree.md) | Include graph, data structure catalog |
 | [CHANGELOG.md](CHANGELOG.md) | Version history & feature tracking |

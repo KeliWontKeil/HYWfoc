@@ -1,0 +1,11 @@
+.\output\control_scheduler.o: ..\..\..\foc\src\control_scheduler.c
+.\output\control_scheduler.o: ..\..\..\foc\include\control_scheduler.h
+.\output\control_scheduler.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\control_scheduler.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_shared_types.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_config.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_cfg_symbol_defs.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_cfg_feature_switches.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_cfg_init_values.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_cfg_compile_limits.h
+.\output\control_scheduler.o: ..\..\..\foc\include\foc_platform_api.h

@@ -14,14 +14,14 @@
 - Compiler: ARM Compiler 5 (AC5)
 - Optimization: Balance speed and size
 - Debug: ST-LINK with SWD interface
-- Control tick source: TIMER1 update interrupt at 1kHz (bound via `FOC_Platform_BindControlTickCallback`)
+- Control tick source: TIMER1 update interrupt at 1kHz (bound via `FOC_Platform_SetControlTickCallback`)
 - Scheduler slots: 1kHz fast-control, 100Hz service, 200Hz monitor, 1Hz heartbeat
 - PWM base: TIMER0 center-aligned output synchronized by TIMER2 (24kHz)
 - ADC trigger: TIMER3 compare event
 
 ### Control Period Contract
-- Open-loop speed conversion in `FOC_OpenLoopStep` currently assumes a 1ms control period.
-- If control scheduler tick frequency is changed, update speed-to-angle conversion accordingly to keep speed command consistent.
+- Open-loop speed conversion in `FOC_OpenLoopStep` uses `FOC_CONTROL_DT_SEC` as control period source (defined in config headers).
+- If control scheduler frequency is changed, keep `FOC_CONTROL_DT_SEC` and scheduler configuration synchronized.
 
 ## Development Workflow
 
@@ -31,7 +31,7 @@
 - Estimate resource impact (ROM/RAM)
 
 ### 2. Implementation Phase
-- Follow coding rules in `dev-guidelines/rules/`
+- Follow coding rules in `docs/engineering/dev-guidelines/rules/`
 - Use appropriate language version (en/cn)
 - Default to direct implementation on `main` unless a dedicated branch is explicitly requested
 - Regular commits with descriptive messages

@@ -1,0 +1,14 @@
+.\output\debug_stream.o: ..\..\..\foc\src\debug_stream.c
+.\output\debug_stream.o: ..\..\..\foc\include\debug_stream.h
+.\output\debug_stream.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_shared_types.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_config.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_cfg_symbol_defs.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_cfg_feature_switches.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_cfg_init_values.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_cfg_compile_limits.h
+.\output\debug_stream.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\debug_stream.o: ..\..\..\foc\include\command_manager.h
+.\output\debug_stream.o: ..\..\..\foc\include\control_scheduler.h
+.\output\debug_stream.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\debug_stream.o: ..\..\..\foc\include\foc_platform_api.h
