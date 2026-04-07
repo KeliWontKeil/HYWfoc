@@ -1,4 +1,5 @@
-#include "foc_platform_api.h"
+#include "interface/foc_platform_api.h"
+#include "config/foc_config.h"
 
 #include "systick.h"
 #include "LED.h"
@@ -10,7 +11,7 @@
 #include "adc.h"
 #include "as5600.h"
 #include "pwm.h"
-#include "foc_config.h"
+
 
 void FOC_Platform_RuntimeInit(void)
 {
@@ -27,11 +28,6 @@ void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on)
     LED_SetState(led_index, on);
 }
 
-void FOC_Platform_SetHeartbeatIndicator(uint8_t on)
-{
-    FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, on);
-}
-
 void FOC_Platform_HighRateClockInit(uint16_t high_rate_khz)
 {
     /* TIMER2 update frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
@@ -41,7 +37,8 @@ void FOC_Platform_HighRateClockInit(uint16_t high_rate_khz)
 void FOC_Platform_ControlTickSourceInit(void)
 {
     /* TIMER1 control tick frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
-    Timer1_Init(9U, (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * FOC_PLATFORM_CONTROL_TIMER_FREQ_KHZ)) - 1U);
+    Timer1_Init(9U,
+                (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * FOC_PLATFORM_CONTROL_TIMER_FREQ_KHZ)) - 1U);
 }
 
 void FOC_Platform_SetControlTickCallback(FOC_Platform_TickCallback_t callback)

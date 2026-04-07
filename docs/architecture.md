@@ -2,208 +2,83 @@
 
 ## System Design
 
-The GD32F303CC FOC project implements a real-time motor control system with the following key components:
+This library implements a layered single-motor FOC architecture designed for portability across embedded platforms.
+Hardware-specific behavior is isolated behind platform API contracts so L1-L3 logic can stay reusable.
 
-### Core Architecture
-- **Microcontroller**: GD32F303CC (ARM Cortex-M4, 120MHz)
-- **Real-time Framework**: Timer-based multi-rate task scheduling
-- **Control Algorithm**: Low-speed sensored FOC complete for current stage (torque/current/position/speed path available; precise current-control tuning remains next focus)
-- **Feedback**: Current sensing + position encoder
-- **Fault Runtime Policy**: FAULT state blocks runtime sensor-read chain and debug stream output, while keeping recovery command path available
+## Software Layers
 
-### Software Layers
+### Level 1: Application Layer
+- `foc_app`: application-facing entry sequence and runtime orchestration.
 
-#### Level 1: Application Layer
-- `foc_app.c`: public app entry for `main.c` (`FOC_App_Init/Start/Loop`)
-- `main.c`: thin bootstrap, calls only level-1 API
+### Level 2: Algorithm Layer
+- `foc_control`: runtime control logic.
+- `foc_control_init`: startup calibration and initialization logic.
+- `control_scheduler`: task scheduling and rate dispatch.
+- `command_manager`: command execution and runtime parameter management.
+- `debug_stream`: debug/telemetry policy and formatting.
 
-#### Level 2: Algorithm Layer
-- `foc_control.c`: FOC runtime control algorithms
-- `foc_control_init.c`: startup calibration and motor init algorithm flow
-- `control_scheduler.c`: task scheduling logic
-- `command_manager.c`: command execution and runtime parameter management
-- `debug_stream.c`: low/high frequency debug output policy and formatting
+### Level 3: Advanced Peripheral Layer
+- `sensor`: raw acquisition to structured sensor values.
+- `svpwm`: voltage/vector command to PWM duty request.
+- `protocol_parser`: frame parsing and command extraction.
 
-#### Level 3: Advanced Peripheral Layer
-- `sensor.c`: converts raw peripheral data to structured sensor outputs
-- `svpwm.c`: converts voltage/vector command to structured PWM duty request
-- `protocol_parser.c`: parses transport-agnostic frame buffer to structured command frames
+### Level 4: Peripheral Layer (Instance-Owned)
+- Board drivers and vendor firmware are instance-specific and live under `examples/<instance>/software/`.
 
-#### Level 4: Peripheral Layer (Utilities)
-- **ADC**: Current sampling with DMA (PA6/PA7 synchronous, 12-bit resolution)
-  - Dual-channel ADC for phase current measurement
-  - DMA transfer for low-latency data acquisition
-  - Calibration and offset compensation
-- **PWM**: 3-phase complementary PWM generation with dead time
-  - Timer-based PWM with configurable frequency and duty cycle
-  - Dead time insertion for safe switching
-  - Brake functionality for emergency stop
-- **USART**: Dual serial communication with DMA RX + IDLE event + DMA TX path
-  - Configurable baud rate and data format
-  - Double buffer frame capture for reliable burst reception
-  - Per-source frame API exposed to upper layer for L3 aggregation
-- **I2C**: Hardware I2C driver for sensor communication
-  - Master mode operation with clock stretching support
-  - Loop-budget based timeout and unlock recovery flow (no runtime millisecond wait dependency)
-  - Multi-device addressing capability
-- **Timer**: Hardware timer management (Timer0/1/2/3)
-  - Configurable prescaler and auto-reload values
-  - Interrupt generation for periodic tasks
-  - Input capture and output compare modes
-- **LED**: Status indication GPIO control
-  - Multi-color LED status signaling
-  - PWM dimming capability
-  - Fault indication and user feedback
-- **AS5600**: Magnetic encoder driver with angle conversion
-  - 12-bit resolution angle measurement
-  - I2C interface with automatic gain control
-  - Zero position calibration and offset compensation
-  - Native radian conversion API for control-path consistency
+### Special Dependency Layer
+- `interface/foc_platform_api.h`: unified hardware abstraction contract.
+- `config/foc_shared_types.h`: shared public data types.
+- `config/foc_config.h` + `config/foc_cfg_*.h`: compile-time configuration source.
 
-#### Special Dependency Layer
-- Purpose: unify cross-layer APIs, shared structs, parameter configuration, and algorithm feature-cut macros.
-- Current candidates:
-  - `foc_platform_api.[ch]` (unified upper API)
-  - `foc_shared_types.h` (shared public structures)
-  - config headers (implemented): `foc_config.h` + `foc_cfg_symbol_defs.h` + `foc_cfg_feature_switches.h` + `foc_cfg_init_values.h` + `foc_cfg_compile_limits.h`
-- Contract:
-  - L1/L2/L3 must access L4 only via this layer.
-  - L4 must not depend on L1/L2/L3.
+## Dependency Contract
+- L1/L2/L3 can access L4 only through the Special Dependency Layer.
+- L4 must not depend on L1/L2/L3.
+- Public headers should not expose board driver headers.
 
-#### Hardware Abstraction Layer
-- GD32F30x standard peripheral library
-- CMSIS-Core for Cortex-M4
-
-## Timing Architecture
-
-### Task Scheduling
-The system uses a hierarchical timing framework:
+## Timing Architecture (Abstract)
 
 ```text
-TIMER1 (1kHz)
-├── Timer1 IRQ -> Timer1_IRQHandler_Internal() -> ControlScheduler_RunTick()
-├── 1kHz callback slot: control loop + sensor refresh
-├── 100Hz callback slot: medium-rate extension slot
-├── 200Hz callback slot: monitoring/debug scheduling slot
-└── 1Hz callback slot: status updates (LED heartbeat)
+Control Tick Source
+├── periodic scheduler tick callback
+├── control-loop slot
+└── lower-rate service/monitor slots
 
-TIMER2 (24kHz master)
-├── Drives TIMER0 slave synchronization for PWM base timing
-├── Provides trigger chain reference for sampling timing
-└── Drives SVPWM interpolation callback for high-rate duty update
+High-Rate Clock Source
+├── optional interpolation callback
+└── high-rate actuation update support
 
-TIMER3 (compare trigger)
-└── Generates ADC external trigger event (current sampling phase alignment)
+Sampling Trigger Source
+└── aligned current/angle acquisition trigger
 ```
 
-### Execution Budget
-- **1kHz tasks**: < 1ms total execution time
-- **100Hz tasks**: < 10ms execution time
-- **200Hz tasks**: < 5ms execution time
-- **1Hz tasks**: < 1s execution time
+Instance-specific timer/peripheral assignments belong to instance docs, not library docs.
 
 ## Data Flow
 
-### Control Loop
+```text
+Raw Acquisition -> Sensor Conversion -> FOC Control -> Actuation Request
+         ^                                         |
+         |-----------------------------------------|
 ```
-ADC Samples → Current Calculation/Filtering → FOC Control API (torque / current-loop / angle-loop / speed-loop entry) → PWM Duty Cycle
-    ↑                                                       ↓
-Position Encoder ←───────────────────────────────────── Motor Driver
-```
-
-### Sensor-Control Boundary
-- Sensor module is responsible for acquisition/filtering only.
-- Sensor data exposure now uses copy-style API to avoid external writable pointer aliasing.
-- Kalman helper functions are internal to `sensor.c` and are not part of public sensor API.
-- Control module accepts sampled phase currents and mechanical angle as API inputs.
-- Mechanical-to-electrical angle conversion is handled in FOC control layer using calibrated zero, direction, and pole pairs.
-
-### Startup Calibration Flow
-```
-FOC_MotorInit()
-  └─ FOC_CalibrateElectricalAngleAndDirection()
-       ├─ Lock electrical angle at 0 and sample mechanical angle (zero electrical reference)
-       └─ Step electrical angle forward with settle+sample at each step
-            ├─ Estimate direction from accumulated mechanical increment sign
-            └─ Estimate pole pairs from accumulated electrical/mechanical angle ratio
-```
-
-### Communication Flow
-```
-USART1 ←→ Unified output channel (debug text + feedback bytes)
-USART1/USART2 RX → DMA + IDLE → ProtocolParser (L3 source aggregation)
-I2C ←→ AS5600 Encoder
-```
-
-## Memory Map
-
-### RAM Usage (Current: ~1.7KB/96KB)
-- Static variables and buffers
-- DMA buffers for ADC
-- Stack and heap
-
-### Flash Usage (Current: ~9KB/256KB)
-- Application code
-- Peripheral drivers
-- Vendor libraries
 
 ## Module Dependencies
 
-```
-main.c
-└── L1: foc_app.c
+```text
+foc_app
+└── interface and algorithm modules
 
-L1: foc_app.c
-└── L2/L3 modules via public headers
+algorithm modules
+└── special dependency layer only
 
-L2: foc_control.c / foc_control_init.c / control_scheduler.c / command_manager.c
-└── Special layer API/types/macros
-
-L3: sensor.c / svpwm.c / protocol_parser.c
-└── Special layer API/types/macros
-
-Special layer: foc_platform_api.c + foc_shared_types.h + config headers
-└── L4 Utilities only
-
-L4: Utilities/*
-└── chip-specific low-level drivers only
-
-gd32f30x_it.c
-├── adc internal IRQ handler
-├── usart1 internal IRQ handler
-├── usart2 internal IRQ handler
-├── timer1 internal IRQ handler
-├── timer2 internal IRQ handler
-└── dma internal IRQ handler
+platform API implementation (instance side)
+└── board drivers (L4)
 ```
 
-## Current Gap Check (against target layering)
-- Communication frame aggregation has been moved from L4 utility mux into L3 `protocol_parser`; this is aligned with layered ownership intent.
-- `foc_platform_api.h` now keeps communication surface as per-source APIs and no longer exposes mux-specific utility abstractions.
-- `svpwm` PWM calls are routed through special layer API; direct `pwm.h` dependency has been removed.
-- `foc_control.h` has been narrowed to shared-type exposure and no longer carries unrelated platform/math includes.
-- Sensor module public API no longer exposes Kalman implementation helpers.
-- ISR glue (`gd32f30x_it.h`) includes utility headers directly; this is acceptable only if treated as special-layer boundary file.
-- Runtime fault gating now cuts off `Sensor_ReadAll` invocation in control loop when system enters FAULT, preventing repeated I2C timeout pressure in invalid hardware states.
-- Runtime debug stream processing now exits immediately in FAULT, reducing invalid-state telemetry flood and bandwidth contention.
+## Porting Notes
+- Porting starts from `foc/port/foc_platform_api_empty.c`.
+- Implement all required platform hooks in instance project code.
+- Keep function signatures unchanged to preserve library compatibility.
 
-## Rectification Decision Snapshot (2026-03-27)
-- Implemented in code (this round):
-  - Cross-layer leak fix: `foc_control_init.c` no longer directly includes device driver headers; mechanical-angle conversion is accessed via special-layer API.
-  - Protocol robustness and consistency: frame extraction from DMA chunks and unified command/parameter error accounting paths.
-- Design only (not implemented this round):
-  - Public header slimming for `foc_app.h` and `foc_control.h` (dependency minimization and include migration plan).
-- Deferred (not implemented this round):
-  - Diagnostics phase-2 (fault grading, recovery strategy, and output throttling policy).
-
-## Safety Considerations
-- Interrupt-safe data handling
-- Watchdog timer integration
-- Error recovery mechanisms
-- Resource usage monitoring
-
-## Extension Points
-- Additional sensor interfaces
-- Communication protocols (CAN, USB)
-- Advanced control algorithms
-- Data logging capabilities
+## Instance References
+- Example hardware mapping and wiring: `../examples/GD32F303_FOCExplore/hardware/hardware.md`
+- Example project integration: `../examples/GD32F303_FOCExplore/README.md`

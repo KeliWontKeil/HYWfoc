@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "name": "GD32F303_FOCExplore",
+            "includePath": [
+                "${workspaceFolder}/Application/Include",
+                "${workspaceFolder}/Firmware/CMSIS",
+                "${workspaceFolder}/Firmware/CMSIS/GD/GD32F30x/Include",
+                "${workspaceFolder}/Firmware/GD32F30x_standard_peripheral/Include",
+                "${workspaceFolder}/Utilities",
+                "${workspaceFolder}/.cmsis/include",
+                "${workspaceFolder}/../../../foc/include",
+                "${workspaceFolder}/../../../foc/src/interface",
+                "${workspaceFolder}/../../../foc/src/algorithm",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "USE_STDPERIPH_DRIVER",
+                "GD32F30X_HD"
+            ],
+            "cStandard": "c99",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}

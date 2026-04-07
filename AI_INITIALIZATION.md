@@ -16,7 +16,7 @@ The project has been initialized with core modules:
 - LED GPIO control
 - USART1 serial communication
 - PWM generation (TIMER0, 3 channels)
-- Timer-based algorithm scheduling (1kHz/100Hz/10Hz/1Hz slots)
+- Timer-based algorithm scheduling (1kHz/100Hz/200Hz/1Hz slots)
 - I2C communication interface
 
 ### Development Rules
@@ -33,17 +33,18 @@ Located in `docs/engineering/dev-guidelines/rules/`:
 4. **Testing**: Hardware validation required, use ST-LINK for debugging
 
 ### Documentation
-- `docs/README.md`: Project overview and quick start
+- `README.md`: Repository overview and quick start
+- `docs/README.md`: Library-document index and reading order
 - `docs/architecture.md`: System design and module relationships
 - `examples/GD32F303_FOCExplore/hardware/hardware.md`: Pin mappings and connections
 - `docs/development.md`: Development procedures and rules
 
 ### Workflow for New Features
 1. Read relevant documentation and rules
-2. Implement in feature branches
+2. Implement directly on `main` unless a dedicated branch is explicitly requested
 3. Test on hardware with ST-LINK
 4. Update documentation
-5. Merge via pull request
+5. Tag/release when milestone criteria are met
 
 ### Common Tasks
 - Add new peripheral drivers in `examples/GD32F303_FOCExplore/software/Utilities/`

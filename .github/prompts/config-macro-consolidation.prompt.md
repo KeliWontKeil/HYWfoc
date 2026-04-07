@@ -1,6 +1,6 @@
 ---
 name: "Config Macro Single-Source Convergence"
-description: "Consolidate scattered default macros and constants into domain-specific foc_config_*.h headers. Eliminate duplicate definitions and establish single-source-of-truth for all configurable parameters. See NEXT_MISSION.md for current phase. Coordinate with @architecture-review, @primary-developer, and @documentation-compliance. Estimated: 3-4 hours."
+description: "Consolidate scattered default macros and constants into domain-specific foc_cfg_*.h headers. Eliminate duplicate definitions and establish single-source-of-truth for all configurable parameters. See NEXT_MISSION.md for current phase. Coordinate with @architecture-review, @primary-developer, and @documentation-compliance. Estimated: 3-4 hours."
 argument-hint: "Check NEXT_MISSION.md for task phase and objectives before starting."
 ---
 
@@ -8,17 +8,17 @@ argument-hint: "Check NEXT_MISSION.md for task phase and objectives before start
 
 ## Objective
 
-**Ensure every configuration parameter is defined exactly once** in the appropriate `foc_config_*.h` header. Eliminate scattered defaults in `.c` files, consolidate duplicates, and establish clear ownership of each macro domain.
+**Ensure every configuration parameter is defined exactly once** in the appropriate `foc_cfg_*.h` header. Eliminate scattered defaults in `.c` files, consolidate duplicates, and establish clear ownership of each macro domain.
 
 ---
 
 ## Current State Assessment
 
-Scan `Application/Source/*.c` for these patterns:
+Scan `foc/src/{interface,algorithm}/*.c` for these patterns:
 ```c
-#define PWM_FREQUENCY           24000   // ❌ Should be in foc_config_pwm.h
-#define TORQUE_LIMIT            5.0f    // ❌ Should be in foc_config_control.h
-#define SCHEDULER_TICK_MS       1       // ❌ Should be in foc_config_task.h
+#define PWM_FREQUENCY           24000   // ❌ Should be in config/foc_cfg_init_values.h
+#define TORQUE_LIMIT            5.0f    // ❌ Should be in config/foc_cfg_init_values.h
+#define SCHEDULER_TICK_MS       1       // ❌ Should be in config/foc_cfg_symbol_defs.h
 ```
 
 **Goal**: Move all such macros to centralized headers and remove duplicates.
@@ -29,12 +29,11 @@ Scan `Application/Source/*.c` for these patterns:
 
 | Domain | Header File | Ownership | Scope |
 |---|---|---|---|
-| **Control Algorithm** | `foc_config_control.h` | FOC_Control_* module | Torque/speed/position limits, PID tuning, ramp rates |
-| **Task Scheduler** | `foc_config_task.h` | ControlScheduler_* module | Tick rates (1kHz), task dividers, priority levels |
-| **Debug & Telemetry** | `foc_config_debug.h` | FOC_DebugStream_* module | Buffer sizes, sample rates, output modes |
-| **Platform & Timing** | `foc_config_platform.h` | FOC_Platform_* API | Timer frequencies, ISR stack sizes, callback routing |
-| **Hardware Peripherals** | `foc_config_hardware.h` | Utilities drivers | Pin assignments, ADC channels, PWM deadtime |
-| **Communication** | `foc_config_comms.h` | Protocol_* / DMA modules | Baud rates, frame sizes, timeout values |
+| **Init Defaults** | `config/foc_cfg_init_values.h` | Init + algorithm modules | Limits, default gains, startup values, platform base timing |
+| **Symbol Definitions** | `config/foc_cfg_symbol_defs.h` | Scheduler + protocol modules | Tick divisors, frame symbols, constants/enums |
+| **Feature Switches** | `config/foc_cfg_feature_switches.h` | Build configuration | Feature on/off switches and build-set options |
+| **Compile Limits** | `config/foc_cfg_compile_limits.h` | Build-time checks | Compile-time range/consistency limits |
+| **Aggregator** | `config/foc_config.h` | Public include entry | Pulls all `foc_cfg_*` headers as SSOT |
 
 ---
 
@@ -42,10 +41,10 @@ Scan `Application/Source/*.c` for these patterns:
 
 ### Phase 1: Inventory & Analysis
 
-**Action**: Run a full codebase scan for `#define` statements in `Application/Source/`
+**Action**: Run a full codebase scan for `#define` statements in `foc/src/`
 
 ```bash
-grep -rn "^\s*#define" Application/Source/ | grep -v "^Binary"
+grep -rn "^\s*#define" foc/src/ | grep -v "^Binary"
 ```
 
 **Deliverable**: Categorized list of all found macros
@@ -64,8 +63,8 @@ Debug Layer:
 ### Phase 2: Consolidation
 
 **For each macro found**:
-1. Check if already in `foc_config_*.h` (eliminate duplicates if same value)
-2. If not in config, **move to appropriate `foc_config_*.h`** and update `.c` file includes
+1. Check if already in `foc_cfg_*.h` (eliminate duplicates if same value)
+2. If not in config, **move to appropriate `foc_cfg_*.h`** and update `.c` file includes
 3. Add **comment block** explaining dependency or constraints:
    ```c
    // ⚠️ TORQUE_LIMIT: Must not exceed motor nameplate torque (5.0 Nm typical).
@@ -81,32 +80,32 @@ Before (foc_control.c):
 #define SPEED_MAX        300.0f
 ```
 
-After (foc_config_control.h):
+After (config/foc_cfg_init_values.h):
 ```c
 /**
- * @defgroup FOC_Config_Control FOC Control Parameters
+ * @brief Centralized initialization and tuning defaults
  * @{
  */
 
 // ⚠️ TORQUE_LIMIT: Firmware soft limit (motors: typ. 5.0 Nm).
-//    Update if hardware rating changes. See docs/hardware.md.
-#define FOC_CONFIG_TORQUE_LIMIT_NM          5.0f
+//    Update if hardware rating changes. See examples/GD32F303_FOCExplore/hardware/hardware.md.
+#define FOC_TORQUE_LIMIT_NM                 5.0f
 
 // ⚠️ SPEED_MAX: Maximum motor speed in electrical RPM.
 //    Prevents field-weakening regions if tuning enabled.
-#define FOC_CONFIG_SPEED_MAX_RPM            300.0f
+#define FOC_SPEED_MAX_RPM                   300.0f
 
 /** @} */
 ```
 
 After (foc_control.c):
 ```c
-#include "foc_config_control.h"
+#include "config/foc_cfg_init_values.h"
 // Remove local #define TORQUE_LIMIT, SPEED_MAX
 
 // Use the centralized macro:
-if (torque_cmd > FOC_CONFIG_TORQUE_LIMIT_NM) {
-    torque_cmd = FOC_CONFIG_TORQUE_LIMIT_NM;
+if (torque_cmd > FOC_TORQUE_LIMIT_NM) {
+  torque_cmd = FOC_TORQUE_LIMIT_NM;
 }
 ```
 
@@ -116,13 +115,13 @@ if (torque_cmd > FOC_CONFIG_TORQUE_LIMIT_NM) {
 
 ```c
 /**
- * @file foc_config_control.h
- * @brief FOC Control Algorithm Configuration
+ * @file config/foc_cfg_init_values.h
+ * @brief FOC initialization and default runtime values
  *
  * Dependencies:
  *  - math_transforms.h (MATH_TWO_PI)
- *  - foc_config_task.h (scheduler tick rate affects speed integration)
- *  - foc_config_hardware.h (ADC resolution affects current scaling)
+ *  - config/foc_cfg_symbol_defs.h (scheduler/protocol symbols)
+ *  - config/foc_cfg_feature_switches.h (feature gates)
  *
  * Default values map to GD32F303CC @ 120MHz, 24kHz PWM, 1kHz control tick.
  */
@@ -132,31 +131,27 @@ if (torque_cmd > FOC_CONFIG_TORQUE_LIMIT_NM) {
 
 **Compilation check**: 
 ```bash
-./eide.project.build  # Should output: 0 information, 0 warning, 0 error
-grep -rn "^\s*#define" Application/Source/ | wc -l  # Should be << original count
+./eide.project.build  # Should output: 0 errors and no newly introduced warnings
+grep -rn "^\s*#define" foc/src/ | wc -l  # Should be << original count
 ```
 
 **Uniqueness check**:
 ```bash
 # Ensure no macro is defined in multiple config headers
-for macro in $(grep "^#define FOC_CONFIG_" foc_config_*.h | awk '{print $2}' | sort); do
-  count=$(grep -c "^#define $macro" foc_config_*.h)
-  if [ $count -gt 1 ]; then
-    echo "ERROR: $macro defined $count times"
-  fi
-done
+grep -rh "^#define FOC_" foc/include/config/foc_cfg_*.h | awk '{print $2}' | sort | uniq -d
+# Should return empty output (no duplicated macro names)
 ```
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] **Inventory complete**: All macros in `Application/Source/` catalogued and categorized
+- [ ] **Inventory complete**: All macros in `foc/src/` catalogued and categorized
 - [ ] **No duplicates**: Each macro value defined exactly once in appropriate config header
 - [ ] **All `.c` files updated**: Include correct config header; remove local defines
 - [ ] **Dependency documented**: Each config header lists its dependencies in file header
-- [ ] **Naming consistent**: All migrated macros use `FOC_CONFIG_DOMAIN_NAME` pattern
-- [ ] **Zero warnings**: `eide.project.build` → "0 information, 0 warning, 0 error"
+- [ ] **Naming consistent**: All migrated macros use project `FOC_*` naming and live in `foc_cfg_*.h`
+- [ ] **No newly introduced warnings**: `eide.project.build` introduces no new warnings
 - [ ] **Memory stable**: ROM/RAM usage unchanged (or within ±100 bytes)
 - [ ] **Docs updated**: `docs/development.md` reflects new config layout with examples
 
@@ -167,26 +162,26 @@ done
 Establish and enforce this pattern:
 
 ```
-FOC_CONFIG_<DOMAIN>_<PARAMETER_NAME>
+FOC_<DOMAIN>_<PARAMETER_NAME>
 
 Examples:
-  FOC_CONFIG_CONTROL_TORQUE_LIMIT_NM
-  FOC_CONFIG_TASK_TICK_RATE_HZ
-  FOC_CONFIG_DEBUG_BUFFER_SIZE_BYTES
-  FOC_CONFIG_PLATFORM_PWM_FREQUENCY_HZ
-  FOC_CONFIG_HARDWARE_ADC_RESOLUTION_BITS
+  FOC_SCHEDULER_TICK_HZ
+  FOC_TORQUE_LIMIT_NM
+  FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS
+  FOC_PROTOCOL_FRAME_HEAD_CHAR
+  FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT
 ```
 
 ---
 
 ## Implementation Checklist
 
-- [ ] **Step 1**: Scan and list all macros in Application/Source/
-- [ ] **Step 2**: Create/update foc_config_*.h files with ownership assignments
+- [ ] **Step 1**: Scan and list all macros in foc/src/
+- [ ] **Step 2**: Create/update foc_cfg_*.h files with ownership assignments
 - [ ] **Step 3**: Move macros and update includes in all .c files
 - [ ] **Step 4**: Add dependency comments to config headers
 - [ ] **Step 5**: Run uniqueness verification
-- [ ] **Step 6**: Compile + verify zero warnings
+- [ ] **Step 6**: Compile + verify no newly introduced warnings
 - [ ] **Step 7**: Update CHANGELOG.md with consolidated macro list
 - [ ] **Step 8**: Update docs/engineering/dev-guidelines/rules/ if new patterns established
 
@@ -194,8 +189,8 @@ Examples:
 
 ## Related Files
 
-- Config header template: `foc_config_control.h` (existing, use as reference)
-- Project includes: `Application/Include/` (verify no .c includes beyond config headers)
+- Config header templates: `foc/include/config/foc_cfg_*.h` + `foc/include/config/foc_config.h`
+- Project includes: `foc/include/` (verify no `.c` local defaults bypass config headers)
 - Build output: Expect no linker warnings about macro conflicts
 
 ---

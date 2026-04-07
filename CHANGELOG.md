@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Extended command frame format to `a<driver_id><cmd><subcmd><param>b` with protocol-level address filtering.
+- Added driver-id validation range (`0x32-0x7E`) and broadcast support (`0xFF`); non-targeted valid frames are silently dropped.
+- Kept instance platform timing and indicator constants as local macros in platform implementation to avoid direct dependency on library config headers.
+- Decoupled instance I2C driver from `foc_config.h` by using local timeout and unlock loop macros in `i2c0`.
+
+### Documentation
+- Updated protocol bilingual guide and GD32F303 instance adaptation examples to the new driver-id command format.
+
 ## [0.4.0] - 2026-04-03
 
 ### Changed
@@ -291,14 +300,14 @@ Prefer referencing files over pasting long code blocks.
   - After completing an iteration, update:
     - `CHANGELOG.md` (version history and changes)
     - `dev-guidelines/rules/*` and `dev-guidelines/skills/*` (AI workflow)
-    - `docs/hardware.md` only if pin mapping changes
+    - `examples/GD32F303_FOCExplore/hardware/hardware.md` only if pin mapping changes
 
 ### Project snapshot (v0.3.0)
 - **MCU**: GD32F303CC (Cortex-M4)
 - **Dev env**: VS Code / Cursor + EIDE extension (`cl.eide`)
 - **Toolchain**: ARM Compiler 5 (AC5)
 - **EIDE target**: `GD32F30X_CL`
-- **Build outputs**: `build/GD32F30X_CL/` (e.g. `Project.axf`, `Project.hex`)
+- **Build outputs**: `examples/<instance>/software/build/GD32F30X_CL/` (e.g. `Project.axf`, `Project.hex`)
 
 ### What exists in code (high-signal)
 

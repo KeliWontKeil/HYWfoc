@@ -10,7 +10,6 @@
             "--header-insertion=never"
         ],
         "files.autoGuessEncoding": true,
-        "C_Cpp.default.configurationProvider": "cl.eide",
         "C_Cpp.errorSquiggles": "disabled",
         "files.associations": {
             ".eideignore": "ignore",
@@ -38,17 +37,11 @@
     },
     "extensions": {
         "recommendations": [
-            "cl.eide",
-            "keroc.hex-fmt",
-            "xiaoyongdong.srecord",
-            "hars.cppsnippets",
-            "zixuanwang.linkerscript",
+            "ms-vscode.cpptools",
+            "llvm-vs-code-extensions.vscode-clangd",
             "redhat.vscode-yaml",
             "IBM.output-colorizer",
-            "cschlosser.doxdocgen",
-            "ms-vscode.vscode-serial-monitor",
-            "dan-c-underwood.arm",
-            "marus25.cortex-debug"
+            "cschlosser.doxdocgen"
         ]
     }
 }

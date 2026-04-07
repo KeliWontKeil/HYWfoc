@@ -18,10 +18,10 @@ Further **reduce header coupling** through strategic application of forward decl
 
 Current state:
 ```c
-// Application/Include/foc_control.h
+// foc/include/algorithm/foc_control.h
 #include "gd32f30x_timer.h"      // ❌ L2 exposes L4 device header
 #include "Utilities/pwm_driver.h" // ❌ Unnecessary transitive include
-#include "foc_platform_api.h"     // ✅ Correct (via mandate)
+#include "interface/foc_platform_api.h"     // ✅ Correct (via mandate)
 
 // This means:
 // - Any user of foc_control.h must compile GD32 headers
@@ -31,9 +31,9 @@ Current state:
 
 **Goal**:
 ```c
-// Application/Include/foc_control.h (refactored)
-#include "foc_shared_types.h"     // ✅ Only shared types needed
-#include "foc_platform_api.h"     // ✅ Mandate fulfilled
+// foc/include/algorithm/foc_control.h (refactored)
+#include "config/foc_shared_types.h"     // ✅ Only shared types needed
+#include "interface/foc_platform_api.h"     // ✅ Mandate fulfilled
 // Forward declarations in .h; actual includes only in .c
 
 // Result:
@@ -51,16 +51,16 @@ Current state:
 **Tool**: Create a dependency map script (or manual analysis)
 
 ```bash
-# Find all #include lines in Application/Include/ headers
-for hdr in Application/Include/*.h; do
+# Find all #include lines in library public headers
+for hdr in foc/include/interface/*.h foc/include/algorithm/*.h; do
   echo "=== $hdr ==="
   grep "^#include" "$hdr" | grep -v "^//"
 done
 ```
 
 **Categorize includes**:
-- ✅ **Good**: `#include "foc_shared_types.h"` (same layer, essential types)
-- ✅ **Good**: `#include "foc_platform_api.h"` (mandate: cross-layer via API)
+- ✅ **Good**: `#include "config/foc_shared_types.h"` (same layer, essential types)
+- ✅ **Good**: `#include "interface/foc_platform_api.h"` (mandate: cross-layer via API)
 - ✅ **Good**: `#include <stdint.h>` (C standard library)
 - ❌ **Bad**: `#include "gd32f30x_timer.h"` (L4 device header leaked)
 - ❌ **Bad**: `#include "Utilities/pwm_driver.h"` (transitive; should go via platform API)
@@ -72,7 +72,7 @@ done
 |---|---|---|---|---|
 | foc_control.h | gd32f30x_timer.h, math_transforms.h, foc_platform_api.h | YES: gd32f30x_timer.h | YES: for timer ISR callback | Remove timer.h, use function pointer typedef |
 | foc_app.h | foc_control.h | NO | NO | Keep |
-| protocol_parser.h | stdlib.h, stdint.h, foc_shared_types.h | NO | NO | Keep |
+| protocol_parser.h | stdlib.h, stdint.h, config/foc_shared_types.h | NO | NO | Keep |
 
 ---
 
@@ -148,7 +148,7 @@ Before (foc_control.h):
 ```c
 #include "Utilities/pwm_driver.h"  // Transitive
 #include "math_transforms.h"       // Used in inline: MATH_TWO_PI
-#include "foc_shared_types.h"      // Typedef definitions
+#include "config/foc_shared_types.h"      // Typedef definitions
 
 void FOC_Control_Update(FOC_State *state);  // No PWM_* types in signature
 ```
@@ -156,7 +156,7 @@ void FOC_Control_Update(FOC_State *state);  // No PWM_* types in signature
 After (foc_control.h):
 ```c
 #include "math_transforms.h"       // ✅ Used inline
-#include "foc_shared_types.h"      // ✅ Typedef definitions
+#include "config/foc_shared_types.h"      // ✅ Typedef definitions
 
 void FOC_Control_Update(FOC_State *state);
 
@@ -168,7 +168,7 @@ After (foc_control.c):
 ```c
 #include "foc_control.h"
 #include "Utilities/pwm_driver.h"  // ✅ Now in .c only
-#include "foc_platform_api.h"      // ✅ Mandate
+#include "interface/foc_platform_api.h"      // ✅ Mandate
 
 // Implementation gets full type access
 ```
@@ -181,7 +181,7 @@ After (foc_control.c):
 
 ```bash
 # Check for device header leaks in public interfaces
-for hdr in Application/Include/*.h; do
+for hdr in foc/include/interface/*.h foc/include/algorithm/*.h; do
   if grep -q "gd32f30x_" "$hdr"; then
     echo "⚠️  LEAK: $hdr includes GD32 device header"
     grep "gd32f30x_" "$hdr"
@@ -207,7 +207,7 @@ done
 **Full compilation check**:
 ```bash
 eide.project.build
-# Expected: 0 information, 0 warning, 0 error
+# Expected: 0 errors and no newly introduced warnings
 # No new undefined references
 ```
 
@@ -232,7 +232,7 @@ FOC_Control_Update(&state);  // ✅ Should compile
 - [ ] **No L4 device headers in L2/L3 public headers** (except pre-approved exceptions with justification)
 - [ ] **Transitive includes eliminated**: Public headers include only direct dependencies
 - [ ] **Forward declarations applied** where feasible (min. 5 candidates identified and converted)
-- [ ] **Zero compilation warnings**: `eide.project.build` → "0 information, 0 warning, 0 error"
+- [ ] **No newly introduced compilation warnings**: `eide.project.build` introduces no new warnings
 - [ ] **No API breaking changes**: Existing function signatures and types remain compatible
 - [ ] **ROM/RAM stable**: ≤ ±100 bytes of current binary size
 - [ ] **Layer boundaries clear**: Visual inspection confirms L1/L2/L3 do not expose L4 internals
@@ -257,12 +257,12 @@ FOC_Control_Update(&state);  // ✅ Should compile
 
 ### Before (Tight Coupling)
 ```c
-// Application/Include/foc_control.h
+// foc/include/algorithm/foc_control.h
 #include "gd32f30x.h"               // ❌ L4
 #include "gd32f30x_timer.h"         // ❌ L4
 #include "Utilities/pwm_driver.h"   // ❌ L4 via transitive
 #include "Utilities/adc.h"          // ❌ L4 via transitive
-#include "foc_platform_api.h"       // ✅ Mandate
+#include "interface/foc_platform_api.h"       // ✅ Mandate
 #include "math_transforms.h"        // ✅ Same layer, used inline
 
 typedef struct {
@@ -273,9 +273,9 @@ typedef struct {
 
 ### After (Decoupled)
 ```c
-// Application/Include/foc_control.h
-#include "foc_shared_types.h"       // ✅ Types only
-#include "foc_platform_api.h"       // ✅ Mandate
+// foc/include/algorithm/foc_control.h
+#include "config/foc_shared_types.h"       // ✅ Types only
+#include "interface/foc_platform_api.h"       // ✅ Mandate
 #include "math_transforms.h"        // ✅ Used inline
 
 // Forward declarations
@@ -303,3 +303,4 @@ For architecture details and dependency rules, see `copilot-instructions.md` and
 ## Success Signal
 
 ✅ **Header coupling removed**: L2/L3 public headers no longer expose L4 implementation details. Compilation cascade reduced, layer boundaries visually clear.
+

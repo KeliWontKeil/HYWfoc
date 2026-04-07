@@ -34,7 +34,7 @@
 .\output\gd32f30x_it.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h
 .\output\gd32f30x_it.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h
 .\output\gd32f30x_it.o: .\Application\Include\main.h
-.\output\gd32f30x_it.o: ..\..\..\foc\include\foc_app.h
+.\output\gd32f30x_it.o: ..\..\..\foc\include\interface/foc_app.h
 .\output\gd32f30x_it.o: .\Application\Include\systick.h
 .\output\gd32f30x_it.o: .\Utilities\LED\LED.h
 .\output\gd32f30x_it.o: .\Utilities\USART\usart1.h

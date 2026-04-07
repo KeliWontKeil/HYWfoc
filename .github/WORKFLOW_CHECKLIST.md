@@ -1,6 +1,6 @@
 # Copilot Workflow Checklist & Guidelines
 
-This document provides quick reference checklists for common development workflows on the FOC project. Follow these before committing code or submitting pull requests.
+This document provides quick reference checklists for common development workflows on the FOC project. Follow these before submitting changes.
 
 ---
 
@@ -12,7 +12,8 @@ Before starting any task, verify:
 - [ ] **Review copilot-instructions.md**: Refresh on project conventions
 - [ ] **Check your task scope**: Locate it in NEXT_MISSION.md for context and goals
 - [ ] **Identify required agents**: Use `.github/AGENTS.md` to determine who to involve
-- [ ] **Verify build is clean**: `eide.project.build` should show 0 errors/warnings
+- [ ] **Open the correct workspace**: use `examples/GD32F303_FOCExplore/software/Project.code-workspace` for build/flash/debug
+- [ ] **Verify build is clean**: `eide.project.build` should show 0 errors and no newly introduced warnings
 
 ---
 
@@ -21,11 +22,11 @@ Before starting any task, verify:
 As you implement:
 
 - [ ] **Follow naming conventions**: `Module_FunctionName()`, `camelCase` vars, `UPPER_CASE` macros
-- [ ] **Add config macros to `foc_config_*.h`**: Never hardcode tuning constants in `.c`
+- [ ] **Add config macros to `foc_cfg_*.h`**: Never hardcode tuning constants in `.c`
 - [ ] **Respect layer boundaries**: 
-  - L1/L2/L3 access L4 **only** via `foc_platform_api.h`
+   - L1/L2/L3 access L4 **only** via `interface/foc_platform_api.h`
   - Do NOT include `gd32f30x_*.h` in public headers
-  - Use `foc_shared_types.h` for cross-layer types
+   - Use `config/foc_shared_types.h` for cross-layer types
 - [ ] **Document via Doxygen**: Add `/** @brief ... */` comments to new public functions
 - [ ] **Include safety notes**: Comment any ISR assumptions, timing constraints, or memory limits
 
@@ -52,7 +53,7 @@ eide.project.build
 
 **Expected output**:
 ```
-Finished: 0 information, 0 warning and 0 error messages
+Finished: 0 error messages, and no newly introduced warnings
 ```
 
 **If warnings appear**:
@@ -86,7 +87,7 @@ No duplicate symbols
 ### Step 4: Check Layer Boundaries (Optional, for structural changes)
 ```bash
 # Ensure no L2/L3 headers expose L4 device headers
-grep -r "^#include.*gd32f30x_" Application/Include/
+grep -r "^#include.*gd32f30x_" foc/include/
 # Should return: nothing (or pre-approved exceptions)
 ```
 
@@ -100,10 +101,10 @@ After code changes:
 - [ ] **Doxygen comments complete**: All new public APIs documented
 - [ ] **NEXT_MISSION.md updated**: Reflect progress on phases
 - [ ] **Checked for:** 
-  - API signature changes? → Update docs/hardware.md or development.md
-  - New config macros? → Document in docs/development.md examples
+  - API signature changes? → Update examples/GD32F303_FOCExplore/hardware/hardware.md or development.md
+   - New config macros? → Document in docs/development.md examples and note owning `foc/include/config/foc_cfg_*.h`
   - Timing assumptions changed? → Update docs/architecture.md
-  - New peripheral added? → Update hardware.md with pin/config mapping
+   - New peripheral added? → Update examples/GD32F303_FOCExplore/hardware/hardware.md with pin/config mapping
 
 ### Invoking Documentation Agent
 ```
@@ -117,13 +118,13 @@ Are there any new APIs, config changes, or timing assumptions that need doc upda
 
 **As a final gate before git commit:**
 
-- [ ] **Code compiles**: `eide.project.build` → 0 errors, 0 warnings
+- [ ] **Code compiles**: `eide.project.build` → 0 errors, no newly introduced warnings
 - [ ] **Memory in budget**: ROM < 256KB, RAM < 96KB (show measurements in commit message)
 - [ ] **Layer boundaries intact**: No L2/L3 includes of L4 device headers
 - [ ] **Tests passed**: Hardware validation completed (if applicable)
 - [ ] **Documentation synced**: All files updated (run doc agent if uncertain)
 - [ ] **Commit message clear**: Describes change scope and phase (e.g., "P1.3: Consolidate TORQUE_LIMIT macro")
-- [ ] **No large binary artifacts**: Only .hex output committed if needed
+- [ ] **No generated artifacts committed**: build/output/.hex and similar generated files stay ignored
 
 ---
 
@@ -185,7 +186,7 @@ Adding a new control feature (e.g., Field-Weakening):
 2. **Implementation phase**:
    - [ ] Implement in foc_control.c + new config header
    - [ ] Follow naming conventions + add Doxygen comments
-   - [ ] Build + verify zero warnings
+   - [ ] Build + verify no newly introduced warnings
 
 3. **Validation phase**:
    - [ ] Hardware test on actual motor
@@ -196,7 +197,7 @@ Adding a new control feature (e.g., Field-Weakening):
 
 ## 📊 Task-Specific Prompts
 
-Task prompts are located in `.github/prompts/`. Browse the directory or check [NEXT_MISSION.md](../../NEXT_MISSION.md) to identify which task prompt applies:
+Task prompts are located in `.github/prompts/`. Browse the directory or check [NEXT_MISSION.md](../NEXT_MISSION.md) to identify which task prompt applies:
 
 ```
 .github/prompts/
@@ -217,12 +218,12 @@ Invoke each prompt via the corresponding agent. Example:
 
 | Task | Resource |
 |---|---|
-| Project overview | [docs/README.md](../../docs/README.md) |
-| Architecture | [docs/architecture.md](../../docs/architecture.md) |
-| Current goals | [NEXT_MISSION.md](../../NEXT_MISSION.md) |
+| Project overview | [docs/README.md](../docs/README.md) |
+| Architecture | [docs/architecture.md](../docs/architecture.md) |
+| Current goals | [NEXT_MISSION.md](../NEXT_MISSION.md) |
 | Build commands | EIDE tasks in VS Code |
-| Code conventions | [docs/engineering/dev-guidelines/rules/](../../docs/engineering/dev-guidelines/rules/) |
-| Agent guide | [.github/AGENTS.md](.github/AGENTS.md) |
+| Code conventions | [docs/engineering/dev-guidelines/rules/](../docs/engineering/dev-guidelines/rules/) |
+| Agent guide | [AGENTS.md](AGENTS.md) |
 | Copilot instructions | [copilot-instructions.md](../copilot-instructions.md) |
 
 ---
@@ -254,7 +255,7 @@ Invoke each prompt via the corresponding agent. Example:
 ## ✨ Best Practices
 
 1. **Compile early, compile often**: Don't wait until end-of-day to discover warnings
-2. **Use config macros aggressively**: Even single-use constants belong in foc_config_*.h
+2. **Use config macros aggressively**: Even single-use constants belong in foc_cfg_*.h
 3. **Document as you code**: Doxygen comments + inline explanations
 4. **Test incrementally**: Don't implement everything, then test once
 5. **Respect layer boundaries**: Future P2 library stage depends on clean layering now
@@ -263,15 +264,15 @@ Invoke each prompt via the corresponding agent. Example:
 
 ## 📞 Getting Help
 
-- **Stuck on agent selection?** → Check [.github/AGENTS.md](.github/AGENTS.md)
-- **Unclear requirements?** → Check [NEXT_MISSION.md](../../NEXT_MISSION.md)
-- **Code style questions?** → See [docs/engineering/dev-guidelines/rules/](../../docs/engineering/dev-guidelines/rules/)
+- **Stuck on agent selection?** → Check [AGENTS.md](AGENTS.md)
+- **Unclear requirements?** → Check [NEXT_MISSION.md](../NEXT_MISSION.md)
+- **Code style questions?** → See [docs/engineering/dev-guidelines/rules/](../docs/engineering/dev-guidelines/rules/)
 - **Build issues?** → See Troubleshooting section above
-- **Algorithm questions?** → Read [docs/architecture.md](../../docs/architecture.md) + foc-algorithm-review agent description
+- **Algorithm questions?** → Read [docs/architecture.md](../docs/architecture.md) + foc-algorithm-review agent description
 
 ---
 
-**Last updated**: 2026-03-31  
-**Version**: v0.3.6  
-**Phases covered**: P1 (ongoing), P2 (planned)
-Active phases**: See [NEXT_MISSION.md](../../NEXT_MISSION.md) for current work breakdown
+**Last updated**: 2026-04-07  
+**Version**: v0.4.0  
+**Phases covered**: See [NEXT_MISSION.md](../NEXT_MISSION.md)
+**Active phases**: See [NEXT_MISSION.md](../NEXT_MISSION.md) for current work breakdown

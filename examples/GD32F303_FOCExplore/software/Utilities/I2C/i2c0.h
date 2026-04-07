@@ -15,6 +15,19 @@
 #define I2C_SPEED             300000U  /* 300kHz fast mode */
 #define I2C_DUTYCYCLE         I2C_DTCY_2  /* I2C duty cycle 2 */
 
+/* Timeout and unlock delay budgets (loop count, not time unit). */
+#ifndef I2C0_TIMEOUT_LOOPS
+#define I2C0_TIMEOUT_LOOPS 12000U
+#endif
+
+#ifndef I2C0_UNLOCK_HALF_PULSE_DELAY_LOOPS
+#define I2C0_UNLOCK_HALF_PULSE_DELAY_LOOPS 600U
+#endif
+
+#ifndef I2C0_UNLOCK_STOP_DELAY_LOOPS
+#define I2C0_UNLOCK_STOP_DELAY_LOOPS 600U
+#endif
+
 /* I2C status codes */
 typedef enum {
     I2C_OK = 0,

@@ -1,9 +1,14 @@
 # Documentation Index
 
 ## Scope
-This folder stores FOC library documents only (architecture, API/contract, development workflow, and protocol references).
+This folder stores library-only documents (architecture, API contracts, generic workflow, and transport-agnostic protocol definitions).
 
-Example-project documents are stored under each example instance, e.g. `examples/GD32F303_FOCExplore/hardware/` and `examples/GD32F303_FOCExplore/software/`.
+Board/project-specific documents must stay under each instance folder (for example `examples/GD32F303_FOCExplore/`).
+
+### Boundary Rules
+- Keep in `docs/`: reusable library behavior, dependency contracts, generic process rules.
+- Keep in `examples/<instance>/`: hardware pin map, toolchain setup, build/debug steps, transport channel mapping.
+- Library docs may link to instances, but must not contain instance-only implementation details.
 
 ## Current Baseline
 - Version: v0.4.0
@@ -13,11 +18,17 @@ Example-project documents are stored under each example instance, e.g. `examples
 
 ## Documents
 - `architecture.md`: Layering model, timing architecture, data flow, and module dependency constraints.
-- `development.md`: Build/debug workflow, coding standards, and validation requirements.
+- `development.md`: Generic development workflow, coding standards, and validation requirements.
 - `structure-and-dependency-tree.md`: Current file tree and layered dependency snapshot.
-- `protocol-parameters-bilingual.md`: Command protocol and runtime parameter reference (Chinese/English).
+- `protocol-parameters-bilingual.md`: Transport-agnostic command protocol and runtime parameter reference (Chinese/English).
 - `api-unused-interface-evaluation.md`: Unused API classification and keep/remove rationale.
 - `library-structuring-p1.md`: P1 library-structuring migration report and file mapping.
+
+## Related Instance Docs
+- `../examples/GD32F303_FOCExplore/README.md`
+- `../examples/GD32F303_FOCExplore/DEVELOPMENT.md`
+- `../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md`
+- `../examples/GD32F303_FOCExplore/hardware/hardware.md`
 
 ## Recommended Reading Order
 1. `architecture.md`

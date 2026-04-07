@@ -22,7 +22,7 @@ This file defines the FOC project's agent ecosystem, their responsibilities, and
 - 🔀 If changes involve **architectural coupling/dependencies** → handoff to `architecture-review`
 - 🔀 If changes need **documentation alignment** → handoff to `documentation-compliance`
 
-**Key responsibility**: End-to-end workflow (code → build → verify zero warnings)
+**Key responsibility**: End-to-end workflow (code → build → verify no newly introduced warnings)
 
 ---
 
@@ -39,8 +39,9 @@ This file defines the FOC project's agent ecosystem, their responsibilities, and
 - ✅ 1ms period assumption needs verification
 
 **File patterns (auto-suggest if editing)**:
-- `Application/Source/foc_control*.c`
-- `Application/Include/foc_config_control.h`
+- `foc/src/algorithm/foc_control*.c`
+- `foc/src/interface/foc_app.c`
+- `foc/include/config/foc_cfg_*.h`
 - Math or timing changes in `math_transforms.*`
 
 **Key responsibility**: Ensure algorithm respects 1ms control period and L1/L2/L3→L4 contract
@@ -64,10 +65,11 @@ This file defines the FOC project's agent ecosystem, their responsibilities, and
 - ✅ API contract violations between layers
 
 **File patterns (auto-suggest if editing)**:
-- `Application/Include/` headers
-- `Application/Source/foc_platform_api.*`
+- `foc/include/` headers
+- `foc/include/interface/foc_platform_api.h`
+- `examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.*`
 - `Utilities/` driver organization
-- `foc_config*.h` structure
+- `foc/include/config/foc_cfg_*.h` structure
 
 **Key responsibility**: Maintain strict L1→L2→L3→L4 layering and minimize coupling
 
@@ -142,7 +144,7 @@ Next → Verify build → Check docs alignment → Complete
 2. **Architecture Review** → validate placement in Utilities, check API contract
 3. **Primary Developer** → implement driver
 4. **Primary Developer** → integrate into `foc_platform_api`
-5. **Documentation Compliance** → update `docs/hardware.md`
+5. **Documentation Compliance** → update `examples/GD32F303_FOCExplore/hardware/hardware.md`
 6. **Primary Developer** → final compile + test ✅
 
 ### Workflow 2: Fix Speed Loop Oscillation
@@ -154,9 +156,9 @@ Next → Verify build → Check docs alignment → Complete
 
 ### Workflow 3: P1.3 Config Consolidation (Task-specific)
 1. **Architecture Review** → scan for scattered defaults, create consolidation map
-2. **Primary Developer** → move macros to `foc_config_*.h`, update includes
+2. **Primary Developer** → move macros to `foc_cfg_*.h`, update includes
 3. **Architecture Review** → verify no layer violations in new structure
-4. **Primary Developer** → compile + verify zero warnings ✅
+4. **Primary Developer** → compile + verify no newly introduced warnings ✅
 5. **Documentation Compliance** → update `docs/engineering/dev-guidelines/rules/` if new patterns established
 
 ### Workflow 4: P1.1 LED Visualization
@@ -171,9 +173,9 @@ Next → Verify build → Check docs alignment → Complete
 
 - **Main instructions**: [copilot-instructions.md](../copilot-instructions.md)
 - **Agent definitions**: `.github/agents/*.agent.md`
-- **Project phases**: [NEXT_MISSION.md](../../NEXT_MISSION.md)
+- **Project phases**: [NEXT_MISSION.md](../NEXT_MISSION.md)
 - **Build rules**: Tasks in `.vscode/tasks.json` or EIDE config
-- **Code conventions**: [docs/engineering/dev-guidelines/rules/](../../docs/engineering/dev-guidelines/rules/)
+- **Code conventions**: [docs/engineering/dev-guidelines/rules/](../docs/engineering/dev-guidelines/rules/)
 
 ---
 
@@ -215,3 +217,4 @@ Use the P1.1-LED-Visualization prompt to implement the state machine.
 - Define pre-commit hooks for zero-warning verification
 - Add P2 (library) phase workflow coordination
 - Document multi-agent parallel workflows (e.g., P1.4 header refactor + algorithm tuning)
+

@@ -33,13 +33,13 @@ Define a **deterministic state-to-LED behavior** table:
 ### 2. Implementation Location
 
 Create or refactor the LED module at:
-- **Header**: `Application/Include/led_visualizer.h`
-- **Implementation**: `Application/Source/led_visualizer.c`
+- **Header**: `foc/include/interface/led_visualizer.h`
+- **Implementation**: `foc/src/interface/led_visualizer.c`
 
 **Dependencies**:
-- `foc_shared_types.h` (for state enums)
-- `Utilities/led.h` (existing GPIO driver, add PWM dimming support if needed)
-- `foc_config_control.h` (LED feature macros)
+- `config/foc_shared_types.h` (for state enums)
+- `interface/foc_platform_api.h` (GPIO abstraction)
+- `config/foc_cfg_init_values.h` + `config/foc_cfg_feature_switches.h` (LED defaults and feature switches)
 
 ### 3. Key Functions
 
@@ -92,9 +92,9 @@ if (FEATURE_LED_ISR_TRACE) {
 - [ ] **All 9 states** have visually distinct patterns (documented in table above)
 - [ ] **Diagnostic capability**: Given any system state, LED pattern is deterministic and observable within **5 seconds**
 - [ ] **Zero serial dependency**: LED state visible even if USART is misconfigured
-- [ ] **Integration**: System state → LED mapping linked to actual FOC state enum in `Application/Source/foc_app.c`
+- [ ] **Integration**: System state → LED mapping linked to actual FOC state enum in `foc/src/interface/foc_app.c`
 - [ ] **No ROM/RAM regression**: LED module adds ≤1KB ROM, ≤512B RAM
-- [ ] **Compile with zero warnings** on ARM Compiler 5
+- [ ] **Compile with no newly introduced warnings** on ARM Compiler 5
 - [ ] **Hardware validation**: Patterns verified on GD32F303CC dev board using oscilloscope + visual inspection
 - [ ] **Documentation**: LED state table added to `docs/README.md` and Doxygen comments in header
 
@@ -109,7 +109,7 @@ if (FEATURE_LED_ISR_TRACE) {
 
 ### Config Integration
 
-Add to `foc_config_led.h`:
+Add to `foc/include/config/foc_cfg_init_values.h` and `foc/include/config/foc_cfg_feature_switches.h`:
 ```c
 #define LED_STATE_BLINK_INIT_FREQ_HZ     0.5f
 #define LED_STATE_BLINK_READY_FREQ_HZ    2.0f
@@ -129,9 +129,9 @@ Add to `foc_config_led.h`:
 ## Related Files & Context
 
 - Current LED driver: `Utilities/led.c` (check existing API)
-- System state enum: `foc_shared_types.h` (FOC_State, FOC_Fault)
-- Control loop: `Application/Source/foc_app.c` (FOC_App_Loop)
-- Config structure: See analogous splits in `foc_config_control.h`
+- System state enum: `config/foc_shared_types.h` (FOC_State, FOC_Fault)
+- Control loop: `foc/src/interface/foc_app.c` (FOC_App_Loop)
+- Config structure: See existing split in `foc/include/config/foc_cfg_*.h`
 
 ---
 

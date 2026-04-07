@@ -1,5 +1,4 @@
 #include "i2c0.h"
-#include "foc_cfg_init_values.h"
 
 /* Private function prototypes */
 static void I2C0_GPIO_Config(void);
@@ -12,7 +11,7 @@ static i2c_status_t I2C0_SendStop(void);
 static i2c_status_t I2C0_SendAddress(uint8_t address, uint32_t direction);
 
 /* Timeout configuration (loop budget, not milliseconds). */
-#define I2C_TIMEOUT_LOOPS FOC_I2C_WAIT_LOOP_MAX
+#define I2C_TIMEOUT_LOOPS I2C0_TIMEOUT_LOOPS
 
 void I2C0_Init(void)
 {
@@ -454,24 +453,24 @@ void I2C0_Unlock(void)
     /* Configure SCL and SDA as GPIO open-drain outputs. */
     gpio_init(I2C0_GPIO_PORT, GPIO_MODE_OUT_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN | I2C0_SDA_PIN);
     gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN | I2C0_SDA_PIN);
-    I2C0_BusyDelayLoops(FOC_I2C_UNLOCK_STOP_LOOP);
+    I2C0_BusyDelayLoops(I2C0_UNLOCK_STOP_DELAY_LOOPS);
     
     /* Generate 9 clock pulses */
     for (i = 0; i < 9; i++)
     {
         gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SCL_PIN);
-        I2C0_BusyDelayLoops(FOC_I2C_UNLOCK_HALF_PULSE_LOOP);
+        I2C0_BusyDelayLoops(I2C0_UNLOCK_HALF_PULSE_DELAY_LOOPS);
         gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN);
-        I2C0_BusyDelayLoops(FOC_I2C_UNLOCK_HALF_PULSE_LOOP);
+        I2C0_BusyDelayLoops(I2C0_UNLOCK_HALF_PULSE_DELAY_LOOPS);
     }
     
     /* Generate STOP condition: SDA low -> SCL high -> SDA high. */
     gpio_bit_reset(I2C0_GPIO_PORT, I2C0_SDA_PIN);
-    I2C0_BusyDelayLoops(FOC_I2C_UNLOCK_STOP_LOOP);
+    I2C0_BusyDelayLoops(I2C0_UNLOCK_STOP_DELAY_LOOPS);
     gpio_bit_set(I2C0_GPIO_PORT, I2C0_SCL_PIN);
-    I2C0_BusyDelayLoops(FOC_I2C_UNLOCK_STOP_LOOP);
+    I2C0_BusyDelayLoops(I2C0_UNLOCK_STOP_DELAY_LOOPS);
     gpio_bit_set(I2C0_GPIO_PORT, I2C0_SDA_PIN);
-    I2C0_BusyDelayLoops(FOC_I2C_UNLOCK_STOP_LOOP);
+    I2C0_BusyDelayLoops(I2C0_UNLOCK_STOP_DELAY_LOOPS);
 
     gpio_init(I2C0_GPIO_PORT, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN | I2C0_SDA_PIN);
 }

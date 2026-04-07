@@ -1,7 +1,7 @@
 # API Unused Interface Evaluation
 
 ## Scope
-- Reviewed layers: L1/L2/L3 and special layer under Application.
+- Reviewed layers: L1/L2/L3 across `foc/src/interface` and `foc/src/algorithm`.
 - Excluded: Utilities (L4) and vendor firmware.
 
 ## Classification Rules
@@ -13,9 +13,9 @@
 
 | Symbol | Location | Current Usage | Classification | Decision |
 |---|---|---|---|---|
-| DebugStream_Init | Application/Include/debug_stream.h, Application/Source/debug_stream.c | Was not called in init path | MISSING_WIRING | Connected in FOC_App_Init and kept as explicit reset entry |
-| SVPWM_GetOutput | Application/Include/svpwm.h, Application/Source/svpwm.c | No internal call sites | RESERVED_INTERFACE | Keep with audit tag for optional observability/debug |
-| ControlScheduler_ResetTickCounter | Application/Include/control_scheduler.h, Application/Source/control_scheduler.c | No internal call sites | RESERVED_INTERFACE | Keep with audit tag for deterministic test/re-sync scenarios |
+| DebugStream_Init | foc/include/interface/debug_stream.h, foc/src/interface/debug_stream.c | Was not called in init path | MISSING_WIRING | Connected in FOC_App_Init and kept as explicit reset entry |
+| SVPWM_GetOutput | foc/include/algorithm/svpwm.h, foc/src/algorithm/svpwm.c | No internal call sites | RESERVED_INTERFACE | Keep with audit tag for optional observability/debug |
+| ControlScheduler_ResetTickCounter | foc/include/interface/control_scheduler.h, foc/src/interface/control_scheduler.c | No internal call sites | RESERVED_INTERFACE | Keep with audit tag for deterministic test/re-sync scenarios |
 
 ## Next Release Candidates
 - If SVPWM_GetOutput still has no external consumer after one release, reclassify to REFACTOR_RESIDUAL and prepare removal.

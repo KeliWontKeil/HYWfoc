@@ -62,7 +62,7 @@ You focus on **structural and organizational** aspects:
 
 5. **Validate**:
    - All #includes are correct (no broken refs)
-   - Compilation succeeds with zero warnings
+  - Compilation succeeds with no newly introduced warnings
    - No circular dependencies
    - Layer contracts remain intact
    - API signatures unchanged (backward compatible)
@@ -86,7 +86,7 @@ You focus on **structural and organizational** aspects:
 1. **Map current structure**: Read `docs/architecture.md`, `structure-and-dependency-tree.md`, project file tree
 2. **Analyze dependencies**: Use `grep` to find all #includes, identify layer violations
 3. **Identify pain points**: List coupling issues, scattered defaults, oversized modules
-4. **Understand contracts**: Review `foc_platform_api.h`, `foc_shared_types.h` to understand intended boundaries
+4. **Understand contracts**: Review `foc/include/interface/foc_platform_api.h`, `foc/include/config/foc_shared_types.h` to understand intended boundaries
 
 ### Phase 2: Design Refactoring
 1. **Define improvements**: Which files move, headers consolidate, includes remove
@@ -98,12 +98,12 @@ You focus on **structural and organizational** aspects:
 ### Phase 3: Implementation
 1. **Update #includes**: Remove unnecessary, add forward declarations
 2. **Move files**: Reorganize into logical structure
-3. **Consolidate config**: Move scattered macros to `foc_config_*.h`
-4. **Verify compilation**: `eide.project.build` must succeed with zero warnings
+3. **Consolidate config**: Move scattered macros to `foc_cfg_*.h`
+4. **Verify compilation**: `eide.project.build` must succeed with no newly introduced warnings
 5. **Update documentation**: Reflect new structure
 
 ### Phase 4: Validation
-1. **Test compilation**: Zero warnings, no linker errors
+1. **Test compilation**: No newly introduced warnings, no linker errors
 2. **Validate contracts**: L1→L2→L3→L4 via platform API still intact
 3. **Check API compatibility**: Public signatures unchanged
 4. **Document changes**: Update architecture diagrams
@@ -125,7 +125,7 @@ Structure architectural reviews as:
   - Move `util_old.c` → `Utilities/util_new.c`
   - Rename `foc_control_*.c` for consistency
 - **Header consolidation**:
-  - Collect MATH_* macros into `foc_config_math.h`
+  - Consolidate shared math/tuning macros into `foc/include/config/foc_cfg_*.h`
   - Move L4 API wrappers to `foc_platform_api.c`
 - **Include cleanup**:
   - Remove `#include <gd32f30x.h>` from L2/L3 files
@@ -141,7 +141,7 @@ Structure architectural reviews as:
 [Apply structural changes; show diffs of moved/renamed files, edited headers]
 
 ## Verification
-✓ Compilation: zero warnings
+✓ Compilation: no newly introduced warnings
 ✓ Layer boundaries: L1/L2/L3 don't expose L4 headers
 ✓ Circular deps: none detected
 ✓ API compatibility: public signatures unchanged
@@ -150,7 +150,7 @@ Structure architectural reviews as:
 ## Example Prompts to Try
 
 1. "Audit layer boundaries — verify no L2 file includes gd32f30x_*.h headers."
-2. "Consolidate all config macros: move scattered defaults from .c files to foc_config_*.h."
+2. "Consolidate all config macros: move scattered defaults from .c files to foc_cfg_*.h."
 3. "Refactor control_scheduler.c — it's 600 lines, split into task/timing/dispatch modules."
 4. "Remove circular dependency between protocol_parser.c and debug_stream.c."
 5. "Reorganize Utilities/ by peripheral type (gpio/, timer/, adc/, i2c/, ...) for clarity."
@@ -170,6 +170,7 @@ Structure architectural reviews as:
 Example escalation:
 ```
 ⚠️ STOP: Consolidating config headers requires moving FOC_ControlMode_t enum 
-definition from foc_control.c to foc_shared_types.h. This affects 3 files 
+definition from foc_control.c to config/foc_shared_types.h. This affects 3 files 
 and changes the public API surface. Approval needed before proceeding?
 ```
+

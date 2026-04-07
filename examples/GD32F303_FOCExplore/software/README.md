@@ -7,10 +7,10 @@ This folder is intended to be opened directly by IDE tools.
 - `Application/`: board entry (`main.c`), ISR bridge, and platform API implementation.
 - `Utilities/`: board-specific driver modules.
 - `Firmware/`: bundled GD32 vendor firmware for independent build.
-- `_legacy_from_root/`: migration archive from root-level legacy layout.
+- `.eide/`, `.pack/`, `.cmsis/`, `build/`: instance-local build metadata and outputs.
 
 ## Build Dependency
-- Core library sources are referenced from external path: `../../../foc/src`.
+- Core library sources are referenced from external paths: `../../../foc/src/interface` and `../../../foc/src/algorithm`.
 - Core headers are referenced from external path: `../../../foc/include`.
 
 ## Notes

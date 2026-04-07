@@ -33,4 +33,3 @@
 .\output\i2c0.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_misc.h
 .\output\i2c0.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h
 .\output\i2c0.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h
-.\output\i2c0.o: ..\..\..\foc\include\foc_cfg_init_values.h

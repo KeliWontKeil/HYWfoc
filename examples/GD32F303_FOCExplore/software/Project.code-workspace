@@ -1,0 +1,30 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "C_Cpp.default.configurationProvider": "cl.eide",
+        "C_Cpp.errorSquiggles": "disabled",
+        "terminal.integrated.shellIntegration.enabled": false,
+        "clangd.arguments": [
+            "--header-insertion=never"
+        ],
+        "files.associations": {
+            "*.h": "c",
+            "*.c": "c",
+            "*.hpp": "cpp",
+            "*.cpp": "cpp",
+            "*.cxx": "cpp",
+            "*.cc": "cpp"
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "cl.eide",
+            "marus25.cortex-debug",
+            "ms-vscode.cpptools"
+        ]
+    }
+}

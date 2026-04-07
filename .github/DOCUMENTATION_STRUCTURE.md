@@ -1,159 +1,65 @@
 # Documentation Structure Guide
 
-This file serves as a master index for the FOC project documentation. All documents are organized by category to avoid scattering and ensure consistency.
+This file is the master map of documentation ownership for this repository.
 
----
+## Repository Documentation Ownership
 
-## 📁 Documentation Hierarchy
-
-```
-ProjectRoot/
-├── copilot-instructions.md          # 🔴 [CRITICAL] AI instruction manifest - DO NOT MOVE
-├── AI_INITIALIZATION.md             # 🤖 AI context & framework setup - DO NOT MOVE (Copilot discovery)
-├── NEXT_MISSION.md                  # 📅 Current project phase & goals
-├── CHANGELOG.md                     # 📝 Version history & releases
-│
-├── .github/
-│   ├── AGENTS.md                    # 🤖 Agent orchestration & roles
-│   ├── WORKFLOW_CHECKLIST.md        # ✅ Pre-code/build/commit checklists
-│   ├── DOCUMENTATION_STRUCTURE.md   # 📑 This file - documentation index
-│   ├── agents/
-│   │   ├── primary-developer.agent.md
-│   │   ├── foc-algorithm-review.agent.md
-│   │   ├── architecture-review.agent.md
-│   │   └── documentation-compliance.agent.md
-│   └── prompts/
-│       ├── led-state-visualization.prompt.md
-│       ├── config-macro-consolidation.prompt.md
-│       └── header-decoupling.prompt.md
-│
-├── docs/
-│   ├── README.md                    # 📘 Project quick start & overview
-│   ├── architecture.md              # 🏗️ System design & layering
-│   ├── development.md               # 👨‍💻 Development workflow & procedures
-│   ├── engineering/
-│   │   └── dev-guidelines/
-│   │       └── rules/               # 📏 Coding standards (EN/CN)
-│   ├── protocol-parameters-bilingual.md   # 📡 Protocol reference (EN/CN)
-│   └── structure-and-dependency-tree.md   # 🔗 Include graph & data structures
-│
-└── examples/
-    └── GD32F303_FOCExplore/
-        └── hardware/
-            └── hardware.md          # 🔌 Hardware config & pin mappings
-```
-
----
-
-## 📋 Document Categories & Purpose
-
-### Category 1: Critical Configuration (ProjectRoot)
-
-| Document | Purpose | Audience | Update Frequency | Notes |
-|----------|---------|----------|------------------|-------|
-| **copilot-instructions.md** | Master AI instruction manifest. Defines project conventions, layering, naming, build/test procedures. **Do NOT move.** | AI Agents, Developers | Per release or structural change | Essential for AI Agent initialization |
-| **AI_INITIALIZATION.md** | AI context & framework state. Provides AI Agents with project setup information. **Do NOT move.** | AI Agents, New Developers | Per framework change | Copilot discovery mechanism |
-| **NEXT_MISSION.md** | Current sprint/phase breakdown. Contains active goals, priorities, deliverables. | Developers, AI Agents | Per sprint (weekly) | Source of truth for phase terminology |
-
-### Category 2: Workflow & Process (.github/)
-
-| Document | Purpose | Audience | Update Frequency |
-|----------|---------|----------|------------------|
-| **AGENTS.md** | Agent roles, responsibilities, trigger conditions, handoff rules | Developers, AI Agents | Per agent update |
-| **WORKFLOW_CHECKLIST.md** | Pre-code/build/commit verification checklists | Developers | Per phase change |
-| **DOCUMENTATION_STRUCTURE.md** | This file; master index of all documentation | Developers, AI Agents | As structure changes |
-| **agents/*.agent.md** | Individual agent role definitions | AI Agents | Per agent refinement |
-| **prompts/*.prompt.md** | Task-specific guidance prompts (named generically, phase-independent) | Developers, AI Agents | Per task update |
-
-### Category 3: Technical Documentation (docs/)
-
-| Document | Purpose | Audience | Update Frequency |
-|----------|---------|----------|------------------|
-| **README.md** | Project overview, features, quick start | New developers, stakeholders | Per release |
-| **architecture.md** | Layering contract, timing, data flow, module responsibilities | Developers, AI Agents | Per architectural change |
-| **development.md** | Build procedures, workflows, constraints, rules | Developers | Per process change |
-| **examples/GD32F303_FOCExplore/hardware/hardware.md** | Pin assignments, peripherals, clock config, constraints | Hardware engineers, developers | Per hardware change |
-| **protocol-parameters-bilingual.md** | Protocol specification, commands, parameters | Developers, integrators | Per protocol update |
-| **structure-and-dependency-tree.md** | Include graph, type catalog, dependency analysis | Developers | Per structural change |
-
-### Category 4: Development Guidelines (docs/engineering/dev-guidelines/rules/)
-
-| Document Set | Purpose | Languages |
+| Scope | Path | Responsibility |
 |---|---|---|
-| **en/** | Coding standards, best practices, Anti-patterns (English) | English |
-| **cn/** | Coding standards, best practices, Anti-patterns (Chinese) | Chinese (Simplified) |
+| Project entry and licensing | `README.md`, `LICENSE`, `CHANGELOG.md`, `NEXT_MISSION.md` | Project overview, legal license, release history, and active mission planning |
+| AI/global governance | `copilot-instructions.md`, `AI_INITIALIZATION.md` | Always-on AI behavior, workflow conventions, and project context |
+| Workflow orchestration | `.github/AGENTS.md`, `.github/WORKFLOW_CHECKLIST.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md` | Agent roles, execution checklist, and reusable task prompts |
+| Library technical docs | `docs/*.md` | Architecture, dependency tree, development process, protocol reference, migration/evaluation reports |
+| Board/instance docs | `examples/<instance>/README.md`, `examples/<instance>/hardware/*.md`, `examples/<instance>/software/README.md` | Instance-specific hardware notes and standalone software package description |
 
----
+## Current Structure Snapshot
 
-## 🔗 Key Links & Cross-References
+```text
+ProjectRoot/
+├── README.md
+├── LICENSE
+├── CHANGELOG.md
+├── NEXT_MISSION.md
+├── copilot-instructions.md
+├── AI_INITIALIZATION.md
+├── .github/
+│   ├── AGENTS.md
+│   ├── WORKFLOW_CHECKLIST.md
+│   ├── DOCUMENTATION_STRUCTURE.md
+│   ├── agents/*.agent.md
+│   └── prompts/*.prompt.md
+├── docs/
+│   ├── README.md
+│   ├── architecture.md
+│   ├── development.md
+│   ├── structure-and-dependency-tree.md
+│   ├── protocol-parameters-bilingual.md
+│   ├── api-unused-interface-evaluation.md
+│   └── library-structuring-p1.md
+└── examples/GD32F303_FOCExplore/
+    ├── README.md
+    ├── hardware/
+    │   ├── README.md
+    │   └── hardware.md
+    └── software/
+        ├── README.md
+        └── Project.code-workspace
+```
 
-### For New Developers
-1. Start here: [docs/README.md](../docs/README.md)
-2. Then read: [copilot-instructions.md](../copilot-instructions.md)
-3. Check current work: [NEXT_MISSION.md](../NEXT_MISSION.md)
-4. Review rules: [docs/engineering/dev-guidelines/rules/en/](../docs/engineering/dev-guidelines/rules/en/) or [cn/](../docs/engineering/dev-guidelines/rules/cn/)
+## Update Rules
 
-### For AI Agents
-1. Agent definitions: [.github/AGENTS.md](.github/AGENTS.md)
-2. Master instructions: [copilot-instructions.md](../copilot-instructions.md)
-3. Current goals: [NEXT_MISSION.md](../NEXT_MISSION.md)
-4. Checklists: [.github/WORKFLOW_CHECKLIST.md](.github/WORKFLOW_CHECKLIST.md)
+1. Keep one source of truth per topic; use links instead of duplicated prose.
+2. Root `Project.code-workspace` is management-only; build/flash/debug guidance belongs to instance software docs.
+3. Any architecture, interface, timing, or config-contract change must update `docs/` in the same iteration.
+4. Any board pin/peripheral change must update `examples/GD32F303_FOCExplore/hardware/hardware.md`.
+5. Any workflow/agent behavior change must update `.github` docs and `copilot-instructions.md` together.
 
-### For Workflow Execution
-1. Identify task: [NEXT_MISSION.md](../NEXT_MISSION.md)
-2. Choose agents: [.github/AGENTS.md](.github/AGENTS.md)
-3. Get task prompt: [.github/prompts/](./prompts/)
-4. Follow checklist: [.github/WORKFLOW_CHECKLIST.md](.github/WORKFLOW_CHECKLIST.md)
+## Reading Order
 
----
+1. `README.md`
+2. `docs/README.md`
+3. `docs/architecture.md`
+4. `docs/development.md`
+5. `examples/GD32F303_FOCExplore/hardware/hardware.md`
 
-## 📌 Important Principles
-
-### ✅ DO
-- Update documentation **synchronously** with code changes
-- Keep phase/goal descriptions in **NEXT_MISSION.md**, not scattered in task prompts
-- Refer to NEXT_MISSION.md when phase terminology changes
-- Document temporary reports **inline** with work, then delete before next task
-
-### ❌ DON'T
-- Hardcode phase identifiers (P1.1, P1.3, etc.) in workflow documents
-- Leave temporary test/work reports in the repository
-- Scatter the same documentation across multiple locations (use links instead)
-- Move `copilot-instructions.md` from project root
-- Create documentation without updating this structure guide
-
----
-
-## 🔄 Documentation Maintenance Tasks
-
-### When updating documentation:
-- [ ] Update this index if adding new documents
-- [ ] Mark outdated content with deprecation notices
-- [ ] Update CHANGELOG.md with documentation changes
-- [ ] Ensure cross-document links are still valid
-- [ ] Remove temporary reports/test files before committing
-
-### When starting a new phase/sprint:
-- [ ] Update NEXT_MISSION.md with new goals
-- [ ] Review and update task prompts if phase structure changes
-- [ ] Verify AGENTS.md still applies to new work
-- [ ] Update WORKFLOW_CHECKLIST.md if processes change
-- [ ] Delete any accumulated test/work reports
-
----
-
-## 📊 Documentation Status
-
-| Category | Status | Last Updated |
-|----------|--------|---|
-| Workflow & Process | ✅ Complete | 2026-03-31 |
-| Technical Docs | ✅ Current | 2026-03-31 |
-| Development Guidelines | ✅ Complete | (see dev-guidelines/) |
-| Agent Definitions | ✅ Complete | 2026-03-31 |
-| Task Prompts | ✅ Complete (generic naming) | 2026-03-31 |
-
----
-
-**Last Updated**: 2026-03-31  
-**Version**: 1.0  
-**Audience**: Developers, AI Agents, Project Maintainers
+Last Updated: 2026-04-06

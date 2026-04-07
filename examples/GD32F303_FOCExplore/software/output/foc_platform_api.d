@@ -1,5 +1,5 @@
 .\output\foc_platform_api.o: Application\Source\foc_platform_api.c
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_platform_api.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\interface/foc_platform_api.h
 .\output\foc_platform_api.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
 .\output\foc_platform_api.o: .\Application\Include\systick.h
 .\output\foc_platform_api.o: .\Firmware\CMSIS\GD\GD32F30x\Include\gd32f30x.h
@@ -48,9 +48,9 @@
 .\output\foc_platform_api.o: .\Utilities\I2C\i2c0.h
 .\output\foc_platform_api.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\math.h
 .\output\foc_platform_api.o: .\Utilities\PWM\pwm.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_config.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_shared_types.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_cfg_symbol_defs.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_cfg_feature_switches.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_cfg_init_values.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\foc_cfg_compile_limits.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\config/foc_config.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\config/foc_shared_types.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\config/foc_cfg_symbol_defs.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\config/foc_cfg_feature_switches.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\config/foc_cfg_init_values.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\config/foc_cfg_compile_limits.h

@@ -18,7 +18,7 @@ alwaysApply: true
 2. **Implementation**: AI generates code, manual review
 3. **Compilation**: AI should run EIDE tasks or terminal build commands and ensure no errors and no newly introduced warnings
 4. **Documentation**: Update guides after each iteration
-5. **Release**: Tag version and merge to main
+5. **Release**: Create version tags only when requested; merge only when a feature branch workflow is explicitly used
 
 ## Manual Debugging Requirements
 - Hardware debugging is mandatory for embedded systems

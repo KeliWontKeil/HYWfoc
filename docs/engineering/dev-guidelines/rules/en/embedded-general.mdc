@@ -9,7 +9,7 @@ alwaysApply: false
 ## Resource Optimization
 - Minimize RAM/ROM usage
 - Prefer static allocation over dynamic
-- Use fixed-point math when possible, but floating-point is allowed in performance-sensitive tasks (ISR, ADC processing) if FPU is available
+- Use fixed-point math when possible; if FPU is available, floating-point may be used cautiously in non-ISR performance-sensitive paths (for example post-sampling processing)
 - Adjust floating-point usage frequency based on debugging feedback and target FPU presence
 - Profile code size and execution time
 

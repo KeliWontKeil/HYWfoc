@@ -16,8 +16,11 @@
 
 ## Ownership Boundaries
 - Core reusable library:
-  - `foc/include/*.h`
-  - `foc/src/*.c`
+  - `foc/include/interface/*.h`
+  - `foc/include/algorithm/*.h`
+  - `foc/include/config/*.h`
+  - `foc/src/interface/*.c`
+  - `foc/src/algorithm/*.c`
   - `foc/port/foc_platform_api_empty.c`
 - Example-specific implementation:
   - `examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c`
@@ -33,13 +36,12 @@
 ## Migration Result Summary
 - `foc-lib` renamed to `foc`.
 - Root-level `Firmware` and `Utilities` migrated into `examples/GD32F303_FOCExplore/software`.
-- uVision project under example software now references core sources from external `../../../foc/src`.
+- uVision project under example software now references core sources from external `../../../foc/src/interface` and `../../../foc/src/algorithm`.
 - Hardware document moved from root docs to `examples/GD32F303_FOCExplore/hardware/hardware.md`.
 
 ## Compatibility Strategy Update
 - Transitional wrapper layer has been retired from active build flow.
-- Legacy root-level assets are archived under:
-  - `examples/GD32F303_FOCExplore/software/_legacy_from_root/`
+- Legacy root-level assets were migrated into the instance-owned tree and are no longer maintained at root.
 
 ## Notes
 - This phase focused on restructuring and ownership clarification; algorithm/protocol behavior was not intentionally changed.

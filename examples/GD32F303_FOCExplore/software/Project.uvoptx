@@ -668,7 +668,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\control_scheduler.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\interface\\control_scheduler.c</PathWithFileName>
       <FilenameWithoutPath>control_scheduler.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -680,7 +680,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\foc_app.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\interface\\foc_app.c</PathWithFileName>
       <FilenameWithoutPath>foc_app.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -692,7 +692,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\foc_control.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\algorithm\\foc_control.c</PathWithFileName>
       <FilenameWithoutPath>foc_control.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -740,7 +740,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\math_transforms.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\algorithm\\math_transforms.c</PathWithFileName>
       <FilenameWithoutPath>math_transforms.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -752,7 +752,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\sensor.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\algorithm\\sensor.c</PathWithFileName>
       <FilenameWithoutPath>sensor.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -764,7 +764,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\svpwm.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\algorithm\\svpwm.c</PathWithFileName>
       <FilenameWithoutPath>svpwm.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -788,7 +788,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\command_manager.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\interface\\command_manager.c</PathWithFileName>
       <FilenameWithoutPath>command_manager.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -800,7 +800,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\debug_stream.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\interface\\debug_stream.c</PathWithFileName>
       <FilenameWithoutPath>debug_stream.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -812,7 +812,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\foc_control_init.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\algorithm\\foc_control_init.c</PathWithFileName>
       <FilenameWithoutPath>foc_control_init.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -824,7 +824,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\\..\\..\\foc\\src\\protocol_parser.c</PathWithFileName>
+      <PathWithFileName>..\\..\\..\\foc\\src\\interface\\protocol_parser.c</PathWithFileName>
       <FilenameWithoutPath>protocol_parser.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>

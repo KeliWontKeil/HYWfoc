@@ -11,6 +11,24 @@
 /out
 /output
 
+# nested instance outputs (EIDE/Keil)
+examples/**/software/build/
+examples/**/software/list/
+examples/**/software/output/
+examples/**/software/.pack/
+examples/**/software/.cmsis/
+examples/**/software/RTE/_*/
+examples/**/software/.obj/
+examples/**/software/**/*.o
+examples/**/software/**/*.d
+examples/**/software/**/*.crf
+examples/**/software/**/*.axf
+examples/**/software/**/*.elf
+examples/**/software/**/*.map
+examples/**/software/**/*.lst
+examples/**/software/**/*.hex
+examples/**/software/**/*.bin
+
 # eide template
 *.ept
 *.eide-template
@@ -32,6 +50,8 @@ JLinkLog.txt
 .idea/
 *.suo
 *.user
+*.uvoptx
+*.uvguix.*
 
 # OS files
 .DS_Store
