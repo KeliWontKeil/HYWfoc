@@ -1,55 +1,84 @@
-# AI Project Initialization Template
+# AI Project Initialization Template (Repository-Level)
 
 ## Context for AI Assistant
 
-You are working on a GD32F303CC microcontroller project with the following setup:
+You are working in the HYWfoc repository (何易位FOC), which is organized as:
 
-### Project Structure
-- **MCU**: GD32F303CC (ARM Cortex-M4, 120MHz)
-- **Framework**: Pre-configured with basic peripherals
-- **Development**: VS Code + EIDE extension, Keil μVision 5
-- **Version Control**: Git with semantic versioning
+- `foc/`: reusable library core (platform-agnostic)
+- `examples/`: board and toolchain specific instance projects
+- `docs/`: library-level architecture and workflow documents
 
-### Current Framework State
-The project has been initialized with core modules:
-- System tick (1kHz)
-- LED GPIO control
-- USART1 serial communication
-- PWM generation (TIMER0, 3 channels)
-- Timer-based algorithm scheduling (1kHz/100Hz/200Hz/1Hz slots)
-- I2C communication interface
+This initialization file is intentionally **repository-level**.
 
-### Development Rules
-Located in `docs/engineering/dev-guidelines/rules/`:
-- `en/` and `cn/` versions available
-- Follow project-specific rules for GD32 development
-- Use embedded-general rules for ARM Cortex-M best practices
-- Adhere to development-workflow for AI-assisted coding
+Do not assume one fixed board instance. For board-specific details, always read the corresponding instance documents under `examples/<instance>/`.
 
-### Key Guidelines
-1. **Code Style**: Follow naming conventions (Module_FunctionName, UPPERCASE_MACROS)
-2. **Safety**: Include `<stddef.h>` for NULL, avoid blocking operations in ISRs
-3. **Resources**: Optimize for embedded constraints (ROM/RAM efficiency)
-4. **Testing**: Hardware validation required, use ST-LINK for debugging
+## Scope Boundary (Important)
 
-### Documentation
-- `README.md`: Repository overview and quick start
-- `docs/README.md`: Library-document index and reading order
-- `docs/architecture.md`: System design and module relationships
-- `examples/GD32F303_FOCExplore/hardware/hardware.md`: Pin mappings and connections
-- `docs/development.md`: Development procedures and rules
+Use this file for:
+- global development workflow
+- repository-level coding and collaboration rules
+- versioning and commit governance
 
-### Workflow for New Features
-1. Read relevant documentation and rules
-2. Implement directly on `main` unless a dedicated branch is explicitly requested
-3. Test on hardware with ST-LINK
-4. Update documentation
-5. Tag/release when milestone criteria are met
+Do not place instance-specific details here, including:
+- exact pin mappings
+- board wiring
+- instance build output paths
+- transport channel bindings for one concrete board
 
-### Common Tasks
-- Add new peripheral drivers in `examples/GD32F303_FOCExplore/software/Utilities/`
-- Implement control algorithms in timer task slots
-- Add communication protocols
-- Integrate sensors and actuators
+Those details must remain in each instance doc set.
 
-Remember: This is an embedded system - efficiency, reliability, and hardware validation are critical.
+## Required Rule Sources
+
+Before implementation, read:
+- `docs/engineering/dev-guidelines/rules/cn/`
+- `docs/engineering/dev-guidelines/rules/en/`
+- `docs/development.md`
+- `NEXT_MISSION.md`
+
+## Global Workflow for AI-Assisted Development
+
+1. Read mission scope and relevant rules.
+2. Implement on `main` unless user explicitly requests another branch.
+3. Build and validate in the target instance workspace.
+4. Synchronize documentation in the same iteration.
+5. Commit locally according to the commit/version policy below.
+
+## Commit and Version Governance (Mandatory)
+
+### Commit Rule
+- After each completed modification cycle, perform **local `git commit` only**.
+- **Do not `git push`** unless user explicitly requests push.
+
+### Version Rule
+- Use `1.2.3` style version semantics:
+	- `1`: major version
+	- `2`: pushable minor version
+	- `3`: local revision number
+- After each local `git commit`, local revision (`.3`) must increment by `+1`.
+- Numeric values above are examples only; concrete numbers follow real project progress.
+
+### Commit Amendment Rule
+- If user requests modification to the current commit, use:
+	- `git commit --amend`
+- Do not create a separate new commit for that correction unless user explicitly requests it.
+
+### Activation Point
+- Governance activation baseline is **`1.0.0`** (first push milestone).
+- This policy is active for all subsequent development cycles.
+
+## Generic Technical Expectations
+
+1. **Code Style**: Follow repository naming rules and macro conventions.
+2. **Safety**: Include `<stddef.h>` when using `NULL`; avoid blocking operations in ISRs.
+3. **Resources**: Keep ROM/RAM usage and real-time path cost under control.
+4. **Validation**: Hardware validation remains mandatory for embedded behavior closure.
+
+## Documentation Entry Points
+
+- `README.md`: external-facing project introduction
+- `docs/README.md`: library-level document index
+- `docs/architecture.md`: layering and dependency design
+- `docs/development.md`: reusable development process
+- `examples/<instance>/README.md`: instance usage entry
+
+Remember: this is an embedded control repository. Reliability, timing determinism, and hardware-verified behavior take priority over purely simulated correctness.

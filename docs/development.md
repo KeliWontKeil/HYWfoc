@@ -19,6 +19,17 @@ Instance-specific build/debug setup belongs to `examples/<instance>/DEVELOPMENT.
 - Default to direct implementation on `main` unless a dedicated branch is explicitly requested.
 - Keep L1-L3 logic platform-agnostic.
 
+### 2.5 Commit & Version Governance
+- After each completed modification cycle, perform local `git commit` only.
+- Do not `git push` unless explicitly requested by the user.
+- Use `1.2.3` version semantics:
+	- `1`: major version
+	- `2`: pushable minor version
+	- `3`: local revision number
+- After each local commit, local revision (`.3`) must increment by `+1`.
+- If user requests changes to current commit, use `git commit --amend` instead of creating a new standalone commit.
+- This governance is active from baseline `1.0.0`.
+
 ### 3. Verification
 - Build with no newly introduced warnings.
 - Validate layer boundaries and include dependencies.
@@ -32,6 +43,7 @@ Instance-specific build/debug setup belongs to `examples/<instance>/DEVELOPMENT.
 - Review change scope and risks.
 - Update `CHANGELOG.md`.
 - Create tags only when explicitly requested.
+- Push to remote only when explicitly requested.
 
 ## Coding Standards
 

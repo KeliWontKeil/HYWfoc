@@ -7,8 +7,12 @@ alwaysApply: true
 
 ## Version Control & Branching
 - Use semantic versioning: MAJOR.MINOR.PATCH
-- Default policy: do not commit immediately after each development task unless explicitly requested by the user
-- Minor-version cadence: commit before starting the next minor-version development cycle so user changes are included
+- Commit policy: after each completed modification cycle, create a local `git commit`
+- Push policy: `git push` is prohibited by default; push only when explicitly requested by the user
+- Version policy: use `1.2.3` semantics (`1`=major, `2`=pushable minor, `3`=local revision)
+- Local revision rule: after each local commit, revision (`.3`) must increment by `+1`
+- Activation point: this policy is active from baseline `1.0.0`
+- Commit correction rule: if user asks to modify the current commit, use `git commit --amend` and do not create a separate new commit
 - Branch policy: commit directly on `main` by default; do not create a new branch unless explicitly requested
 - Commit messages: Use conventional commits format
 - Tags: Create version tags only when explicitly requested by the user
