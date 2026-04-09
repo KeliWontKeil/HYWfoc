@@ -126,6 +126,14 @@ Are there any new APIs, config changes, or timing assumptions that need doc upda
 - [ ] **Commit message clear**: Describes change scope and phase (e.g., "P1.3: Consolidate TORQUE_LIMIT macro")
 - [ ] **No generated artifacts committed**: build/output/.hex and similar generated files stay ignored
 
+### Post-Commit Governance
+
+- [ ] **Local commit only**: Complete the cycle with local `git commit`
+- [ ] **No push by default**: Do not run `git push` unless explicitly requested by the user
+- [ ] **Revision increment**: Local revision part (`1.2.3` -> `.3`) increments by `+1` after each local commit
+- [ ] **Commit correction path**: If current commit needs correction, use `git commit --amend` instead of creating a new standalone commit
+- [ ] **Activation baseline awareness**: Governance is active for version baseline `>= 1.0.0`
+
 ---
 
 ## 🔄 Multi-Device Workflow (Multiple Agents)
@@ -272,7 +280,7 @@ Invoke each prompt via the corresponding agent. Example:
 
 ---
 
-**Last updated**: 2026-04-07  
-**Version**: v0.4.0  
+**Last updated**: 2026-04-09  
+**Version**: v1.0.0  
 **Phases covered**: See [NEXT_MISSION.md](../NEXT_MISSION.md)
 **Active phases**: See [NEXT_MISSION.md](../NEXT_MISSION.md) for current work breakdown

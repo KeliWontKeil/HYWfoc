@@ -1,42 +1,49 @@
-# Documentation Index
+# 文档索引（库级）
 
-## Scope
-This folder stores library-only documents (architecture, API contracts, generic workflow, and transport-agnostic protocol definitions).
+## 作用范围
 
-Board/project-specific documents must stay under each instance folder (for example `examples/GD32F303_FOCExplore/`).
+本目录只放“库级通用文档”：架构、接口契约、通用流程、协议定义。
 
-### Boundary Rules
-- Keep in `docs/`: reusable library behavior, dependency contracts, generic process rules.
-- Keep in `examples/<instance>/`: hardware pin map, toolchain setup, build/debug steps, transport channel mapping.
-- Library docs may link to instances, but must not contain instance-only implementation details.
+实例/板级文档必须放在各实例目录下（例如 [../examples/GD32F303_FOCExplore/](../examples/GD32F303_FOCExplore/)）。
 
-## Current Baseline
-- Version: v0.4.0
-- Code baseline: L3 communication aggregation is implemented in `protocol_parser`, and platform communication APIs are exposed as per-source interfaces.
-- Runtime baseline: fault state gates runtime sensor read chain and debug stream output; I2C timeout/recovery uses loop budgets in driver path.
-- Config baseline: project configuration converges through `foc_config.h` with `foc_cfg_*` split headers.
+## 文档分层边界
 
-## Documents
-- `architecture.md`: Layering model, timing architecture, data flow, and module dependency constraints.
-- `development.md`: Generic development workflow, coding standards, and validation requirements.
-- `structure-and-dependency-tree.md`: Current file tree and layered dependency snapshot.
-- `protocol-parameters-bilingual.md`: Transport-agnostic command protocol and runtime parameter reference (Chinese/English).
-- `api-unused-interface-evaluation.md`: Unused API classification and keep/remove rationale.
-- `library-structuring-p1.md`: P1 library-structuring migration report and file mapping.
+- 放在 `docs/`：可复用的库行为、依赖契约、通用开发规则。
+- 放在 `examples/<instance>/`：硬件管脚、工具链配置、构建烧录步骤、通道映射。
+- 库文档可以链接实例文档，但不承载实例专有实现细节。
 
-## Related Instance Docs
-- `../examples/GD32F303_FOCExplore/README.md`
-- `../examples/GD32F303_FOCExplore/DEVELOPMENT.md`
-- `../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md`
-- `../examples/GD32F303_FOCExplore/hardware/hardware.md`
+## 当前基线
 
-## Recommended Reading Order
-1. `architecture.md`
-2. `development.md`
-3. `structure-and-dependency-tree.md`
-4. `protocol-parameters-bilingual.md`
+- 版本基线：v1.0.0
+- 项目命名：HYW FOC（中文名：何易位FOC）
+- 任务目标：下一目标版本见 [../NEXT_MISSION.md](../NEXT_MISSION.md)
+- 第三方许可证声明：见 [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
 
-## Maintenance Rules
-- Whenever API signatures, config headers, or layer ownership changes, update this folder in the same iteration.
-- `CHANGELOG.md` must reference the same version baseline as this index.
-- `NEXT_MISSION.md` target version should always be one step ahead of the current baseline.
+## 本目录文档
+
+- [architecture.md](architecture.md)：分层模型、时序架构、数据流、模块依赖约束。
+- [development.md](development.md)：通用开发流程、编码标准、验证要求。
+- [structure-and-dependency-tree.md](structure-and-dependency-tree.md)：当前文件树与分层依赖快照。
+- [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)：通信协议与运行参数（中英对照）。
+- [api-unused-interface-evaluation.md](api-unused-interface-evaluation.md)：未使用接口分类与保留/移除依据。
+- [library-structuring-p1.md](library-structuring-p1.md)：P1 结构化迁移说明与文件映射。
+
+## 相关实例文档（GD32F303）
+
+- [../examples/GD32F303_FOCExplore/README.md](../examples/GD32F303_FOCExplore/README.md)
+- [../examples/GD32F303_FOCExplore/DEVELOPMENT.md](../examples/GD32F303_FOCExplore/DEVELOPMENT.md)
+- [../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md)
+- [../examples/GD32F303_FOCExplore/hardware/hardware.md](../examples/GD32F303_FOCExplore/hardware/hardware.md)
+
+## 推荐阅读顺序
+
+1. [architecture.md](architecture.md)
+2. [development.md](development.md)
+3. [structure-and-dependency-tree.md](structure-and-dependency-tree.md)
+4. [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)
+
+## 维护约定
+
+- API、配置头、层级归属变化时，需在同次迭代同步更新本目录文档。
+- [../CHANGELOG.md](../CHANGELOG.md) 的版本基线需与本索引一致。
+- [../NEXT_MISSION.md](../NEXT_MISSION.md) 的目标版本应始终领先当前稳定基线一步。

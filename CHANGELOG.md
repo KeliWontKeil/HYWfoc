@@ -1,11 +1,16 @@
 # Changelog
 
-All notable changes to the GD32F303CC FOC Motor Control Project will be documented in this file.
+All notable changes to the HYWfoc (何易位FOC) project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+- No entries yet.
+
+## [1.0.0] - 2026-04-09
 
 ### Changed
 - Extended command frame format to `a<driver_id><cmd><subcmd><param>b` with protocol-level address filtering.
@@ -15,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - Updated protocol bilingual guide and GD32F303 instance adaptation examples to the new driver-id command format.
+- Reworked root `README.md` as external-facing Chinese project introduction with unified naming baseline (HYWfoc / 何易位FOC).
+- Reworked instance `examples/GD32F303_FOCExplore/README.md` into platform usage guide and aligned links to detailed instance docs.
+- Updated `docs/README.md` and `NEXT_MISSION.md` (P3.5) for document-role boundary and naming/task consistency.
+- Updated repository workflow and initialization docs to repository-level governance (`AI_INITIALIZATION.md`, `copilot-instructions.md`, `docs/development.md`, and workflow rules in `docs/engineering/dev-guidelines/rules/`).
+- Added third-party dependency and license notice inventory in `THIRD_PARTY_NOTICES.md`.
 
 ## [0.4.0] - 2026-04-03
 

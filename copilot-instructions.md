@@ -1,14 +1,14 @@
 ---
-description: "GD32F303CC FOC motor control project. Use when: implementing control algorithms, adding peripherals, fixing build issues, reviewing architecture, optimizing embedded code, working with motor control stack."
+description: "HYWfoc repository-level development instructions. Use when: implementing control algorithms, adding peripherals, fixing build issues, reviewing architecture, optimizing embedded code, and governing commit/version workflow."
 ---
 
-# Copilot Instructions: GD32F303CC FOC Motor Control
+# Copilot Instructions: HYWfoc Repository Workflow
 
 ## Project Overview
 
-**GD32F303CC FOC Project** implements Field-Oriented Control for motor drive on a GD32F303CC ARM Cortex-M4 microcontroller (120MHz). The system provides torque, speed, and position control APIs with real-time task scheduling, ADC current sensing, 3-phase PWM output, and I2C sensor integration (AS5600 magnetic encoder).
+**HYWfoc** is a repository-level FOC development project. It provides a reusable control library plus instance-specific board integrations. Board details (pin maps, transport bindings, exact build outputs) must be maintained under `examples/<instance>/` rather than in global workflow instructions.
 
-**Current Version**: v0.4.0 (with ongoing workspace-governance refactor)
+**Current Version**: v1.0.0 (open-source release baseline)
 
 ### Key Build Outputs
 - **Toolchain**: ARM Compiler 5.06 update 6 via EIDE extension
@@ -158,7 +158,11 @@ Key highlights:
 ## Workflow Preferences
 
 Per user convention:
-- **Git commits**: Default on `main` branch; no auto-commit after each feature. Batch commits before next sprint.
+- **Git commits**: After each completed modification cycle, create local `git commit` on `main` (unless user explicitly requests a different branch).
+- **Git push**: Do not push by default. Push only when user explicitly requests.
+- **Versioning policy**: Use `1.2.3` semantics where `1`=major, `2`=pushable minor, `3`=local revision. Each local commit must increment the local revision (`.3`) by `+1`.
+- **Amend policy**: If user asks to revise the current commit, use `git commit --amend` instead of creating a new standalone commit.
+- **Policy activation**: Active from `1.0.0` (first push milestone baseline).
 - **Documentation**: Update before code review. Keep docs linked, not duplicated.
 - **Task tracking**: Confirm "改代码/仅设计/暂缓" per item **before** auto-expanding scope.
 
