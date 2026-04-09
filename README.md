@@ -4,7 +4,7 @@
 ### 诸位点个Star好不好，~~求求你了~求求你了~帮帮可莉吧~~
 
 - 项目名称：何易位FOC
-- English Name：How Y-axis Works FOC
+- English Name：How Y-axis Works FOC（强行翻译）
 
 ## 何意味？（这个项目是什么）
 
@@ -16,6 +16,9 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强的单电机
 使用 AI 辅助开发（非 VibeCoding）🤖  
 ~~感谢copilot对本项目的大力支持~~
 
+演示视频：暂时没拍  
+硬件开源地址：暂时没有，目前想要的话直接去examples/GD32F303_FOCExplore/hardware文件夹里找，是个嘉立创EDA的工程，还没开源出去
+
 ---
 
 ## 何以为？（这个项目可以用来做什么）
@@ -23,7 +26,7 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强的单电机
 ### 探索关于 FOC 的一切！🔍
 
 - 作为可移植 FOC 核心库，集成到你自己的嵌入式工程。
-- 直接使用示例代码 + 硬件参考实例，做板级验证与二次开发。
+- 直接使用示例代码 + 硬件参考实例，进行板级验证与二次开发。
 - 探索FOC算法实现方式，优化相关算法
 - 学习“平台适配接口 + 控制核心解耦”的分层开发方式（不属于任何标准，作者自己摸索出来的，借鉴了相关思想，请勿将其作为某种标准化的开发方式）。
 - 探索 AI 辅助嵌入式开发的新工作流。
@@ -43,90 +46,21 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强的单电机
 
 ### 当然是 FOC 算法啦 ⚙️
 
+本库采用中断+状态机的方式完成相关控制任务  
+其中，控制链路完全存在于中断中，确保控制的实时性和可靠性
+其他协议解析，状态判断等逻辑则是以状态机的形式在主循环中运行，依靠相关中断实现状态的改变
+
 当前有感控制链路包含：
-- 电流采样 + 机械角度反馈
+- 电流、机械角度采样及数据处理、滤波
 - 数学变换链（Clarke / Park / 反变换）
 - SVPWM 调制输出（三相占空比）
 - 外环控制（速度 / 角度）与内环电流控制
-
-采用中断+状态机的方式完成相关控制任务
-
 
 当前协议帧格式：
 - `a<driver_id><cmd><subcmd><param>b`
 - 单播 driver_id 范围：`0x32-0x7E`（可以打出来的字符）
 - 广播地址：`0xFF`
 - 默认本机 driver_id：`0x61`（`'a'`）
-
-具体命令与参数请看 [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)。
-
-> 现阶段：有感 FOC，持续进行控制效果优化。  
-> 后续计划：无感 FOC（完成有感FOC的大功率测试和算法优化后）
-
----
-
-## 何依偎？（库的架构和依赖关系是怎样的）
-
-# HYW FOC
-
-### 🚧 项目正在锐意开发中！ 
-### 诸位点个Star好不好，~~求求你了~求求你了~帮帮可莉吧~~
-
-- 项目名称：何易位FOC
-- English Name：How Y-axis Works FOC
-
-## 何意味？（这个项目是什么）
-
-### 何易位FOC，意为“电机转子如何改变自己的位置”
-
-HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强的单电机 FOC 可复用库，集成了指令控制系统。  
-即：把“控制算法”和“硬件平台”尽量解耦的 FOC 工程实践仓库。
-
-使用 AI 辅助开发（非 VibeCoding）🤖  
-~~感谢copilot对本项目的大力支持~~
-
----
-
-## 何以为？（这个项目可以用来做什么）
-
-### 探索关于 FOC 的一切！🔍
-
-- 作为可移植 FOC 核心库，集成到你自己的嵌入式工程。
-- 直接使用示例代码 + 硬件参考实例，做板级验证与二次开发。
-- 探索FOC算法实现方式，优化相关算法
-- 学习“平台适配接口 + 控制核心解耦”的分层开发方式（不属于任何标准，作者自己摸索出来的，借鉴了相关思想，请勿将其作为某种标准化的开发方式）。
-- 探索 AI 辅助嵌入式开发的新工作流。
-
-### 当前能力一览
-
-| 项目 | 当前状态 |
-|---|---|
-| 单电机有感 FOC | ✅ 可用 |
-| 指令化查询/控制 | ✅ 可用 |
-| 无感 FOC | 🧪 规划中 |
-| 多电机驱动 | ❌ 不支持，以后可能也不会支持 |
-
----
-
-## 何易位？（究竟是怎么控制电机的）
-
-### 当然是 FOC 算法啦 ⚙️
-
-当前有感控制链路包含：
-- 电流采样 + 机械角度反馈
-- 数学变换链（Clarke / Park / 反变换）
-- SVPWM 调制输出（三相占空比）
-- 外环控制（速度 / 角度）与内环电流控制
-
-采用中断+状态机的方式完成相关控制任务
-
-
-当前协议帧格式：
-- `a<driver_id><cmd><subcmd><param>b`
-- 单播 driver_id 范围：`0x32-0x7E`（可以打出来的字符）
-- 广播地址：`0xFF`
-- 默认本机 driver_id：`0x61`（`'a'`）
-
 具体命令与参数请看 [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)。
 
 > 现阶段：有感 FOC，持续进行控制效果优化。  
@@ -157,9 +91,9 @@ FOC_VSCODE/
 ```
 
 项目采用“核心库 + 示例工程”分层组织：
-- 核心库保持平台无关，聚焦控制逻辑与接口契约。
-- 示例工程负责具体硬件平台的驱动适配、构建与烧录流程。
-- 通过平台 API 边界连接具体芯片与驱动实现。
+- 核心库保持与平台完全无关，聚焦控制逻辑与接口契约。
+- 通过平台 API 及相关中断回调连接具体的外设相关驱动和实现（L4层）。
+- 示例工程演示了具体硬件平台的驱动适配方式和构建流程。
 
 ---
 
@@ -175,7 +109,7 @@ FOC_VSCODE/
 5. 阅读完文档后，你就可以开始阅读代码了，然后慢慢的一步一步尝试把这玩意整到你自己的板子上面去......~~真有人是这么干的吗~~
 
 #### 路径 B：从 GD32F303_FOCExplore 开始上手
-1. 准备硬件。我在hardware文件夹里直接放了整个嘉立创EDA专业版的工程，买元件，嫖板子，然后把它装起来！当然你要觉得我画的板子不咋地~~确实不咋地~~，可以参考原理图自己从头设计！
+1. 准备硬件。我在hardware文件夹里直接放了整个嘉立创EDA专业版的工程，买元件，嫖板子，然后把它装起来！当然你要觉得我画的板子不咋地~~确实不咋地~~，可以参考原理图自己从头设计。
 2. 打开 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace) 或 [examples/GD32F303_FOCExplore/software/Project.uvprojx](examples/GD32F303_FOCExplore/software/Project.uvprojx)。你可以选择你喜欢和熟悉的IDE。
 3. 编译并烧录。
 4. 按 [examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md) 指导，发送命令并进行验证/观察现象
@@ -191,87 +125,42 @@ FOC_VSCODE/
 
 ## 何移位？（如何移植这个库）
 
-想把它移植到新芯片/新板子，核心流程如下：
+由于具体的硬件读取相关逻辑，如采样/发送/协议解析完全依赖api接口实现，故库的核心内容并不包含例如：串口DMA、PWM同步电流采样、I2C协议、传感器读取等硬件层相关内容
+- 也就是说，你不能指望把这个库拿来就用
+- 你需要手动实现相关的硬件和芯片外设驱动
+- 同时，你实现这些外设的方式决定了这个库的效果，如：电流采样是否与PWM同步？使用什么传感器和算法获取机械角度？使用DMA进行通信还是直接CPU硬通信？  
+
+故如果想把它移植到新芯片/新板子，核心流程如下：
 1. 在你的工程中引入 `foc/` 核心库。
 2. 参考示例在主流程中完成初始化、调度与控制循环调用。
-3. 实现平台 API（时钟、中断、PWM、采样、通信、指示灯等）。
+3. 实现平台 API，比如相关时钟、中断、PWM、采样、通信、指示灯等（这是最麻烦的一步）
 4. 对照协议文档完成参数通道联调。
 
-建议优先阅读：
-- [foc/port/foc_platform_api_empty.c](foc/port/foc_platform_api_empty.c)
-- [foc/include/interface/foc_platform_api.h](foc/include/interface/foc_platform_api.h)
-- [examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c](examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c)
+建议研究一下这几个文件：
+- [foc/port/foc_platform_api_empty.c](foc/port/foc_platform_api_empty.c)：一个完全空白的API实现
+- [foc/include/interface/foc_platform_api.h](foc/include/interface/foc_platform_api.h)：所有需要实现的相关API
+- [examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c](examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c)：具体API实现的一个工程实例
 
 #### 主包主包，太麻烦了怎么办？
-全~ 都~交给AI吧!从外设初始化到 API 实现，只需验证硬件行为即可!
+全~都~交给AI吧!从外设初始化到 API 实现，只需验证硬件行为即可!（而且效果应该还不错，我自己写GD32标准库的初始化就是AI干的，只有一点小问题要改）
 
 ---
 
-## 何异谓？（如果想要提出意见该怎么做）
+## 何异谓？（如果有不同意见该怎么做）
 
 直接提 Issue 就好啦，欢迎：
 - Bug 报告
 - 文档纠错/重写(文档这一块跟AI斗智斗勇，力竭了)
 - 新平台移植经验
-- 控制效果优化建议
+- 控制效果与算法优化建议
 - ~~狠狠的辱骂这个库，写的什么垃圾玩意！~~
 
 ---
 
-## 开发计划
-
-- 当前稳定基线：v1.0.0
-- 下一目标版本：v1.0.1（开源后稳定性与文档迭代）
-- 当前定位：单电机 FOC 驱动库，不包含多电机扩展规划
-
-- ~~把这个库开发成世界上最牛逼的FOC库~~（做梦中）
-
-详细里程碑见 [NEXT_MISSION.md](NEXT_MISSION.md)。 
-
----
-
-## 文档导航
-
-### 库级文档（通用、可复用）
-- [docs/README.md](docs/README.md)：库文档索引与边界规则
-- [docs/architecture.md](docs/architecture.md)：架构、数据流、依赖关系
-- [docs/development.md](docs/development.md)：通用开发流程与约束
-- [docs/structure-and-dependency-tree.md](docs/structure-and-dependency-tree.md)：结构与依赖快照
-- [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)：协议与参数定义
-
-### 实例级文档（平台相关、用户上手）
-- [examples/GD32F303_FOCExplore/README.md](examples/GD32F303_FOCExplore/README.md)：实例入口文档
-- [examples/GD32F303_FOCExplore/DEVELOPMENT.md](examples/GD32F303_FOCExplore/DEVELOPMENT.md)：实例构建/调试细节
-- [examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md)：实例通信通道映射
-- [examples/GD32F303_FOCExplore/hardware/README.md](examples/GD32F303_FOCExplore/hardware/README.md)：硬件目录说明
-- [examples/GD32F303_FOCExplore/hardware/hardware.md](examples/GD32F303_FOCExplore/hardware/hardware.md)：硬件管脚速查
-
----
-
-## 工作区使用说明
-
-- 根工作区 [Project.code-workspace](Project.code-workspace)：用于仓库管理、文档治理、跨目录检视。
-- 实例工作区 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace)：用于该实例构建/烧录/调试。
-
-## 开源协作说明
-
-- AI请遵循 [docs/engineering/dev-guidelines/rules/](docs/engineering/dev-guidelines/rules/) 下的规则文件。
-- 请保持项目结构的清晰，确保它的可维护性。AI是好东西，但是请不要让它在项目上拉屎
-- 请保持“库文档”和“实例文档”职责边界，不在同一文档混写。
-- 每次改动若涉及行为、参数或流程，需在同次迭代同步更新相关文档。
-
-## 许可证
-
-MIT License，详见 [LICENSE](LICENSE)。
-
-第三方组件许可证声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
----
-
-## 作者的碎碎念
+## 何以谓（作者想说什么）
 ### 欢迎各位大佬来提建议，或是直接为本项目添砖加瓦 🙌
 
-这个项目是一边学一边做的，目的是学习以及积累项目经验，同时摸索AI在中型嵌入式项目中的使用  
+这个项目是一边学一边做的，目的是学习以及积累项目经验，同时摸索AI在嵌入式项目中的使用  
 作者本身理论知识不是很扎实，可能很多地方存在问题。  
 
 ~~没人看没人开发也没关系，我会在角落里默默开发的......~~
@@ -279,3 +168,60 @@ MIT License，详见 [LICENSE](LICENSE)。
 
 顺便推一下作者的另一个小项目：PortOSC  
 https://github.com/KeliWontKeil/PortOSC
+
+---
+## 其他开发相关
+### 开发计划
+
+- 当前项目状态：单电机有感 FOC 驱动库
+- 当前稳定基线：v1.0.0
+- 下一活跃目标版本：v1.1.0
+
+待实现的目标：
+1. 算法优化：抗齿槽效应、电流环参数整定与控制效果优化、传感器滤波算法优化
+2. 结构调整：控制逻辑与协议逻辑进一步隔离（结合后续库化阶段评估）
+3. 长期目标,完成无感FOC开发
+4. ~~把这个库开发成世界上最牛逼的FOC库~~（做梦中）
+
+
+详细里程碑见 [NEXT_MISSION.md](NEXT_MISSION.md)。 
+
+
+### 文档导航
+
+#### 库级文档（驱动库通用文档）
+- [docs/README.md](docs/README.md)：库文档索引与边界规则
+- [docs/architecture.md](docs/architecture.md)：架构、数据流、依赖关系
+- [docs/development.md](docs/development.md)：通用开发流程与约束
+- [docs/structure-and-dependency-tree.md](docs/structure-and-dependency-tree.md)：结构与依赖快照
+- [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)：协议与参数定义
+
+#### 实例级文档（以具体项目为准的具体工程实例文档）
+- [examples/GD32F303_FOCExplore/README.md](examples/GD32F303_FOCExplore/README.md)：实例入口文档
+- [examples/GD32F303_FOCExplore/DEVELOPMENT.md](examples/GD32F303_FOCExplore/DEVELOPMENT.md)：实例构建/调试细节
+- [examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md)：实例通信通道映射
+- [examples/GD32F303_FOCExplore/hardware/README.md](examples/GD32F303_FOCExplore/hardware/README.md)：硬件目录说明
+- [examples/GD32F303_FOCExplore/hardware/hardware.md](examples/GD32F303_FOCExplore/hardware/hardware.md)：硬件管脚速查
+
+
+### 工作区使用说明
+
+- 该项目可直接在VSCODE完整打开
+- 根工作区 [Project.code-workspace](Project.code-workspace)：用于仓库管理、文档治理、跨目录检视。
+- 实例工作区 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace)：用于该实例构建/烧录/调试。
+
+### 开源协作说明
+
+- AI请遵循 [docs/engineering/dev-guidelines/rules/](docs/engineering/dev-guidelines/rules/) 下的规则文件。
+- 请保持项目结构和代码逻辑的清晰，确保它的可维护性。
+- 请保持“库文档”和“实例文档”职责边界，不在同一文档混写。且每次改动需在同步更新相关文档。
+- AI是好东西，但是请不要让它在项目上拉屎。该项目所有代码必须经过人工审查。
+
+
+### 许可证
+
+MIT License，详见 [LICENSE](LICENSE)。
+
+第三方组件许可证声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+---
