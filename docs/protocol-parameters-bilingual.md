@@ -92,7 +92,8 @@ Notes:
 | Subcmd | Parameter name | Type | Range | Default | Unit | W Example | R Example |
 |---|---|---|---|---|---|---|---|
 | `A` | target_angle_rad | float | [-12.566, 12.566] | 3.14 | rad | `aaWA1.57b` | `aaRAb` |
-| `S` | angle_position_speed_rad_s | float | [0, 200] | 8.0 | rad/s | `aaWS10b` | `aaRSb` |
+| `R` | angle_position_speed_rad_s | float | [0, 200] | 18.0 | rad/s | `aaWS10b` | `aaRSb` |
+| `S` | speed_only_speed_rad_s | float | [-200, 200] | 18.0 | rad/s | `aaWR-10b` | `aaRRb` |
 | `W` | sensor_sample_offset_percent | float | [0, 100] | 96.0 | % | `aaWW96b` | `aaRWb` |
 | `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaWL10b` | `aaRLb` |
 | `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 50 | Hz | `aaWH100b` | `aaRHb` |
@@ -132,6 +133,11 @@ Build-trim constraint:
 - FULL build: allows `0` and `1`
 - SPEED_ONLY build: only `1` is accepted
 - SPEED_ANGLE_ONLY build: only `0` is accepted
+
+Speed parameter mapping:
+
+- `S` (`angle_position_speed_rad_s`): speed reference used by speed+angle mode (non-negative limit)
+- `R` (`speed_only_speed_rad_s`): speed reference used by speed-only mode (supports negative direction)
 
 ### 4.3 Oscilloscope Mask Bits / 示波参数掩码位
 
@@ -201,6 +207,8 @@ aaFCb       # clear fault counters + soft diag reinit
 ```text
 aaWD0b      # control_mode = speed+angle
 aaWD1b      # control_mode = speed-only
+aaWR-20b    # speed-only speed reference = -20rad/s
+aaWS12b     # speed+angle mode speed limit/reference = 12rad/s
 aaWQ1b      # motor enable
 aaWQ0b      # motor disable
 aaWW96b     # sensor sample offset percent = 96
@@ -216,6 +224,8 @@ aaWV0.05b   # speed kd
 
 ```text
 aaRDb       # read control_mode
+aaRRb       # read speed_only_speed_rad_s
+aaRSb       # read angle_position_speed_rad_s
 aaRQb       # read motor_enable
 aaRWb       # read sensor_sample_offset_percent
 aaROb       # read oscilloscope_param_mask

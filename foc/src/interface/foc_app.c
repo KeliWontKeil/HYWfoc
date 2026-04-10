@@ -368,7 +368,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     FOC_SpeedControlStep(&g_motor,
                          &g_speed_pid,
                          &g_torque_current_pid,
-                         CommandManager_GetAngleSpeedRadS(),
+                         CommandManager_GetSpeedOnlyRadS(),
                          sensor_data,
                          FOC_CONTROL_DT_SEC,
                          FOC_TORQUE_MODE_CURRENT_PID);
@@ -408,7 +408,7 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
         FOC_SpeedControlStep(&g_motor,
                              &g_speed_pid,
                              &g_torque_current_pid,
-                             CommandManager_GetAngleSpeedRadS(),
+                             CommandManager_GetSpeedOnlyRadS(),
                              sensor_data,
                              FOC_CONTROL_DT_SEC,
                              FOC_TORQUE_MODE_CURRENT_PID);

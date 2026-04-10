@@ -8,6 +8,8 @@ Future additions can include schematic snapshots, BOM, and bring-up checklist.
 
 ## 这是给人看的，不是AI
 
-该硬件使用立创EDA专业版设计，请直接将工程文档导入即可
+该硬件使用立创EDA专业版设计，请直接将工程文档导入即可，应该能嫖的到板子吧
 
-应该能嫖的到板子吧
+文件夹内部有一个PDF原理图和嘉立创EDA工程，都能直接用
+
+原理介绍/器件介绍等等基本信息都没写，后面在嘉立创上面开源的时候再写

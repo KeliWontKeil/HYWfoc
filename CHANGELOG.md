@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - No entries yet.
 
+## [1.1.0] - 2026-04-10
+
+### Changed
+- Added independent speed reference parameters for speed-only and speed-angle control paths, including dedicated subcommand mapping and runtime getters.
+- Updated speed-only runtime path to consume the dedicated speed-only reference value instead of reusing the speed-angle parameter.
+- Added circular-domain angle LPF processing path in sensor readout and kept it behind compile-time feature switches.
+- Unified sensor filter compile-time trimming structure so declaration/call/definition guards are aligned for Kalman and angle LPF paths.
+- Updated sensing defaults to use angle LPF while keeping current and angle Kalman paths disabled by default for the current hardware baseline.
+- Expanded command parameter compile limits and defaults to include signed speed-only range and related initialization values.
+
+### Documentation
+- Updated protocol bilingual parameter documentation for speed-only and speed-angle subcommand mapping and examples.
+- Updated mission planning document to set v1.1.0 as baseline and define next-stage algorithm priorities (cogging feedforward and current-loop tuning).
+- Refreshed project/hardware readme descriptions for current repository and instance status.
+
 ## [1.0.0] - 2026-04-09
 
 ### Changed

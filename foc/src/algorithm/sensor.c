@@ -8,6 +8,10 @@
 
 /* Private variables */
 static sensor_data_t sensor_data;
+#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
+static uint8_t g_sensor_angle_lpf_state_valid = 0U;
+static float g_sensor_angle_lpf_state = 0.0f;
+#endif
 
 /* Private function prototypes */
 static void Sensor_ReadADC(void);
@@ -17,8 +21,15 @@ static void Kalman_Init(kalman_filter_t* filter,
                         float estimate_error,
                         float process_noise,
                         float initial_value);
+#if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
 static void Kalman_Update(kalman_filter_t* filter, float measurement);
+#endif
+#if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
 static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement);
+#endif
+#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
+static float Sensor_UpdateAngleLpf(float measurement);
+#endif
 
 /*!
     \brief      Initialize sensor module
@@ -53,6 +64,11 @@ void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent)
 
     Sensor_SetZeroOffset();
     Sensor_ADCSampleTimeOffset(adc_sample_offset_percent);
+
+#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
+    g_sensor_angle_lpf_state = FOC_SENSOR_KALMAN_ANGLE_INIT;
+    g_sensor_angle_lpf_state_valid = 0U;
+#endif
 
 }
 
@@ -201,6 +217,7 @@ static void Sensor_ReadADC(void)
 static void Sensor_ReadEncoder(void)
 {
     float angle_rad;
+    float angle_for_output;
 
     /* Read encoder angle register via decoupled AS5600 interface. */
     if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
@@ -208,12 +225,18 @@ static void Sensor_ReadEncoder(void)
 #if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
         /* Apply Kalman filtering with wraparound compensation for 0-360 discontinuity. */
         Kalman_Update_Angle(&sensor_data.mech_angle_rad, angle_rad);
-        sensor_data.mech_angle_rad.output_value = sensor_data.mech_angle_rad.filtered_value;
+        angle_for_output = sensor_data.mech_angle_rad.filtered_value;
 #else
         sensor_data.mech_angle_rad.raw_value = angle_rad;
-        sensor_data.mech_angle_rad.filtered_value = angle_rad;
-        sensor_data.mech_angle_rad.output_value = angle_rad;
+        sensor_data.mech_angle_rad.filtered_value = Math_WrapRad(angle_rad);
+        angle_for_output = sensor_data.mech_angle_rad.filtered_value;
 #endif
+
+#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
+        angle_for_output = Sensor_UpdateAngleLpf(angle_for_output);
+#endif
+
+        sensor_data.mech_angle_rad.output_value = angle_for_output;
         sensor_data.encoder_valid = 1;
     }
     else
@@ -272,6 +295,7 @@ static void Kalman_Init(kalman_filter_t* filter, float measurement_error, float 
     \param[out] none
     \retval     none
 */
+#if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
 static void Kalman_Update(kalman_filter_t* filter, float measurement)
 {
     float denominator;
@@ -307,6 +331,7 @@ static void Kalman_Update(kalman_filter_t* filter, float measurement)
 
     filter->output_value = filter->filtered_value - filter->zero_offset;  /* Apply zero offset to get final output */
 }
+#endif
 
 /*!
     \brief      Update Kalman filter for angle with wraparound handling (0-2pi discontinuity).
@@ -316,6 +341,7 @@ static void Kalman_Update(kalman_filter_t* filter, float measurement)
     \retval     none
     \note       Uses Math_WrapRadDelta to handle 2pi discontinuity without jitter.
 */
+#if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
 static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
 {
     float denominator;
@@ -368,3 +394,32 @@ static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
     filter->filtered_value = Math_WrapRad(filter->filtered_value);
     filter->output_value = filter->filtered_value;
 }
+#endif
+
+#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
+/*
+ * Angle LPF on circular domain: update state by wrapped delta to avoid
+ * jumps when crossing 0/2pi.
+ */
+static float Sensor_UpdateAngleLpf(float measurement)
+{
+    float alpha;
+    float wrapped_measurement;
+    float delta;
+
+    alpha = Math_ClampFloat(FOC_SENSOR_ANGLE_LPF_ALPHA, 0.0f, 1.0f);
+    wrapped_measurement = Math_WrapRad(measurement);
+
+    if (g_sensor_angle_lpf_state_valid == 0U)
+    {
+        g_sensor_angle_lpf_state = wrapped_measurement;
+        g_sensor_angle_lpf_state_valid = 1U;
+        return g_sensor_angle_lpf_state;
+    }
+
+    delta = Math_WrapRadDelta(wrapped_measurement - g_sensor_angle_lpf_state);
+    g_sensor_angle_lpf_state = Math_WrapRad(g_sensor_angle_lpf_state + alpha * delta);
+
+    return g_sensor_angle_lpf_state;
+}
+#endif

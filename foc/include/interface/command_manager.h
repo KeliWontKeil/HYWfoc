@@ -91,6 +91,7 @@ void CommandManager_ReportAllParams(void);
 
 float CommandManager_GetTargetAngleRad(void);
 float CommandManager_GetAngleSpeedRadS(void);
+float CommandManager_GetSpeedOnlyRadS(void);
 float CommandManager_GetSensorSampleOffsetPercent(void);
 
 uint8_t CommandManager_IsSemanticReportEnabled(void);

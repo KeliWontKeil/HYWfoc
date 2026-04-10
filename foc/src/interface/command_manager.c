@@ -10,6 +10,7 @@
 typedef struct {
     float target_angle_rad;
     float angle_speed_rad_s;
+    float speed_only_rad_s;
     float sensor_sample_offset_percent;
     uint16_t semantic_freq_hz;
     uint16_t osc_freq_hz;
@@ -81,6 +82,7 @@ void CommandManager_Init(void)
 
     g_params.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
     g_params.angle_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
+    g_params.speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
     g_params.sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
     g_params.semantic_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
     g_params.osc_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
@@ -350,6 +352,16 @@ uint8_t CommandManager_WriteParam(char subcommand, float value)
         g_params.angle_speed_rad_s = value;
         break;
 
+    case COMMAND_MANAGER_SUBCMD_SPEED_ONLY_SPEED:
+        if (CommandManager_IsInRange(value,
+                                     COMMAND_MANAGER_PARAM_SPEED_ONLY_MIN_RAD_S,
+                                     COMMAND_MANAGER_PARAM_SPEED_ONLY_MAX_RAD_S) == 0U)
+        {
+            return 0U;
+        }
+        g_params.speed_only_rad_s = value;
+        break;
+
     case COMMAND_MANAGER_SUBCMD_SENSOR_SAMPLE_OFFSET:
         if (CommandManager_IsInRange(value,
                                      COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MIN_PERCENT,
@@ -581,6 +593,10 @@ uint8_t CommandManager_ReadParam(char subcommand, float *value_out)
         *value_out = g_params.angle_speed_rad_s;
         break;
 
+    case COMMAND_MANAGER_SUBCMD_SPEED_ONLY_SPEED:
+        *value_out = g_params.speed_only_rad_s;
+        break;
+
     case COMMAND_MANAGER_SUBCMD_SENSOR_SAMPLE_OFFSET:
         *value_out = g_params.sensor_sample_offset_percent;
         break;
@@ -682,6 +698,7 @@ void CommandManager_ReportAllParams(void)
     const char params[] = {
         COMMAND_MANAGER_SUBCMD_TARGET_ANGLE,
         COMMAND_MANAGER_SUBCMD_ANGLE_SPEED,
+        COMMAND_MANAGER_SUBCMD_SPEED_ONLY_SPEED,
         COMMAND_MANAGER_SUBCMD_SENSOR_SAMPLE_OFFSET,
         COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV,
         COMMAND_MANAGER_SUBCMD_OSC_DIV,
@@ -724,6 +741,11 @@ float CommandManager_GetTargetAngleRad(void)
 float CommandManager_GetAngleSpeedRadS(void)
 {
     return g_params.angle_speed_rad_s;
+}
+
+float CommandManager_GetSpeedOnlyRadS(void)
+{
+    return g_params.speed_only_rad_s;
 }
 
 float CommandManager_GetSensorSampleOffsetPercent(void)
@@ -958,6 +980,8 @@ static const char *CommandManager_GetParamName(char subcommand)
         return "target_angle_rad";
     case COMMAND_MANAGER_SUBCMD_ANGLE_SPEED:
         return "angle_position_speed_rad_s";
+    case COMMAND_MANAGER_SUBCMD_SPEED_ONLY_SPEED:
+        return "speed_only_speed_rad_s";
     case COMMAND_MANAGER_SUBCMD_SENSOR_SAMPLE_OFFSET:
         return "sensor_sample_offset_percent";
     case COMMAND_MANAGER_SUBCMD_SEMANTIC_DIV:
