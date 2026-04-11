@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - No entries yet.
 
+## [1.2.0] - 2026-04-11
+
+### Changed
+- Completed high-rate execution-path refactor: PWM update ISR callback is now the canonical interpolation/current-loop path and protocol parsing is fully polling-based (`IsFrameReady + ReadFrame`).
+- Completed outer/inner loop decoupling baseline: outer loop stays on scheduler task path, while current-loop execution is driven by PWM ISR cadence.
+- Updated ADC sampling pipeline to support distinct slow/fast averaging windows and moved average-count boundary normalization into ADC driver layer.
+- Added 16-bit trig lookup module (`0.001 rad` step, symmetry reconstruction) under special dependency layer and switched SVPWM trigonometric hotspots to LUT path.
+- Improved macro clipping semantics for current-loop disable mode: ISR keeps interpolation-only behavior and skips fast-loop compute chain.
+- Added optional first-order `iq` LPF switch/alpha configuration in current-loop path for noise suppression experiments.
+- Cleaned instance platform API adapter responsibility by removing non-adapter helper logic from `foc_platform_api`.
+
+### Documentation
+- Updated release baseline references and mission document targets to align with `v1.2.0` snapshot delivery.
+
 ## [1.1.0] - 2026-04-10
 
 ### Changed

@@ -11,6 +11,10 @@
 static float g_speed_err_accum_rad = 0.0f;
 static float g_prev_mech_signed_rad = 0.0f;
 static uint8_t g_speed_state_valid = 0U;
+#if (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE)
+static uint8_t g_current_iq_lpf_state_valid = 0U;
+static float g_current_iq_lpf_state = 0.0f;
+#endif
 #if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
 static uint8_t g_svpwm_lpf_state_valid = 0U;
 static float g_svpwm_lpf_phase_a = 0.0f;
@@ -349,12 +353,13 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
                          float electrical_angle,
                          float dt_sec)
 {
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
     float i_alpha;
     float i_beta;
     float id_measured;
     float iq_measured;
+#endif
     float voltage_limit;
-    float uq_ff;
     float uq_cmd;
 
     if ((motor == 0) || (sensor == 0))
@@ -369,6 +374,7 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
     }
 #endif
 
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
     Math_ClarkeTransform(sensor->current_a.output_value,
                          sensor->current_b.output_value,
                          sensor->current_c.output_value,
@@ -381,22 +387,50 @@ void FOC_CurrentLoopStep(foc_motor_t *motor,
                        &id_measured,
                        &iq_measured);
 
+#if (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE)
+    iq_measured = Math_FirstOrderLpf(iq_measured,
+                                     &g_current_iq_lpf_state,
+                                     FOC_CURRENT_LOOP_IQ_LPF_ALPHA,
+                                     &g_current_iq_lpf_state_valid);
+#endif
+#endif
+
     voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
-    uq_ff = iq_ref * motor->phase_resistance;
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
-    uq_cmd = uq_ff + FOC_CurrentLoopPIDRun(current_pid, iq_ref, iq_measured, dt_sec);
+    uq_cmd = FOC_CurrentLoopPIDRun(current_pid, iq_ref, iq_measured, dt_sec);
+    motor->iq_measured = iq_measured;
 #else
     (void)current_pid;
+    (void)sensor;
     (void)dt_sec;
-    uq_cmd = uq_ff;
+    motor->iq_measured = 0.0f;
 #endif
 
     motor->electrical_phase_angle = Math_WrapRad(electrical_angle);
     motor->ud = 0.0f;
     motor->uq = Math_ClampFloat(uq_cmd, -voltage_limit, voltage_limit);
     motor->iq_target = iq_ref;
-    motor->iq_measured = iq_measured;
+}
+
+void FOC_FastCurrentLoopStep(foc_motor_t *motor,
+                             foc_pid_t *current_pid,
+                             const sensor_data_t *sensor,
+                             float electrical_angle,
+                             float dt_sec)
+{
+    if ((motor == 0) || (sensor == 0))
+    {
+        return;
+    }
+
+    FOC_CurrentLoopStep(motor,
+                        current_pid,
+                        motor->iq_target,
+                        sensor,
+                        electrical_angle,
+                        dt_sec);
+    FOC_ControlApplyElectricalAngle(motor, motor->electrical_phase_angle);
 }
 
 void FOC_ControlApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
@@ -474,7 +508,7 @@ void FOC_ControlApplyElectricalAngle(foc_motor_t *motor, float electrical_angle)
                  &motor->duty_c);
 #endif
 
-    /* Duty update is executed by the TIMER2 callback via SVPWM linear interpolation. */
+    /* Duty update is executed by the PWM update ISR via SVPWM linear interpolation. */
 }
 
 void FOC_OpenLoopStep(foc_motor_t *motor,float voltage, float turn_speed)
@@ -534,15 +568,12 @@ void FOC_TorqueControlStep(foc_motor_t *motor,
     FOC_ControlApplyElectricalAngle(motor, motor->electrical_phase_angle);
 }
 
-void FOC_SpeedControlStep(foc_motor_t *motor,
-                          foc_pid_t *speed_pid,
-                          foc_pid_t *current_pid,
-                          float speed_ref_rad_s,
-                          const sensor_data_t *sensor,
-                          float dt_sec,
-                          foc_torque_mode_t torque_mode)
+void FOC_SpeedOuterLoopStep(foc_motor_t *motor,
+                            foc_pid_t *speed_pid,
+                            float speed_ref_rad_s,
+                            const sensor_data_t *sensor,
+                            float dt_sec)
 {
-    float torque_ref_current;
     float speed_angle_error_rad;
 
     if ((motor == 0) || (speed_pid == 0) || (sensor == 0))
@@ -560,30 +591,22 @@ void FOC_SpeedControlStep(foc_motor_t *motor,
                                                       speed_ref_rad_s,
                                                       dt_sec);
 
-    torque_ref_current = FOC_PIDRunCore(speed_pid,
-                                        speed_angle_error_rad,
-                                        0.0f,
-                                        dt_sec);
-
-    FOC_TorqueControlStep(motor,
-                          current_pid,
-                          torque_ref_current,
-                          sensor,
-                          dt_sec,
-                          torque_mode);
+    motor->iq_target = FOC_PIDRunCore(speed_pid,
+                                      speed_angle_error_rad,
+                                      0.0f,
+                                      dt_sec);
+    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor,
+                                                                            sensor->mech_angle_rad.output_value);
 }
 
-void FOC_SpeedAngleControlStep(foc_motor_t *motor,
-                               foc_pid_t *speed_pid,
-                               foc_pid_t *angle_hold_pid,
-                               foc_pid_t *current_pid,
-                               float angle_ref_rad,
-                               float angle_position_speed_rad_s,
-                               const sensor_data_t *sensor,
-                               float dt_sec,
-                               foc_torque_mode_t torque_mode)
+void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
+                                 foc_pid_t *speed_pid,
+                                 foc_pid_t *angle_hold_pid,
+                                 float angle_ref_rad,
+                                 float angle_position_speed_rad_s,
+                                 const sensor_data_t *sensor,
+                                 float dt_sec)
 {
-    float torque_ref_current;
     float torque_ref_speed;
     float torque_ref_hold;
     float mech_signed_total_rad;
@@ -656,11 +679,64 @@ void FOC_SpeedAngleControlStep(foc_motor_t *motor,
                                           mech_signed_total_rad,
                                           dt_sec);
 
-    torque_ref_current = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
+    motor->iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
+    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor,
+                                                                            sensor->mech_angle_rad.output_value);
+}
+
+void FOC_SpeedControlStep(foc_motor_t *motor,
+                          foc_pid_t *speed_pid,
+                          foc_pid_t *current_pid,
+                          float speed_ref_rad_s,
+                          const sensor_data_t *sensor,
+                          float dt_sec,
+                          foc_torque_mode_t torque_mode)
+{
+    if ((motor == 0) || (speed_pid == 0) || (sensor == 0))
+    {
+        return;
+    }
+
+    FOC_SpeedOuterLoopStep(motor,
+                           speed_pid,
+                           speed_ref_rad_s,
+                           sensor,
+                           dt_sec);
 
     FOC_TorqueControlStep(motor,
                           current_pid,
-                          torque_ref_current,
+                          motor->iq_target,
+                          sensor,
+                          dt_sec,
+                          torque_mode);
+}
+
+void FOC_SpeedAngleControlStep(foc_motor_t *motor,
+                               foc_pid_t *speed_pid,
+                               foc_pid_t *angle_hold_pid,
+                               foc_pid_t *current_pid,
+                               float angle_ref_rad,
+                               float angle_position_speed_rad_s,
+                               const sensor_data_t *sensor,
+                               float dt_sec,
+                               foc_torque_mode_t torque_mode)
+{
+    if ((motor == 0) || (speed_pid == 0) || (angle_hold_pid == 0) || (sensor == 0))
+    {
+        return;
+    }
+
+    FOC_SpeedAngleOuterLoopStep(motor,
+                                speed_pid,
+                                angle_hold_pid,
+                                angle_ref_rad,
+                                angle_position_speed_rad_s,
+                                sensor,
+                                dt_sec);
+
+    FOC_TorqueControlStep(motor,
+                          current_pid,
+                          motor->iq_target,
                           sensor,
                           dt_sec,
                           torque_mode);

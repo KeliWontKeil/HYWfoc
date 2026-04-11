@@ -6,25 +6,16 @@
 /** @brief Control tick callback type for the platform timer source. */
 typedef void (*FOC_Platform_TickCallback_t)(void);
 
-/** @brief High-rate callback type for modulation or ISR-driven update sources. */
-typedef void (*FOC_Platform_HighRateCallback_t)(void);
-
-/** @brief RX trigger callback type for communication sources. */
-typedef void (*FOC_Platform_CommRxTriggerCallback_t)(void);
+/** @brief PWM update ISR callback type for high-rate modulation update path. */
+typedef void (*FOC_Platform_PwmIsrCallback_t)(void);
 
 /* ===== Runtime / Clock ===== */
 
 /** @brief Initialize runtime base services for the platform. */
 void FOC_Platform_RuntimeInit(void);
 
-/** @brief Initialize high-rate hardware clock source with target frequency in kHz. */
-void FOC_Platform_HighRateClockInit(uint16_t high_rate_khz);
-
-/** @brief Set the high-rate callback function. */
-void FOC_Platform_SetHighRateCallback(FOC_Platform_HighRateCallback_t callback);
-
-/** @brief Start the high-rate hardware clock source. */
-void FOC_Platform_StartHighRateClock(void);
+/** @brief Set callback used by PWM update ISR path. */
+void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback);
 
 /** @brief Initialize the control-tick source. */
 void FOC_Platform_ControlTickSourceInit(void);
@@ -51,17 +42,17 @@ void FOC_Platform_SetHeartbeatIndicator(uint8_t on);
 /** @brief Initialize communication peripherals used by platform transport. */
 void FOC_Platform_CommInit(void);
 
-/** @brief Set RX trigger callback for communication source 1. */
-void FOC_Platform_CommSource1_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+/** @brief Return non-zero when communication source 1 has one complete frame ready. */
+uint8_t FOC_Platform_CommSource1_IsFrameReady(void);
 
-/** @brief Set RX trigger callback for communication source 2. */
-void FOC_Platform_CommSource2_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+/** @brief Return non-zero when communication source 2 has one complete frame ready. */
+uint8_t FOC_Platform_CommSource2_IsFrameReady(void);
 
-/** @brief Set RX trigger callback for communication source 3. */
-void FOC_Platform_CommSource3_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+/** @brief Return non-zero when communication source 3 has one complete frame ready. */
+uint8_t FOC_Platform_CommSource3_IsFrameReady(void);
 
-/** @brief Set RX trigger callback for communication source 4. */
-void FOC_Platform_CommSource4_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback);
+/** @brief Return non-zero when communication source 4 has one complete frame ready. */
+uint8_t FOC_Platform_CommSource4_IsFrameReady(void);
 
 /** @brief Read one received frame from communication source 1. */
 uint16_t FOC_Platform_CommSource1_ReadFrame(uint8_t *buffer, uint16_t max_len);
@@ -91,6 +82,9 @@ void FOC_Platform_SetSensorSampleOffsetPercent(float percent);
 
 /** @brief Read phase-A and phase-B currents. */
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b);
+
+/** @brief Read phase-A and phase-B currents for fast current-loop path. */
+uint8_t FOC_Platform_ReadPhaseCurrentABFast(float *phase_current_a, float *phase_current_b);
 
 /** @brief Read mechanical angle in radians. */
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad);

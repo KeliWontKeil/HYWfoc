@@ -8,7 +8,7 @@ description: "HYWfoc repository-level development instructions. Use when: implem
 
 **HYWfoc** is a repository-level FOC development project. It provides a reusable control library plus instance-specific board integrations. Board details (pin maps, transport bindings, exact build outputs) must be maintained under `examples/<instance>/` rather than in global workflow instructions.
 
-**Current Version**: v1.0.0 (open-source release baseline)
+**Current Version**: v1.2.0 (snapshot release baseline)
 
 ### Key Build Outputs
 - **Toolchain**: ARM Compiler 5.06 update 6 via EIDE extension

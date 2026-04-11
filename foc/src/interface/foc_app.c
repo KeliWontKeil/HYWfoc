@@ -17,7 +17,9 @@
 static void Service_Task_Trigger(void);
 static void Motor_Control_Loop(void);
 static void Monitor_Task_Trigger(void);
+static void FOC_App_OnPwmUpdateISR(void);
 static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data);
+static void FOC_App_StopFastCurrentLoop(void);
 static void FOC_App_ApplyPidRuntimeParams(void);
 static void FOC_App_ProcessCommStep(void);
 static void FOC_App_UpdateIndicators(void);
@@ -31,8 +33,15 @@ static sensor_data_t g_sensor_snapshot;
 static foc_pid_t g_torque_current_pid;
 static foc_pid_t g_angle_pid;
 static foc_pid_t g_speed_pid;
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
+static sensor_data_t g_fast_current_sensor_snapshot;
+#endif
 static volatile uint8_t g_service_task_pending = 0U;
 static volatile uint8_t g_monitor_task_pending = 0U;
+static volatile uint8_t g_fast_current_loop_enabled = 0U;
+static volatile uint8_t g_fast_current_loop_div_counter = 0U;
+static volatile float g_fast_current_loop_iq_target = 0.0f;
+static volatile float g_fast_current_loop_electrical_angle = 0.0f;
 static uint8_t g_led_run_on = 1U;
 static uint8_t g_app_init_completed = 0U;
 static uint16_t g_led_run_blink_counter = 0U;
@@ -52,7 +61,6 @@ void FOC_App_Init(void)
     FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, 1U);
     FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 1U);
     FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 1U);
-    FOC_Platform_HighRateClockInit(FOC_PWM_FREQ_KHZ);
 
     FOC_Platform_ControlTickSourceInit();
     ControlScheduler_Init();
@@ -69,9 +77,9 @@ void FOC_App_Init(void)
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMM, 1U);
     FOC_Platform_WriteDebugText("\r\n=== FOC System Started ===\r\n");
     FOC_Platform_WriteDebugText("USART1 telemetry channel enabled\r\n");
-    FOC_Platform_WriteDebugText("High-rate modulation clock active at configured PWM frequency\r\n");
+    FOC_Platform_WriteDebugText("PWM update ISR interpolation path enabled\r\n");
     FOC_Platform_WriteDebugText("PWM bridge running in center-aligned complementary mode\r\n");
-    FOC_Platform_WriteDebugText("Control scheduler running at 1kHz with heartbeat callback\r\n");
+    FOC_Platform_WriteDebugText("Control scheduler running at configured tick rate\r\n");
     FOC_Platform_WriteDebugText("Magnetic encoder feedback enabled\r\n");
     FOC_Platform_WriteDebugText("Current sampling pipeline enabled\r\n");
     FOC_Platform_WriteDebugText("Control debug telemetry enabled\r\n");
@@ -97,10 +105,8 @@ void FOC_App_Init(void)
 
     /* Initialize SVPWM output and interpolation callback. */
     SVPWM_Init(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
+    FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_PWM, 1U);
-
-    FOC_Platform_SetHighRateCallback(SVPWM_InterpolationISR);
-    FOC_Platform_StartHighRateClock();
 
     /* Initialize motor model and targets. */
     FOC_MotorInit(&g_motor,
@@ -208,6 +214,69 @@ static void Monitor_Task_Trigger(void)
     g_monitor_task_pending = 1U;
 }
 
+static void FOC_App_StopFastCurrentLoop(void)
+{
+    g_fast_current_loop_enabled = 0U;
+    g_fast_current_loop_iq_target = 0.0f;
+    g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
+    g_fast_current_loop_div_counter = 0U;
+}
+
+static void FOC_App_OnPwmUpdateISR(void)
+{
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_DISABLE)
+    /* Current-loop disabled: keep PWM update ISR as interpolation-only path. */
+    SVPWM_InterpolationISR();
+    return;
+#else
+    uint8_t divider;
+    float current_loop_dt_sec;
+
+    /* Keep interpolation update at each PWM update interrupt. */
+    SVPWM_InterpolationISR();
+
+    if (g_fast_current_loop_enabled == 0U)
+    {
+        return;
+    }
+
+    divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
+    g_fast_current_loop_div_counter++;
+    if (g_fast_current_loop_div_counter < divider)
+    {
+        return;
+    }
+    g_fast_current_loop_div_counter = 0U;
+
+    Sensor_ReadCurrentOnly();
+    if (Sensor_CopyData(&g_fast_current_sensor_snapshot) == 0U)
+    {
+        return;
+    }
+
+    if (g_fast_current_sensor_snapshot.adc_valid == 0U)
+    {
+        return;
+    }
+
+    g_motor.iq_target = g_fast_current_loop_iq_target;
+    if (FOC_PWM_FREQ_KHZ == 0U)
+    {
+        current_loop_dt_sec = FOC_CONTROL_DT_SEC;
+    }
+    else
+    {
+        current_loop_dt_sec = (float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f);
+    }
+
+    FOC_FastCurrentLoopStep(&g_motor,
+                            &g_torque_current_pid,
+                            &g_fast_current_sensor_snapshot,
+                            g_fast_current_loop_electrical_angle,
+                            current_loop_dt_sec);
+#endif
+}
+
 static void FOC_App_UpdateIndicators(void)
 {
     uint8_t led_run_on = 0U;
@@ -275,6 +344,7 @@ static void Motor_Control_Loop(void)
     if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
     {
         /* Stop runtime I2C read path in fault state to avoid repeated bus timeout load. */
+        FOC_App_StopFastCurrentLoop();
         FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
         CommandManager_ReportControlLoopSkip();
         return;
@@ -283,6 +353,8 @@ static void Motor_Control_Loop(void)
     Sensor_ReadAll();
     if (Sensor_CopyData(&g_sensor_snapshot) == 0U)
     {
+        FOC_App_StopFastCurrentLoop();
+        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
         CommandManager_ReportRuntimeSensorState(0U, 0U);
         return;
     }
@@ -292,6 +364,9 @@ static void Motor_Control_Loop(void)
 
     if ((g_sensor_snapshot.adc_valid == 0U) || (g_sensor_snapshot.encoder_valid == 0U))
     {
+        FOC_App_StopFastCurrentLoop();
+        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
+        CommandManager_ReportControlLoopSkip();
         return;
     }
 
@@ -303,6 +378,7 @@ static void Motor_Control_Loop(void)
 
     if (FOC_App_IsUndervoltageFaultActive() != 0U)
     {
+        FOC_App_StopFastCurrentLoop();
         FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
         CommandManager_ReportControlLoopSkip();
         return;
@@ -310,6 +386,7 @@ static void Motor_Control_Loop(void)
 
     if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
     {
+        FOC_App_StopFastCurrentLoop();
         FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
         CommandManager_ReportControlLoopSkip();
         return;
@@ -317,6 +394,7 @@ static void Motor_Control_Loop(void)
 
     if (CommandManager_IsMotorEnabled() == COMMAND_MANAGER_ENABLED_DISABLE)
     {
+        FOC_App_StopFastCurrentLoop();
         FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
         CommandManager_ReportControlLoopSkip();
         return;
@@ -365,23 +443,19 @@ static uint8_t FOC_App_IsUndervoltageFaultActive(void)
 static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
 {
 #if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)
-    FOC_SpeedControlStep(&g_motor,
-                         &g_speed_pid,
-                         &g_torque_current_pid,
-                         CommandManager_GetSpeedOnlyRadS(),
-                         sensor_data,
-                         FOC_CONTROL_DT_SEC,
-                         FOC_TORQUE_MODE_CURRENT_PID);
+    FOC_SpeedOuterLoopStep(&g_motor,
+                           &g_speed_pid,
+                           CommandManager_GetSpeedOnlyRadS(),
+                           sensor_data,
+                           FOC_CONTROL_DT_SEC);
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
-    FOC_SpeedAngleControlStep(&g_motor,
-                              &g_speed_pid,
-                              &g_angle_pid,
-                              &g_torque_current_pid,
-                              CommandManager_GetTargetAngleRad(),
-                              CommandManager_GetAngleSpeedRadS(),
-                              sensor_data,
-                              FOC_CONTROL_DT_SEC,
-                              FOC_TORQUE_MODE_CURRENT_PID);
+    FOC_SpeedAngleOuterLoopStep(&g_motor,
+                                &g_speed_pid,
+                                &g_angle_pid,
+                                CommandManager_GetTargetAngleRad(),
+                                CommandManager_GetAngleSpeedRadS(),
+                                sensor_data,
+                                FOC_CONTROL_DT_SEC);
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
     const uint8_t control_mode = CommandManager_GetControlMode();
 
@@ -405,28 +479,45 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     /* FULL build keeps both parallel algorithms and runtime mode switching. */
     if (control_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY)
     {
-        FOC_SpeedControlStep(&g_motor,
-                             &g_speed_pid,
-                             &g_torque_current_pid,
-                             CommandManager_GetSpeedOnlyRadS(),
-                             sensor_data,
-                             FOC_CONTROL_DT_SEC,
-                             FOC_TORQUE_MODE_CURRENT_PID);
+        FOC_SpeedOuterLoopStep(&g_motor,
+                               &g_speed_pid,
+                               CommandManager_GetSpeedOnlyRadS(),
+                               sensor_data,
+                               FOC_CONTROL_DT_SEC);
     }
     else if (control_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
     {
-        FOC_SpeedAngleControlStep(&g_motor,
-                                  &g_speed_pid,
-                                  &g_angle_pid,
-                                  &g_torque_current_pid,
-                                  CommandManager_GetTargetAngleRad(),
-                                  CommandManager_GetAngleSpeedRadS(),
-                                  sensor_data,
-                                  FOC_CONTROL_DT_SEC,
-                                  FOC_TORQUE_MODE_CURRENT_PID);
+        FOC_SpeedAngleOuterLoopStep(&g_motor,
+                                    &g_speed_pid,
+                                    &g_angle_pid,
+                                    CommandManager_GetTargetAngleRad(),
+                                    CommandManager_GetAngleSpeedRadS(),
+                                    sensor_data,
+                                    FOC_CONTROL_DT_SEC);
+    }
+    else
+    {
+        FOC_App_StopFastCurrentLoop();
+        return;
     }
 #else
 #error "Unsupported FOC_BUILD_CONTROL_ALGO_SET"
+#endif
+
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
+    g_fast_current_loop_iq_target = g_motor.iq_target;
+    g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
+    g_fast_current_loop_enabled = 1U;
+#else
+    /* Current-loop disabled: update duty target in task context; ISR only interpolates. */
+    FOC_CurrentLoopStep(&g_motor,
+                        &g_torque_current_pid,
+                        g_motor.iq_target,
+                        sensor_data,
+                        g_motor.electrical_phase_angle,
+                        FOC_CONTROL_DT_SEC);
+    FOC_ControlApplyElectricalAngle(&g_motor, g_motor.electrical_phase_angle);
+    FOC_App_StopFastCurrentLoop();
 #endif
 }
 

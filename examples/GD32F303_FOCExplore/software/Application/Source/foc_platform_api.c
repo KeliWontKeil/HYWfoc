@@ -28,12 +28,6 @@ void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on)
     LED_SetState(led_index, on);
 }
 
-void FOC_Platform_HighRateClockInit(uint16_t high_rate_khz)
-{
-    /* TIMER2 update frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
-    Timer2_Init(9U, (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * (uint32_t)high_rate_khz)) - 1U);
-}
-
 void FOC_Platform_ControlTickSourceInit(void)
 {
     /* TIMER1 control tick frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
@@ -51,40 +45,30 @@ void FOC_Platform_StartControlTickSource(void)
     Timer1_Start();
 }
 
-void FOC_Platform_SetHighRateCallback(FOC_Platform_HighRateCallback_t callback)
-{
-    Timer2_SetCallback(callback);
-}
-
-void FOC_Platform_StartHighRateClock(void)
-{
-    Timer2_Start();
-}
-
 void FOC_Platform_CommInit(void)
 {
     USART1_Init();
     USART2_Init();
 }
 
-void FOC_Platform_CommSource1_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+uint8_t FOC_Platform_CommSource1_IsFrameReady(void)
 {
-    USART1_SetIdleCallback((usart1_idle_callback_t)callback);
+    return USART1_IsFrameReady();
 }
 
-void FOC_Platform_CommSource2_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+uint8_t FOC_Platform_CommSource2_IsFrameReady(void)
 {
-    USART2_SetIdleCallback((usart2_idle_callback_t)callback);
+    return USART2_IsFrameReady();
 }
 
-__attribute__((weak)) void FOC_Platform_CommSource3_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+__attribute__((weak)) uint8_t FOC_Platform_CommSource3_IsFrameReady(void)
 {
-    (void)callback;
+    return 0U;
 }
 
-__attribute__((weak)) void FOC_Platform_CommSource4_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback)
+__attribute__((weak)) uint8_t FOC_Platform_CommSource4_IsFrameReady(void)
 {
-    (void)callback;
+    return 0U;
 }
 
 uint16_t FOC_Platform_CommSource1_ReadFrame(uint8_t *buffer, uint16_t max_len)
@@ -123,16 +107,35 @@ void FOC_Platform_WriteStatusByte(uint8_t status_code)
 
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 {
+    uint32_t timer_period;
+
+    timer_period = (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * (uint32_t)pwm_freq_khz)) - 1U;
+
     AS5600_Init();
-    Timer3_Init(9U, (uint32_t)((FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * (uint32_t)pwm_freq_khz)) - 1U));
+
+    /* TIMER2 is the sync master; TIMER0(PWM) and TIMER3(ADC trigger) restart from its update event. */
+    Timer2_Init(9U, timer_period * 2);
+    Timer2_Start();
+
+    Timer3_Init(9U, timer_period);
     Timer3_Start();
+
     ADC_Init();
     ADC_Start();
 }
 
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b)
 {
-    return ADC_ReadPhaseCurrentABOk(phase_current_a, phase_current_b, ADC_AVG_DEFAULT_COUNT);
+    return ADC_ReadPhaseCurrentABOk(phase_current_a,
+                                    phase_current_b,
+                                    (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_SLOW);
+}
+
+uint8_t FOC_Platform_ReadPhaseCurrentABFast(float *phase_current_a, float *phase_current_b)
+{
+    return ADC_ReadPhaseCurrentABOk(phase_current_a,
+                                    phase_current_b,
+                                    (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_FAST);
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
@@ -183,4 +186,9 @@ void FOC_Platform_PWMStart(void)
 void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c)
 {
     PWM_SetDutyCycleTripleFloat(duty_a, duty_b, duty_c);
+}
+
+void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback)
+{
+    PWM_SetUpdateCallback((pwm_update_callback_t)callback);
 }

@@ -375,6 +375,15 @@ adc_status_t ADC_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current
         return ADC_STATUS_ERROR;
     }
 
+    if (avg_count == 0U)
+    {
+        avg_count = 1U;
+    }
+    else if (avg_count > ADC_BUFFER_SIZE)
+    {
+        avg_count = ADC_BUFFER_SIZE;
+    }
+
     if (ADC_GetAverageSample(sample, CURRENT, avg_count) != ADC_STATUS_OK)
     {
         return ADC_STATUS_ERROR;
@@ -449,9 +458,8 @@ adc_status_t ADC_DMA_IsComplete(void)
 */
 void ADC_SetTriggerFrequency(uint32_t frequency_hz)
 {
-    /* Note: Trigger frequency is controlled by TIMER0 CH0
-       This function should be coordinated with PWM frequency setup
-       Currently, ADC uses TIMER0_CH0 as trigger source */
+    /* Note: Trigger frequency is controlled by TIMER3 CH3 compare event.
+       This function should be coordinated with PWM and TIMER2/TIMER3 sync setup. */
     (void)frequency_hz; /* Parameter not used in current implementation */
 }
 

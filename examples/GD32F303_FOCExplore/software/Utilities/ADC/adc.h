@@ -40,7 +40,7 @@
 /* ADC configuration */
 #define ADC_SAMPLE_TIME       ADC_SAMPLETIME_55POINT5  /* Maximum resolution */
 #define ADC_RESOLUTION        ADC_RESOLUTION_12B       /* 12-bit resolution */
-#define ADC_EXTERNAL_TRIGGER  ADC0_1_EXTTRIG_ROUTINE_T0_CH0  /* TIMER0 CH0 trigger */
+#define ADC_EXTERNAL_TRIGGER  ADC0_1_EXTTRIG_ROUTINE_T3_CH3  /* TIMER3 CH3 trigger */
 #define ADC_REGULAR_CHANNEL   ADC_ROUTINE_CHANNEL      /* Routine channel (regular channel) */
 
 /* DMA configuration */

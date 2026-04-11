@@ -4,6 +4,7 @@
 
 #include "interface/foc_platform_api.h"
 #include "config/foc_config.h"
+#include "config/foc_math_lut.h"
 
 static svpwm_output_t s_output;
 static float s_duty_a_current = 0.5f;
@@ -25,12 +26,12 @@ static float SVPWM_Sqrt(float value)
 
 static float SVPWM_Sin(float value)
 {
-    return (float)sin((double)value);
+    return FOC_MathLut_Sin(value);
 }
 
 static float SVPWM_Atan2(float y, float x)
 {
-    return (float)atan2((double)y, (double)x);
+    return FOC_MathLut_Atan2(y, x);
 }
 
 static float SVPWM_Clamp01(float value)

@@ -6,7 +6,7 @@
  *
  * Lifecycle contract:
  * 1) Init-and-activate immediately: Runtime, Communication, SensorInput.
- * 2) Init plus explicit Start required: ControlTickSource, HighRateClock, PWM.
+ * 2) Init plus explicit Start required: ControlTickSource, PWM.
  * 3) For callback-driven modules, callback must be set before Start.
  *
  * Porting workflow:
@@ -16,19 +16,21 @@
  * - Keep callback paths IRQ-safe and bounded in execution time.
  */
 
+/*
+1.必须实现两个定时器:互补PWM定时器（等待将PWM插值移入PWM定时器中断）、任务定时器
+2.必须实现两个回调函数:任务定时器回调函数、PWM定时器回调函数
+3.高频率同步定时器、采样定时器建议实现，以取得较好的同步效果和控制效果
+4.通信接口可选实现，但建议至少实现一个UART接口以便于调试和参数调整
+
+*/
+
 /* ===== Runtime / Clock ===== */
 
 /** @brief Initialize runtime base services (for example SysTick). */
 void FOC_Platform_RuntimeInit(void) {}
 
-/** @brief Initialize high-rate hardware clock in kHz before callback bind/start. */
-void FOC_Platform_HighRateClockInit(uint16_t high_rate_khz) { (void)high_rate_khz; }
-
-/** @brief Bind high-rate callback executed by hardware tick source. */
-void FOC_Platform_SetHighRateCallback(FOC_Platform_HighRateCallback_t callback) { (void)callback; }
-
-/** @brief Start high-rate clock source after init and callback binding. */
-void FOC_Platform_StartHighRateClock(void) {}
+/** @brief Bind PWM update ISR callback executed by PWM timer update interrupt. */
+void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback) { (void)callback; }
 
 /** @brief Initialize control tick source before callback bind/start. */
 void FOC_Platform_ControlTickSourceInit(void) {}
@@ -55,17 +57,17 @@ void FOC_Platform_SetHeartbeatIndicator(uint8_t on) { (void)on; }
 /** @brief Initialize transport peripherals used by command and debug channels. */
 void FOC_Platform_CommInit(void) {}
 
-/** @brief Set RX trigger callback for source 1 (for example DMA idle hook). */
-void FOC_Platform_CommSource1_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback) { (void)callback; }
+/** @brief Return frame-ready state for source 1. */
+uint8_t FOC_Platform_CommSource1_IsFrameReady(void) { return 0U; }
 
-/** @brief Set RX trigger callback for source 2. */
-void FOC_Platform_CommSource2_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback) { (void)callback; }
+/** @brief Return frame-ready state for source 2. */
+uint8_t FOC_Platform_CommSource2_IsFrameReady(void) { return 0U; }
 
-/** @brief Set RX trigger callback for optional source 3. */
-void FOC_Platform_CommSource3_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback) { (void)callback; }
+/** @brief Return frame-ready state for optional source 3. */
+uint8_t FOC_Platform_CommSource3_IsFrameReady(void) { return 0U; }
 
-/** @brief Set RX trigger callback for optional source 4. */
-void FOC_Platform_CommSource4_SetRxTriggerCallback(FOC_Platform_CommRxTriggerCallback_t callback) { (void)callback; }
+/** @brief Return frame-ready state for optional source 4. */
+uint8_t FOC_Platform_CommSource4_IsFrameReady(void) { return 0U; }
 
 /** @brief Read one frame from source 1; return 0 if unavailable. */
 uint16_t FOC_Platform_CommSource1_ReadFrame(uint8_t *buffer, uint16_t max_len) { (void)buffer; (void)max_len; return 0U; }
@@ -95,6 +97,9 @@ void FOC_Platform_SetSensorSampleOffsetPercent(float percent) { (void)percent; }
 
 /** @brief Read phase currents A and B and return non-zero on success. */
 uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b) { (void)phase_current_a; (void)phase_current_b; return 0U; }
+
+/** @brief Read phase currents A and B for fast current-loop path. */
+uint8_t FOC_Platform_ReadPhaseCurrentABFast(float *phase_current_a, float *phase_current_b) { (void)phase_current_a; (void)phase_current_b; return 0U; }
 
 /** @brief Read mechanical angle in radians and return non-zero on success. */
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad) { (void)angle_rad; return 0U; }

@@ -1,4 +1,5 @@
 #include "pwm.h"
+#include "interrupt_priority.h"
 
 /* Private variables */
 static uint8_t current_duty[PWM_CHANNEL_COUNT] = {
@@ -8,6 +9,7 @@ static uint8_t current_duty[PWM_CHANNEL_COUNT] = {
 };
 
 static uint16_t pwm_period = 0;
+static pwm_update_callback_t pwm_update_callback = 0;
 
 /* Private function prototypes */
 void PWM_GPIO_Config(void);
@@ -54,6 +56,26 @@ void PWM_Start(void)
 void PWM_Stop(void)
 {
     timer_disable(PWM_TIMER0_PERIPH);
+}
+
+void PWM_SetUpdateCallback(pwm_update_callback_t callback)
+{
+    pwm_update_callback = callback;
+}
+
+void PWM_Timer0Update_IRQHandler_Internal(void)
+{
+    if (timer_interrupt_flag_get(PWM_TIMER0_PERIPH, TIMER_INT_FLAG_UP) == RESET)
+    {
+        return;
+    }
+
+    timer_interrupt_flag_clear(PWM_TIMER0_PERIPH, TIMER_INT_FLAG_UP);
+
+    if (pwm_update_callback != 0)
+    {
+        pwm_update_callback();
+    }
 }
 
 /*!
@@ -279,6 +301,9 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_channel_output_mode_config(PWM_TIMER0_PERIPH, TIMER_CH_2, TIMER_OC_MODE_PWM0);
     timer_channel_output_shadow_config(PWM_TIMER0_PERIPH, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
     
+    timer_interrupt_enable(PWM_TIMER0_PERIPH, TIMER_INT_UP);
+    NVIC_CONFIG(TIMER0_UP_IRQn, TIMER0_UP_PRIORITY_GROUP, TIMER0_UP_PRIORITY_SUBGROUP);
+
     timer_auto_reload_shadow_enable(PWM_TIMER0_PERIPH);
     
     #ifdef PWM_DEAD_TIME

@@ -60,6 +60,8 @@ typedef enum {
     PWM_CHANNEL_COUNT
 } pwm_channel_t;
 
+typedef void (*pwm_update_callback_t)(void);
+
 /* Function prototypes */
 void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent);
 void PWM_Start(void);
@@ -71,5 +73,7 @@ uint8_t PWM_GetDutyCycle(pwm_channel_t channel);
 void PWM_SetDeadTime(uint16_t dead_time_cycles);
 void PWM_EnableComplementaryOutputs(void);
 void PWM_DisableComplementaryOutputs(void);
+void PWM_SetUpdateCallback(pwm_update_callback_t callback);
+void PWM_Timer0Update_IRQHandler_Internal(void);
 
 #endif /* _PWM_H_ */

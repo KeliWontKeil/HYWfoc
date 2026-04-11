@@ -21,7 +21,6 @@ typedef enum {
 } protocol_parser_result_t;
 
 void ProtocolParser_Init(void);
-void ProtocolParser_TriggerParse(void);
 uint8_t ProtocolParser_IsParsePending(void);
 void ProtocolParser_Process(void);
 const protocol_command_t *ProtocolParser_GetLatestCommand(void);

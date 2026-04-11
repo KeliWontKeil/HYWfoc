@@ -152,6 +152,11 @@ void ADC0_1_IRQHandler(void)
     ADC_IRQHandler_Internal();
 }
 
+void TIMER0_UP_IRQHandler(void)
+{
+    PWM_Timer0Update_IRQHandler_Internal();
+}
+
 /*!
     \brief      USART1 interrupt service routine
     \param[in]  none

@@ -14,7 +14,7 @@ static float g_sensor_angle_lpf_state = 0.0f;
 #endif
 
 /* Private function prototypes */
-static void Sensor_ReadADC(void);
+static void Sensor_ReadADC(uint8_t use_fast_window);
 static void Sensor_ReadEncoder(void);
 static void Kalman_Init(kalman_filter_t* filter,
                         float measurement_error,
@@ -157,8 +157,13 @@ void Sensor_SetZeroOffset(void)
 */
 void Sensor_ReadAll(void)
 {
-    Sensor_ReadADC();
+    Sensor_ReadADC(0U);
     Sensor_ReadEncoder();
+}
+
+void Sensor_ReadCurrentOnly(void)
+{
+    Sensor_ReadADC(1U);
 }
 
 /*!
@@ -167,14 +172,23 @@ void Sensor_ReadAll(void)
     \param[out] none
     \retval     none
 */
-static void Sensor_ReadADC(void)
+static void Sensor_ReadADC(uint8_t use_fast_window)
 {
     float current_a = 0.0f;
     float current_b = 0.0f;
     float common_mode;
+    uint8_t read_ok;
 
-    /* Use averaged ADC values over one control period (default 24 samples at 24kHz). */
-    if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
+    if (use_fast_window != 0U)
+    {
+        read_ok = FOC_Platform_ReadPhaseCurrentABFast(&current_a, &current_b);
+    }
+    else
+    {
+        read_ok = FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b);
+    }
+
+    if (read_ok != 0U)
     {
 #if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
         /* Apply Kalman filtering */

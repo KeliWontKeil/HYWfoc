@@ -17,6 +17,7 @@
 #include "timer1.h"
 #include "timer2.h"
 #include "adc.h"
+#include "pwm.h"
 
 /* function declarations */
 /* this function handles NMI exception */
@@ -39,6 +40,8 @@ void PendSV_Handler(void);
 void SysTick_Handler(void);
 /* this function handles ADC0 and ADC1 interrupt */
 void ADC0_1_IRQHandler(void);
+/* this function handles TIMER0 update interrupt */
+void TIMER0_UP_IRQHandler(void);
 /* this function handles USART1 interrupt */
 void USART1_IRQHandler(void);
 /* this function handles USART2 interrupt */

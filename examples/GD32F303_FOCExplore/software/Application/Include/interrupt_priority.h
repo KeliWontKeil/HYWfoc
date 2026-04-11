@@ -14,19 +14,22 @@
 #define NVIC_PRIORITY_GROUPING NVIC_PRIGROUP_PRE4_SUB0
 
 /* Timer interrupt priorities */
+#define TIMER0_UP_PRIORITY_GROUP   0
+#define TIMER0_UP_PRIORITY_SUBGROUP 0
+
 #define TIMER1_PRIORITY_GROUP      1
 #define TIMER1_PRIORITY_SUBGROUP   0
 
 #define TIMER2_PRIORITY_GROUP      0
-#define TIMER2_PRIORITY_SUBGROUP   0
+#define TIMER2_PRIORITY_SUBGROUP   1
 
 /* ADC interrupt priorities */
 #define ADC0_1_PRIORITY_GROUP      0
-#define ADC0_1_PRIORITY_SUBGROUP   1
+#define ADC0_1_PRIORITY_SUBGROUP   2
 
 /* ADC DMA interrupt priorities */
 #define ADC_DMA_PRIORITY_GROUP     0
-#define ADC_DMA_PRIORITY_SUBGROUP  2
+#define ADC_DMA_PRIORITY_SUBGROUP  3
 
 /* USART interrupt priorities */
 #define USART1_PRIORITY_GROUP      3

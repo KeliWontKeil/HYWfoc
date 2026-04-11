@@ -2,6 +2,7 @@
 
 #include "interface/foc_platform_api.h"
 #include "algorithm/foc_control_internal.h"
+#include "config/foc_config.h"
 
 static uint8_t FOC_ClampPolePairs(int32_t pole_pairs)
 {
@@ -165,15 +166,8 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     backup_ud = motor->ud;
     backup_uq = motor->uq;
 
-    calib_uq = motor->set_voltage * 0.20f;
-    if (calib_uq < 0.5f)
-    {
-        calib_uq = 0.5f;
-    }
-    if (calib_uq > 2.5f)
-    {
-        calib_uq = 2.5f;
-    }
+    calib_uq = motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO_DEFAULT;
+    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->set_voltage);
 
     motor->uq = 0.0f;
     motor->ud = calib_uq;
@@ -241,9 +235,15 @@ void FOC_MotorInit(foc_motor_t *motor,
         return;
     }
 
+    if (vbus_voltage < 0.0f)
+    {
+        vbus_voltage = 0.0f;
+    }
+    set_voltage = Math_ClampFloat(set_voltage, 0.0f, vbus_voltage);
+
     motor->electrical_phase_angle = 0.0f;
     motor->ud = 0.0f;
-    motor->uq = 1.0f;
+    motor->uq = 0.0f;
     motor->set_voltage = set_voltage;
     motor->vbus_voltage = vbus_voltage;
     motor->iq_target = 0.0f;
