@@ -30,12 +30,14 @@ a<driver_id><cmd><subcmd><param>b
 - `<driver_id>`: one byte, valid range `0x32-0x7E` (`'2'..'~'`), broadcast `0xFF`
 - `<cmd>`: uppercase letter `A-Z`
 - `<subcmd>`: uppercase letter `A-Z`
-- `<param>`: optional for read/state/fault control, mandatory for write command
+- `<param>`: optional; command-specific meaning:
+  - `P`/`S` with param = write, without param = read
+  - `Y` must not carry param
 
 Example:
 
 ```
-aaWA3.14b
+aaPA3.14b
 ```
 
 ### 2.2 Driver ID Rules / 驱动器编号规则
@@ -74,54 +76,85 @@ Important behavior:
 
 | Command | Meaning (EN) | 含义 (中文) | Typical form |
 |---|---|---|---|
-| `W` | Write one parameter | 写单参数 | `a<id>W<subcmd><value>b` |
-| `R` | Read one parameter | 读单参数 | `a<id>R<subcmd>b` |
-| `R` + `X` | Read all parameters | 读全部参数 | `a<id>RXb` |
-| `Q` | Read runtime state summary | 读取运行状态摘要 | `a<id>QXb` (subcmd placeholder) |
-| `F` + `C` | Fault clear + soft diag reinit | 清故障计数并软重置诊断 | `a<id>FCb` |
+| `P` | Parameter channel | 参数通道 | `a<id>P<subcmd>[value]b` |
+| `S` | State channel (ENABLE/DISABLE only) | 状态通道（仅开关态） | `a<id>S<subcmd>[0/1]b` |
+| `Y` | System channel | 系统语义通道 | `a<id>Y<subcmd>b` |
 
-Notes:
+Execution semantics:
 
-- `Q` command ignores subcmd in execution, but frame format still requires one uppercase subcmd character.
-- `F` currently supports only subcmd `C`.
+- `P`: with value = write parameter; without value = read parameter.
+- `S`: with value = write state; without value = read state.
+- `Y`: no value allowed.
+
+System subcommands:
+
+| `Y` subcmd | Meaning |
+|---|---|
+| `R` | runtime summary |
+| `C` | fault clear + soft diag reinit |
+
+Compatibility note:
+
+- This version is a clean protocol update and does not keep compatibility aliases for `W/R/Q/F`.
+
+### 3.1 Build-Time Protocol Trimming / 编译期协议裁剪
+
+Protocol availability is split into a fixed minimal set and optional groups controlled by compile macros in `foc/include/config/foc_cfg_feature_switches.h`.
+
+Minimal set (always enabled, non-trimmable):
+
+- `P`: `A/R/S/D`
+- `S`: `M`
+- `Y`: `R/C`
+
+Optional groups:
+
+| Macro | Affected subcommands |
+|---|---|
+| `FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET` | `P:W` |
+| `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `P:L/H/O`, `S:S/O` |
+| `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `P:C/I/J` |
+| `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `P:G/K/N` |
+| `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `P:P/U/V` |
+| `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `P:M/B/E/F/T` |
+| `FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH` | `P:Q/Y/Z`, `S:C` |
+
+When an optional subcommand is trimmed off, write/read on that subcommand returns parameter-invalid (`P`) after frame parse success (`O`).
 
 ## 4. Parameter Subcommands / 参数子命令
 
 ### 4.1 Full Reference Table / 完整参数表
 
-| Subcmd | Parameter name | Type | Range | Default | Unit | W Example | R Example |
+Note: this table corresponds to FULL protocol profile. In trimmed builds, optional entries may be unavailable per section 3.1.
+
+| Subcmd | Parameter name | Type | Range | Default | Unit | Write Example (`P`) | Read Example (`P`) |
 |---|---|---|---|---|---|---|---|
-| `A` | target_angle_rad | float | [-12.566, 12.566] | 3.14 | rad | `aaWA1.57b` | `aaRAb` |
-| `R` | angle_position_speed_rad_s | float | [0, 200] | 18.0 | rad/s | `aaWS10b` | `aaRSb` |
-| `S` | speed_only_speed_rad_s | float | [-200, 200] | 18.0 | rad/s | `aaWR-10b` | `aaRRb` |
-| `W` | sensor_sample_offset_percent | float | [0, 100] | 96.0 | % | `aaWW96b` | `aaRWb` |
-| `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaWL10b` | `aaRLb` |
-| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 50 | Hz | `aaWH100b` | `aaRHb` |
-| `Y` | semantic_report_enabled | bool | 0 or 1 | 0 | - | `aaWY1b` | `aaRYb` |
-| `Z` | oscilloscope_report_enabled | bool | 0 or 1 | 0 | - | `aaWZ1b` | `aaRZb` |
-| `O` | oscilloscope_param_mask | uint | [0, 65535] | 24 (0x0018) | bitmask | `aaWO56b` | `aaROb` |
-| `C` | pid_current_kp | float | [0, 50] | 0.0 | - | `aaWC0.2b` | `aaRCb` |
-| `I` | pid_current_ki | float | [0, 50] | 0.0 | - | `aaWI0.1b` | `aaRIb` |
-| `J` | pid_current_kd | float | [0, 10] | 0.0 | - | `aaWJ0.01b` | `aaRJb` |
-| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaWG2.5b` | `aaRGb` |
-| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaWK0.9b` | `aaRKb` |
-| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaWN0.02b` | `aaRNb` |
-| `P` | pid_speed_kp | float | [0, 50] | 1.5 | - | `aaWP3.0b` | `aaRPb` |
-| `U` | pid_speed_ki | float | [0, 50] | 0.8 | - | `aaWU0.6b` | `aaRUb` |
-| `V` | pid_speed_kd | float | [0, 10] | 0.01 | - | `aaWV0.05b` | `aaRVb` |
-| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaWM0.002b` | `aaRMb` |
-| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.2 | - | `aaWB0.3b` | `aaRBb` |
-| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaWE0.004b` | `aaREb` |
-| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.40 | rad | `aaWF0.45b` | `aaRFb` |
-| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 0.60 | rad | `aaWT0.70b` | `aaRTb` |
-| `D` | control_mode | uint | 0 or 1 | 0 (FULL build default) | - | `aaWD0b` | `aaRDb` |
-| `Q` | motor_enable | bool | 0 or 1 | 1 | - | `aaWQ1b` | `aaRQb` |
-| `X` | read_all sentinel | - | R only | - | - | N/A | `aaRXb` |
-
-Bool write note:
-
-- Implementation maps `0` to disable and any non-zero value to enable.
-- For interoperability and clear test logs, always use `0` or `1`.
+| `A` | target_angle_rad | float | [-100, 100] | 3.14 | rad | `aaPA1.57b` | `aaPAb` |
+| `R` | angle_position_speed_rad_s | float | [0, 36] | 18.0 | rad/s | `aaPR12b` | `aaPRb` |
+| `S` | speed_only_speed_rad_s | float | [-36, 36] | 10.0 | rad/s | `aaPS-20b` | `aaPSb` |
+| `W` | sensor_sample_offset_percent | float | [0, 100] | 96.0 | % | `aaPW96b` | `aaPWb` |
+| `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaPL20b` | `aaPLb` |
+| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 50 | Hz | `aaPH100b` | `aaPHb` |
+| `O` | oscilloscope_param_mask | uint | [0, 65535] | 7 (0x0007) | bitmask | `aaPO63b` | `aaPOb` |
+| `C` | pid_current_kp | float | [0, 50] | 0.0 | - | `aaPC0.2b` | `aaPCb` |
+| `I` | pid_current_ki | float | [0, 50] | 15.0 | - | `aaPI0.1b` | `aaPIb` |
+| `J` | pid_current_kd | float | [0, 10] | 0.0 | - | `aaPJ0.01b` | `aaPJb` |
+| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaPG2.5b` | `aaPGb` |
+| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaPK0.9b` | `aaPKb` |
+| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaPN0.02b` | `aaPNb` |
+| `P` | pid_speed_kp | float | [0, 50] | 1.5 | - | `aaPP3.0b` | `aaPPb` |
+| `U` | pid_speed_ki | float | [0, 50] | 0.8 | - | `aaPU0.6b` | `aaPUb` |
+| `V` | pid_speed_kd | float | [0, 10] | 0.02 | - | `aaPV0.05b` | `aaPVb` |
+| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaPM0.002b` | `aaPMb` |
+| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.2 | - | `aaPB0.3b` | `aaPBb` |
+| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaPE0.004b` | `aaPEb` |
+| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `aaPF0.45b` | `aaPFb` |
+| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `aaPT0.70b` | `aaPTb` |
+| `D` | control_mode | uint | 0 or 1 | 0 (FULL build default) | - | `aaPD0b` | `aaPDb` |
+| `Q` | current_soft_switch_mode | uint | 0/1/2 | 1 | - | `aaPQ2b` | `aaPQb` |
+| `Y` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.25 | A | `aaPY1.5b` | `aaPYb` |
+| `Z` | current_soft_switch_auto_closed_iq_a | float | [0, 100] and >= `Y` | 0.80 | A | `aaPZ3.0b` | `aaPZb` |
+| `X` | read_all sentinel | - | read only | - | - | N/A | `aaPXb` |
 
 ### 4.2 Control Mode Values / 控制模式值
 
@@ -136,10 +169,17 @@ Build-trim constraint:
 
 Speed parameter mapping:
 
-- `S` (`angle_position_speed_rad_s`): speed reference used by speed+angle mode (non-negative limit)
-- `R` (`speed_only_speed_rad_s`): speed reference used by speed-only mode (supports negative direction)
+- `R` (`angle_position_speed_rad_s`): speed reference used by speed+angle mode (non-negative limit)
+- `S` (`speed_only_speed_rad_s`): speed reference used by speed-only mode (supports negative direction)
 
-### 4.3 Oscilloscope Mask Bits / 示波参数掩码位
+### 4.3 Current Soft Switch Mode Values / 电流软切换模式值
+
+- `0`: OPEN (pure open-loop current model)
+- `1`: CLOSED (pure current PID)
+- `2`: AUTO (threshold+hysteresis with first-order blend)
+- Blend time constants currently use compile-time macros `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_MIN_SEC` and `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC` (not exposed as a `P` runtime parameter in this version).
+
+### 4.4 Oscilloscope Mask Bits / 示波参数掩码位
 
 | Bit | Hex | Field |
 |---|---|---|
@@ -150,17 +190,29 @@ Speed parameter mapping:
 | 4 | 0x0010 | angle_accum |
 | 5 | 0x0020 | execution_time_us |
 
-Default mask is `0x0018` (angle_filtered + angle_accum).
+Default mask is `0x0007` (current_a + current_b + current_c).
 
-## 5. Responses and Status Codes / 返回与状态码
+## 5. State Subcommands / 状态子命令
 
-### 5.1 Feedback Byte / 单字节反馈
+State channel uses command `S`, and state values are strict numeric `0` or `1`.
+
+| Subcmd | State name | Default | Write Example (`S`) | Read Example (`S`) |
+|---|---|---|---|---|
+| `M` | motor_enable | 1 | `aaSM1b` | `aaSMb` |
+| `S` | semantic_report_enabled | 1 | `aaSS1b` | `aaSSb` |
+| `O` | oscilloscope_report_enabled | 0 | `aaSO1b` | `aaSOb` |
+| `C` | current_soft_switch_enabled | 0 | `aaSC1b` | `aaSCb` |
+| `X` | read_all sentinel | - | N/A | `aaSXb` |
+
+## 6. Responses and Status Codes / 返回与状态码
+
+### 6.1 Feedback Byte / 单字节反馈
 
 | Code | Meaning |
 |---|---|
 | `O` | Frame parsed successfully |
 | `E` | Frame format error (head/tail/cmd/subcmd/param parse failed) |
-| `P` | Parameter invalid (unknown subcmd, missing write value, out of range) |
+| `P` | Parameter invalid (unknown subcmd, out of range, illegal state value, illegal Y payload) |
 | `I` | Command invalid (unknown cmd) |
 | `T` | Reserved timeout code (currently defined but not emitted) |
 
@@ -168,13 +220,13 @@ Execution order note:
 
 - A syntactically correct but semantically wrong frame can produce two feedback bytes in sequence: first `O`, then `P` or `I`.
 
-### 5.2 Debug Text Output / 文本返回
+### 6.2 Debug Text Output / 文本返回
 
 When diagnostics output is enabled, responses are plain text lines on the configured output channel, for example:
 
 ```
-parameter.pid_speed_kp=3.000
-parameter.semantic_report_enabled=ENABLE
+param.pid_speed_kp=3.000
+state.semantic_report_enabled=ENABLE
 STATE SYS=1 COMM=1 REPORT=1 DIRTY=1 LAST=1 INIT=1 FAULT=NONE SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
 FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
 ```
@@ -183,78 +235,94 @@ Formatting rules:
 
 - Float parameters: 3 decimal places
 - Integer parameters: unsigned decimal text
-- Enable/disable parameters: `ENABLE` or `DISABLE`
+- State output: `ENABLE` or `DISABLE`
 
 Fault-state behavior:
 
 - In FAULT state, debug stream periodic semantic/osc output is suppressed.
 - Command-path diagnostics and explicit query/clear commands are still available.
 
-## 6. Complete Command Examples / 完整命令示例
+## 7. Complete Command Examples / 完整命令示例
 
-### 6.1 Core commands / 核心命令
-
-```text
-aaWA3.14b   # write target_angle_rad
-aaRAb       # read target_angle_rad
-aaRXb       # read all parameters
-aaQXb       # read runtime state summary
-aaFCb       # clear fault counters + soft diag reinit
-```
-
-### 6.2 Typical parameter writes / 常用参数写入示例
+### 7.1 Core commands / 核心命令
 
 ```text
-aaWD0b      # control_mode = speed+angle
-aaWD1b      # control_mode = speed-only
-aaWR-20b    # speed-only speed reference = -20rad/s
-aaWS12b     # speed+angle mode speed limit/reference = 12rad/s
-aaWQ1b      # motor enable
-aaWQ0b      # motor disable
-aaWW96b     # sensor sample offset percent = 96
-aaWL20b     # semantic report frequency = 20Hz
-aaWH100b    # osc report frequency = 100Hz
-aaWO63b     # osc mask bits 0..5 all on
-aaWP3.0b    # speed kp
-aaWU0.6b    # speed ki
-aaWV0.05b   # speed kd
+aaPA3.14b   # write target_angle_rad
+aaPAb       # read target_angle_rad
+aaPXb       # read all parameters
+aaSM1b      # motor_enable = ENABLE
+aaSMb       # read motor_enable
+aaSXb       # read all states
+aaYRb       # read runtime state summary
+aaYCb       # clear fault counters + soft diag reinit
 ```
 
-### 6.3 Typical reads / 常用读取示例
+### 7.2 Typical parameter writes / 常用参数写入示例
 
 ```text
-aaRDb       # read control_mode
-aaRRb       # read speed_only_speed_rad_s
-aaRSb       # read angle_position_speed_rad_s
-aaRQb       # read motor_enable
-aaRWb       # read sensor_sample_offset_percent
-aaROb       # read oscilloscope_param_mask
-aaRPb       # read pid_speed_kp
-aaRMb       # read min_mech_angle_accum_delta
+aaPD0b      # control_mode = speed+angle
+aaPD1b      # control_mode = speed-only
+aaPS-20b    # speed-only speed reference = -20rad/s
+aaPR12b     # speed+angle mode speed limit/reference = 12rad/s
+aaPW96b     # sensor sample offset percent = 96
+aaPL20b     # semantic report frequency = 20Hz
+aaPH100b    # osc report frequency = 100Hz
+aaPO63b     # osc mask bits 0..5 all on
+aaPP3.0b    # speed kp
+aaPU0.6b    # speed ki
+aaPV0.05b   # speed kd
+aaPQ2b      # current_soft_switch_mode = AUTO
+aaPY1.5b    # current_soft_switch_auto_open_iq_a = 1.5A
+aaPZ3.0b    # current_soft_switch_auto_closed_iq_a = 3.0A
 ```
 
-## 7. Common Error Cases / 常见错误与原因
+### 7.3 Typical state writes / 常用状态写入示例
+
+```text
+aaSM1b      # motor enable
+aaSM0b      # motor disable
+aaSS1b      # semantic report enable
+aaSO1b      # osc report enable
+aaSC1b      # current soft switch enable
+```
+
+### 7.4 Typical reads / 常用读取示例
+
+```text
+aaPDb       # read control_mode
+aaPSb       # read speed_only_speed_rad_s
+aaPRb       # read angle_position_speed_rad_s
+aaSMb       # read motor_enable
+aaPWb       # read sensor_sample_offset_percent
+aaPOb       # read oscilloscope_param_mask
+aaPPb       # read pid_speed_kp
+aaPMb       # read min_mech_angle_accum_delta
+aaSCb       # read current_soft_switch_enabled
+```
+
+## 8. Common Error Cases / 常见错误与原因
 
 | Frame | Expected feedback | Reason |
 |---|---|---|
-| `aaWA1e-3b` | `E` | Scientific notation not supported |
-| `aaWAb` | `O` then `P` | Write command missing value |
-| `aaWZonb` | `E` | Non-numeric write value cannot be parsed as float |
-| `aaRxb` | `E` | subcmd must be uppercase `A-Z` |
+| `aaPA1e-3b` | `E` | Scientific notation not supported |
+| `aaSS2b` | `O` then `P` | State write accepts only `0` or `1` |
+| `aaSConb` | `E` | Non-numeric write value cannot be parsed as float |
+| `aaPxb` | `E` | subcmd must be uppercase `A-Z` |
 | `aa?A1b` | `E` | cmd must be uppercase `A-Z` |
-| `aaZA1b` | `O` then `I` | Unknown command group |
-| `2WA1b` | `E` | Missing frame head `a` |
-| `aaWA1` | `E` | Missing frame tail `b` |
+| `aaRA1b` | `O` then `I` | Unknown command group (`R` no longer valid) |
+| `2PA1b` | `E` | Missing frame head `a` |
+| `aaPA1` | `E` | Missing frame tail `b` |
 
-## 8. Recommended Test Procedure / 推荐测试流程
+## 9. Recommended Test Procedure / 推荐测试流程
 
 1. Open host tools bound to instance input/output channels.
-2. Send `aaRXb` and confirm a full parameter dump appears on output channel.
-3. Send one write command (for example `aaWP3.0b`), verify:
+2. Send `aaPXb` and confirm a full parameter dump appears on output channel.
+3. Send one parameter write command (for example `aaPP3.0b`), verify:
   - output channel receives `O`
   - output channel prints updated parameter line.
-4. Send `aaQXb` to check runtime status summary.
-5. Send `aaFCb` and confirm fault counters are cleared.
+4. Send one state write command (for example `aaSM1b`) and verify state output line.
+5. Send `aaYRb` to check runtime status summary.
+6. Send `aaYCb` and confirm fault counters are cleared.
 
 Instance-specific serial terminal setup and channel wiring are documented in:
 - `../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md`

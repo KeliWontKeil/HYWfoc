@@ -3,27 +3,25 @@
 
 /* Platform timing base and timer source setup. */
 #define FOC_PLATFORM_BASE_CLOCK_KHZ 120000U
-#define FOC_PLATFORM_CONTROL_TIMER_FREQ_KHZ 1U
 
 /* Scheduler rates. */
 #define FOC_SCHEDULER_TICK_HZ 1000U
-
 #define FOC_SCHEDULER_CONTROL_HZ 1000U
-
 #define FOC_SCHEDULER_SERVICE_HZ 100U
 #define FOC_SCHEDULER_MONITOR_HZ 200U
 #define FOC_SCHEDULER_HEARTBEAT_HZ 1U
 
+/*PWM initialization defaults.*/
 #define FOC_PWM_FREQ_KHZ                24U
 #define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
+#define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 2U
+
 /* Fast current-loop execute every N PWM update interrupts. */
 #define FOC_CURRENT_LOOP_ISR_DIVIDER    4U
 /* ADC averaging windows: slow loop for observability, fast loop for current ISR latency. */
 #define FOC_SENSOR_ADC_AVG_COUNT_SLOW   24U
-#define FOC_SENSOR_ADC_AVG_COUNT_FAST   FOC_CURRENT_LOOP_ISR_DIVIDER
+#define FOC_SENSOR_ADC_AVG_COUNT_FAST   (FOC_SENSOR_ADC_AVG_COUNT_SLOW / FOC_CURRENT_LOOP_ISR_DIVIDER)
 #define FOC_CONTROL_DT_SEC              (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
-/* Current-loop iq low-pass filter alpha in [0,1]. Higher alpha keeps more bandwidth. */
-#define FOC_CURRENT_LOOP_IQ_LPF_ALPHA   0.35f
 
 /* Motor initialization parameters. */
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
@@ -31,11 +29,11 @@
 #define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
 
 /* Alignment/calibration voltage is derived from set_voltage (no absolute hard floor). */
-#define FOC_CALIB_ALIGN_VOLTAGE_RATIO_DEFAULT 0.80f
-
 #define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 7U
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD 5.265f
 #define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_NORMAL
+/* Ratio of set_voltage to apply during alignment/calibration steps. */
+#define FOC_CALIB_ALIGN_VOLTAGE_RATIO_DEFAULT 0.80f 
 
 
 /* Control mode default selection and initialization. */
@@ -52,8 +50,8 @@
 
 
 /* Runtime default flags and rates. */
-#define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED FOC_CFG_DISABLE
-#define COMMAND_MANAGER_DEFAULT_OSC_ENABLED FOC_CFG_ENABLE
+#define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED FOC_CFG_ENABLE
+#define COMMAND_MANAGER_DEFAULT_OSC_ENABLED FOC_CFG_DISABLE
 #define COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE FOC_CFG_ENABLE
 #define COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ 2U
 #define COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ 50U
@@ -81,11 +79,11 @@
 #define FOC_SENSOR_KALMAN_CURRENT_B_EST_ERR 0.0f
 #define FOC_SENSOR_KALMAN_CURRENT_B_PROC_NOISE 0.02f
 #define FOC_SENSOR_KALMAN_CURRENT_B_INIT 0.0f
-#define FOC_SENSOR_KALMAN_ANGLE_MEAS_ERR 0.01f
+#define FOC_SENSOR_KALMAN_ANGLE_MEAS_ERR 0.005f
 #define FOC_SENSOR_KALMAN_ANGLE_EST_ERR 0.001f
 #define FOC_SENSOR_KALMAN_ANGLE_PROC_NOISE 0.001f
 #define FOC_SENSOR_KALMAN_ANGLE_INIT 0.0f
-#define FOC_SENSOR_ANGLE_LPF_ALPHA 0.5f
+#define FOC_SENSOR_ANGLE_LPF_ALPHA 0.30f
 
 /* Safety threshold defaults. */
 #define FOC_DIAG_SENSOR_FAULT_THRESHOLD 20U
@@ -102,23 +100,40 @@
 #define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD 0.60f
 #define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD 1.0f
 
-#define FOC_SVPWM_PRE_LPF_ALPHA 0.60f
+#define FOC_SVPWM_PRE_LPF_ALPHA 0.20f
 #define FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V 0.1f
 
 /* PID default gains. */
-#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP 4.0f
-#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI 15.0f
+#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP 1.2f
+#define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI 12.0f
 #define COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD 0.0f
-#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP 6.0f
-#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KI 1.2f
-#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KD 0.06f
+#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP 2.0f
+#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KI 0.8f
+#define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KD 0.01f
 #define COMMAND_MANAGER_DEFAULT_PID_SPEED_KP 1.5f
 #define COMMAND_MANAGER_DEFAULT_PID_SPEED_KI 0.8f
 #define COMMAND_MANAGER_DEFAULT_PID_SPEED_KD 0.02f
 
-/* App-level SVPWM and LED initialization defaults. */
-#define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 2U
+/* Current-loop iq low-pass filter alpha in [0,1]. Higher alpha keeps more bandwidth. */
+#define FOC_CURRENT_LOOP_IQ_LPF_ALPHA                           0.7f                              // LPF alpha used on measured iq signal.
 
+/* Current-loop anti-noise and soft-switch defaults. */
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE        FOC_CURRENT_SOFT_SWITCH_MODE_AUTO // Startup current-loop soft-switch mode.
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A 0.25f                           // AUTO mode threshold to switch toward OPEN.
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A 0.80f                         // AUTO mode threshold to switch toward CLOSED.
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE      FOC_CFG_ENABLE                     // Enables soft-switch path at startup.
+
+#define FOC_CURRENT_LOOP_ERROR_DEADBAND_A                       0.25f                              // Error deadband that suppresses tiny current noise.
+#define FOC_CURRENT_LOOP_INTEGRAL_SUPPRESS_LEAK                 0.98f                              // Integral retention factor while inside deadband.
+#define FOC_CURRENT_LOOP_KI_LOW_CURRENT_START_A                 0.00f                              // Lower bound current for low-Ki scaling zone.
+#define FOC_CURRENT_LOOP_KI_LOW_CURRENT_END_A                   1.60f                              // Upper bound current for low-Ki scaling zone.
+#define FOC_CURRENT_LOOP_KI_LOW_CURRENT_SCALE                   0.10f                              // Ki scale at low-current start point.
+
+#define FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_MIN_SEC               0.001f                             // Minimum allowed soft-switch blend time constant.
+#define FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC           0.60f                              // Default soft-switch blend time constant.
+
+
+/*LED initialization defaults. */
 #define FOC_LED_RUN_INDEX 1U
 #define FOC_LED_COMM_INDEX 2U
 #define FOC_LED_FAULT_INDEX 3U

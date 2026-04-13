@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - No entries yet.
 
+## [1.3.0] - 2026-04-13
+
+### Changed
+- Reformatted current-loop anti-noise and soft-switch config macros in `foc_cfg_init_values.h` with aligned value columns for easier scanning.
+- Added concise inline `//` comments for soft-switch defaults, anti-noise deadband/integral/Ki-scaling macros, and blend time constants.
+- Added explicit `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_MIN_SEC` default definition for soft-switch blend lower-bound configuration.
+
+### Documentation
+- Updated repository baseline/version references to `v1.3.0` and moved active mission target to `v1.3.1`.
+- Updated protocol documentation to describe both soft-switch blend time-constant macros (`TAU_MIN` and `TAU_DEFAULT`).
+
 ## [1.2.0] - 2026-04-11
 
 ### Changed

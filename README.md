@@ -21,7 +21,7 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强的单电机
 ~~感谢copilot对本项目的大力支持~~
 
 演示视频：暂时没拍  
-硬件开源地址：暂时没有，目前想要的话直接去examples/GD32F303_FOCExplore/hardware文件夹里找，是个嘉立创EDA的工程，还没开源出去
+硬件开源地址：暂时没有，硬件仍处于前期验证阶段，目前想要的话直接去examples/GD32F303_FOCExplore/hardware文件夹里找，是个嘉立创EDA的工程，还没开源出去
 
 ---
 
@@ -59,8 +59,9 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强的单电机
 - 数学变换链（Clarke / Park / 反变换）
 - SVPWM 调制输出（三相占空比）
 - 外环控制（速度 / 角度）与内环电流控制
+- 电流环开环/闭环软切换抑制小电流下噪声
 
-当前协议帧格式：
+电机可使用协议帧控制，当前协议帧格式：
 - `a<driver_id><cmd><subcmd><param>b`
 - 单播 driver_id 范围：`0x32-0x7E`（可以打出来的字符）
 - 广播地址：`0xFF`
@@ -95,6 +96,11 @@ FOC_VSCODE/
 - 通过平台 API 及相关中断回调连接具体的外设相关驱动和实现（L4层）。
 - 示例工程演示了具体硬件平台的驱动适配方式和构建流程。
 
+项目代码可裁剪，裁剪对象包括：
+- 部分可选的滤波器
+- 部分用于调节参数的通信协议
+- 控制算法
+具体协议裁剪开关见 [foc/include/config/foc_cfg_feature_switches.h](foc/include/config/foc_cfg_feature_switches.h)，裁剪映射关系见协议文档的“Build-Time Protocol Trimming”小节。
 ---
 
 ## 何易为？（如何简单开始使用该项目）
@@ -111,7 +117,7 @@ FOC_VSCODE/
 #### 路径 B：从 GD32F303_FOCExplore 开始上手
 1. 准备硬件。我在hardware文件夹里直接放了整个嘉立创EDA专业版的工程，买元件，嫖板子，然后把它装起来！当然你要觉得我画的板子不咋地~~确实不咋地~~，可以参考原理图自己从头设计。
 2. 打开 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace) 或 [examples/GD32F303_FOCExplore/software/Project.uvprojx](examples/GD32F303_FOCExplore/software/Project.uvprojx)。你可以选择你喜欢和熟悉的IDE。
-3. 编译并烧录。
+3. 调整相关宏定义设置相关参数和算法裁剪，编译并烧录。
 4. 按 [examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md) 指导，发送命令并进行验证/观察现象
 5. 如果一切正常的话，去做你想做的吧，摸索代码/二次开发/优化算法都行。
 
@@ -174,8 +180,8 @@ https://github.com/KeliWontKeil/PortOSC
 ### 开发计划
 
 - 当前项目状态：单电机有感 FOC 驱动库
-- 当前稳定基线：v1.2.0
-- 下一活跃目标版本：v1.2.1
+- 当前稳定基线：v1.3.0
+- 下一活跃目标版本：v1.3.1
 
 待实现的目标：
 1. 算法优化：抗齿槽效应前馈补偿、电流环参数整定与控制效果恢复
