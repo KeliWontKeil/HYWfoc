@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - No entries yet.
 
+## [1.3.1] - 2026-04-14
+
+### Added
+- Added optional cogging compensation framework with feature switches, runtime status tracking, LUT load API, and low-speed lookup injection in speed/speed-angle outer-loop paths.
+- Added startup cogging source selection logic: static profile first, init-time learning fallback, and no-source graceful disable path with diagnostics.
+- Added init-time cogging learning routine with finer lock sampling, table quantization, and structured debug dump output.
+
+### Changed
+- Refined motor init calibration stepping strategy to use finer electrical-angle subdivision for direction/pole-pair estimation.
+- Added new compile-limit checks for cogging-related feature switches and init-calibration trimming constraints.
+
 ## [1.3.0] - 2026-04-13
 
 ### Changed
