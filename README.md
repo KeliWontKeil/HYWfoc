@@ -180,8 +180,8 @@ https://github.com/KeliWontKeil/PortOSC
 ### 开发计划
 
 - 当前项目状态：单电机有感 FOC 驱动库
-- 当前稳定基线：v1.3.1
-- 下一活跃目标版本：v1.3.2
+- 当前稳定基线：v1.3.2
+- 下一活跃目标版本：v1.3.3
 
 待实现的目标：
 1. 算法优化：抗齿槽效应前馈补偿、电流环参数整定与控制效果恢复
@@ -199,7 +199,6 @@ https://github.com/KeliWontKeil/PortOSC
 - [docs/README.md](docs/README.md)：库文档索引与边界规则
 - [docs/architecture.md](docs/architecture.md)：架构、数据流、依赖关系
 - [docs/development.md](docs/development.md)：通用开发流程与约束
-- [docs/structure-and-dependency-tree.md](docs/structure-and-dependency-tree.md)：结构与依赖快照
 - [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)：协议与参数定义
 
 #### 实例级文档（以具体项目为准的具体工程实例文档）

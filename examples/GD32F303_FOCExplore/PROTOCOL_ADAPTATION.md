@@ -27,8 +27,9 @@ Protocol semantics remain in `../../docs/protocol-parameters-bilingual.md`.
 2. Terminal B bound to USART1 for status bytes and debug text.
 
 ## Quick Validation
-1. Send `aaRXb` and verify full parameter dump on USART1 output.
-2. Send `aaWP3.0b` and verify `O` feedback plus updated parameter text.
-3. Send `aaQXb` and check runtime status summary output.
-4. Send `aaFCb` and verify fault counters are cleared.
+1. Send `aaPXb` and verify full parameter dump on USART1 output.
+2. Send `aaPP3.0b` and verify `O` feedback plus updated parameter text.
+3. Send `aaSM1b` and verify state write/readback output.
+4. Send `aaYRb` and check runtime status summary output.
+5. Send `aaYCb` and verify fault counters are cleared.
 

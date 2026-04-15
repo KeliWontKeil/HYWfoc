@@ -14,19 +14,18 @@
 
 ## 当前基线
 
-- 版本基线：v1.3.1
+- 版本基线：v1.3.2
 - 项目命名：HYW FOC（中文名：何易位FOC）
 - 任务目标：下一目标版本见 [../NEXT_MISSION.md](../NEXT_MISSION.md)
 - 第三方许可证声明：见 [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
 
 ## 本目录文档
 
-- [architecture.md](architecture.md)：分层模型、时序架构、数据流、模块依赖约束。
-- [development.md](development.md)：通用开发流程、编码标准、验证要求。
-- [structure-and-dependency-tree.md](structure-and-dependency-tree.md)：当前文件树与分层依赖快照。
+- [architecture.md](architecture.md)：唯一结构说明（SSOT），含分层、依赖、时序、控制链路。
+- [development.md](development.md)：通用开发流程、构建验证、编译/调试经验沉淀。
 - [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)：通信协议与运行参数（中英对照）。
-- [api-unused-interface-evaluation.md](api-unused-interface-evaluation.md)：未使用接口分类与保留/移除依据。
-- [library-structuring-p1.md](library-structuring-p1.md)：P1 结构化迁移说明与文件映射。
+
+说明：结构类重复文档已移除，不再保留兼容跳转页。
 
 ## 相关实例文档（GD32F303）
 
@@ -39,8 +38,7 @@
 
 1. [architecture.md](architecture.md)
 2. [development.md](development.md)
-3. [structure-and-dependency-tree.md](structure-and-dependency-tree.md)
-4. [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)
+3. [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)
 
 ## 维护约定
 

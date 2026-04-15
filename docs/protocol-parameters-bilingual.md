@@ -265,8 +265,8 @@ aaPD1b      # control_mode = speed-only
 aaPS-20b    # speed-only speed reference = -20rad/s
 aaPR12b     # speed+angle mode speed limit/reference = 12rad/s
 aaPW96b     # sensor sample offset percent = 96
-aaPL20b     # semantic report frequency = 20Hz
-aaPH100b    # osc report frequency = 100Hz
+aaPL20b     # semantic report frequency parameter example value = 20
+aaPH100b    # osc report frequency parameter example value = 100
 aaPO63b     # osc mask bits 0..5 all on
 aaPP3.0b    # speed kp
 aaPU0.6b    # speed ki

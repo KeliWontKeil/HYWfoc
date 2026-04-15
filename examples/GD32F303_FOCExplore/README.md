@@ -44,8 +44,8 @@
 ## 4. 上电后快速验证
 
 1. 连接串口并确认通信参数（见 [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md)）。
-2. 默认本机 driver_id 为 `0x61`（`'a'`），可先用 `aaRXb` 验证参数读回。
-3. 继续执行 `aaWP3.0b`、`aaQXb`、`aaFCb` 等快速命令，确认状态输出和故障清除路径。
+2. 默认本机 driver_id 为 `0x61`（`'a'`），可先用 `aaPXb` 验证参数读回。
+3. 继续执行 `aaPP3.0b`、`aaSM1b`、`aaYRb`、`aaYCb` 等快速命令，确认状态输出和故障清除路径。
 
 说明：本页只给最小验证路径，具体通道绑定与命令语义以 [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md) 与 [../../docs/protocol-parameters-bilingual.md](../../docs/protocol-parameters-bilingual.md) 为准。
 

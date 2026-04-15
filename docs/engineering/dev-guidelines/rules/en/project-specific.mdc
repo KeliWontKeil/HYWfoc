@@ -67,14 +67,14 @@ void Function(void) {
 - Prefer ISR forwarding to module handler functions for complex logic
 
 ## Timing & Scheduling
-- Use 1kHz/100Hz/200Hz/1Hz task slots in `control_scheduler.c`
+- Use task slots defined by configuration macros in `control_scheduler.c`
 - Use DWT timing for execution measurement
 - Initialize timers via parameterized APIs (Timer1/Timer2/PWM)
 
-## Execution Time & 1kHz Budget
-- Ensure any 1kHz task completes well under 1ms
+## Execution Time & Control-Period Budget
+- Ensure each control task completes well under its configured period
 - Use `ControlScheduler_EnableDWT()` / `ControlScheduler_GetExecutionCycles()` to validate
-- Avoid blocking delays (`delay_1ms()`) in initialization/calibration paths unless necessary
+- Avoid blocking delays (`delay_*()`) in initialization/calibration paths unless necessary
 - If blocking delays are used, document execution time impact and ensure no interference with real-time tasks
 
 ## Safety

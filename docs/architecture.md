@@ -1,84 +1,114 @@
-# Architecture Overview
+# 架构与结构总览（唯一结构说明）
 
-## System Design
+## 文档定位
 
-This library implements a layered single-motor FOC architecture designed for portability across embedded platforms.
-Hardware-specific behavior is isolated behind platform API contracts so L1-L3 logic can stay reusable.
+本文件是仓库“结构与依赖”的唯一主文档（SSOT）。
 
-## Software Layers
+- 结构、分层、依赖方向、时序与控制链路，以本文件为准。
+- 本文件禁止写死控制频率，控制周期与调度槽均以配置宏和代码实现为准。
 
-### Level 1: Application Layer
-- `foc_app`: application-facing entry sequence and runtime orchestration.
-
-### Level 2: Algorithm Layer
-- `foc_control`: runtime control logic.
-- `foc_control_init`: startup calibration and initialization logic.
-- `control_scheduler`: task scheduling and rate dispatch.
-- `command_manager`: command execution and runtime parameter management.
-- `debug_stream`: debug/telemetry policy and formatting.
-
-### Level 3: Advanced Peripheral Layer
-- `sensor`: raw acquisition to structured sensor values.
-- `svpwm`: voltage/vector command to PWM duty request.
-- `protocol_parser`: frame parsing and command extraction.
-
-### Level 4: Peripheral Layer (Instance-Owned)
-- Board drivers and vendor firmware are instance-specific and live under `examples/<instance>/software/`.
-
-### Special Dependency Layer
-- `interface/foc_platform_api.h`: unified hardware abstraction contract.
-- `config/foc_shared_types.h`: shared public data types.
-- `config/foc_config.h` + `config/foc_cfg_*.h`: compile-time configuration source.
-
-## Dependency Contract
-- L1/L2/L3 can access L4 only through the Special Dependency Layer.
-- L4 must not depend on L1/L2/L3.
-- Public headers should not expose board driver headers.
-
-## Timing Architecture (Abstract)
+## 仓库结构（当前基线）
 
 ```text
-Control Tick Source
-├── periodic scheduler tick callback
-├── control-loop slot
-└── lower-rate service/monitor slots
-
-High-Rate Clock Source
-├── optional interpolation callback
-└── high-rate actuation update support
-
-Sampling Trigger Source
-└── aligned current/angle acquisition trigger
+FOC_VSCODE/
+├── foc/                                         # 可复用核心库
+│   ├── include/
+│   │   ├── algorithm/
+│   │   ├── config/
+│   │   └── interface/
+│   ├── src/
+│   │   ├── algorithm/
+│   │   └── interface/
+│   └── port/                                    # 平台API空模板
+├── examples/GD32F303_FOCExplore/               # 板级实例
+│   ├── hardware/
+│   └── software/
+├── docs/                                        # 库级文档
+└── .github/                                     # AI工作流与提示词
 ```
 
-Instance-specific timer/peripheral assignments belong to instance docs, not library docs.
+## 分层模型（代码与职责）
 
-## Data Flow
+当前统一采用“LS + L1~L5”描述，旧分层术语不再作为并行口径维护。
+
+| 层级 | 主要位置 | 职责 |
+|---|---|---|
+| `LS` 配置层 | `foc/include/config/foc_cfg_*.h` | 开关、默认值、编译期约束、符号定义 |
+| `L1` 运行编排层 | `foc/src/interface/foc_app.c`、`control_scheduler.c` | 启动时序、任务调度、运行入口 |
+| `L2` 逻辑功能层 | `command_manager.c`、`debug_stream.c`、`protocol_parser.c` | 协议处理流程、参数管理、调试输出 |
+| `L3` 应用算法层 | `foc_control.c`、`foc_control_init.c`、`sensor.c`、`svpwm.c` | FOC 计算链路、初始化标定、调制与采样处理 |
+| `L4-2` 平台接口桥 | `foc_platform_api.h`、实例 `foc_platform_api.c` | 将库调用桥接到具体外设实现 |
+| `L4-1` 纯算法复用层 | `math_transforms.c/h`、LUT 等纯数学模块 | 不含板级依赖、可跨平台复用 |
+| `L5` 外设驱动层 | `examples/.../software/Utilities/` + `Firmware/` | 定时器、PWM、ADC、USART、I2C、芯片库 |
+
+## 依赖约束（强制）
+
+1. `L1/L2/L3` 访问硬件仅可通过 `foc/include/interface/foc_platform_api.h`。
+2. `L1/L2/L3` 头文件不得暴露 `gd32f30x_*` 设备头。
+3. `L5` 不得反向依赖 `foc/src/` 业务逻辑。
+4. 可配置常量必须汇聚到 `foc_cfg_*.h`，禁止散落在 `.c`。
+
+## 可维护性约束（强制）
+
+1. 模块说明必须对应真实文件位置，禁止抽象名词堆叠但无法落到代码。
+2. 同一职责只允许一个主入口文档，禁止多文档重复叙述同一结构事实。
+3. 涉及层级、接口、时序的描述必须可映射到检查动作（例如：头文件包含检查、API 调用点检查、构建验证）。
+4. 若代码与文档冲突，以代码为准并在同次迭代修正文档。
+
+## 控制时序（抽象）
 
 ```text
-Raw Acquisition -> Sensor Conversion -> FOC Control -> Actuation Request
-         ^                                         |
-         |-----------------------------------------|
+控制节拍源
+├── 调度器回调（慢速任务：协议、状态、监测）
+└── 控制主循环入口
+
+PWM更新中断源（高速）
+├── 运行态SVPWM插值
+└── （可选）电流环快速路径
+
+采样触发源
+└── 与PWM对齐的电流/角度采样触发
 ```
 
-## Module Dependencies
+说明：具体定时器映射、通道管脚和中断向量归实例文档维护。
+
+## 控制链路（初始化与运行严格分离）
+
+### 初始化链路（直接输出链）
 
 ```text
-foc_app
-└── interface and algorithm modules
-
-algorithm modules
-└── special dependency layer only
-
-platform API implementation (instance side)
-└── board drivers (L4)
+初始化状态机
+-> 锁定电角0
+-> 采样机械零位
+-> 估计方向与极对数
+-> 直接SVPWM占空比下发（无运行态插值）
 ```
 
-## Porting Notes
-- Porting starts from `foc/port/foc_platform_api_empty.c`.
-- Implement all required platform hooks in instance project code.
-- Keep function signatures unchanged to preserve library compatibility.
+### 运行链路（插值输出链）
 
-## Instance References
-- Example hardware mapping and wiring: `../examples/GD32F303_FOCExplore/hardware/hardware.md`
-- Example project integration: `../examples/GD32F303_FOCExplore/README.md`
+```text
+传感器采样
+-> 坐标变换与控制计算
+-> SVPWM运行态目标更新
+-> PWM更新ISR执行插值下发
+```
+
+## 启停与中断生命周期
+
+1. 初始化阶段允许外设启动，但延后运行态控制中断使能。
+2. 应用进入运行态后，再统一调用平台接口开启运行时中断。
+3. 运行期中断开关通过统一平台 API 管理，避免分散控制。
+
+## 迁移与适配入口
+
+1. 复制并实现 `foc/port/foc_platform_api_empty.c` 中空接口。
+2. 在实例工程 `Application/Source/foc_platform_api.c` 完成桥接。
+3. 保持接口签名不变，减少库升级迁移成本。
+
+## 维护规则
+
+1. 结构/依赖变化必须同步更新本文件。
+2. 本文件变化后，需同步检查：
+    - `docs/README.md` 索引项
+    - `.github/DOCUMENTATION_STRUCTURE.md` 文档归属说明
+3. 禁止通过新增“历史跳转文档”维持兼容结构；结构重复内容应直接合并或删除。

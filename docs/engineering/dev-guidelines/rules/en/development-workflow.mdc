@@ -10,6 +10,7 @@ alwaysApply: true
 - Commit policy: after each completed modification cycle, create a local `git commit`
 - Push policy: `git push` is prohibited by default; push only when explicitly requested by the user
 - Version policy: use `1.2.3` semantics (`1`=major, `2`=pushable minor, `3`=local revision)
+- Push milestone gate: push is allowed only when MINOR (second segment) or MAJOR (first segment) changes; PATCH-only revisions must not be pushed to remote
 - Local revision rule: after each local commit, revision (`.3`) must increment by `+1`
 - Activation point: this policy is active from baseline `1.0.0`
 - Commit correction rule: if user asks to modify the current commit, use `git commit --amend` and do not create a separate new commit

@@ -1,84 +1,81 @@
-# AI Project Initialization Template (Repository-Level)
+# AI 项目初始化（仓库级）
 
-## Context for AI Assistant
+## 你当前所处仓库
 
-You are working in the HYWfoc repository (何易位FOC), which is organized as:
+你正在 `HYWfoc（何易位FOC）` 仓库工作，核心结构如下：
 
-- `foc/`: reusable library core (platform-agnostic)
-- `examples/`: board and toolchain specific instance projects
-- `docs/`: library-level architecture and workflow documents
+- `foc/`：可复用控制库（平台无关）
+- `examples/`：实例工程（板级与工具链相关）
+- `docs/`：库级文档与开发流程
 
-This initialization file is intentionally **repository-level**.
+本文件是“仓库级初始化约束”，不是实例说明书。
 
-Do not assume one fixed board instance. For board-specific details, always read the corresponding instance documents under `examples/<instance>/`.
+## 作用边界（必须遵守）
 
-## Scope Boundary (Important)
+本文件负责：
 
-Use this file for:
-- global development workflow
-- repository-level coding and collaboration rules
-- versioning and commit governance
+1. 仓库级开发流程
+2. 协作与提交治理
+3. 文档同步规则
 
-Do not place instance-specific details here, including:
-- exact pin mappings
-- board wiring
-- instance build output paths
-- transport channel bindings for one concrete board
+本文件不承载：
 
-Those details must remain in each instance doc set.
+1. 管脚映射
+2. 板级连线
+3. 单实例构建输出路径
+4. 特定实例通信通道绑定
 
-## Required Rule Sources
+以上内容必须写在 `examples/<instance>/` 对应文档中。
 
-Before implementation, read:
-- `docs/engineering/dev-guidelines/rules/cn/`
-- `docs/engineering/dev-guidelines/rules/en/`
-- `docs/development.md`
-- `NEXT_MISSION.md`
+## 实施前必读
 
-## Global Workflow for AI-Assisted Development
+1. `docs/engineering/dev-guidelines/rules/cn/`
+2. `docs/engineering/dev-guidelines/rules/en/`
+3. `docs/development.md`
+4. `docs/architecture.md`
+5. `NEXT_MISSION.md`
 
-1. Read mission scope and relevant rules.
-2. Implement on `main` unless user explicitly requests another branch.
-3. Build and validate in the target instance workspace.
-4. Synchronize documentation in the same iteration.
-5. Commit locally according to the commit/version policy below.
+## 全局工作流（AI开发）
 
-## Commit and Version Governance (Mandatory)
+1. 先读任务与规则，再动代码。
+2. 默认在 `main` 开发，除非用户明确要求分支。
+3. 构建与验证在实例工作区完成。
+4. 代码改动与文档改动同迭代提交。
+5. 严格执行本地提交治理。
 
-### Commit Rule
-- After each completed modification cycle, perform **local `git commit` only**.
-- **Do not `git push`** unless user explicitly requests push.
+## 提交与版本治理（强制）
 
-### Version Rule
-- Use `1.2.3` style version semantics:
-	- `1`: major version
-	- `2`: pushable minor version
-	- `3`: local revision number
-- After each local `git commit`, local revision (`.3`) must increment by `+1`.
-- Numeric values above are examples only; concrete numbers follow real project progress.
+### 提交规则
 
-### Commit Amendment Rule
-- If user requests modification to the current commit, use:
-	- `git commit --amend`
-- Do not create a separate new commit for that correction unless user explicitly requests it.
+1. 每次完整修改周期结束后，只做本地 `git commit`。
+2. 未经用户明确指令，不执行 `git push`。
 
-### Activation Point
-- Governance activation baseline is **`1.0.0`** (first push milestone).
-- This policy is active for all subsequent development cycles.
+### 版本规则
 
-## Generic Technical Expectations
+采用 `MAJOR.MINOR.PATCH` 语义；其中 PATCH 可作为本地修订序号。
 
-1. **Code Style**: Follow repository naming rules and macro conventions.
-2. **Safety**: Include `<stddef.h>` when using `NULL`; avoid blocking operations in ISRs.
-3. **Resources**: Keep ROM/RAM usage and real-time path cost under control.
-4. **Validation**: Hardware validation remains mandatory for embedded behavior closure.
+### 修订规则
 
-## Documentation Entry Points
+若用户要求修改当前提交，优先使用 `git commit --amend`，不新增独立提交。
 
-- `README.md`: external-facing project introduction
-- `docs/README.md`: library-level document index
-- `docs/architecture.md`: layering and dependency design
-- `docs/development.md`: reusable development process
-- `examples/<instance>/README.md`: instance usage entry
+### 生效基线
 
-Remember: this is an embedded control repository. Reliability, timing determinism, and hardware-verified behavior take priority over purely simulated correctness.
+本治理在 `>= 1.0.0` 基线下持续生效。
+
+## 通用技术要求
+
+1. 命名、宏、分层遵循仓库规则。
+2. 使用 `NULL` 时确保包含 `<stddef.h>`。
+3. ISR 路径禁止阻塞操作。
+4. 保持 ROM/RAM 与实时路径成本可控。
+5. 嵌入式行为以硬件验证为最终闭环。
+
+## 文档入口
+
+1. `README.md`：项目总览
+2. `docs/README.md`：库文档索引
+3. `docs/architecture.md`：唯一结构说明（SSOT）
+4. `docs/development.md`：开发流程与经验沉淀
+5. `examples/<instance>/README.md`：实例入口
+
+结论：该仓库优先级始终是“稳定性、时序确定性、硬件可验证性”。

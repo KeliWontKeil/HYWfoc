@@ -65,14 +65,14 @@ void Function(void) {
 - ISR 应尽量转发到模块处理函数，避免直接包含复杂逻辑
 
 ## 时序与调度
-- 主要节奏：`control_scheduler.c` 中的 1kHz/100Hz/200Hz/1Hz 任务槽
+- 主要节奏：`control_scheduler.c` 中由配置宏定义的任务槽
 - 使用 DWT 计时工具监控关键路径的执行时间
 - 定时器初始化应参数化（Timer1/Timer2/PWM）
 
-## 执行时间与 1kHz 预算
-- 任何 1kHz 任务都应确保最坏情况执行时间低于 1ms（预留周期）
+## 执行时间与控制周期预算
+- 任何控制任务都应确保最坏情况执行时间低于对应配置周期（预留裕量）
 - 需要用 `ControlScheduler_EnableDWT()` / `ControlScheduler_GetExecutionCycles()` 进行检查
-- 尽量避免在初始化/校准路径中使用阻塞延时（`delay_1ms` 等）
+- 尽量避免在初始化/校准路径中使用阻塞延时（`delay_*` 等）
 - 如果必须使用阻塞延时，应明确说明执行时间影响，并确保不会影响关键实时任务
 ## 安全性
 - 访问指针前校验，不使用未初始化变量
