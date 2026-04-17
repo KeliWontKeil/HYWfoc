@@ -15,7 +15,7 @@
 ### 1. 任务确认
 
 1. 先读 `NEXT_MISSION.md` 明确目标与边界。
-2. 在 v1.3.4 阶段，执行 M9 前需同时读取 `docs/engineering/layered-architecture-temp-plan-2026-04-16.md`，并以其阶段性约束作为实施前复核基线。
+2. 在 v1.3.5 阶段，执行 M9 前需同时读取 `docs/engineering/layered-architecture-temp-plan-2026-04-16.md`，并以其阶段性约束作为实施前复核基线。
 3. 逐项确认任务属性：改代码 / 仅设计 / 暂缓。
 4. 评估影响层级与回滚策略。
 

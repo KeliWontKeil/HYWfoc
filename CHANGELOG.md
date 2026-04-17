@@ -7,8 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-04-17
+
 ### Changed
-- None yet.
+- Completed P1 architecture-prep inventory and consolidated file-level boundary facts (control/protocol split, config ownership, platform API minimal set, timing impact) into the SSOT architecture document.
+- Completed P2 structure-clarification pass for runtime interrupt lifecycle: application init now explicitly keeps control runtime IRQs disabled until runtime start, preserving init/runtime execution-path separation.
+- Added compile-time timing constraints for PWM/current-loop divider legality to prevent invalid non-integer or zero-divider configurations.
+- Completed physical directory convergence for L1/L2/L4-1 source layout: runtime orchestration/service modules now build from `core`/`service`, and math/LUT modules build from dedicated `math` directories.
+- Split `command_manager` into focused submodules (`command_manager_dispatch`, `command_manager_diag`) and split `foc_control` auxiliary strategies into dedicated modules (`foc_control_softswitch`, `foc_control_compensation`).
+- Synced EIDE project sources and builder source list with the refactored module paths and newly introduced source files.
+- Completed trig LUT unification for init calibration path in `foc_control_init`: replaced direct trig-library usage with `FOC_MathLut_Sin` / `FOC_MathLut_Atan2` to align init/runtime math behavior.
+- Fixed state-to-control propagation after L2/L3 decoupling: writing current soft-switch enable state now marks runtime params dirty so L1 applies it in unified runtime config refresh.
+
+### Documentation
+- Added P3 regression-prep records in `docs/development.md`, including build result, resource usage summary, startup calibration path check, and runtime SVPWM interpolation path check.
+- Updated `NEXT_MISSION.md` to mark P1/P2/P3 as completed and recorded this cycle's closure summary.
+- Updated `docs/architecture.md` structure tree and layer mapping to reflect `math` directory extraction and service/algorithm internal module splits.
 
 ## [1.3.2] - 2026-04-15
 

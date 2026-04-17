@@ -1,5 +1,5 @@
-#include "interface/foc_platform_api.h"
-#include "config/foc_config.h"
+#include "L42_PAL/foc_platform_api.h"
+#include "LS_Config/foc_config.h"
 
 #include "systick.h"
 #include "LED.h"

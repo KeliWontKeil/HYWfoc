@@ -22,7 +22,7 @@
 
 1. `foc/src/algorithm/foc_control*.c`
 2. `foc/src/algorithm/svpwm.c`
-3. `foc/src/interface/foc_app.c`
+3. `foc/src/core/foc_app.c`
 4. `foc/include/config/foc_cfg_*.h`
 
 ### `architecture-review`

@@ -1,4 +1,4 @@
-#include "../include/interface/foc_platform_api.h"
+#include "../include/L42_PAL/foc_platform_api.h"
 
 /**
  * @file foc_platform_api_empty.c

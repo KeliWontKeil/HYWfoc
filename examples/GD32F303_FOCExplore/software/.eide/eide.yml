@@ -14,16 +14,25 @@ virtualFolder:
         - path: Application/Source/main.c
         - path: Application/Source/systick.c
         - path: Application/Source/foc_platform_api.c
-        - path: ../../../foc/src/interface/control_scheduler.c
-        - path: ../../../foc/src/algorithm/sensor.c
-        - path: ../../../foc/src/algorithm/svpwm.c
-        - path: ../../../foc/src/algorithm/math_transforms.c
-        - path: ../../../foc/src/algorithm/foc_control.c
-        - path: ../../../foc/src/interface/foc_app.c
-        - path: ../../../foc/src/algorithm/foc_control_init.c
-        - path: ../../../foc/src/interface/protocol_parser.c
-        - path: ../../../foc/src/interface/command_manager.c
-        - path: ../../../foc/src/interface/debug_stream.c
+        - path: ../../../foc/src/L1_Orchestration/control_scheduler.c
+        - path: ../../../foc/src/L3_Algorithm/sensor.c
+        - path: ../../../foc/src/L3_Algorithm/svpwm.c
+        - path: ../../../foc/src/L41_Math/math_transforms.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_softswitch.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_compensation.c
+        - path: ../../../foc/src/L3_Algorithm/protocol_core_parser.c
+        - path: ../../../foc/src/L3_Algorithm/protocol_core_normalize.c
+        - path: ../../../foc/src/L3_Algorithm/protocol_text_codec.c
+        - path: ../../../foc/src/L1_Orchestration/foc_app.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_init.c
+        - path: ../../../foc/src/L2_Service/protocol_parser.c
+        - path: ../../../foc/src/L2_Service/command_manager.c
+        - path: ../../../foc/src/L2_Service/command_manager_diag.c
+        - path: ../../../foc/src/L2_Service/command_manager_dispatch.c
+        - path: ../../../foc/src/L2_Service/debug_stream.c
+        - path: ../../../foc/src/L2_Service/motor_control_service.c
+        - path: ../../../foc/src/L2_Service/protocol_service.c
       folders: []
     - name: CMSIS
       files:
@@ -504,4 +513,3 @@ targets:
         proType: 1
         speed: 8000
     uploader: JLink
-
