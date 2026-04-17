@@ -70,6 +70,24 @@
 			"type": "shell",
 			"command": "('foc/include/config=' + (Test-Path 'foc/include/config')) | Out-Host; ('foc/include/core=' + (Test-Path 'foc/include/core')) | Out-Host; ('foc/include/service=' + (Test-Path 'foc/include/service')) | Out-Host; ('foc/include/algorithm=' + (Test-Path 'foc/include/algorithm')) | Out-Host; ('foc/include/math=' + (Test-Path 'foc/include/math')) | Out-Host; ('foc/include/interface=' + (Test-Path 'foc/include/interface')) | Out-Host; ('foc/src/core=' + (Test-Path 'foc/src/core')) | Out-Host; ('foc/src/service=' + (Test-Path 'foc/src/service')) | Out-Host; ('foc/src/algorithm=' + (Test-Path 'foc/src/algorithm')) | Out-Host; ('foc/src/math=' + (Test-Path 'foc/src/math')) | Out-Host; ('foc/src/interface=' + (Test-Path 'foc/src/interface')) | Out-Host",
 			"isBackground": false
+		},
+		{
+			"label": "agent-commit-l3-phase1",
+			"type": "shell",
+			"command": "git add \"examples/GD32F303_FOCExplore/software/.eide/eide.yml\" \"foc/include/L3_Algorithm/foc_control_types.h\" \"foc/include/L3_Algorithm/foc_control_c02_cfg_state.h\" \"foc/include/L3_Algorithm/foc_control_compensation.h\" \"foc/include/L3_Algorithm/foc_control_internal.h\" \"foc/src/L3_Algorithm/foc_control_c03_outer_loop.c\" \"foc/src/L3_Algorithm/foc_control_init.c\" \"foc/include/L3_Algorithm/foc_control.h\" \"foc/src/L3_Algorithm/foc_control.c\"; git commit -m \"refactor: remove L3 legacy control shell and old umbrella header\"; git show --name-status --oneline -n 1",
+			"isBackground": false
+		},
+		{
+			"label": "agent-commit-l3-phase1-2",
+			"type": "shell",
+			"command": "git commit -m \"refactor: remove L3 legacy control shell and old umbrella header\" && git show --name-status --oneline -n 1",
+			"isBackground": false
+		},
+		{
+			"label": "agent-commit-l3-phase1-3",
+			"type": "shell",
+			"command": "git commit -m 'refactor: remove L3 legacy control shell and old umbrella header'; git show --name-status --oneline -n 1",
+			"isBackground": false
 		}
 	]
 }

@@ -139,7 +139,7 @@
 2. 代码落点：`foc_app.c` 中 `Motor_Control_Loop`、`FOC_App_RunControlAlgorithm`、`FOC_App_OnPwmUpdateISR` 与 `svpwm.c` 中 `SVPWM_InterpolationISR`。
 3. 结论：运行态 SVPWM 插值链保持独立，未回退为初始化态直通路径。
 
-## v1.3.5 M6/M8 结构落地验证记录（2026-04-17）
+## v1.3.5 M6/M8（R3）结构落地验证记录（2026-04-17）
 
 ### M6（L2 结构链）
 
@@ -147,23 +147,17 @@
 2. 参数与状态存储查询已迁移到 `command_manager_store.c`、`command_manager_query.c`。
 3. 检索验证通过：主编排文件不再包含 `WriteParam/ReadParam/WriteState/ReadState/ReportAll*` 实现。
 
-### M7（L3 Cxx 控制链）
+### M8（L3 Cxx 控制链，R3 收口）
 
-1. `foc_control` 运行实现已迁移到 `foc_control_c01~c05` 分层文件；旧总头 `foc_control.h` 与兼容翻译单元 `foc_control.c` 已删除。
-2. `foc_control_softswitch.c` 与 `foc_control_compensation.c` 保持复用；`sensor.c`、`svpwm.c` 未并发拆分。
-3. 检索验证通过：`C04/C05` 不反向依赖 `C01/C02`。
-
-### M8（L2/L3 边界与命名固化）
-
-1. `MotorControlService_RunControlTask` 保持为唯一控制执行主入口，兼容壳 `RunOpenLoop/RunOuterLoop/RunCurrentLoop` 已移除对外导出与实现。
-2. L2 对 L3 调用面统一经 `*_iface.h` 暴露：`motion_control_iface.h`、`control_config_iface.h`、`motor_init_iface.h`、`sensor_iface.h`、`svpwm_iface.h`。
-3. `MotorControlService_ApplyPendingConfig` 仍是唯一 `FOC_ControlSet*` 调用入口。
+1. `foc_control` 运行实现已稳定在 `C11/C12 -> C21/C22/C23/C24/C25 -> C31` 分层链路。
+2. 软切换独立文件已并入电流环主链；补偿分支与电机参数学习分支已按新层级拆分。
+3. 检索验证通过：`C11` 不再直连执行层，执行输出经电流环组织路径收口。
 
 ### 构建结果
 
 1. `phase-d-verify-build` 因本机缺少 `eide` 命令不可用。
 2. 按约束改用 `phase-d-rebuild`，构建通过（0 error）。
-3. Warning 维持历史项：`L6914W`（linker rwpi + scatter）与 `foc_control_init.c` 既有不可达语句警告，无新增 warning。
+3. Warning 维持历史项：`L6914W`（linker rwpi + scatter），无新增 warning。
 
 ## 参考文档
 

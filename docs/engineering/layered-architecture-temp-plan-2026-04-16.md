@@ -328,27 +328,45 @@ M5 需要显式治理以下“重复或旁路”风险点：
   - 协议纯处理合并（并入 R2 同次执行）：
     - 合并来源：`protocol_core_parser.c`、`protocol_core_normalize.c`、`protocol_text_codec.c`（已删除）。
     - 合并结果：`protocol_core.c` 单实现入口。
-3. R3-L2-Chain（链式与并列拆分治理）：
+  - R2 优先执行锁（本轮）：执行与验收只以本节 R2 条目为准；若与其他文档冲突，本节口径优先，R3 及后续任务仅作规划不进入实施面。
+  - R2 执行结果（2026-04-17）：`phase-d-rebuild` 全量重建通过（0 error），未发现 R2 删除项在工程清单残留，warning 无新增。
+3. R3-L3-Restructure（新增，L3 深化重排与层级合并/整体命名提升）：
+  - 当前 `C33`（软切换）并入电流环主链，避免并行分支过细化。
+  - 当前 `C34` 收口为齿槽补偿算法，并承接初始化侧补偿准备逻辑。
+  - 从 `C12` 拆分“电机参数学习算法”为新 `C33`，`C12` 保留初始化组织与标定原语。
+  - `C11` 去除对当前 `C41` 的直接依赖，执行输出链改为经电流环组织路径收口。
+  - 第一步：旧 `C2` 并入旧 `C3`，形成 `C1/C2/C3/C4 -> C1/C3/C4` 的职责收口。
+  - 第二步：对旧 `C3/C4` 做整体命名提升，落为新 `C2/C3`（即最终层级为 `C1/C2/C3`）。
+4. R3.5-L2-Chain-Style（新增，宏裁剪前前置）：
+  - 在现有文件名基础上引入“类 Cxy”的链式口径：`entry -> dispatch -> store/query -> diag`，不强制同轮改文件名。
+  - `motor_control_service` 仅保留统一任务入口，兼容壳 `RunOpenLoop/RunOuterLoop/RunCurrentLoop` 退场。
+  - `command_manager_store.c` 与 `command_manager_query.c` 合并为同域单文件，避免并列碎片化。
+5. R3.6-L3-Residual-Cleanup（新增，宏裁剪前前置）：
+  - 清理 L3 结构化残留：冗余 wrapper/helper、过细头文件边界、孤儿 `.c/.h`。
+  - 保持 `C11 -> C22` 桥接边界，不回退为 `C11` 直连执行层。
+  - 该步只做结构清理，不引入算法参数语义变化。
+6. R4-L2-Chain（原 R3，链式与并列拆分治理）：
   - 链式固化：`protocol_service.c -> protocol_parser.c -> command_manager.c`。
   - 命令链固化：`command_manager.c -> command_manager_dispatch.c -> store/query -> command_manager_diag.c`。
   - 非链同域聚合：`command_manager_store.c` 与 `command_manager_query.c` 合并为单文件。
   - 控制门面收口：`motor_control_service.c` 仅保留统一调度入口，删除兼容壳导出。
-4. R4-List+Build（清单与构建闭环）：
+7. R5-List+Build（原 R4，清单与构建闭环）：
   - 清单同步：`builder.params`、`.eide/eide.yml` 与源文件删除/合并动作同次更新。
   - 验证：检索 + `phase-d-rebuild` + 文档回写同次完成。
 
 ### 9.3.1 L3 控制链函数映射（强制）
 
 1. C11（R2 后上行唯一入口文件）：`FOC_ControlOuterLoopStep`、`FOC_OpenLoopStep`，并吸收原 `C22` 的模式分发、入口复位与执行桥接职责。
-2. C12（初始化算法原语层）：`FOC_MotorInit`、`FOC_CalibrateElectricalAngleAndDirection` 及其算法原语。
-3. C21（运行配置/状态层）：`FOC_ControlConfigResetDefault`、全部 `FOC_ControlSet*`、`FOC_PIDInit`、状态访问函数。
-4. C31（外环）：`FOC_SpeedOuterLoopStep`、`FOC_SpeedAngleOuterLoopStep`、角度/速度累积 helper。
-5. C32（电流环）：`FOC_CurrentControlStep`、`FOC_ControlRequiresCurrentSample`、闭环融合逻辑。
-6. C33（软切换并行分支）：`FOC_ControlSoftSwitchUpdateBlend`。
-7. C34（补偿并行分支）：`FOC_ControlCoggingLookupIq`。
-8. C41（执行层）：`FOC_ControlApplyElectricalAngleRuntime/Direct`、执行输出与后处理函数。
-9. C21/C12 评估结论：保持分离，不做整文件合并。
-10. 并行算法约束：`C33` 仅服务 `C32`，`C34` 仅服务 `C31`；并行分支不得跨层反向传播。
+2. C11（R3 目标）：移除对当前 `C41` 的直接 include/直接调用，执行输出经电流环组织路径收口。
+3. C12（初始化算法原语层）：保留 `FOC_MotorInit`、`FOC_CalibrateElectricalAngleAndDirection` 与初始化组织逻辑；剥离“电机参数学习算法”。
+4. 新 C33（R3 目标）：承接从 `C12` 拆分的电机参数学习算法。
+5. 当前 C21（运行配置/状态层）：`FOC_ControlConfigResetDefault`、全部 `FOC_ControlSet*`、`FOC_PIDInit`、状态访问函数；R3 中并入旧 C3 族，不再保留独立 C2 层。
+6. 当前 C31（外环）：`FOC_SpeedOuterLoopStep`、`FOC_SpeedAngleOuterLoopStep`、角度/速度累积 helper；R3 后提升为新 `C21`。
+7. 当前 C32（电流环）：`FOC_CurrentControlStep`、`FOC_ControlRequiresCurrentSample`、闭环融合逻辑；R3 吸收当前 `C33` 与执行输出组织后提升为新 `C22`。
+8. 当前 C34（补偿分支）：`FOC_ControlCoggingLookupIq`；R3 收口为齿槽补偿算法并提升为新 `C24`。
+9. 当前 C41（执行层）在 R3 后提升为新 `C31`，且不再作为 C11 直连依赖点。
+10. C21/C12 评估结论：保持分离，不做整文件合并。
+11. R3 层级合并与提升映射冻结：旧 `C2` 并入旧 `C3`；旧 `C3->新 C2`、旧 `C4->新 C3`；示例映射 `C31->C21`、`C32->C22`、`C33->C23`、`C34->C24`、`C41->C31`。
 
 ### 9.3.2 L2 函数级细化（强制）
 
