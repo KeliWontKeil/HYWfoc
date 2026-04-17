@@ -1,10 +1,9 @@
-#include "L3_Algorithm/foc_control_c32_current_loop.h"
+#include "L3_Algorithm/foc_control_c22_current_loop.h"
 
 #include <math.h>
 
-#include "L3_Algorithm/foc_control_c21_cfg_state.h"
-#include "L3_Algorithm/foc_control_c33_softswitch.h"
-#include "L3_Algorithm/foc_control_c41_actuation.h"
+#include "L3_Algorithm/foc_control_c25_cfg_state.h"
+#include "L3_Algorithm/foc_control_c31_actuation.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 
@@ -19,6 +18,29 @@ static float FOC_NormalizeDt(float dt_sec)
 {
     return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_DEFAULT_SEC;
 }
+
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+static float FOC_CurrentSoftSwitchUpdateBlend(float current_blend,
+                                              uint8_t *blend_initialized,
+                                              float target_blend,
+                                              float dt_sec)
+{
+    float alpha;
+
+    target_blend = Math_ClampFloat(target_blend, 0.0f, 1.0f);
+    if ((blend_initialized != 0U) && (*blend_initialized == 0U))
+    {
+        *blend_initialized = 1U;
+        return target_blend;
+    }
+
+    alpha = dt_sec / (FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC + dt_sec);
+    alpha = Math_ClampFloat(alpha, 0.0f, 1.0f);
+
+    current_blend += (target_blend - current_blend) * alpha;
+    return Math_ClampFloat(current_blend, 0.0f, 1.0f);
+}
+#endif
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
 static float FOC_CurrentLoopComputeKiScale(float iq_ref_abs)
@@ -288,7 +310,7 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
 
     active_mode = FOC_CurrentSoftSwitchResolveActiveMode(soft_switch_status, fabsf(motor->iq_target));
     target_blend = (active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED) ? 1.0f : 0.0f;
-    blend_factor = FOC_ControlSoftSwitchUpdateBlend(soft_switch_status->blend_factor,
+    blend_factor = FOC_CurrentSoftSwitchUpdateBlend(soft_switch_status->blend_factor,
                                                     blend_initialized,
                                                     target_blend,
                                                     dt_sec);
@@ -363,6 +385,36 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
 #endif
 
+    FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
+}
+
+void FOC_CurrentControlApplyElectricalAngleDirect(foc_motor_t *motor, float electrical_angle)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
+}
+
+void FOC_CurrentControlOpenLoopStep(foc_motor_t *motor,
+                                    float voltage,
+                                    float turn_speed,
+                                    float dt_sec)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    dt_sec = FOC_NormalizeDt(dt_sec);
+    motor->electrical_phase_angle = Math_WrapRad(
+        motor->electrical_phase_angle +
+        FOC_MATH_TWO_PI * turn_speed * motor->pole_pairs * dt_sec * motor->direction);
+
+    motor->ud = 0.0f;
+    motor->uq = Math_ClampFloat(voltage, 0.0f, motor->set_voltage);
     FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
 }
 

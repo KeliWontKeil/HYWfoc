@@ -1,5 +1,5 @@
-#ifndef FOC_CONTROL_C21_CFG_STATE_H
-#define FOC_CONTROL_C21_CFG_STATE_H
+#ifndef FOC_CONTROL_C25_CFG_STATE_H
+#define FOC_CONTROL_C25_CFG_STATE_H
 
 #include <stdint.h>
 
@@ -69,4 +69,4 @@ void FOC_PIDInit(foc_pid_t *pid,
                  float out_min,
                  float out_max);
 
-#endif /* FOC_CONTROL_C21_CFG_STATE_H */
+#endif /* FOC_CONTROL_C25_CFG_STATE_H */

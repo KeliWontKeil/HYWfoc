@@ -1,10 +1,10 @@
-#include "L3_Algorithm/foc_control_c31_outer_loop.h"
+#include "L3_Algorithm/foc_control_c21_outer_loop.h"
 
 #include <math.h>
 
-#include "L3_Algorithm/foc_control_c21_cfg_state.h"
-#include "L3_Algorithm/foc_control_c34_compensation.h"
-#include "L3_Algorithm/foc_control_c41_actuation.h"
+#include "L3_Algorithm/foc_control_c25_cfg_state.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
+#include "L3_Algorithm/foc_control_c31_actuation.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 

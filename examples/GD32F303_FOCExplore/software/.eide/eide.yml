@@ -20,18 +20,19 @@ virtualFolder:
         - path: ../../../foc/src/L41_Math/math_transforms.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c11_entry.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c12_init.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c21_cfg_state.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c31_outer_loop.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c32_current_loop.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c33_softswitch.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c34_compensation.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c41_actuation.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c21_outer_loop.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c22_current_loop.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c23_motor_param_learn.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c24_compensation.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c25_cfg_state.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
         - path: ../../../foc/src/L2_Service/protocol_parser.c
         - path: ../../../foc/src/L2_Service/command_manager.c
         - path: ../../../foc/src/L2_Service/command_manager_diag.c
         - path: ../../../foc/src/L2_Service/command_manager_dispatch.c
+        - path: ../../../foc/src/L2_Service/command_manager_query.c
         - path: ../../../foc/src/L2_Service/command_manager_store.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c

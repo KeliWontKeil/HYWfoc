@@ -1,9 +1,8 @@
 #include "L3_Algorithm/foc_control_c11_entry.h"
 
 #include "LS_Config/foc_config.h"
-#include "L3_Algorithm/foc_control_c21_cfg_state.h"
-#include "L3_Algorithm/foc_control_c31_outer_loop.h"
-#include "L3_Algorithm/foc_control_c41_actuation.h"
+#include "L3_Algorithm/foc_control_c21_outer_loop.h"
+#include "L3_Algorithm/foc_control_c22_current_loop.h"
 #include "L41_Math/math_transforms.h"
 
 #define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
@@ -21,24 +20,12 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
 
 void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle)
 {
-    FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
+    FOC_CurrentControlApplyElectricalAngleDirect(motor, electrical_angle);
 }
 
 void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
 {
-    if (motor == 0)
-    {
-        return;
-    }
-
-    motor->electrical_phase_angle = Math_WrapRad(
-        motor->electrical_phase_angle +
-        FOC_MATH_TWO_PI * turn_speed * motor->pole_pairs * FOC_CONTROL_DT_DEFAULT_SEC * motor->direction);
-
-    motor->ud = 0.0f;
-    motor->uq = Math_ClampFloat(voltage, 0.0f, motor->set_voltage);
-
-    FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
+    FOC_CurrentControlOpenLoopStep(motor, voltage, turn_speed, FOC_CONTROL_DT_DEFAULT_SEC);
 }
 
 uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
