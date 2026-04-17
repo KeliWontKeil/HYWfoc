@@ -207,7 +207,7 @@
 
 执行记录：
 1. 已落地 `foc_control_c01_entry.c`、`foc_control_c02_cfg_state.c`、`foc_control_c03_outer_loop.c`、`foc_control_c04_current_loop.c`、`foc_control_c05_actuation.c` 及同名头文件。
-2. `foc_control.c` 已收敛为兼容空壳，运行实现迁移至 `C01~C05`。
+2. 旧总头 `foc_control.h` 与兼容翻译单元 `foc_control.c` 已删除，运行实现完全迁移至 `C01~C05`。
 3. `C04/C05` 未反向依赖 `C01/C02`；`sensor.c` 与 `svpwm.c` 保持不拆分。
 4. 构建验证：同 M6，`phase-d-rebuild` 通过且无新增 warning。
 
@@ -240,6 +240,14 @@
 3. 构建通过且无新增 warning。
 
 #### M8：L2/L3 边界与命名固化（结构收口完成）
+
+状态：已完成（2026-04-17）
+
+执行记录：
+1. `MotorControlService_RunControlTask` 固化为 L2 控制执行主入口；`RunOpenLoop/RunOuterLoop/RunCurrentLoop` 兼容壳已从 `motor_control_service.h` 与实现中移除。
+2. L2 到 L3 的调用面收敛为 `*_iface.h`：`motion_control_iface.h`、`control_config_iface.h`、`motor_init_iface.h`、`sensor_iface.h`、`svpwm_iface.h`。
+3. `MotorControlService_ApplyPendingConfig` 继续保持唯一 `FOC_ControlSet*` 参数应用入口。
+4. 构建验证：`phase-d-rebuild` 通过，且无新增 warning。
 
 目标：固化 L2<->L3 最小接口面与命名规范，消除结构阶段遗留歧义。
 

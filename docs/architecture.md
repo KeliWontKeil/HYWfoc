@@ -116,6 +116,7 @@ FOC_VSCODE/
 3. 去内联约束分层处理：L2 允许少量受控 inline（模块内私有且可检索）；L3 业务逻辑完全去内联（除 `L41_Math` 既有数学 inline）。
 4. `sensor.c` 与 `svpwm.c` 本轮保持职责边界，不做拆分/重命名并发改造。
 5. 若出现单函数、单调用者的过细算法文件，允许按单向层级并回上一级实现文件，避免文件粒度碎片化。
+6. M8 已完成 L2/L3 接口面收口：`motor_control_service` 到 L3 的调用仅通过 `*_iface.h`（`motion/control_config/motor_init/sensor/svpwm`）暴露，不再保留 `RunOpenLoop/RunOuterLoop/RunCurrentLoop` 兼容壳导出。
 
 ## 控制时序（抽象）
 

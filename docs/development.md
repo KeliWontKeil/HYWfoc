@@ -139,7 +139,7 @@
 2. 代码落点：`foc_app.c` 中 `Motor_Control_Loop`、`FOC_App_RunControlAlgorithm`、`FOC_App_OnPwmUpdateISR` 与 `svpwm.c` 中 `SVPWM_InterpolationISR`。
 3. 结论：运行态 SVPWM 插值链保持独立，未回退为初始化态直通路径。
 
-## v1.3.5 M6/M7 结构落地验证记录（2026-04-17）
+## v1.3.5 M6/M8 结构落地验证记录（2026-04-17）
 
 ### M6（L2 结构链）
 
@@ -149,9 +149,15 @@
 
 ### M7（L3 Cxx 控制链）
 
-1. `foc_control` 运行实现已迁移到 `foc_control_c01~c05` 分层文件；`foc_control.c` 仅保留兼容空壳。
+1. `foc_control` 运行实现已迁移到 `foc_control_c01~c05` 分层文件；旧总头 `foc_control.h` 与兼容翻译单元 `foc_control.c` 已删除。
 2. `foc_control_softswitch.c` 与 `foc_control_compensation.c` 保持复用；`sensor.c`、`svpwm.c` 未并发拆分。
 3. 检索验证通过：`C04/C05` 不反向依赖 `C01/C02`。
+
+### M8（L2/L3 边界与命名固化）
+
+1. `MotorControlService_RunControlTask` 保持为唯一控制执行主入口，兼容壳 `RunOpenLoop/RunOuterLoop/RunCurrentLoop` 已移除对外导出与实现。
+2. L2 对 L3 调用面统一经 `*_iface.h` 暴露：`motion_control_iface.h`、`control_config_iface.h`、`motor_init_iface.h`、`sensor_iface.h`、`svpwm_iface.h`。
+3. `MotorControlService_ApplyPendingConfig` 仍是唯一 `FOC_ControlSet*` 调用入口。
 
 ### 构建结果
 

@@ -1,10 +1,16 @@
-#include "L3_Algorithm/sensor.h"
+#include "L3_Algorithm/sensor_iface.h"
 
 #include <math.h>
 
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
+
+#define SENSOR_ZERO_CALIB_SAMPLES            200U
+#define SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT  0.15f
+#define SENSOR_ZERO_CALIB_MIN_VALID_SAMPLES  160U
+#define SENSOR_ZERO_CALIB_MAX_ABS_CURRENT    2.50f
+#define SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT 0.80f
 
 /* Private variables */
 static sensor_data_t sensor_data;

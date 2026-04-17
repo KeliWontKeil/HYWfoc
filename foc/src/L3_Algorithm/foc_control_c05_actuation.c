@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "L3_Algorithm/foc_control_internal.h"
-#include "L3_Algorithm/svpwm.h"
+#include "L3_Algorithm/svpwm_iface.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 
