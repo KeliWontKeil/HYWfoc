@@ -19,6 +19,11 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/svpwm.c
         - path: ../../../foc/src/L41_Math/math_transforms.c
         - path: ../../../foc/src/L3_Algorithm/foc_control.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c01_entry.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c02_cfg_state.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c03_outer_loop.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c04_current_loop.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c05_actuation.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_softswitch.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_compensation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core_parser.c
@@ -30,6 +35,8 @@ virtualFolder:
         - path: ../../../foc/src/L2_Service/command_manager.c
         - path: ../../../foc/src/L2_Service/command_manager_diag.c
         - path: ../../../foc/src/L2_Service/command_manager_dispatch.c
+        - path: ../../../foc/src/L2_Service/command_manager_query.c
+        - path: ../../../foc/src/L2_Service/command_manager_store.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c
         - path: ../../../foc/src/L2_Service/protocol_service.c

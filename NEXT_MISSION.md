@@ -167,6 +167,13 @@
 
 #### M6：L2 结构链重排（运行编排 -> 分发 -> 存储查询 -> 诊断）
 
+状态：已完成（2026-04-17）
+
+执行记录：
+1. 新增 `command_manager_store.c` 与 `command_manager_query.c`，主编排文件仅保留 Init/Process 与诊断/故障编排职责。
+2. `CommandManager_WriteParam/ReadParam/WriteState/ReadState/ReportAllParams/ReportAllStates` 已迁出 `command_manager.c`。
+3. 构建验证：`phase-d-verify-build` 因环境缺少 `eide` 命令失败，已按约束改用 `phase-d-rebuild`，构建通过且无新增 warning。
+
 目标：先把 L2 从“中心化超大文件”重排为可解释单向结构链，不在本任务做裁剪。
 
 文件级细化：
@@ -195,6 +202,14 @@
 3. 构建通过且无新增 warning。
 
 #### M7：L3 控制算法结构链重排（`foc_control` 整体，`Cxx` 命名）
+
+状态：已完成（2026-04-17）
+
+执行记录：
+1. 已落地 `foc_control_c01_entry.c`、`foc_control_c02_cfg_state.c`、`foc_control_c03_outer_loop.c`、`foc_control_c04_current_loop.c`、`foc_control_c05_actuation.c` 及同名头文件。
+2. `foc_control.c` 已收敛为兼容空壳，运行实现迁移至 `C01~C05`。
+3. `C04/C05` 未反向依赖 `C01/C02`；`sensor.c` 与 `svpwm.c` 保持不拆分。
+4. 构建验证：同 M6，`phase-d-rebuild` 通过且无新增 warning。
 
 目标：将 `foc_control.c` 重排为“同一算法整体 + 分层单向文件链”，先做结构收口，不做裁剪策略变更。
 

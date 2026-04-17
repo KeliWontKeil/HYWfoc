@@ -139,6 +139,26 @@
 2. 代码落点：`foc_app.c` 中 `Motor_Control_Loop`、`FOC_App_RunControlAlgorithm`、`FOC_App_OnPwmUpdateISR` 与 `svpwm.c` 中 `SVPWM_InterpolationISR`。
 3. 结论：运行态 SVPWM 插值链保持独立，未回退为初始化态直通路径。
 
+## v1.3.5 M6/M7 结构落地验证记录（2026-04-17）
+
+### M6（L2 结构链）
+
+1. `command_manager.c` 仅保留运行编排与故障/诊断编排。
+2. 参数与状态存储查询已迁移到 `command_manager_store.c`、`command_manager_query.c`。
+3. 检索验证通过：主编排文件不再包含 `WriteParam/ReadParam/WriteState/ReadState/ReportAll*` 实现。
+
+### M7（L3 Cxx 控制链）
+
+1. `foc_control` 运行实现已迁移到 `foc_control_c01~c05` 分层文件；`foc_control.c` 仅保留兼容空壳。
+2. `foc_control_softswitch.c` 与 `foc_control_compensation.c` 保持复用；`sensor.c`、`svpwm.c` 未并发拆分。
+3. 检索验证通过：`C04/C05` 不反向依赖 `C01/C02`。
+
+### 构建结果
+
+1. `phase-d-verify-build` 因本机缺少 `eide` 命令不可用。
+2. 按约束改用 `phase-d-rebuild`，构建通过（0 error）。
+3. Warning 维持历史项：`L6914W`（linker rwpi + scatter）与 `foc_control_init.c` 既有不可达语句警告，无新增 warning。
+
 ## 参考文档
 
 - `../examples/GD32F303_FOCExplore/DEVELOPMENT.md`
