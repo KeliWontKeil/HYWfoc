@@ -18,7 +18,6 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/sensor.c
         - path: ../../../foc/src/L3_Algorithm/svpwm.c
         - path: ../../../foc/src/L41_Math/math_transforms.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c01_entry.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c02_cfg_state.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c03_outer_loop.c

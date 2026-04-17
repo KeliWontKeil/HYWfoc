@@ -6,7 +6,7 @@
 #include "L41_Math/foc_math_lut.h"
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
-#include "L3_Algorithm/foc_control.h"
+#include "L3_Algorithm/foc_control_c02_cfg_state.h"
 #include "L3_Algorithm/foc_control_internal.h"
 #include "LS_Config/foc_config.h"
 

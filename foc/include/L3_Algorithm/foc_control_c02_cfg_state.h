@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-#include "L3_Algorithm/foc_control.h"
+#include "L3_Algorithm/foc_control_types.h"
+#include "LS_Config/foc_shared_types.h"
 
 void FOC_ControlConfigResetDefault(void);
 const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(void);

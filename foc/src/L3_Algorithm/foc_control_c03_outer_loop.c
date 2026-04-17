@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-#include "L3_Algorithm/foc_control.h"
+#include "L3_Algorithm/foc_control_c02_cfg_state.h"
 #include "L3_Algorithm/foc_control_compensation.h"
 #include "L3_Algorithm/foc_control_c05_actuation.h"
 #include "L3_Algorithm/foc_control_internal.h"

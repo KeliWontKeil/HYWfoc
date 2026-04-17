@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L3_Algorithm/foc_control.h"
+#include "L3_Algorithm/foc_control_types.h"
 #include "LS_Config/foc_shared_types.h"
 
 float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad);
