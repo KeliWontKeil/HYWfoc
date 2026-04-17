@@ -1,9 +1,10 @@
-#include "L3_Algorithm/foc_control_c04_current_loop.h"
+#include "L3_Algorithm/foc_control_c32_current_loop.h"
 
 #include <math.h>
 
-#include "L3_Algorithm/foc_control_internal.h"
-#include "L3_Algorithm/foc_control_softswitch.h"
+#include "L3_Algorithm/foc_control_c21_cfg_state.h"
+#include "L3_Algorithm/foc_control_c33_softswitch.h"
+#include "L3_Algorithm/foc_control_c41_actuation.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 

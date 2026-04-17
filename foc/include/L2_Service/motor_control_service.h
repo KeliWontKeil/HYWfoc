@@ -43,6 +43,7 @@ uint8_t MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot);
 
 uint8_t MotorControlService_RequiresCurrentSample(void);
 void MotorControlService_ResetCurrentSoftSwitchState(void);
+void MotorControlService_RunOpenLoop(foc_motor_t *motor, float voltage, float turn_speed);
 
 uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
                                            foc_motor_t *motor,
@@ -50,6 +51,23 @@ uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
                                            foc_pid_t *speed_pid,
                                            foc_pid_t *angle_hold_pid,
                                            const motor_control_service_task_args_t *args);
+
+uint8_t MotorControlService_RunOuterLoop(foc_motor_t *motor,
+                                         foc_pid_t *current_pid,
+                                         foc_pid_t *speed_pid,
+                                         foc_pid_t *angle_hold_pid,
+                                         const sensor_data_t *sensor,
+                                         uint8_t control_mode,
+                                         float speed_only_rad_s,
+                                         float target_angle_rad,
+                                         float angle_position_speed_rad_s,
+                                         float dt_sec);
+
+void MotorControlService_RunCurrentLoop(foc_motor_t *motor,
+                                        foc_pid_t *current_pid,
+                                        const sensor_data_t *sensor,
+                                        float electrical_angle,
+                                        float dt_sec);
 
 void MotorControlService_InitPidControllers(foc_motor_t *motor,
                                             foc_pid_t *current_pid,

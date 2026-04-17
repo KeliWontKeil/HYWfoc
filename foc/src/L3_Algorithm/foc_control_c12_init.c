@@ -1,4 +1,4 @@
-#include "L3_Algorithm/foc_control_init.h"
+#include "L3_Algorithm/foc_control_c12_init.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -6,8 +6,8 @@
 #include "L41_Math/foc_math_lut.h"
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
-#include "L3_Algorithm/foc_control_c02_cfg_state.h"
-#include "L3_Algorithm/foc_control_internal.h"
+#include "L3_Algorithm/foc_control_c11_entry.h"
+#include "L3_Algorithm/foc_control_c21_cfg_state.h"
 #include "LS_Config/foc_config.h"
 
 float Math_WrapRad(float angle);
@@ -135,7 +135,7 @@ static uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
         return 0U;
     }
 
-    FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
+    FOC_ControlApplyElectricalAngleInitBridge(motor, electrical_angle);
     FOC_Platform_WaitMs(settle_ms);
 
     for (i = 0U; i < sample_count; i++)
@@ -225,7 +225,7 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     *direction_est = (sum_d_mech >= 0.0f) ? FOC_DIR_NORMAL : FOC_DIR_REVERSED;
     *pole_pairs_est = FOC_ClampPolePairs((int32_t)(fabsf(sum_d_elec / sum_d_mech) + 0.5f));
 
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleInitBridge(motor, 0.0f);
     FOC_Platform_WaitMs(FOC_CALIB_COARSE_STEP_SETTLE_MS);
 
     for (i = step_count; i > 0U; i--)
@@ -301,7 +301,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     }
     else
     {
-        FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+        FOC_ControlApplyElectricalAngleInitBridge(motor, 0.0f);
         FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
     }
 
@@ -333,7 +333,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     motor->ud = backup_ud;
     motor->uq = backup_uq;
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleInitBridge(motor, 0.0f);
 }
 
 static uint8_t FOC_LoadStaticCoggingTable(int16_t *table_q15,
@@ -434,7 +434,7 @@ static uint8_t FOC_LearnCoggingTable(foc_motor_t *motor,
 
     motor->ud = backup_ud;
     motor->uq = backup_uq;
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleInitBridge(motor, 0.0f);
 
     if ((valid_count * 100U) < (uint16_t)(point_count * FOC_COGGING_LEARN_MIN_VALID_PERCENT))
     {

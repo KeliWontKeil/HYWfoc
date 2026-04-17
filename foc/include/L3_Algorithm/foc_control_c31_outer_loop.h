@@ -1,5 +1,5 @@
-#ifndef FOC_CONTROL_C03_OUTER_LOOP_H
-#define FOC_CONTROL_C03_OUTER_LOOP_H
+#ifndef FOC_CONTROL_C31_OUTER_LOOP_H
+#define FOC_CONTROL_C31_OUTER_LOOP_H
 
 #include <stdint.h>
 
@@ -22,4 +22,4 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
                                  const sensor_data_t *sensor,
                                  float dt_sec);
 
-#endif /* FOC_CONTROL_C03_OUTER_LOOP_H */
+#endif /* FOC_CONTROL_C31_OUTER_LOOP_H */

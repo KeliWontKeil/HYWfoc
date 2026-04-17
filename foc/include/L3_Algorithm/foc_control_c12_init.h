@@ -1,5 +1,5 @@
-#ifndef _FOC_CONTROL_INIT_H_
-#define _FOC_CONTROL_INIT_H_
+#ifndef FOC_CONTROL_C12_INIT_H
+#define FOC_CONTROL_C12_INIT_H
 
 #include <stdint.h>
 
@@ -14,4 +14,4 @@ void FOC_MotorInit(foc_motor_t *motor,
                    int8_t direction);
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor);
 
-#endif /* _FOC_CONTROL_INIT_H_ */
+#endif /* FOC_CONTROL_C12_INIT_H */

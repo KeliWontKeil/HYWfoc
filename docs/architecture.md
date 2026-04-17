@@ -41,7 +41,7 @@ FOC_VSCODE/
 | `LS` 配置层 | `foc/include/LS_Config/foc_cfg_*.h` | 开关、默认值、编译期约束、符号定义 |
 | `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c`、`foc/src/L1_Orchestration/control_scheduler.c` | 启动时序、任务调度、运行入口 |
 | `L2` 逻辑功能层 | `foc/src/L2_Service/command_manager.c`、`foc/src/L2_Service/command_manager_dispatch.c`、`foc/src/L2_Service/command_manager_store.c`、`foc/src/L2_Service/command_manager_query.c`、`foc/src/L2_Service/command_manager_diag.c`、`foc/src/L2_Service/debug_stream.c`、`foc/src/L2_Service/protocol_service.c`、`foc/src/L2_Service/protocol_parser.c` | 协议运行时适配（多源收发、状态回执、故障统计）、参数存储/查询、诊断输出、调试输出 |
-| `L3` 应用算法层 | 控制链：`foc_control_c01_entry.c`、`foc_control_c02_cfg_state.c`、`foc_control_c03_outer_loop.c`、`foc_control_c04_current_loop.c`、`foc_control_c05_actuation.c`、`foc_control_softswitch.c`、`foc_control_compensation.c`、`foc_control_init.c`；采样与调制：`sensor.c`、`svpwm.c`；协议纯处理：`protocol_core_parser.c`、`protocol_core_normalize.c`、`protocol_text_codec.c` | 承载可裁剪算法与纯处理内核；v1.3.5 已落地 `C01->C02->C03->C04->C05` 单向结构链（一个整体、多级文件、禁止反向依赖） |
+| `L3` 应用算法层 | 控制链：`foc_control_c11_entry.c`、`foc_control_c12_init.c`、`foc_control_c21_cfg_state.c`、`foc_control_c31_outer_loop.c`、`foc_control_c32_current_loop.c`、`foc_control_c33_softswitch.c`、`foc_control_c34_compensation.c`、`foc_control_c41_actuation.c`；采样与调制：`sensor.c`、`svpwm.c`；协议纯处理：`protocol_core.c` | 承载可裁剪算法与纯处理内核；v1.3.5 采用 `Cxy` 命名（`x`=调用链层级，`y`=并列层级编号），主链已收敛为 `C11/C12->C21->C31/C32->C41` 单向结构（一个整体、多级文件、禁止跨级与反向依赖） |
 | `L4-2` 平台接口桥 | `foc_platform_api.h`、实例 `foc_platform_api.c` | 将库调用桥接到具体外设实现 |
 | `L4-1` 纯算法复用层 | `foc/include/L41_Math/*`、`foc/src/L41_Math/*` | 不含板级依赖、可跨平台复用 |
 | `L5` 外设驱动层 | `examples/.../software/Utilities/` + `Firmware/` | 定时器、PWM、ADC、USART、I2C、芯片库 |
@@ -66,11 +66,11 @@ FOC_VSCODE/
 
 | 链路边界 | 当前状态（已实现） | 目标状态（本阶段） | 文件级落点 |
 |---|---|---|---|
-| 协议帧采集与源仲裁 | L2 保留多源 ready/read、状态回执；L3 已承载帧提取、语法解析、命令归一化与文本格式构建 | 维持“L2 运行态适配 + L3 纯处理内核”双段式分层，并避免纯处理逻辑回流到 L2 | `foc/src/L2_Service/protocol_service.c`、`foc/src/L2_Service/protocol_parser.c`、`foc/src/L3_Algorithm/protocol_core_parser.c`、`foc/src/L3_Algorithm/protocol_core_normalize.c`、`foc/src/L3_Algorithm/protocol_text_codec.c` |
+| 协议帧采集与源仲裁 | L2 保留多源 ready/read、状态回执；L3 已承载帧提取、语法解析、命令归一化与文本格式构建 | 维持“L2 运行态适配 + L3 纯处理内核”双段式分层，并避免纯处理逻辑回流到 L2 | `foc/src/L2_Service/protocol_service.c`、`foc/src/L2_Service/protocol_parser.c`、`foc/src/L3_Algorithm/protocol_core.c` |
 | 参数/状态/系统命令执行 | `command_manager` 负责运行编排/分发，存储查询下沉到 store/query 子模块 | 与协议语法解析保持解耦，只消费结构化命令结果 | `foc/src/L2_Service/command_manager.c`、`foc/src/L2_Service/command_manager_store.c`、`foc/src/L2_Service/command_manager_query.c` |
 | 应用运行编排 | `foc_app` 负责调度触发、通信处理步进、故障降级与控制入口 | 不承载协议字段解析与参数存储职责 | `foc/src/L1_Orchestration/foc_app.c` |
-| 初始化控制链路 | `foc_control_init` 负责电角锁定、机械零位采样、方向/极对数估计 | 严格保持 direct 占空比下发路径，不混入运行态插值更新 | `foc/src/L3_Algorithm/foc_control_init.c` |
-| 运行态控制链路 | `foc_control_c01~c05` + `svpwm` + PWM Update ISR 完成目标占空比更新与插值下发 | 保持 runtime 路径独立，不回退到初始化态直通策略；v1.3.5 已完成 `C01->C02->C03->C04->C05` 单向依赖链重排 | `foc/src/L3_Algorithm/foc_control_c01_entry.c`、`foc/src/L3_Algorithm/foc_control_c02_cfg_state.c`、`foc/src/L3_Algorithm/foc_control_c03_outer_loop.c`、`foc/src/L3_Algorithm/foc_control_c04_current_loop.c`、`foc/src/L3_Algorithm/foc_control_c05_actuation.c`、`foc/src/L3_Algorithm/svpwm.c`、`foc/src/L1_Orchestration/foc_app.c` |
+| 初始化控制链路 | `foc_control_c12_init` 负责电角锁定、机械零位采样、方向/极对数估计，并通过 `C11` 初始化桥接下发 | 保持 init 路径与 runtime 路径分离，不混入运行态插值更新 | `foc/src/L3_Algorithm/foc_control_c12_init.c`、`foc/src/L3_Algorithm/foc_control_c11_entry.c` |
+| 运行态控制链路 | `foc_control_c11/c21/c31/c32/c41` + 并行分支 `c33/c34` + `svpwm` + PWM Update ISR 完成目标占空比更新与插值下发 | R2 已完成 `C22` 并入 `C11` 的收口，链路为 `C11/C12->C21->C31/C32->C41`，且本轮未做 `L1/L2` 层级提升 | `foc/src/L3_Algorithm/foc_control_c11_entry.c`、`foc/src/L3_Algorithm/foc_control_c12_init.c`、`foc/src/L3_Algorithm/foc_control_c21_cfg_state.c`、`foc/src/L3_Algorithm/foc_control_c31_outer_loop.c`、`foc/src/L3_Algorithm/foc_control_c32_current_loop.c`、`foc/src/L3_Algorithm/foc_control_c33_softswitch.c`、`foc/src/L3_Algorithm/foc_control_c34_compensation.c`、`foc/src/L3_Algorithm/foc_control_c41_actuation.c`、`foc/src/L3_Algorithm/svpwm.c`、`foc/src/L1_Orchestration/foc_app.c` |
 
 ### 配置宏归属清单
 
@@ -102,7 +102,7 @@ FOC_VSCODE/
 
 1. 协议解析与运行状态管理在 v1.3.4 基线保持双模块边界；v1.3.5 起按“L2 运行态适配 + L3 纯处理内核”推进分层收敛。
 2. `command_manager` 内部分拆为 dispatch/diag 子模块：命令分发与诊断文本职责物理解耦。
-3. `foc_control` 已在 v1.3.5 收敛为 `C01~C05` 编号分层单向链，softswitch/compensation 作为配套策略模块复用，保持“同一算法整体 + 可读依赖层级”。
+3. `foc_control` 已收敛为 `C11/C12 -> C21 -> C31/C32 -> C41` 分层单向链；`C22` 职责已并入 `C11`，并保持 `C21` 与 `C12` 分离（避免运行态配置与初始化生命周期耦合）。
 4. 纯数学与 LUT 头/源迁移到 `foc/include/L41_Math` 与 `foc/src/L41_Math`，从算法目录职责中解耦。
 5. 初始化标定链路中的三角函数调用统一到 LUT 路径（`FOC_MathLut_Sin`、`FOC_MathLut_Atan2`），保持与运行态数学路径一致。
 6. 控制算法保持 init/runtime 严格分离：初始化链走 direct 占空比路径，运行链走 runtime 目标 + ISR 插值路径。
@@ -112,11 +112,10 @@ FOC_VSCODE/
 ## v1.3.5 结构准备（M6~M8）
 
 1. L2 按“运行编排 -> 分发执行 -> 参数状态存储/查询 -> 诊断输出”收敛为层内单向调用链，不再维持中心化超大实现文件。
-2. L3 控制算法按功能链编号命名推进：`foc_control_c01_*`（入口编排）-> `c02_*`（配置与状态）-> `c03_*`（外环）-> `c04_*`（快环）-> `c05_*`（执行与后处理）。
+2. L3 控制算法按功能链编号命名已落地：`C11/C12`（入口与初始化）-> `C21`（配置状态）-> `C31/C32`（外环与快环）-> `C41`（执行与后处理）；`C33/C34` 仅作为 `C32/C31` 的并行分支；本轮未做 `L1/L2` 大层级迁移。
 3. 去内联约束分层处理：L2 允许少量受控 inline（模块内私有且可检索）；L3 业务逻辑完全去内联（除 `L41_Math` 既有数学 inline）。
 4. `sensor.c` 与 `svpwm.c` 本轮保持职责边界，不做拆分/重命名并发改造。
 5. 若出现单函数、单调用者的过细算法文件，允许按单向层级并回上一级实现文件，避免文件粒度碎片化。
-6. M8 已完成 L2/L3 接口面收口：`motor_control_service` 到 L3 的调用仅通过 `*_iface.h`（`motion/control_config/motor_init/sensor/svpwm`）暴露，不再保留 `RunOpenLoop/RunOuterLoop/RunCurrentLoop` 兼容壳导出。
 
 ## 控制时序（抽象）
 

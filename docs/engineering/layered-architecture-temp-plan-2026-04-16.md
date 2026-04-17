@@ -3,6 +3,8 @@
 日期：2026-04-16  
 状态：临时方案（执行期参考文档；保留至 M11 完成并验收后再归档）
 
+2026-04-17 修订说明：新增“重开收口约束（R 版）”，本次修订覆盖此前“兼容壳可短期保留”的执行口径。
+
 ## 1. 目标与约束
 
 - 目标依赖规则：仅允许相邻层单向依赖。
@@ -116,11 +118,15 @@
   - current_inner_algo.c：电流环与软切换。
   - pwm_algo.c：SVPWM 更新。
   - algo_config_apply.c：配置参数应用入口。
-  - foc_control_c01_entry.c：控制入口编排与统一对外门面。
-  - foc_control_c02_config_state.c：运行时配置与状态维护。
-  - foc_control_c03_outer_loop.c：外环与慢速链核心。
-  - foc_control_c04_current_loop.c：快环与电流环核心。
-  - foc_control_c05_actuation.c：执行后处理（软切换/补偿/电角应用）。
+  - foc_control_c11_entry.c：控制入口编排与统一对外门面。
+  - foc_control_c12_init.c：初始化与标定链。
+  - foc_control_c21_cfg_state.c：运行时配置与状态维护。
+  - foc_control_c22_runtime_dispatch.c：运行态分发桥接（层级收口，承接 C11/C12 到主算法链）。
+  - foc_control_c31_outer_loop.c：外环与慢速链核心。
+  - foc_control_c32_current_loop.c：快环与电流环核心。
+  - foc_control_c33_softswitch.c：电流软切换并行分支。
+  - foc_control_c34_compensation.c：补偿并行分支。
+  - foc_control_c41_actuation.c：执行后处理（电角应用与占空比下发）。
 - L4
   - 保持 L41_Math、L42_PAL，不承载业务编排逻辑。
 
@@ -282,12 +288,85 @@ M5 需要显式治理以下“重复或旁路”风险点：
 ### 8.5 M7 前新增步骤（L3 控制算法编号单向链准备）
 
 1. 目标：把 `foc_control.c` 从“单文件大实现”重构为“同一算法整体下的分层单向链实现”。
-2. 命名规则：按功能链编号命名 `foc_control_c01~c05_*`，文件名直接反映依赖层与职责（不用 `L` 前缀避免与分层编号混淆）。
-3. 依赖规则：仅允许 `C01 -> C02 -> C03 -> C04 -> C05` 方向，禁止低层 include 高层。
+2. 命名规则：按功能链编号命名 `foc_control_cxy_*`，其中 `x`=调用链层级、`y`=并列层级编号（与 `L` 层编号语义一致）；文件名直接反映依赖层与职责（不用 `L` 前缀避免与分层编号混淆）。
+3. 依赖规则：仅允许 `C11/C12 -> C21/C22 -> C31/C32 -> C41` 主方向；`C33/C34` 作为并行分支仅供 `C32/C31` 调用；禁止跨级 include（例如 `C11/C12 -> C31/C41`）。
 4. 对外接口：`motion_control_iface.h`、`control_config_iface.h` 保持稳定，不把分层细节泄漏给 L2。
 5. 边界约束：`sensor.c`、`svpwm.c` 本轮不并发拆分；仅在控制链文件内完成重构。
 6. 验收检查：
-  - include 检索：不存在 `c04/c05` 反向 include `c01/c02`。
+  - include 检索：不存在 `c32/c41` 反向 include `c11/c21`。
   - 宏闭环：`FOC_CURRENT_LOOP_PID_ENABLE` 在新链路中满足“宏开关 -> 状态变量 -> 接口 -> 调用点”闭环。
   - 构建验证：`phase-d-verify-build`（缺 `eide` 时用 `phase-d-rebuild`）通过且无新增 warning。
+
+## 9. 2026-04-17 重开收口约束与任务目标（R 版）
+
+### 9.1 基线评估（重开时源码快照，历史基线）
+
+1. L3 存在“新链 + 旧壳”并存：控制链文件已拆分，但 `foc_control.c` 仍在工程清单中。
+2. L3 链内仍通过公共总头/公共 internal 头耦合：`foc_control.h`、`foc_control_internal.h` 被多级链路复用，违背“层级最小依赖”。
+3. L3 非控制链算法仍分散：协议纯处理位于 `protocol_core_parser.c`、`protocol_core_normalize.c`、`protocol_text_codec.c` 三文件并列，未做单文件聚合。
+4. L2 存在兼容壳外露与并列散点：`RunOpenLoop/RunOuterLoop/RunCurrentLoop` 与统一入口并存；同域读写与诊断/输出职责仍有并列文件。
+
+### 9.2 强化约束（覆盖旧口径）
+
+1. 禁止兼容共存：调用链落地后，旧壳文件必须同次删除，不允许“先保留、后清理”。
+2. 禁止公共 internal 聚合头穿透：L3 链内只能依赖“本级头 + 下一级头 + 必要共享类型头”，不得通过 `foc_control_internal.h` 作为跨级入口。
+3. 严格层层单向，允许同层并行：同层可有多个算法分支（如外环/电流环并行），但分支必须汇入下一层统一执行出口。
+4. 非链同域算法必须合并：L3 协议纯处理、L2 同域并列处理模块不允许长期分散。
+5. 删除动作必须联动工程清单：删源文件时必须同步更新 `builder.params`、`.eide/eide.yml`，否则不通过验收。
+
+### 9.3 重开任务目标（按执行顺序）
+
+1. R1-L3-Control（全链 Cxy 化，不限于 `foc_control.c`）：
+  - 文件范围：`foc_control_c11_*`、`foc_control_c12_*`、`foc_control_c21_*`、`foc_control_c22_*`、`foc_control_c31_*`、`foc_control_c32_*`、`foc_control_c33_*`、`foc_control_c34_*`、`foc_control_c41_*`。
+  - 目标：所有 `foc_control` 相关控制算法函数都归入 `Cxx` 调用链；旧文件 `foc_control.c`、`foc_control.h` 必删。
+  - 上行约束：对 L2 只保留一个上行实现文件（`C11`）。
+2. R2-L3-Compaction+Protocol（合并任务）：
+  - C1 收口：`C22` 职责已并入 `C11`，独立分发壳已删除。
+  - 初始化拆分：已落地为“算法组织级（L3-C1，与 C11 同层）”和“控制算法级（L3 初始化原语层）”。
+  - R2 范围限定：仅完成 L3 内部层级重排与收口，不进行 L1/L2 大层级提升。
+  - C21/C12 评估结论：不做整文件合并；`C21` 保持运行配置/状态库，`C12` 保持初始化算法原语，仅保留最小接口连接。
+  - 协议纯处理合并（并入 R2 同次执行）：
+    - 合并来源：`protocol_core_parser.c`、`protocol_core_normalize.c`、`protocol_text_codec.c`（已删除）。
+    - 合并结果：`protocol_core.c` 单实现入口。
+3. R3-L2-Chain（链式与并列拆分治理）：
+  - 链式固化：`protocol_service.c -> protocol_parser.c -> command_manager.c`。
+  - 命令链固化：`command_manager.c -> command_manager_dispatch.c -> store/query -> command_manager_diag.c`。
+  - 非链同域聚合：`command_manager_store.c` 与 `command_manager_query.c` 合并为单文件。
+  - 控制门面收口：`motor_control_service.c` 仅保留统一调度入口，删除兼容壳导出。
+4. R4-List+Build（清单与构建闭环）：
+  - 清单同步：`builder.params`、`.eide/eide.yml` 与源文件删除/合并动作同次更新。
+  - 验证：检索 + `phase-d-rebuild` + 文档回写同次完成。
+
+### 9.3.1 L3 控制链函数映射（强制）
+
+1. C11（R2 后上行唯一入口文件）：`FOC_ControlOuterLoopStep`、`FOC_OpenLoopStep`，并吸收原 `C22` 的模式分发、入口复位与执行桥接职责。
+2. C12（初始化算法原语层）：`FOC_MotorInit`、`FOC_CalibrateElectricalAngleAndDirection` 及其算法原语。
+3. C21（运行配置/状态层）：`FOC_ControlConfigResetDefault`、全部 `FOC_ControlSet*`、`FOC_PIDInit`、状态访问函数。
+4. C31（外环）：`FOC_SpeedOuterLoopStep`、`FOC_SpeedAngleOuterLoopStep`、角度/速度累积 helper。
+5. C32（电流环）：`FOC_CurrentControlStep`、`FOC_ControlRequiresCurrentSample`、闭环融合逻辑。
+6. C33（软切换并行分支）：`FOC_ControlSoftSwitchUpdateBlend`。
+7. C34（补偿并行分支）：`FOC_ControlCoggingLookupIq`。
+8. C41（执行层）：`FOC_ControlApplyElectricalAngleRuntime/Direct`、执行输出与后处理函数。
+9. C21/C12 评估结论：保持分离，不做整文件合并。
+10. 并行算法约束：`C33` 仅服务 `C32`，`C34` 仅服务 `C31`；并行分支不得跨层反向传播。
+
+### 9.3.2 L2 函数级细化（强制）
+
+1. `motor_control_service.c`：
+  - 保留：`MotorControlService_RunControlTask`、`MotorControlService_ApplyPendingConfig`。
+  - 删除对外兼容壳：`RunOpenLoop`、`RunOuterLoop`、`RunCurrentLoop`（仅转发时）。
+2. `command_manager_dispatch.c`：`CommandManager_DispatchExecute` 只做分发，不承载参数存储读写细节。
+3. `command_manager_store/query` 合并文件：保持 `WriteParam/ReadParam/WriteState/ReadState/ReportAll*` 函数边界，不改变协议行为。
+4. `command_manager_diag.c`：仅保留输出桥接与文本封装，不承载状态机与参数逻辑。
+
+### 9.4 验收口径（R 版）
+
+1. 检索无 `foc_control.c`、`foc_control.h` 在控制链中的残留依赖与工程清单条目。
+2. `Cxx` 源文件检索无 `foc_control_internal.h` 作为跨级公共入口的用法。
+3. L3 协议纯处理仅保留单文件实现入口。
+4. L2 `store/query` 完成同域合并，且 `DispatchExecute` 不回流写入细节。
+5. L3 对 L2 的运行上行入口仅保留单文件（C11）。
+6. `foc_control_c22_runtime_dispatch.*` 在 R2 完成后不再保留独立构建条目。
+7. 初始化职责满足“组织级与算法级均在 L3 完成重排”约束：组织级与 `C11` 同层，算法级保持初始化原语层，且无跨层回流。
+8. 构建通过且无新增 warning。
 

@@ -1,4 +1,4 @@
-#include "L3_Algorithm/foc_control_softswitch.h"
+#include "L3_Algorithm/foc_control_c33_softswitch.h"
 
 #include "LS_Config/foc_config.h"
 #include "L41_Math/math_transforms.h"

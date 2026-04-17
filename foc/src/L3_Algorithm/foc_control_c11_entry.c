@@ -1,9 +1,10 @@
-#include "L3_Algorithm/foc_control_c01_entry.h"
+#include "L3_Algorithm/foc_control_c11_entry.h"
 
-#include "L3_Algorithm/foc_control_c03_outer_loop.h"
-#include "L3_Algorithm/foc_control_c05_actuation.h"
-#include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
+#include "L3_Algorithm/foc_control_c21_cfg_state.h"
+#include "L3_Algorithm/foc_control_c31_outer_loop.h"
+#include "L3_Algorithm/foc_control_c41_actuation.h"
+#include "L41_Math/math_transforms.h"
 
 #define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
 
@@ -16,6 +17,11 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
 
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
+}
+
+void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle)
+{
+    FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
 }
 
 void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)

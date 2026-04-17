@@ -1,6 +1,5 @@
-#include "L3_Algorithm/foc_control_c02_cfg_state.h"
+#include "L3_Algorithm/foc_control_c21_cfg_state.h"
 
-#include "L3_Algorithm/foc_control_internal.h"
 #include "LS_Config/foc_config.h"
 
 static foc_control_runtime_config_t g_foc_runtime_cfg = {

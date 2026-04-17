@@ -1,5 +1,5 @@
-#ifndef FOC_CONTROL_C01_ENTRY_H
-#define FOC_CONTROL_C01_ENTRY_H
+#ifndef FOC_CONTROL_C11_ENTRY_H
+#define FOC_CONTROL_C11_ENTRY_H
 
 #include <stdint.h>
 
@@ -18,4 +18,7 @@ uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
 
 void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
-#endif /* FOC_CONTROL_C01_ENTRY_H */
+/* L3 init path bridge: keep C12 on C1 entry and avoid direct C12->C41 dependency. */
+void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle);
+
+#endif /* FOC_CONTROL_C11_ENTRY_H */

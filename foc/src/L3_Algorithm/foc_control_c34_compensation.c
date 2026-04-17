@@ -1,4 +1,4 @@
-#include "L3_Algorithm/foc_control_compensation.h"
+#include "L3_Algorithm/foc_control_c34_compensation.h"
 
 #include <math.h>
 

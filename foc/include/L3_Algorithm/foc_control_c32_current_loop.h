@@ -1,5 +1,5 @@
-#ifndef FOC_CONTROL_C04_CURRENT_LOOP_H
-#define FOC_CONTROL_C04_CURRENT_LOOP_H
+#ifndef FOC_CONTROL_C32_CURRENT_LOOP_H
+#define FOC_CONTROL_C32_CURRENT_LOOP_H
 
 #include <stdint.h>
 
@@ -13,4 +13,4 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
 
 uint8_t FOC_ControlRequiresCurrentSample(void);
 
-#endif /* FOC_CONTROL_C04_CURRENT_LOOP_H */
+#endif /* FOC_CONTROL_C32_CURRENT_LOOP_H */
