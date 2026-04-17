@@ -26,6 +26,9 @@ void FOC_Platform_SetControlTickCallback(FOC_Platform_TickCallback_t callback);
 /** @brief Start the control-tick source. */
 void FOC_Platform_StartControlTickSource(void);
 
+/** @brief Enable or disable runtime control interrupts. */
+void FOC_Platform_SetControlRuntimeInterrupts(uint8_t enable);
+
 /* ===== Indicator ===== */
 
 /** @brief Initialize board indicator peripherals. */

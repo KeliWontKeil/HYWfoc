@@ -33,3 +33,4 @@
 .\output\pwm.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_misc.h
 .\output\pwm.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h
 .\output\pwm.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h
+.\output\pwm.o: .\Application\Include\interrupt_priority.h

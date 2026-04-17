@@ -17,10 +17,13 @@
  */
 
 /*
-1.必须实现两个定时器:互补PWM定时器（等待将PWM插值移入PWM定时器中断）、任务定时器
+0.API层实现禁止修改，建议使用已经定义的相关宏作为初始化参数
+1.必须实现两个定时器:互补PWM定时器、任务定时器
 2.必须实现两个回调函数:任务定时器回调函数、PWM定时器回调函数
-3.高频率同步定时器、采样定时器建议实现，以取得较好的同步效果和控制效果
-4.通信接口可选实现，但建议至少实现一个UART接口以便于调试和参数调整
+3.高频率同步定时器强烈建议实现，避免控制和PWM更新时序错位引起震颤
+4.建议严格分离初始化和中断使能，避免中断提前开启导致不可预期的行为
+5.如果使用定时器触发+DMA进行ADC采样，请确保采样点与PWM周期内的预设位置对齐，建议使用高频率同步定时器作为定时器同步源
+6.通信接口可选实现，但建议至少实现一个UART接口以便于调试和参数调整
 
 */
 
@@ -40,6 +43,11 @@ void FOC_Platform_SetControlTickCallback(FOC_Platform_TickCallback_t callback) {
 
 /** @brief Start control tick source after init and callback binding. */
 void FOC_Platform_StartControlTickSource(void) {}
+
+void FOC_Platform_SetControlRuntimeInterrupts(uint8_t enable)
+{
+	(void)enable;
+}
 
 /* ===== Indicator ===== */
 

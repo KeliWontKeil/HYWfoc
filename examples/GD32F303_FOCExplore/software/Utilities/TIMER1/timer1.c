@@ -26,6 +26,10 @@ void Timer1_Init(uint32_t prescaler, uint32_t period)
     /* Deinitialize TIMER1 */
     timer_deinit(TIMER1_PERIPH);
     
+    timer_slave_mode_select(TIMER1_PERIPH, TIMER_SLAVE_MODE_EVENT);
+    timer_master_slave_mode_config(TIMER1_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
+    timer_input_trigger_source_select(TIMER1_PERIPH, TIMER_SMCFG_TRGSEL_ITI2);  /* Trigger from TIMER2 (ITI2) */
+
     /* Configure TIMER1 with provided parameters */
     timer_parameter_struct timer_initpara;
     timer_initpara.prescaler         = prescaler;
@@ -35,12 +39,6 @@ void Timer1_Init(uint32_t prescaler, uint32_t period)
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_initpara.repetitioncounter = 0;
     timer_init(TIMER1_PERIPH, &timer_initpara);
-    
-    /* Enable TIMER1 update interrupt */
-    timer_interrupt_enable(TIMER1_PERIPH, TIMER_INT_UP);
-    
-    /* Configure NVIC for TIMER1 */
-    nvic_irq_enable(TIMER1_IRQn, TIMER1_PRIORITY_GROUP, TIMER1_PRIORITY_SUBGROUP);
     
     /* Mark as initialized */
     timer1_initialized = 1;
@@ -69,6 +67,20 @@ void Timer1_Start(void)
 void Timer1_Stop(void)
 {
     timer_disable(TIMER1_PERIPH);
+}
+
+void Timer1_SetUpdateInterruptEnabled(uint8_t enable)
+{
+    if (enable != 0U)
+    {
+        timer_interrupt_enable(TIMER1_PERIPH, TIMER_INT_UP);
+        nvic_irq_enable(TIMER1_IRQn, TIMER1_PRIORITY_GROUP, TIMER1_PRIORITY_SUBGROUP);
+    }
+    else
+    {
+        timer_interrupt_disable(TIMER1_PERIPH, TIMER_INT_UP);
+        nvic_irq_disable(TIMER1_IRQn);
+    }
 }
 
 /*!

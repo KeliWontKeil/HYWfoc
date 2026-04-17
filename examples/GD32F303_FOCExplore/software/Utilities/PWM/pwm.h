@@ -66,6 +66,7 @@ typedef void (*pwm_update_callback_t)(void);
 void PWM_Init(uint8_t freq_kHz,uint8_t deadtime_percent);
 void PWM_Start(void);
 void PWM_Stop(void);
+void PWM_SetUpdateInterruptEnabled(uint8_t enable);
 void PWM_SetDutyCycle(pwm_channel_t channel, uint8_t duty_percent);
 void PWM_SetDutyCycleFloat(pwm_channel_t channel, float duty);
 void PWM_SetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c);

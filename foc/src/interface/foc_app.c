@@ -20,6 +20,7 @@ static void Monitor_Task_Trigger(void);
 static void FOC_App_OnPwmUpdateISR(void);
 static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data);
 static void FOC_App_StopFastCurrentLoop(void);
+static void FOC_App_EnterSafeOutputState(uint8_t report_skip);
 static void FOC_App_ApplyPidRuntimeParams(void);
 static void FOC_App_ProcessCommStep(void);
 static void FOC_App_UpdateIndicators(void);
@@ -160,6 +161,7 @@ void FOC_App_Init(void)
 void FOC_App_Start(void)
 {
     FOC_Platform_StartControlTickSource();
+    FOC_Platform_SetControlRuntimeInterrupts(1U);
 }
 
 void FOC_App_Loop(void)
@@ -222,15 +224,23 @@ static void FOC_App_StopFastCurrentLoop(void)
     g_fast_current_loop_div_counter = 0U;
 }
 
+static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
+{
+    FOC_App_StopFastCurrentLoop();
+    FOC_ControlResetCurrentSoftSwitchState();
+    FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
+
+    if (report_skip != 0U)
+    {
+        CommandManager_ReportControlLoopSkip();
+    }
+}
+
 static void FOC_App_OnPwmUpdateISR(void)
 {
-#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_DISABLE)
-    /* Current-loop disabled: keep PWM update ISR as interpolation-only path. */
-    SVPWM_InterpolationISR();
-    return;
-#else
     uint8_t divider;
     float current_loop_dt_sec;
+    const sensor_data_t *current_sensor = 0;
 
     /* Keep interpolation update at each PWM update interrupt. */
     SVPWM_InterpolationISR();
@@ -248,17 +258,6 @@ static void FOC_App_OnPwmUpdateISR(void)
     }
     g_fast_current_loop_div_counter = 0U;
 
-    Sensor_ReadCurrentOnly();
-    if (Sensor_CopyData(&g_fast_current_sensor_snapshot) == 0U)
-    {
-        return;
-    }
-
-    if (g_fast_current_sensor_snapshot.adc_valid == 0U)
-    {
-        return;
-    }
-
     g_motor.iq_target = g_fast_current_loop_iq_target;
     if (FOC_PWM_FREQ_KHZ == 0U)
     {
@@ -269,12 +268,25 @@ static void FOC_App_OnPwmUpdateISR(void)
         current_loop_dt_sec = (float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f);
     }
 
-    FOC_FastCurrentLoopStep(&g_motor,
-                            &g_torque_current_pid,
-                            &g_fast_current_sensor_snapshot,
-                            g_fast_current_loop_electrical_angle,
-                            current_loop_dt_sec);
+#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
+    Sensor_ReadCurrentOnly();
+    if (Sensor_CopyData(&g_fast_current_sensor_snapshot) == 0U)
+    {
+        return;
+    }
+
+    if (g_fast_current_sensor_snapshot.adc_valid == 0U)
+    {
+        return;
+    }
+    current_sensor = &g_fast_current_sensor_snapshot;
 #endif
+
+    FOC_CurrentControlStep(&g_motor,
+                           &g_torque_current_pid,
+                           current_sensor,
+                           g_fast_current_loop_electrical_angle,
+                           current_loop_dt_sec);
 }
 
 static void FOC_App_UpdateIndicators(void)
@@ -344,17 +356,14 @@ static void Motor_Control_Loop(void)
     if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
     {
         /* Stop runtime I2C read path in fault state to avoid repeated bus timeout load. */
-        FOC_App_StopFastCurrentLoop();
-        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
-        CommandManager_ReportControlLoopSkip();
+        FOC_App_EnterSafeOutputState(1U);
         return;
     }
 
     Sensor_ReadAll();
     if (Sensor_CopyData(&g_sensor_snapshot) == 0U)
     {
-        FOC_App_StopFastCurrentLoop();
-        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
+        FOC_App_EnterSafeOutputState(0U);
         CommandManager_ReportRuntimeSensorState(0U, 0U);
         return;
     }
@@ -364,9 +373,7 @@ static void Motor_Control_Loop(void)
 
     if ((g_sensor_snapshot.adc_valid == 0U) || (g_sensor_snapshot.encoder_valid == 0U))
     {
-        FOC_App_StopFastCurrentLoop();
-        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
-        CommandManager_ReportControlLoopSkip();
+        FOC_App_EnterSafeOutputState(1U);
         return;
     }
 
@@ -378,25 +385,13 @@ static void Motor_Control_Loop(void)
 
     if (FOC_App_IsUndervoltageFaultActive() != 0U)
     {
-        FOC_App_StopFastCurrentLoop();
-        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
-        CommandManager_ReportControlLoopSkip();
-        return;
-    }
-
-    if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
-    {
-        FOC_App_StopFastCurrentLoop();
-        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
-        CommandManager_ReportControlLoopSkip();
+        FOC_App_EnterSafeOutputState(1U);
         return;
     }
 
     if (CommandManager_IsMotorEnabled() == COMMAND_MANAGER_ENABLED_DISABLE)
     {
-        FOC_App_StopFastCurrentLoop();
-        FOC_OpenLoopStep(&g_motor, 0.0f, 0.0f);
-        CommandManager_ReportControlLoopSkip();
+        FOC_App_EnterSafeOutputState(1U);
         return;
     }
 
@@ -504,21 +499,10 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
 #error "Unsupported FOC_BUILD_CONTROL_ALGO_SET"
 #endif
 
-#if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
+    /* Current algorithm always runs in PWM ISR; task loop only publishes fast-loop targets. */
     g_fast_current_loop_iq_target = g_motor.iq_target;
     g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
     g_fast_current_loop_enabled = 1U;
-#else
-    /* Current-loop disabled: update duty target in task context; ISR only interpolates. */
-    FOC_CurrentLoopStep(&g_motor,
-                        &g_torque_current_pid,
-                        g_motor.iq_target,
-                        sensor_data,
-                        g_motor.electrical_phase_angle,
-                        FOC_CONTROL_DT_SEC);
-    FOC_ControlApplyElectricalAngle(&g_motor, g_motor.electrical_phase_angle);
-    FOC_App_StopFastCurrentLoop();
-#endif
 }
 
 static void FOC_App_ApplyPidRuntimeParams(void)
@@ -541,4 +525,10 @@ static void FOC_App_ApplyPidRuntimeParams(void)
     g_angle_pid.out_max = g_motor.set_voltage;
     g_speed_pid.out_min = -g_motor.set_voltage;
     g_speed_pid.out_max = g_motor.set_voltage;
+
+    FOC_ControlSetCurrentSoftSwitchMode(CommandManager_GetCurrentSoftSwitchMode());
+    FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(CommandManager_GetCurrentSoftSwitchAutoOpenIqA());
+    FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(CommandManager_GetCurrentSoftSwitchAutoClosedIqA());
+    FOC_ControlSetCurrentSoftSwitchEnable(CommandManager_IsCurrentSoftSwitchEnabled());
+    FOC_ControlResetCurrentSoftSwitchState();
 }

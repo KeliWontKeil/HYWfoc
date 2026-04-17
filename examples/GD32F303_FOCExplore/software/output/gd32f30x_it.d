@@ -45,3 +45,4 @@
 .\output\gd32f30x_it.o: .\Utilities\TIMER2\timer2.h
 .\output\gd32f30x_it.o: .\Utilities\ADC\adc.h
 .\output\gd32f30x_it.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\gd32f30x_it.o: .\Utilities\PWM\pwm.h

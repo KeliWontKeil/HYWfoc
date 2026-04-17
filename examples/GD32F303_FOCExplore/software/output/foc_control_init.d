@@ -4,5 +4,12 @@
 .\output\foc_control_init.o: ..\..\..\foc\include\config/foc_shared_types.h
 .\output\foc_control_init.o: ..\..\..\foc\include\algorithm/math_transforms.h
 .\output\foc_control_init.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\math.h
+.\output\foc_control_init.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\foc_control_init.o: ..\..\..\foc\include\algorithm/foc_control.h
 .\output\foc_control_init.o: ..\..\..\foc\include\interface/foc_platform_api.h
 .\output\foc_control_init.o: ..\..\..\foc\include\algorithm/foc_control_internal.h
+.\output\foc_control_init.o: ..\..\..\foc\include\config/foc_config.h
+.\output\foc_control_init.o: ..\..\..\foc\include\config/foc_cfg_symbol_defs.h
+.\output\foc_control_init.o: ..\..\..\foc\include\config/foc_cfg_feature_switches.h
+.\output\foc_control_init.o: ..\..\..\foc\include\config/foc_cfg_init_values.h
+.\output\foc_control_init.o: ..\..\..\foc\include\config/foc_cfg_compile_limits.h

@@ -9,3 +9,4 @@
 .\output\svpwm.o: ..\..\..\foc\include\config/foc_cfg_feature_switches.h
 .\output\svpwm.o: ..\..\..\foc\include\config/foc_cfg_init_values.h
 .\output\svpwm.o: ..\..\..\foc\include\config/foc_cfg_compile_limits.h
+.\output\svpwm.o: ..\..\..\foc\include\config/foc_math_lut.h

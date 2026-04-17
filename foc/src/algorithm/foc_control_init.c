@@ -1,11 +1,17 @@
 #include "algorithm/foc_control_init.h"
 
 #include <stdio.h>
+#include <math.h>
 
 #include "algorithm/foc_control.h"
+#include "algorithm/math_transforms.h"
 #include "interface/foc_platform_api.h"
 #include "algorithm/foc_control_internal.h"
 #include "config/foc_config.h"
+
+float Math_WrapRad(float angle);
+float Math_WrapRadDelta(float angle);
+float Math_ClampFloat(float value, float min_val, float max_val);
 
 static uint8_t FOC_ClampPolePairs(int32_t pole_pairs)
 {
@@ -128,7 +134,7 @@ static uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
         return 0U;
     }
 
-    FOC_ControlApplyElectricalAngle(motor, electrical_angle);
+    FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
     FOC_Platform_WaitMs(settle_ms);
 
     for (i = 0U; i < sample_count; i++)
@@ -140,17 +146,17 @@ static uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
             continue;
         }
 
-        sin_sum += sinf(sample_rad);
-        cos_sum += cosf(sample_rad);
+        sin_sum += (float)sin((double)sample_rad);
+        cos_sum += (float)cos((double)sample_rad);
         FOC_Platform_WaitMs(FOC_CALIB_SETTLE_MS);
     }
 
-    if ((fabsf(sin_sum) < 1e-6f) && (fabsf(cos_sum) < 1e-6f))
+    if (((float)fabs((double)sin_sum) < 1e-6f) && ((float)fabs((double)cos_sum) < 1e-6f))
     {
         return 0U;
     }
 
-    *mech_angle_rad = Math_WrapRad(atan2f(sin_sum, cos_sum));
+    *mech_angle_rad = Math_WrapRad((float)atan2((double)sin_sum, (double)cos_sum));
     return 1U;
 }
 
@@ -164,8 +170,8 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     float sum_d_elec = 0.0f;
     uint8_t has_prev = 0U;
     uint16_t i;
-    uint16_t step_count = FOC_CALIB_FINE_STEP_COUNT;
-    float step_elec_rad = FOC_CALIB_FINE_STEP_ELEC_RAD;
+    uint16_t step_count = FOC_CALIB_COARSE_STEP_COUNT;
+    float step_elec_rad = FOC_CALIB_COARSE_STEP_ELEC_RAD;
 
     if ((motor == 0) || (direction_est == 0) || (pole_pairs_est == 0))
     {
@@ -179,8 +185,8 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
 
         if (FOC_SampleLockedMechanicalAngle(motor,
                                             elec_target,
-                                            FOC_CALIB_FINE_STEP_SETTLE_MS,
-                                            FOC_CALIB_FINE_STEP_SAMPLE_COUNT,
+                                            FOC_CALIB_COARSE_STEP_SETTLE_MS,
+                                            FOC_CALIB_COARSE_STEP_SAMPLE_COUNT,
                                             &mech_rad) == 0U)
         {
             continue;
@@ -198,7 +204,7 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
             float d_mech = Math_WrapRadDelta(mech_rad - prev_mech_rad);
             float d_elec = elec_target - prev_elec_rad;
 
-            if (fabsf(d_mech) >= FOC_CALIB_MIN_MECH_STEP_RAD)
+            if ((float)fabs((double)d_mech) >= FOC_CALIB_MIN_MECH_STEP_RAD)
             {
                 sum_d_mech += d_mech;
                 sum_d_elec += d_elec;
@@ -209,16 +215,17 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
         prev_elec_rad = elec_target;
     }
 
-    if ((fabsf(sum_d_mech) < FOC_CALIB_MIN_MECH_STEP_RAD) || (fabsf(sum_d_elec) < 1e-6f))
+    if (((float)fabs((double)sum_d_mech) < FOC_CALIB_MIN_MECH_STEP_RAD) ||
+        ((float)fabs((double)sum_d_elec) < 1e-6f))
     {
         return 0U;
     }
 
     *direction_est = (sum_d_mech >= 0.0f) ? FOC_DIR_NORMAL : FOC_DIR_REVERSED;
-    *pole_pairs_est = FOC_ClampPolePairs((int32_t)(fabsf(sum_d_elec / sum_d_mech) + 0.5f));
+    *pole_pairs_est = FOC_ClampPolePairs((int32_t)((float)fabs((double)(sum_d_elec / sum_d_mech)) + 0.5f));
 
-    FOC_ControlApplyElectricalAngle(motor, 0.0f);
-    FOC_Platform_WaitMs(FOC_CALIB_FINE_STEP_SETTLE_MS);
+    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_Platform_WaitMs(FOC_CALIB_COARSE_STEP_SETTLE_MS);
 
     for (i = step_count; i > 0U; i--)
     {
@@ -227,8 +234,8 @@ static uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
 
         FOC_SampleLockedMechanicalAngle(motor,
                                         elec_target,
-                                        FOC_CALIB_FINE_STEP_SETTLE_MS,
-                                        FOC_CALIB_FINE_STEP_SAMPLE_COUNT,
+                                        FOC_CALIB_COARSE_STEP_SETTLE_MS,
+                                        FOC_CALIB_COARSE_STEP_SAMPLE_COUNT,
                                         &mech_rad);
     }
 
@@ -264,41 +271,18 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     backup_ud = motor->ud;
     backup_uq = motor->uq;
 
-    calib_uq = motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO_DEFAULT;
+    calib_uq = motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
     calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->set_voltage);
 
     motor->uq = 0.0f;
     motor->ud = calib_uq;
 
-    if (FOC_EstimateDirectionAndPolePairs(motor, &direction_est, &pole_pairs_est) != 0U)
-    {
-        if (need_direction != 0U)
-        {
-            motor->direction = direction_est;
-        }
-        if (need_pole_pairs != 0U)
-        {
-            motor->pole_pairs = pole_pairs_est;
-        }
-    }
-    else
-    {
-        if (need_direction != 0U)
-        {
-            motor->direction = FOC_DIR_NORMAL;
-        }
-        if (need_pole_pairs != 0U)
-        {
-            motor->pole_pairs = 1U;
-        }
-    }
-
     if (need_zero != 0U)
     {
         if (FOC_SampleLockedMechanicalAngle(motor,
                                             0.0f,
-                                            FOC_CALIB_LOCK_SETTLE_MS,
-                                            FOC_CALIB_LOCK_SAMPLE_COUNT,
+                                            FOC_CALIB_ZERO_LOCK_SETTLE_MS,
+                                            FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT,
                                             &mech_zero_rad_est) != 0U)
         {
             motor->mech_angle_at_elec_zero_rad = mech_zero_rad_est;
@@ -314,10 +298,41 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             motor->mech_angle_prev_valid = 1U;
         }
     }
+    else
+    {
+        FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+        FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
+    }
+
+    if ((need_direction != 0U) || (need_pole_pairs != 0U))
+    {
+        if (FOC_EstimateDirectionAndPolePairs(motor, &direction_est, &pole_pairs_est) != 0U)
+        {
+            if (need_direction != 0U)
+            {
+                motor->direction = direction_est;
+            }
+            if (need_pole_pairs != 0U)
+            {
+                motor->pole_pairs = pole_pairs_est;
+            }
+        }
+        else
+        {
+            if (need_direction != 0U)
+            {
+                motor->direction = FOC_DIR_NORMAL;
+            }
+            if (need_pole_pairs != 0U)
+            {
+                motor->pole_pairs = 1U;
+            }
+        }
+    }
 
     motor->ud = backup_ud;
     motor->uq = backup_uq;
-    FOC_ControlApplyElectricalAngle(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
 }
 
 static uint8_t FOC_LoadStaticCoggingTable(int16_t *table_q15,
@@ -369,7 +384,7 @@ static uint8_t FOC_LearnCoggingTable(foc_motor_t *motor,
 
     backup_ud = motor->ud;
     backup_uq = motor->uq;
-    lock_ud = Math_ClampFloat(motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO_DEFAULT,
+    lock_ud = Math_ClampFloat(motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO,
                               0.0f,
                               motor->set_voltage);
 
@@ -378,9 +393,17 @@ static uint8_t FOC_LearnCoggingTable(foc_motor_t *motor,
 
     for (i = 0U; i < point_count; i++)
     {
-        float target_mech_rad = (FOC_MATH_TWO_PI * (float)i) / (float)point_count;
-        float target_elec_rad = FOC_ControlMechanicalToElectricalAngle(motor, target_mech_rad);
+        float target_elec_rad = (FOC_MATH_TWO_PI * (float)i) / (float)point_count;
+        float target_mech_rad;
         float sampled_mech_rad;
+
+        if ((motor->pole_pairs == 0U) || (motor->direction == FOC_DIR_UNDEFINED))
+        {
+            return 0U;
+        }
+
+        target_mech_rad = Math_WrapRad(motor->mech_angle_at_elec_zero_rad +
+                                       ((float)motor->direction * target_elec_rad / (float)motor->pole_pairs));
 
         if (FOC_SampleLockedMechanicalAngle(motor,
                                             target_elec_rad,
@@ -410,7 +433,7 @@ static uint8_t FOC_LearnCoggingTable(foc_motor_t *motor,
 
     motor->ud = backup_ud;
     motor->uq = backup_uq;
-    FOC_ControlApplyElectricalAngle(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
 
     if ((valid_count * 100U) < (uint16_t)(point_count * FOC_COGGING_LEARN_MIN_VALID_PERCENT))
     {
@@ -536,6 +559,5 @@ void FOC_MotorInit(foc_motor_t *motor,
 #if (FOC_INIT_CALIBRATION_ENABLE == FOC_CFG_ENABLE)
     FOC_CalibrateElectricalAngleAndDirection(motor);
 #endif
-
     FOC_InitOptionalCoggingCompensation(motor);
 }

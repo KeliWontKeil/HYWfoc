@@ -88,6 +88,9 @@ const command_manager_runtime_state_t *CommandManager_GetRuntimeState(void);
 uint8_t CommandManager_WriteParam(char subcommand, float value);
 uint8_t CommandManager_ReadParam(char subcommand, float *value_out);
 void CommandManager_ReportAllParams(void);
+uint8_t CommandManager_WriteState(char subcommand, uint8_t state);
+uint8_t CommandManager_ReadState(char subcommand, uint8_t *state_out);
+void CommandManager_ReportAllStates(void);
 
 float CommandManager_GetTargetAngleRad(void);
 float CommandManager_GetAngleSpeedRadS(void);
@@ -116,6 +119,10 @@ float CommandManager_GetSpeedPidKd(void);
 
 uint8_t CommandManager_GetControlMode(void);
 uint8_t CommandManager_IsMotorEnabled(void);
+uint8_t CommandManager_IsCurrentSoftSwitchEnabled(void);
+uint8_t CommandManager_GetCurrentSoftSwitchMode(void);
+float CommandManager_GetCurrentSoftSwitchAutoOpenIqA(void);
+float CommandManager_GetCurrentSoftSwitchAutoClosedIqA(void);
 uint8_t CommandManager_RecoverFaultAndReinit(void);
 
 #endif /* COMMAND_MANAGER_H */

@@ -47,6 +47,20 @@ void PWM_Start(void)
     timer_enable(PWM_TIMER0_PERIPH);
 }
 
+void PWM_SetUpdateInterruptEnabled(uint8_t enable)
+{
+    if (enable != 0U)
+    {
+        timer_interrupt_enable(PWM_TIMER0_PERIPH, TIMER_INT_UP);
+        NVIC_CONFIG(TIMER0_UP_IRQn, TIMER0_UP_PRIORITY_GROUP, TIMER0_UP_PRIORITY_SUBGROUP);
+    }
+    else
+    {
+        timer_interrupt_disable(PWM_TIMER0_PERIPH, TIMER_INT_UP);
+        nvic_irq_disable(TIMER0_UP_IRQn);
+    }
+}
+
 /*!
     \brief      Stop PWM generation
     \param[in]  none
@@ -301,9 +315,6 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_channel_output_mode_config(PWM_TIMER0_PERIPH, TIMER_CH_2, TIMER_OC_MODE_PWM0);
     timer_channel_output_shadow_config(PWM_TIMER0_PERIPH, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
     
-    timer_interrupt_enable(PWM_TIMER0_PERIPH, TIMER_INT_UP);
-    NVIC_CONFIG(TIMER0_UP_IRQn, TIMER0_UP_PRIORITY_GROUP, TIMER0_UP_PRIORITY_SUBGROUP);
-
     timer_auto_reload_shadow_enable(PWM_TIMER0_PERIPH);
     
     #ifdef PWM_DEAD_TIME

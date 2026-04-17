@@ -32,7 +32,7 @@ void FOC_Platform_ControlTickSourceInit(void)
 {
     /* TIMER1 control tick frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
     Timer1_Init(9U,
-                (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * FOC_PLATFORM_CONTROL_TIMER_FREQ_KHZ)) - 1U);
+                (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * FOC_SCHEDULER_TICK_HZ / 1000U)) - 1U);
 }
 
 void FOC_Platform_SetControlTickCallback(FOC_Platform_TickCallback_t callback)
@@ -43,6 +43,12 @@ void FOC_Platform_SetControlTickCallback(FOC_Platform_TickCallback_t callback)
 void FOC_Platform_StartControlTickSource(void)
 {
     Timer1_Start();
+}
+
+void FOC_Platform_SetControlRuntimeInterrupts(uint8_t enable)
+{
+    Timer1_SetUpdateInterruptEnabled(enable);
+    PWM_SetUpdateInterruptEnabled(enable);
 }
 
 void FOC_Platform_CommInit(void)

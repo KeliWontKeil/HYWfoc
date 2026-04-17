@@ -15,8 +15,9 @@
 ### 1. 任务确认
 
 1. 先读 `NEXT_MISSION.md` 明确目标与边界。
-2. 逐项确认任务属性：改代码 / 仅设计 / 暂缓。
-3. 评估影响层级与回滚策略。
+2. 在 v1.3.4 阶段，执行 M9 前需同时读取 `docs/engineering/layered-architecture-temp-plan-2026-04-16.md`，并以其阶段性约束作为实施前复核基线。
+3. 逐项确认任务属性：改代码 / 仅设计 / 暂缓。
+4. 评估影响层级与回滚策略。
 
 ### 2. 实施
 
@@ -24,6 +25,7 @@
 2. 默认在 `main` 直接开发，除非用户明确要求分支。
 3. `L1/L2/L3` 不得直接依赖板级驱动。
 4. 可配置参数必须先落到 `foc_cfg_*.h`，再在 `.c` 使用。
+5. L3 控制算法重构按“功能链编号文件（Cxx）+ 单向依赖链”推进，禁止先拆文件后补依赖方向说明。
 
 ### 3. 验证
 
@@ -39,6 +41,9 @@
 3. 版本与里程碑：同步 `CHANGELOG.md` 与 `NEXT_MISSION.md`。
 4. 库级文档不得写死控制频率，统一使用“配置宏决定的控制周期”表述。
 5. 非必要不新增文档；优先更新现有事实源。
+6. 涉及协议链分层口径调整时，`docs/architecture.md`、`NEXT_MISSION.md` 与临时方案文档必须同次迭代对齐。
+7. 临时方案文档 `docs/engineering/layered-architecture-temp-plan-2026-04-16.md` 保留至 M11 完成并验收后再归档。
+8. 涉及 L3 控制算法编号重构（`foc_control_c01~c05_*`）时，必须同次更新 `docs/architecture.md` 与 `NEXT_MISSION.md` 的命名/依赖链描述。
 
 ## P0 可读性与可维护性验收
 
@@ -71,9 +76,15 @@
 2. 公共头文件不得暴露 `gd32f30x_*`。
 3. 共享类型统一放在 `foc_shared_types.h`。
 
+### L3 控制链文件规则
+
+1. `foc_control` 相关实现按功能链编号命名：`c01`（入口编排）-> `c02`（配置状态）-> `c03`（外环）-> `c04`（快环）-> `c05`（执行后处理）。
+2. 仅允许高层依赖低层，禁止低层 include 高层头文件。
+3. 去内联约束分层处理：L2 允许少量受控 inline（模块内私有且可检索）；L3 除 `L41_Math` 外不新增业务 inline 头，业务共享逻辑必须落到 `.c` 分层文件。
+
 ### 配置收敛
 
-1. `foc/include/config/foc_config.h` + `foc_cfg_*.h` 是唯一配置源。
+1. `foc/include/LS_Config/foc_config.h` + `foc_cfg_*.h` 是唯一配置源。
 2. 禁止在 `.c` 文件散落默认值和编译约束。
 
 ### 命名规则
@@ -93,12 +104,40 @@
 4. `get_errors` 可能残留过期 IntelliSense 告警；以 `unify_builder --rebuild` 或基于 `compile_commands.json` 的真实编译结果为准。
 5. 新增配置宏时，若源文件未通过 `foc_config.h` 接入，容易出现宏未定义问题。
 6. 关闭某功能宏后，受控变量与函数声明/定义/调用应在同一条件编译块中，避免“声明但未引用”告警。
+7. 当 L2 不再直接调用控制层 setter 时，影响控制行为的状态写入（例如电流软切换使能）必须置 `params_dirty`，由 L1 在统一参数应用阶段下发，避免“状态改变但运行行为未刷新”。
 
 ## 质量门禁
 
 1. 不得新增告警（no newly introduced warnings）。
 2. 文档必须与代码在同次迭代内同步。
 3. 接口变更需评估实例适配影响。
+
+## v1.3.3 回归验证记录（P3）
+
+### 编译与告警
+
+1. 验证方式：`unify_builder.exe -p build/GD32F30X_CL/builder.params --rebuild`。
+2. 验证结果：`0 error`，`1 warning`。
+3. warning 明细：`L6914W: option rwpi ignored when using --scatter.`（历史已存在，不属于本轮新增）。
+
+### 资源占用
+
+1. Program Size：`Code=43592`、`RO-data=6168`、`RW-data=268`、`ZI-data=2636`。
+2. ROM 估算：`50028 bytes`（`Code + RO-data + RW-data`）。
+3. RAM 估算：`2904 bytes`（`RW-data + ZI-data`）。
+4. 本轮结论：本次结构重排后的资源增量处于可接受范围，且未引入新增告警。
+
+### 启动标定链路核查
+
+1. 链路顺序：电角锁定 -> 机械零位采样 -> 方向/极对数估计。
+2. 代码落点：`foc_control_init.c` 中 `FOC_MotorInit`、`FOC_CalibrateElectricalAngleAndDirection`、`FOC_EstimateDirectionAndPolePairs`。
+3. 结论：初始化链路保持 direct 占空比下发，不依赖运行态 ISR 插值路径。
+
+### 运行链路核查
+
+1. 链路顺序：传感器采样 -> 外环计算 -> 快速电流环目标发布 -> PWM Update ISR 插值/电流环执行。
+2. 代码落点：`foc_app.c` 中 `Motor_Control_Loop`、`FOC_App_RunControlAlgorithm`、`FOC_App_OnPwmUpdateISR` 与 `svpwm.c` 中 `SVPWM_InterpolationISR`。
+3. 结论：运行态 SVPWM 插值链保持独立，未回退为初始化态直通路径。
 
 ## 参考文档
 
