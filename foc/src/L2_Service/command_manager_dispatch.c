@@ -4,7 +4,7 @@
 
 #include "L2_Service/command_manager.h"
 #include "L2_Service/command_manager_diag.h"
-#include "L3_Algorithm/protocol_core_normalize.h"
+#include "L3_Algorithm/protocol_core.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 

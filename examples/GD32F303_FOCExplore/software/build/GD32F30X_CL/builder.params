@@ -46,7 +46,6 @@
         "../../../foc/src/L2_Service/command_manager.c",
         "../../../foc/src/L2_Service/command_manager_diag.c",
         "../../../foc/src/L2_Service/command_manager_dispatch.c",
-        "../../../foc/src/L2_Service/command_manager_query.c",
         "../../../foc/src/L2_Service/command_manager_store.c",
         "../../../foc/src/L2_Service/debug_stream.c",
         "../../../foc/src/L2_Service/motor_control_service.c",

@@ -1,6 +1,4 @@
-#include "L3_Algorithm/protocol_core_parser.h"
-#include "L3_Algorithm/protocol_core_normalize.h"
-#include "L3_Algorithm/protocol_text_codec.h"
+#include "L3_Algorithm/protocol_core.h"
 
 #include <stdio.h>
 #include <string.h>

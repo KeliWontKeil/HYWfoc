@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "L3_Algorithm/protocol_core_parser.h"
+#include "L3_Algorithm/protocol_core.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 

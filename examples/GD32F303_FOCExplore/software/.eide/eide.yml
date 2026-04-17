@@ -32,7 +32,6 @@ virtualFolder:
         - path: ../../../foc/src/L2_Service/command_manager.c
         - path: ../../../foc/src/L2_Service/command_manager_diag.c
         - path: ../../../foc/src/L2_Service/command_manager_dispatch.c
-        - path: ../../../foc/src/L2_Service/command_manager_query.c
         - path: ../../../foc/src/L2_Service/command_manager_store.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c

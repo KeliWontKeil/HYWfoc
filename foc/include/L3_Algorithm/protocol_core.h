@@ -1,5 +1,5 @@
-#ifndef PROTOCOL_CORE_PARSER_H
-#define PROTOCOL_CORE_PARSER_H
+#ifndef PROTOCOL_CORE_H
+#define PROTOCOL_CORE_H
 
 #include <stdint.h>
 
@@ -15,5 +15,18 @@ protocol_core_frame_parse_result_t ProtocolCore_ParseFrame(const uint8_t *frame,
                                                            protocol_command_t *out_cmd);
 uint8_t ProtocolCore_IsDriverIdFormatValid(uint8_t driver_id);
 uint8_t ProtocolCore_IsDriverAddressedToLocal(uint8_t driver_id);
+uint8_t ProtocolCore_ParseStateValue(float value, uint8_t *state_out);
 
-#endif /* PROTOCOL_CORE_PARSER_H */
+const char *ProtocolText_GetParamName(char subcommand);
+const char *ProtocolText_GetStateName(char subcommand);
+uint8_t ProtocolText_IsIntegerParam(char subcommand);
+void ProtocolText_FormatParamLine(char *out,
+                                  uint16_t out_len,
+                                  char subcommand,
+                                  float value);
+void ProtocolText_FormatStateLine(char *out,
+                                  uint16_t out_len,
+                                  char subcommand,
+                                  uint8_t value);
+
+#endif /* PROTOCOL_CORE_H */
