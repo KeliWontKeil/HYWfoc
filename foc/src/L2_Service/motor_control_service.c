@@ -1,9 +1,9 @@
 #include "L2_Service/motor_control_service.h"
 
 #include "L2_Service/command_manager.h"
-#include "L3_Algorithm/control_config_iface.h"
-#include "L3_Algorithm/motion_control_iface.h"
-#include "L3_Algorithm/motor_init_iface.h"
+#include "L3_Algorithm/foc_control_c11_entry.h"
+#include "L3_Algorithm/foc_control_c12_init.h"
+#include "L3_Algorithm/foc_control_c25_cfg_state.h"
 #include "L3_Algorithm/sensor.h"
 #include "L3_Algorithm/svpwm.h"
 
@@ -63,7 +63,7 @@ uint8_t MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot)
 
 uint8_t MotorControlService_RequiresCurrentSample(void)
 {
-    return FOC_ControlRequiresCurrentSample();
+    return FOC_ControlCurrentLoopRequiresSample();
 }
 
 void MotorControlService_ResetCurrentSoftSwitchState(void)
@@ -93,15 +93,15 @@ uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
                                             args->dt_sec);
 
         case MOTOR_CONTROL_SERVICE_TASK_CURRENT_LOOP:
-            FOC_CurrentControlStep(motor,
-                                   current_pid,
-                                   args->sensor,
-                                   args->electrical_angle,
-                                   args->dt_sec);
+            FOC_ControlCurrentLoopStep(motor,
+                                       current_pid,
+                                       args->sensor,
+                                       args->electrical_angle,
+                                       args->dt_sec);
             return 1U;
 
         case MOTOR_CONTROL_SERVICE_TASK_OPEN_LOOP:
-            FOC_OpenLoopStep(motor, args->open_loop_voltage, args->open_loop_turn_speed);
+            FOC_ControlOpenLoopStep(motor, args->open_loop_voltage, args->open_loop_turn_speed);
             return 1U;
 
         default:

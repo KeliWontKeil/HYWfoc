@@ -9,7 +9,6 @@
 #include "L3_Algorithm/foc_control_c11_entry.h"
 #include "L3_Algorithm/foc_control_c23_motor_param_learn.h"
 #include "L3_Algorithm/foc_control_c24_compensation.h"
-#include "L3_Algorithm/foc_control_c25_cfg_state.h"
 #include "LS_Config/foc_config.h"
 
 float Math_WrapRad(float angle);

@@ -23,9 +23,32 @@ void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electri
     FOC_CurrentControlApplyElectricalAngleDirect(motor, electrical_angle);
 }
 
-void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
+uint8_t FOC_ControlCurrentLoopRequiresSample(void)
+{
+    return FOC_ControlRequiresCurrentSample();
+}
+
+void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
+                                foc_pid_t *current_pid,
+                                const sensor_data_t *sensor,
+                                float electrical_angle,
+                                float dt_sec)
+{
+    FOC_CurrentControlStep(motor,
+                           current_pid,
+                           sensor,
+                           electrical_angle,
+                           dt_sec);
+}
+
+void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
 {
     FOC_CurrentControlOpenLoopStep(motor, voltage, turn_speed, FOC_CONTROL_DT_DEFAULT_SEC);
+}
+
+void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
+{
+    FOC_ControlOpenLoopStep(motor, voltage, turn_speed);
 }
 
 uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,

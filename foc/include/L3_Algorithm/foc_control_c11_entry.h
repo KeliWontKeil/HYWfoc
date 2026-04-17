@@ -16,6 +16,14 @@ uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
                                  float angle_position_speed_rad_s,
                                  float dt_sec);
 
+uint8_t FOC_ControlCurrentLoopRequiresSample(void);
+void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
+                                foc_pid_t *current_pid,
+                                const sensor_data_t *sensor,
+                                float electrical_angle,
+                                float dt_sec);
+void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
+
 void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
 /* L3 init path bridge: keep C12 on C1 entry and avoid direct C12->C41 dependency. */
