@@ -1,11 +1,7 @@
-#include "L2_Service/runtime_c41_command_entry.h"
-#include "L2_Service/runtime_c35_protocol_parser.h"
 #include "L2_Service/runtime_c21_comm_chain.h"
 
-/* Keep explicit declarations to avoid stale index diagnostics during header migration. */
-uint8_t CommandManager_Process(void);
-void CommandManager_CaptureSnapshot(runtime_snapshot_t *snapshot);
-void CommandManager_ClearDirtyFlag(void);
+#include "L2_Service/runtime_c41_command_entry.h"
+#include "L2_Service/runtime_c35_protocol_parser.h"
 
 static uint8_t RuntimeChain_ProcessCommStepInternal(uint8_t max_frames)
 {

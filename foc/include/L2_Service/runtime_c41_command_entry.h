@@ -5,6 +5,7 @@
 
 #include "LS_Config/foc_config.h"
 #include "L2_Service/runtime_snapshot.h"
+#include "L2_Service/runtime_c43_command_store.h"
 
 typedef enum {
     COMMAND_MANAGER_SYSTEM_INIT = 0,
@@ -58,22 +59,6 @@ typedef enum {
                                            COMMAND_MANAGER_INIT_CHECK_PWM      | \
                                            COMMAND_MANAGER_INIT_CHECK_MOTOR)
 #endif
-
-typedef struct {
-    command_manager_system_state_t system_state;
-    command_manager_comm_state_t comm_state;
-    command_manager_report_mode_t report_mode;
-    command_manager_diag_state_t init_diag;
-    command_manager_fault_code_t last_fault_code;
-    uint16_t init_check_mask;
-    uint16_t init_fail_mask;
-    uint16_t sensor_invalid_consecutive;
-    uint32_t protocol_error_count;
-    uint32_t param_error_count;
-    uint32_t control_skip_count;
-    uint8_t params_dirty;
-    uint8_t last_exec_ok;
-} command_manager_runtime_state_t;
 
 void CommandManager_Init(void);
 uint8_t CommandManager_Process(void);

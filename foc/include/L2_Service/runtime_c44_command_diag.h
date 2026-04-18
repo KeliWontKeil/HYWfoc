@@ -3,9 +3,7 @@
 
 #include <stdint.h>
 
-#include "L2_Service/runtime_c41_command_entry.h"
-
-const char *CommandManager_GetFaultName(command_manager_fault_code_t fault_code);
+const char *CommandManager_GetFaultName(uint8_t fault_code);
 void CommandManager_OutputDiag(const char *level, const char *module, const char *detail);
 void CommandManager_OutputParam(char subcommand, float value);
 void CommandManager_OutputState(char subcommand, uint8_t value);

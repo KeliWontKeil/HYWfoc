@@ -1,7 +1,25 @@
-#include "L2_Service/runtime_c41_command_entry.h"
-
 #include "L2_Service/runtime_c43_command_store.h"
+
 #include "LS_Config/foc_config.h"
+
+static command_manager_runtime_state_t g_runtime_state;
+static command_manager_params_t g_params;
+static command_manager_states_t g_states;
+
+command_manager_runtime_state_t *CommandManager_InternalRuntimeState(void)
+{
+    return &g_runtime_state;
+}
+
+command_manager_params_t *CommandManager_InternalParams(void)
+{
+    return &g_params;
+}
+
+command_manager_states_t *CommandManager_InternalStates(void)
+{
+    return &g_states;
+}
 
 static uint8_t CommandManager_IsInRange(float value, float min_value, float max_value)
 {

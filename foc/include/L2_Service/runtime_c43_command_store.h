@@ -3,7 +3,21 @@
 
 #include <stdint.h>
 
-#include "L2_Service/runtime_c41_command_entry.h"
+typedef struct {
+    uint8_t system_state;
+    uint8_t comm_state;
+    uint8_t report_mode;
+    uint8_t init_diag;
+    uint8_t last_fault_code;
+    uint16_t init_check_mask;
+    uint16_t init_fail_mask;
+    uint16_t sensor_invalid_consecutive;
+    uint32_t protocol_error_count;
+    uint32_t param_error_count;
+    uint32_t control_skip_count;
+    uint8_t params_dirty;
+    uint8_t last_exec_ok;
+} command_manager_runtime_state_t;
 
 typedef struct {
     float target_angle_rad;

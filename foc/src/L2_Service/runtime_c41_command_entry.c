@@ -3,16 +3,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "L42_PAL/foc_platform_api.h"
 #include "L2_Service/runtime_c35_protocol_parser.h"
 #include "L2_Service/runtime_c44_command_diag.h"
 #include "L2_Service/runtime_c42_command_dispatch.h"
 #include "L2_Service/runtime_c43_command_store.h"
+#include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-static command_manager_runtime_state_t g_runtime_state;
-static command_manager_params_t g_params;
-static command_manager_states_t g_states;
+#define g_runtime_state (*CommandManager_InternalRuntimeState())
+#define g_params (*CommandManager_InternalParams())
+#define g_states (*CommandManager_InternalStates())
 
 static void CommandManager_UpdateReportMode(void);
 
@@ -27,21 +27,6 @@ static void CommandManager_UpdateReportMode(void);
 #else
 #define CMD_DIAG_STATS_INC(field_name) ((void)0)
 #endif
-
-command_manager_runtime_state_t *CommandManager_InternalRuntimeState(void)
-{
-    return &g_runtime_state;
-}
-
-command_manager_params_t *CommandManager_InternalParams(void)
-{
-    return &g_params;
-}
-
-command_manager_states_t *CommandManager_InternalStates(void)
-{
-    return &g_states;
-}
 
 static void CommandManager_UpdateReportMode(void)
 {
