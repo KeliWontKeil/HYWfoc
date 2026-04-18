@@ -1,4 +1,4 @@
-#include "L2_Service/runtime_c41_runtime_fsm.h"
+#include "L2_Service/runtime_c31_runtime_fsm.h"
 
 #include <stdio.h>
 
@@ -65,7 +65,9 @@ void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
         }
         else
         {
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
             runtime->control_skip_count++;
+#endif
             runtime->sensor_invalid_consecutive++;
 
             if (signal->adc_valid == 0U)
@@ -96,7 +98,9 @@ void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
 
     if (signal->control_loop_skipped != 0U)
     {
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
         runtime->control_skip_count++;
+#endif
     }
 
     if (signal->undervoltage_fault != 0U)
@@ -105,7 +109,9 @@ void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
         char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
         runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
         runtime->last_fault_code = RUNTIME_STATE_FAULT_UNDERVOLTAGE;
+    #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
         runtime->control_skip_count++;
+    #endif
 
         snprintf(out,
                  sizeof(out),
@@ -153,12 +159,16 @@ uint8_t RuntimeStateMachine_HandleCommand(const protocol_command_t *cmd)
 
         if (exec_result == RUNTIME_CMD_EXEC_PARAM_ERROR)
         {
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
             runtime->param_error_count++;
+#endif
             runtime->last_fault_code = RUNTIME_STATE_FAULT_PARAM_INVALID;
         }
         else
         {
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
             runtime->protocol_error_count++;
+#endif
             runtime->last_fault_code = RUNTIME_STATE_FAULT_PROTOCOL_FRAME;
         }
 
@@ -177,7 +187,9 @@ void RuntimeStateMachine_ReportFrameError(void)
 {
     runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
 
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
     runtime->protocol_error_count++;
+#endif
     runtime->last_fault_code = RUNTIME_STATE_FAULT_PROTOCOL_FRAME;
     RuntimeCommandRouter_WriteStatusFrameError();
 }

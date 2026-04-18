@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L2_Service/runtime_c42_command_router.h"
+#include "L2_Service/runtime_c32_command_router.h"
 
 typedef struct {
     uint16_t init_checks_pass_mask;

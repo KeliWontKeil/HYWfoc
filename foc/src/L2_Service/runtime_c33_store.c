@@ -1,4 +1,4 @@
-#include "L2_Service/runtime_c43_store.h"
+#include "L2_Service/runtime_c33_store.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -51,10 +51,14 @@ void RuntimeStore_ResetStorageDefaults(void)
     g_params.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
     g_params.angle_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
     g_params.speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
+#if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
     g_params.sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
+#endif
+#if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     g_params.semantic_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
     g_params.osc_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
     g_params.osc_param_mask = COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK;
+#endif
     g_params.pid_current_kp = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP;
     g_params.pid_current_ki = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI;
     g_params.pid_current_kd = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD;
@@ -64,20 +68,28 @@ void RuntimeStore_ResetStorageDefaults(void)
     g_params.pid_speed_kp = COMMAND_MANAGER_DEFAULT_PID_SPEED_KP;
     g_params.pid_speed_ki = COMMAND_MANAGER_DEFAULT_PID_SPEED_KI;
     g_params.pid_speed_kd = COMMAND_MANAGER_DEFAULT_PID_SPEED_KD;
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
     g_params.cfg_min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
     g_params.cfg_angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
     g_params.cfg_angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
     g_params.cfg_speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
     g_params.cfg_speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+#endif
     g_params.control_mode = COMMAND_MANAGER_DEFAULT_CONTROL_MODE;
+#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     g_params.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     g_params.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
     g_params.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
+#endif
 
     g_states.motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
+#if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     g_states.semantic_enable = COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED;
     g_states.osc_enable = COMMAND_MANAGER_DEFAULT_OSC_ENABLED;
+#endif
+#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     g_states.current_soft_switch_enable = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
+#endif
 }
 
 runtime_runtime_state_t *RuntimeStore_Runtime(void)
@@ -672,7 +684,9 @@ void RuntimeStore_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->control_cfg.target_angle_rad = g_params.target_angle_rad;
     snapshot->control_cfg.angle_position_speed_rad_s = g_params.angle_speed_rad_s;
     snapshot->control_cfg.speed_only_rad_s = g_params.speed_only_rad_s;
+#if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
     snapshot->control_cfg.sensor_sample_offset_percent = g_params.sensor_sample_offset_percent;
+#endif
     snapshot->control_cfg.pid_current_kp = g_params.pid_current_kp;
     snapshot->control_cfg.pid_current_ki = g_params.pid_current_ki;
     snapshot->control_cfg.pid_current_kd = g_params.pid_current_kd;
@@ -682,22 +696,28 @@ void RuntimeStore_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->control_cfg.pid_speed_kp = g_params.pid_speed_kp;
     snapshot->control_cfg.pid_speed_ki = g_params.pid_speed_ki;
     snapshot->control_cfg.pid_speed_kd = g_params.pid_speed_kd;
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
     snapshot->control_cfg.cfg_min_mech_angle_accum_delta_rad = g_params.cfg_min_mech_angle_accum_delta_rad;
     snapshot->control_cfg.cfg_angle_hold_integral_limit = g_params.cfg_angle_hold_integral_limit;
     snapshot->control_cfg.cfg_angle_hold_pid_deadband_rad = g_params.cfg_angle_hold_pid_deadband_rad;
     snapshot->control_cfg.cfg_speed_angle_transition_start_rad = g_params.cfg_speed_angle_transition_start_rad;
     snapshot->control_cfg.cfg_speed_angle_transition_end_rad = g_params.cfg_speed_angle_transition_end_rad;
+#endif
     snapshot->control_cfg.motor_enabled = g_states.motor_enable;
+#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     snapshot->control_cfg.current_soft_switch_enable = g_states.current_soft_switch_enable;
     snapshot->control_cfg.current_soft_switch_mode = g_params.current_soft_switch_mode;
     snapshot->control_cfg.current_soft_switch_auto_open_iq_a = g_params.current_soft_switch_auto_open_iq_a;
     snapshot->control_cfg.current_soft_switch_auto_closed_iq_a = g_params.current_soft_switch_auto_closed_iq_a;
+#endif
 
+#if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     snapshot->telemetry.semantic_report_enabled = g_states.semantic_enable;
     snapshot->telemetry.osc_report_enabled = g_states.osc_enable;
     snapshot->telemetry.semantic_report_freq_hz = g_params.semantic_freq_hz;
     snapshot->telemetry.osc_report_freq_hz = g_params.osc_freq_hz;
     snapshot->telemetry.osc_parameter_mask = g_params.osc_param_mask;
+#endif
 }
 
 void RuntimeStore_ClearDirty(void)

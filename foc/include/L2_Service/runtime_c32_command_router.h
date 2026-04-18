@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L2_Service/runtime_c43_store.h"
+#include "L2_Service/runtime_c33_store.h"
 #include "L3_Algorithm/protocol_core_types.h"
 
 typedef enum {

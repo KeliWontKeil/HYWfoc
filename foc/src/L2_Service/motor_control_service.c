@@ -169,17 +169,23 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
         return;
     }
 
+#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
     current_pid->kp = control_cfg->pid_current_kp;
     current_pid->ki = control_cfg->pid_current_ki;
     current_pid->kd = control_cfg->pid_current_kd;
+#endif
 
+#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
     angle_hold_pid->kp = control_cfg->pid_angle_kp;
     angle_hold_pid->ki = control_cfg->pid_angle_ki;
     angle_hold_pid->kd = control_cfg->pid_angle_kd;
+#endif
 
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
     speed_pid->kp = control_cfg->pid_speed_kp;
     speed_pid->ki = control_cfg->pid_speed_ki;
     speed_pid->kd = control_cfg->pid_speed_kd;
+#endif
 
     current_pid->out_min = -motor->set_voltage;
     current_pid->out_max = motor->set_voltage;

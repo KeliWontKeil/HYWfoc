@@ -31,11 +31,11 @@ virtualFolder:
         - path: ../../../foc/src/L2_Service/runtime_c11_entry.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c
-        - path: ../../../foc/src/L2_Service/runtime_c31_frame_source.c
-        - path: ../../../foc/src/L2_Service/runtime_c41_runtime_fsm.c
-        - path: ../../../foc/src/L2_Service/runtime_c42_command_router.c
-        - path: ../../../foc/src/L2_Service/runtime_c43_store.c
-        - path: ../../../foc/src/L2_Service/runtime_c44_output.c
+        - path: ../../../foc/src/L2_Service/runtime_c21_frame_source.c
+        - path: ../../../foc/src/L2_Service/runtime_c31_runtime_fsm.c
+        - path: ../../../foc/src/L2_Service/runtime_c32_command_router.c
+        - path: ../../../foc/src/L2_Service/runtime_c33_store.c
+        - path: ../../../foc/src/L2_Service/runtime_c34_output.c
       folders: []
     - name: CMSIS
       files:

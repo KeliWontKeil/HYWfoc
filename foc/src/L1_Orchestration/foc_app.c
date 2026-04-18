@@ -90,7 +90,9 @@ void FOC_App_Init(void)
 
     init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_PROTOCOL);
 
+#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
     DebugStream_Init();
+#endif
     init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_DEBUG);
 
     MotorControlService_InitSensorInput(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
@@ -171,6 +173,7 @@ void FOC_App_Loop(void)
     if (g_monitor_task_pending != 0U)
     {
         g_monitor_task_pending = 0U;
+#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
         /* Debug stream cadence is bounded by monitor task trigger rate. */
         FOC_App_RefreshL2Snapshot();
         DebugStream_SetExecutionCycles(ControlScheduler_GetExecutionCycles());
@@ -178,6 +181,7 @@ void FOC_App_Loop(void)
                             &g_motor,
                             &g_l2_snapshot.runtime,
                             &g_l2_snapshot.telemetry);
+#endif
     }
 }
 
@@ -439,9 +443,10 @@ static void Motor_Control_Loop(void)
 static uint8_t FOC_App_IsUndervoltageFaultActive(void)
 {
     const float vbus_voltage = g_motor.vbus_voltage;
-    FOC_Platform_UndervoltageProtect(vbus_voltage);
 
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+    FOC_Platform_UndervoltageProtect(vbus_voltage);
+
     if ((g_undervoltage_fault_latched != 0U) &&
         (vbus_voltage >= FOC_UNDERVOLTAGE_RECOVER_VBUS_DEFAULT))
     {
