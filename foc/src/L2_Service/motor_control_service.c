@@ -188,16 +188,27 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
     speed_pid->out_min = -motor->set_voltage;
     speed_pid->out_max = motor->set_voltage;
 
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
     FOC_ControlSetMinMechAngleAccumDeltaRad(motor, control_cfg->cfg_min_mech_angle_accum_delta_rad);
     FOC_ControlSetAngleHoldIntegralLimit(motor, control_cfg->cfg_angle_hold_integral_limit);
     FOC_ControlSetAngleHoldPidDeadbandRad(motor, control_cfg->cfg_angle_hold_pid_deadband_rad);
     FOC_ControlSetSpeedAngleTransitionStartRad(motor, control_cfg->cfg_speed_angle_transition_start_rad);
     FOC_ControlSetSpeedAngleTransitionEndRad(motor, control_cfg->cfg_speed_angle_transition_end_rad);
+#endif
 
+#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     FOC_ControlSetCurrentSoftSwitchMode(motor, control_cfg->current_soft_switch_mode);
     FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(motor, control_cfg->current_soft_switch_auto_open_iq_a);
     FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(motor, control_cfg->current_soft_switch_auto_closed_iq_a);
     FOC_ControlSetCurrentSoftSwitchEnable(motor, control_cfg->current_soft_switch_enable);
-    FOC_ControlSetCoggingCompEnable(motor, FOC_COGGING_COMP_ENABLE);
     FOC_ControlResetCurrentSoftSwitchState(motor);
+#else
+    FOC_ControlSetCurrentSoftSwitchEnable(motor, FOC_CFG_DISABLE);
+#endif
+
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    FOC_ControlSetCoggingCompEnable(motor, FOC_CFG_ENABLE);
+#else
+    FOC_ControlSetCoggingCompEnable(motor, FOC_CFG_DISABLE);
+#endif
 }
