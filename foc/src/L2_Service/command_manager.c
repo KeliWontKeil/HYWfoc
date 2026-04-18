@@ -121,6 +121,11 @@ uint8_t CommandManager_Process(void)
     const protocol_command_t *cmd = ProtocolParser_GetLatestCommand();
     command_exec_result_t exec_result;
 
+    if (ProtocolParser_GetLastResult() == PROTOCOL_PARSER_RESULT_FRAME_ERROR)
+    {
+        CommandManager_ReportProtocolFrameError();
+    }
+
     if ((cmd == 0) || (cmd->updated == 0U))
     {
         return 0U;

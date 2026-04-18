@@ -19,10 +19,6 @@ uint8_t ProtocolService_ProcessStep(uint8_t max_frames)
     while ((ProtocolParser_IsParsePending() != 0U) && (consumed < max_frames))
     {
         ProtocolParser_Process();
-        if (ProtocolParser_GetLastResult() == PROTOCOL_PARSER_RESULT_FRAME_ERROR)
-        {
-            CommandManager_ReportProtocolFrameError();
-        }
 
         if (CommandManager_Process() != 0U)
         {
