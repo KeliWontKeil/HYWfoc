@@ -28,12 +28,14 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
-        - path: ../../../foc/src/L2_Service/runtime_c21_comm_chain.c
-        - path: ../../../foc/src/L2_Service/runtime_c35_protocol_parser.c
-        - path: ../../../foc/src/L2_Service/runtime_c41_command_entry.c
-        - path: ../../../foc/src/L2_Service/runtime_c42_command_dispatch.c
-        - path: ../../../foc/src/L2_Service/runtime_c43_command_store.c
-        - path: ../../../foc/src/L2_Service/runtime_c44_command_diag.c
+        - path: ../../../foc/src/L2_Service/runtime_c11_entry.c
+        - path: ../../../foc/src/L2_Service/runtime_c21_cycle_driver.c
+        - path: ../../../foc/src/L2_Service/runtime_c31_frame_source.c
+        - path: ../../../foc/src/L2_Service/runtime_c32_frame_adapter.c
+        - path: ../../../foc/src/L2_Service/runtime_c41_runtime_fsm.c
+        - path: ../../../foc/src/L2_Service/runtime_c42_command_router.c
+        - path: ../../../foc/src/L2_Service/runtime_c43_store.c
+        - path: ../../../foc/src/L2_Service/runtime_c44_output.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c
       folders: []
