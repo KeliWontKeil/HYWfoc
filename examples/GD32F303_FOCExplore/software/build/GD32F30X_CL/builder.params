@@ -47,7 +47,6 @@
         "../../../foc/src/L2_Service/motor_control_service.c",
         "../../../foc/src/L2_Service/runtime_c11_entry.c",
         "../../../foc/src/L2_Service/runtime_c21_comm_chain.c",
-        "../../../foc/src/L2_Service/runtime_c22_protocol_parser.c",
         "../../../foc/src/L2_Service/runtime_c23_command_manager.c",
         "../../../foc/src/L2_Service/runtime_c24_command_dispatch.c",
         "../../../foc/src/L2_Service/runtime_c25_command_store.c",
