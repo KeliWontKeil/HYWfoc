@@ -3,12 +3,10 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "L41_Math/foc_math_lut.h"
-#include "L42_PAL/foc_platform_api.h"
-#include "L3_Algorithm/foc_control_c23_motor_param_learn.h"
 #include "L3_Algorithm/foc_control_c31_actuation.h"
-#include "LS_Config/foc_config.h"
 #include "L41_Math/math_transforms.h"
+#include "L42_PAL/foc_platform_api.h"
+#include "LS_Config/foc_config.h"
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 static int16_t FOC_QuantizeCoggingIqToQ15(float iq_a, float iq_lsb_a)
@@ -274,27 +272,84 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
                            status->iq_limit_a);
 }
 
+void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
+                                         float mech_angle_rad,
+                                         float speed_ref_rad_s)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->iq_target += FOC_ControlCoggingLookupIq(&motor->cogging_comp_status,
+                                                   motor->cogging_comp_table_q15,
+                                                   mech_angle_rad,
+                                                   speed_ref_rad_s);
+}
+
+uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
+                                           const int16_t *table_q15,
+                                           uint16_t point_count,
+                                           float iq_lsb_a,
+                                           uint8_t source)
+{
+    uint16_t i;
+
+    if ((motor == 0) || (table_q15 == 0) || (point_count < 2U) ||
+        (point_count > (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY))
+    {
+        return 0U;
+    }
+
+    if (iq_lsb_a <= 0.0f)
+    {
+        return 0U;
+    }
+
+    for (i = 0U; i < point_count; i++)
+    {
+        motor->cogging_comp_table_q15[i] = table_q15[i];
+    }
+
+    for (; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
+    {
+        motor->cogging_comp_table_q15[i] = 0;
+    }
+
+    motor->cogging_comp_status.point_count = point_count;
+    motor->cogging_comp_status.iq_lsb_a = iq_lsb_a;
+    motor->cogging_comp_status.available = 1U;
+    motor->cogging_comp_status.source = source;
+    return 1U;
+}
+
+void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->cogging_comp_status.available = 0U;
+    motor->cogging_comp_status.source = source;
+}
+
 void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
 {
 #if (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE)
-    (void)motor;
-
-    FOC_ControlSetCoggingCompEnable(FOC_COGGING_COMP_ENABLE);
-    FOC_ControlSetCoggingCompUnavailable(FOC_COGGING_COMP_SOURCE_DISABLED);
+    FOC_ControlSetCoggingCompUnavailable(motor, FOC_COGGING_COMP_SOURCE_DISABLED);
     FOC_Platform_WriteDebugText("cogging.init: disabled by feature switch\r\n");
 #else
     int16_t table_q15[FOC_COGGING_LUT_POINT_COUNT];
     uint8_t loaded = 0U;
     char out[128];
 
-    (void)motor;
-    FOC_ControlSetCoggingCompEnable(FOC_COGGING_COMP_ENABLE);
-
     if (FOC_LoadStaticCoggingTable(table_q15,
                                    FOC_COGGING_LUT_POINT_COUNT,
                                    FOC_COGGING_LUT_IQ_LSB_A) != 0U)
     {
-        if (FOC_ControlLoadCoggingCompTableQ15(table_q15,
+        if (FOC_ControlLoadCoggingCompTableQ15(motor,
+                                                table_q15,
                                                FOC_COGGING_LUT_POINT_COUNT,
                                                FOC_COGGING_LUT_IQ_LSB_A,
                                                FOC_COGGING_COMP_SOURCE_STATIC_TABLE) != 0U)
@@ -313,7 +368,8 @@ void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
                                   FOC_COGGING_LUT_POINT_COUNT,
                                   FOC_COGGING_LUT_IQ_LSB_A) != 0U)
         {
-            if (FOC_ControlLoadCoggingCompTableQ15(table_q15,
+            if (FOC_ControlLoadCoggingCompTableQ15(motor,
+                                                   table_q15,
                                                    FOC_COGGING_LUT_POINT_COUNT,
                                                    FOC_COGGING_LUT_IQ_LSB_A,
                                                    FOC_COGGING_COMP_SOURCE_INIT_LEARN) != 0U)
@@ -327,7 +383,7 @@ void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
 
     if (loaded == 0U)
     {
-        FOC_ControlSetCoggingCompUnavailable(FOC_COGGING_COMP_SOURCE_NONE);
+        FOC_ControlSetCoggingCompUnavailable(motor, FOC_COGGING_COMP_SOURCE_NONE);
         snprintf(out,
                  sizeof(out),
                  "cogging.init: no available source (learn=%u)\r\n",

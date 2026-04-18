@@ -3,13 +3,13 @@
 #include "L2_Service/command_manager.h"
 #include "L3_Algorithm/foc_control_c11_entry.h"
 #include "L3_Algorithm/foc_control_c12_init.h"
-#include "L3_Algorithm/foc_control_c25_cfg_state.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L3_Algorithm/sensor.h"
 #include "L3_Algorithm/svpwm.h"
 
-void MotorControlService_ResetControlConfigDefault(void)
+void MotorControlService_ResetControlConfigDefault(foc_motor_t *motor)
 {
-    FOC_ControlConfigResetDefault();
+    FOC_ControlConfigResetDefault(motor);
 }
 
 void MotorControlService_InitMotor(foc_motor_t *motor,
@@ -66,9 +66,9 @@ uint8_t MotorControlService_RequiresCurrentSample(void)
     return FOC_ControlCurrentLoopRequiresSample();
 }
 
-void MotorControlService_ResetCurrentSoftSwitchState(void)
+void MotorControlService_ResetCurrentSoftSwitchState(foc_motor_t *motor)
 {
-    FOC_ControlResetCurrentSoftSwitchState();
+    FOC_ControlResetCurrentSoftSwitchState(motor);
 }
 
 uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
@@ -81,16 +81,31 @@ uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
     switch (task)
     {
         case MOTOR_CONTROL_SERVICE_TASK_OUTER_LOOP:
-            return FOC_ControlOuterLoopStep(motor,
-                                            current_pid,
-                                            speed_pid,
-                                            angle_hold_pid,
-                                            args->sensor,
-                                            args->control_mode,
-                                            args->speed_only_rad_s,
-                                            args->target_angle_rad,
-                                            args->angle_position_speed_rad_s,
-                                            args->dt_sec);
+        {
+            uint8_t run_ok = FOC_ControlOuterLoopStep(motor,
+                                                      current_pid,
+                                                      speed_pid,
+                                                      angle_hold_pid,
+                                                      args->sensor,
+                                                      args->control_mode,
+                                                      args->speed_only_rad_s,
+                                                      args->target_angle_rad,
+                                                      args->angle_position_speed_rad_s,
+                                                      args->dt_sec);
+            if (run_ok == 0U)
+            {
+                return 0U;
+            }
+
+            if (args->sensor != 0)
+            {
+                FOC_ControlApplyCoggingCompensation(motor,
+                                                    args->sensor->mech_angle_rad.output_value,
+                                                    motor->cogging_speed_ref_rad_s);
+            }
+
+            return 1U;
+        }
 
         case MOTOR_CONTROL_SERVICE_TASK_CURRENT_LOOP:
             FOC_ControlCurrentLoopStep(motor,
@@ -173,15 +188,16 @@ void MotorControlService_ApplyPendingConfig(foc_motor_t *motor,
     speed_pid->out_min = -motor->set_voltage;
     speed_pid->out_max = motor->set_voltage;
 
-    FOC_ControlSetMinMechAngleAccumDeltaRad(CommandManager_GetControlMinMechAngleAccumDeltaRad());
-    FOC_ControlSetAngleHoldIntegralLimit(CommandManager_GetControlAngleHoldIntegralLimit());
-    FOC_ControlSetAngleHoldPidDeadbandRad(CommandManager_GetControlAngleHoldPidDeadbandRad());
-    FOC_ControlSetSpeedAngleTransitionStartRad(CommandManager_GetControlSpeedAngleTransitionStartRad());
-    FOC_ControlSetSpeedAngleTransitionEndRad(CommandManager_GetControlSpeedAngleTransitionEndRad());
+    FOC_ControlSetMinMechAngleAccumDeltaRad(motor, CommandManager_GetControlMinMechAngleAccumDeltaRad());
+    FOC_ControlSetAngleHoldIntegralLimit(motor, CommandManager_GetControlAngleHoldIntegralLimit());
+    FOC_ControlSetAngleHoldPidDeadbandRad(motor, CommandManager_GetControlAngleHoldPidDeadbandRad());
+    FOC_ControlSetSpeedAngleTransitionStartRad(motor, CommandManager_GetControlSpeedAngleTransitionStartRad());
+    FOC_ControlSetSpeedAngleTransitionEndRad(motor, CommandManager_GetControlSpeedAngleTransitionEndRad());
 
-    FOC_ControlSetCurrentSoftSwitchMode(CommandManager_GetCurrentSoftSwitchMode());
-    FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(CommandManager_GetCurrentSoftSwitchAutoOpenIqA());
-    FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(CommandManager_GetCurrentSoftSwitchAutoClosedIqA());
-    FOC_ControlSetCurrentSoftSwitchEnable(CommandManager_IsCurrentSoftSwitchEnabled());
-    FOC_ControlResetCurrentSoftSwitchState();
+    FOC_ControlSetCurrentSoftSwitchMode(motor, CommandManager_GetCurrentSoftSwitchMode());
+    FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(motor, CommandManager_GetCurrentSoftSwitchAutoOpenIqA());
+    FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(motor, CommandManager_GetCurrentSoftSwitchAutoClosedIqA());
+    FOC_ControlSetCurrentSoftSwitchEnable(motor, CommandManager_IsCurrentSoftSwitchEnabled());
+    FOC_ControlSetCoggingCompEnable(motor, FOC_COGGING_COMP_ENABLE);
+    FOC_ControlResetCurrentSoftSwitchState(motor);
 }

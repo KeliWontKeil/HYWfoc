@@ -2,118 +2,145 @@
 
 #include "LS_Config/foc_config.h"
 
-static foc_control_runtime_config_t g_foc_runtime_cfg = {
-    FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD,
-    FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT,
-    FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD,
-    FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD,
-    FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD
-};
-
-static foc_current_soft_switch_status_t g_current_soft_switch_status = {
-    COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE,
-    (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE,
-    (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE,
-    0.0f,
-    COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A,
-    COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A
-};
-
-static foc_cogging_comp_status_t g_cogging_comp_status = {
-    FOC_COGGING_COMP_ENABLE,
-    0U,
-    FOC_COGGING_COMP_SOURCE_NONE,
-    FOC_COGGING_LUT_POINT_COUNT,
-    FOC_COGGING_LUT_IQ_LSB_A,
-    FOC_COGGING_COMP_SPEED_GATE_RAD_S,
-    FOC_COGGING_COMP_IQ_LIMIT_A
-};
-
-static int16_t g_cogging_comp_table_q15[FOC_COGGING_LUT_POINT_COUNT] = {0};
-
-#if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
-static uint8_t g_current_soft_switch_blend_initialized = 0U;
-#define FOC_SOFT_SWITCH_BLEND_RESET() do { g_current_soft_switch_blend_initialized = 0U; } while (0)
-#else
-#define FOC_SOFT_SWITCH_BLEND_RESET() ((void)0)
+#if (FOC_COGGING_LUT_POINT_COUNT > FOC_MOTOR_COGGING_LUT_CAPACITY)
+#error "FOC_MOTOR_COGGING_LUT_CAPACITY must be >= FOC_COGGING_LUT_POINT_COUNT"
 #endif
 
-void FOC_ControlConfigResetDefault(void)
+static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+#if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
+    motor->current_soft_switch_blend_initialized = 0U;
+#else
+    (void)motor;
+#endif
+}
+
+void FOC_ControlConfigResetDefault(foc_motor_t *motor)
 {
     uint16_t i;
 
-    g_foc_runtime_cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
-    g_foc_runtime_cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
-    g_foc_runtime_cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
-    g_foc_runtime_cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
-    g_foc_runtime_cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
-
-    g_current_soft_switch_status.enabled = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
-    g_current_soft_switch_status.configured_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
-    g_current_soft_switch_status.active_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
-    g_current_soft_switch_status.blend_factor =
-        (g_current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
-    g_current_soft_switch_status.auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
-    g_current_soft_switch_status.auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
-    FOC_SOFT_SWITCH_BLEND_RESET();
-
-    g_cogging_comp_status.enabled = FOC_COGGING_COMP_ENABLE;
-    g_cogging_comp_status.available = 0U;
-    g_cogging_comp_status.source = FOC_COGGING_COMP_SOURCE_NONE;
-    g_cogging_comp_status.point_count = FOC_COGGING_LUT_POINT_COUNT;
-    g_cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
-    g_cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
-    g_cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
-
-    for (i = 0U; i < (uint16_t)FOC_COGGING_LUT_POINT_COUNT; i++)
+    if (motor == 0)
     {
-        g_cogging_comp_table_q15[i] = 0;
+        return;
+    }
+
+    motor->control_runtime_cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
+    motor->control_runtime_cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
+    motor->control_runtime_cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
+    motor->control_runtime_cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
+    motor->control_runtime_cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+
+    motor->current_soft_switch_status.enabled = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
+    motor->current_soft_switch_status.configured_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
+    motor->current_soft_switch_status.active_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
+    motor->current_soft_switch_status.blend_factor =
+        (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
+    motor->current_soft_switch_status.auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
+    motor->current_soft_switch_status.auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
+    FOC_ResetSoftSwitchBlendInit(motor);
+
+    motor->cogging_comp_status.enabled = FOC_COGGING_COMP_ENABLE;
+    motor->cogging_comp_status.available = 0U;
+    motor->cogging_comp_status.source = FOC_COGGING_COMP_SOURCE_NONE;
+    motor->cogging_comp_status.point_count = FOC_COGGING_LUT_POINT_COUNT;
+    motor->cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
+    motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
+    motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+
+    for (i = 0U; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
+    {
+        motor->cogging_comp_table_q15[i] = 0;
     }
 }
 
-const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(void)
+const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(const foc_motor_t *motor)
 {
-    return &g_foc_runtime_cfg;
+    if (motor == 0)
+    {
+        return 0;
+    }
+
+    return &motor->control_runtime_cfg;
 }
 
-void FOC_ControlSetMinMechAngleAccumDeltaRad(float value)
+void FOC_ControlSetMinMechAngleAccumDeltaRad(foc_motor_t *motor, float value)
 {
-    g_foc_runtime_cfg.min_mech_angle_accum_delta_rad = (value < 0.0f) ? 0.0f : value;
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->control_runtime_cfg.min_mech_angle_accum_delta_rad = (value < 0.0f) ? 0.0f : value;
 }
 
-void FOC_ControlSetAngleHoldIntegralLimit(float value)
+void FOC_ControlSetAngleHoldIntegralLimit(foc_motor_t *motor, float value)
 {
-    g_foc_runtime_cfg.angle_hold_integral_limit = (value < 0.0f) ? 0.0f : value;
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->control_runtime_cfg.angle_hold_integral_limit = (value < 0.0f) ? 0.0f : value;
 }
 
-void FOC_ControlSetAngleHoldPidDeadbandRad(float value)
+void FOC_ControlSetAngleHoldPidDeadbandRad(foc_motor_t *motor, float value)
 {
-    g_foc_runtime_cfg.angle_hold_pid_deadband_rad = (value < 0.0f) ? 0.0f : value;
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->control_runtime_cfg.angle_hold_pid_deadband_rad = (value < 0.0f) ? 0.0f : value;
 }
 
-void FOC_ControlSetSpeedAngleTransitionStartRad(float value)
+void FOC_ControlSetSpeedAngleTransitionStartRad(foc_motor_t *motor, float value)
 {
-    g_foc_runtime_cfg.speed_angle_transition_start_rad = (value < 0.0f) ? 0.0f : value;
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->control_runtime_cfg.speed_angle_transition_start_rad = (value < 0.0f) ? 0.0f : value;
 }
 
-void FOC_ControlSetSpeedAngleTransitionEndRad(float value)
+void FOC_ControlSetSpeedAngleTransitionEndRad(foc_motor_t *motor, float value)
 {
-    g_foc_runtime_cfg.speed_angle_transition_end_rad = (value < 0.0f) ? 0.0f : value;
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->control_runtime_cfg.speed_angle_transition_end_rad = (value < 0.0f) ? 0.0f : value;
 }
 
-void FOC_ControlSetCurrentSoftSwitchEnable(uint8_t enable)
+void FOC_ControlSetCurrentSoftSwitchEnable(foc_motor_t *motor, uint8_t enable)
 {
+    if (motor == 0)
+    {
+        return;
+    }
+
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    g_current_soft_switch_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
+    motor->current_soft_switch_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
 #else
     (void)enable;
-    g_current_soft_switch_status.enabled = FOC_CFG_DISABLE;
+    motor->current_soft_switch_status.enabled = FOC_CFG_DISABLE;
 #endif
-    FOC_SOFT_SWITCH_BLEND_RESET();
+    FOC_ResetSoftSwitchBlendInit(motor);
 }
 
-void FOC_ControlSetCurrentSoftSwitchMode(uint8_t mode)
+void FOC_ControlSetCurrentSoftSwitchMode(foc_motor_t *motor, uint8_t mode)
 {
+    if (motor == 0)
+    {
+        return;
+    }
+
     if ((mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
         (mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED) &&
         (mode != FOC_CURRENT_SOFT_SWITCH_MODE_AUTO))
@@ -121,137 +148,102 @@ void FOC_ControlSetCurrentSoftSwitchMode(uint8_t mode)
         mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
     }
 
-    g_current_soft_switch_status.configured_mode = mode;
+    motor->current_soft_switch_status.configured_mode = mode;
     if (mode != FOC_CURRENT_SOFT_SWITCH_MODE_AUTO)
     {
-        g_current_soft_switch_status.active_mode = mode;
+        motor->current_soft_switch_status.active_mode = mode;
     }
-    FOC_SOFT_SWITCH_BLEND_RESET();
+    FOC_ResetSoftSwitchBlendInit(motor);
 }
 
-void FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(float value)
+void FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(foc_motor_t *motor, float value)
 {
     float sanitized = (value < 0.0f) ? 0.0f : value;
 
-    g_current_soft_switch_status.auto_open_iq_a = sanitized;
-    if (g_current_soft_switch_status.auto_closed_iq_a < g_current_soft_switch_status.auto_open_iq_a)
+    if (motor == 0)
     {
-        g_current_soft_switch_status.auto_closed_iq_a = g_current_soft_switch_status.auto_open_iq_a;
+        return;
+    }
+
+    motor->current_soft_switch_status.auto_open_iq_a = sanitized;
+    if (motor->current_soft_switch_status.auto_closed_iq_a < motor->current_soft_switch_status.auto_open_iq_a)
+    {
+        motor->current_soft_switch_status.auto_closed_iq_a = motor->current_soft_switch_status.auto_open_iq_a;
     }
 }
 
-void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(float value)
+void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float value)
 {
     float sanitized = (value < 0.0f) ? 0.0f : value;
 
-    if (sanitized < g_current_soft_switch_status.auto_open_iq_a)
+    if (motor == 0)
     {
-        sanitized = g_current_soft_switch_status.auto_open_iq_a;
+        return;
     }
 
-    g_current_soft_switch_status.auto_closed_iq_a = sanitized;
-}
-
-const foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatus(void)
-{
-    return &g_current_soft_switch_status;
-}
-
-void FOC_ControlResetCurrentSoftSwitchState(void)
-{
-    FOC_SOFT_SWITCH_BLEND_RESET();
-
-    if (g_current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN)
+    if (sanitized < motor->current_soft_switch_status.auto_open_iq_a)
     {
-        g_current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-        g_current_soft_switch_status.blend_factor = 0.0f;
+        sanitized = motor->current_soft_switch_status.auto_open_iq_a;
     }
-    else if (g_current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
+
+    motor->current_soft_switch_status.auto_closed_iq_a = sanitized;
+}
+
+const foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatus(const foc_motor_t *motor)
+{
+    if (motor == 0)
     {
-        g_current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-        g_current_soft_switch_status.blend_factor = 1.0f;
+        return 0;
+    }
+
+    return &motor->current_soft_switch_status;
+}
+
+void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    FOC_ResetSoftSwitchBlendInit(motor);
+
+    if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN)
+    {
+        motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+        motor->current_soft_switch_status.blend_factor = 0.0f;
+    }
+    else if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
+    {
+        motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
+        motor->current_soft_switch_status.blend_factor = 1.0f;
     }
     else
     {
-        if ((g_current_soft_switch_status.active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
-            (g_current_soft_switch_status.active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED))
+        if ((motor->current_soft_switch_status.active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
+            (motor->current_soft_switch_status.active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED))
         {
-            g_current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
+            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
         }
 
-        g_current_soft_switch_status.blend_factor =
-            (g_current_soft_switch_status.active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED) ? 1.0f : 0.0f;
+        motor->current_soft_switch_status.blend_factor =
+            (motor->current_soft_switch_status.active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED) ? 1.0f : 0.0f;
     }
 }
 
-void FOC_ControlSetCoggingCompEnable(uint8_t enable)
+void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable)
 {
+    if (motor == 0)
+    {
+        return;
+    }
+
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    g_cogging_comp_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
+    motor->cogging_comp_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
 #else
     (void)enable;
-    g_cogging_comp_status.enabled = FOC_CFG_DISABLE;
+    motor->cogging_comp_status.enabled = FOC_CFG_DISABLE;
 #endif
-}
-
-uint8_t FOC_ControlLoadCoggingCompTableQ15(const int16_t *table_q15,
-                                           uint16_t point_count,
-                                           float iq_lsb_a,
-                                           uint8_t source)
-{
-    uint16_t i;
-
-    if ((table_q15 == 0) || (point_count < 2U) || (point_count > (uint16_t)FOC_COGGING_LUT_POINT_COUNT))
-    {
-        return 0U;
-    }
-
-    if (iq_lsb_a <= 0.0f)
-    {
-        return 0U;
-    }
-
-    for (i = 0U; i < point_count; i++)
-    {
-        g_cogging_comp_table_q15[i] = table_q15[i];
-    }
-
-    for (; i < (uint16_t)FOC_COGGING_LUT_POINT_COUNT; i++)
-    {
-        g_cogging_comp_table_q15[i] = 0;
-    }
-
-    g_cogging_comp_status.point_count = point_count;
-    g_cogging_comp_status.iq_lsb_a = iq_lsb_a;
-    g_cogging_comp_status.available = 1U;
-    g_cogging_comp_status.source = source;
-    return 1U;
-}
-
-void FOC_ControlSetCoggingCompUnavailable(uint8_t source)
-{
-    g_cogging_comp_status.available = 0U;
-    g_cogging_comp_status.source = source;
-}
-
-const foc_cogging_comp_status_t *FOC_ControlGetCoggingCompStatus(void)
-{
-    return &g_cogging_comp_status;
-}
-
-uint8_t FOC_ControlReadCoggingCompTableQ15(const int16_t **table_q15,
-                                           uint16_t *point_count,
-                                           float *iq_lsb_a)
-{
-    if ((table_q15 == 0) || (point_count == 0) || (iq_lsb_a == 0))
-    {
-        return 0U;
-    }
-
-    *table_q15 = g_cogging_comp_table_q15;
-    *point_count = g_cogging_comp_status.point_count;
-    *iq_lsb_a = g_cogging_comp_status.iq_lsb_a;
-    return (g_cogging_comp_status.available != 0U) ? 1U : 0U;
 }
 
 void FOC_PIDInit(foc_pid_t *pid,
@@ -275,30 +267,27 @@ void FOC_PIDInit(foc_pid_t *pid,
     pid->out_max = out_max;
 }
 
-foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(void)
+foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(foc_motor_t *motor)
 {
-    return &g_current_soft_switch_status;
+    if (motor == 0)
+    {
+        return 0;
+    }
+
+    return &motor->current_soft_switch_status;
 }
 
-uint8_t *FOC_ControlGetCurrentSoftSwitchBlendInitFlag(void)
+uint8_t *FOC_ControlGetCurrentSoftSwitchBlendInitFlag(foc_motor_t *motor)
 {
+    if (motor == 0)
+    {
+        return 0;
+    }
+
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
-    return &g_current_soft_switch_blend_initialized;
+    return &motor->current_soft_switch_blend_initialized;
 #else
     return 0;
 #endif
 }
 
-void FOC_ControlGetCoggingCompContext(const foc_cogging_comp_status_t **status,
-                                      const int16_t **table_q15)
-{
-    if (status != 0)
-    {
-        *status = &g_cogging_comp_status;
-    }
-
-    if (table_q15 != 0)
-    {
-        *table_q15 = g_cogging_comp_table_q15;
-    }
-}

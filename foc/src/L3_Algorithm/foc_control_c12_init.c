@@ -3,12 +3,13 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "L3_Algorithm/foc_control_c22_current_loop.h"
+#include "L3_Algorithm/foc_control_c23_motor_param_learn.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
+#include "L3_Algorithm/foc_control_c25_cfg_state.h"
 #include "L41_Math/foc_math_lut.h"
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
-#include "L3_Algorithm/foc_control_c11_entry.h"
-#include "L3_Algorithm/foc_control_c23_motor_param_learn.h"
-#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "LS_Config/foc_config.h"
 
 float Math_WrapRad(float angle);
@@ -73,7 +74,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     }
     else
     {
-        FOC_ControlApplyElectricalAngleInitBridge(motor, 0.0f);
+        FOC_CurrentControlApplyElectricalAngleDirect(motor, 0.0f);
         FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
     }
 
@@ -105,7 +106,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     motor->ud = backup_ud;
     motor->uq = backup_uq;
-    FOC_ControlApplyElectricalAngleInitBridge(motor, 0.0f);
+    FOC_CurrentControlApplyElectricalAngleDirect(motor, 0.0f);
 }
 
 void FOC_MotorInit(foc_motor_t *motor,
@@ -134,6 +135,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->vbus_voltage = vbus_voltage;
     motor->iq_target = 0.0f;
     motor->iq_measured = 0.0f;
+    motor->cogging_speed_ref_rad_s = 0.0f;
     motor->mech_angle_accum_rad = 0.0f;
     motor->mech_angle_prev_rad = 0.0f;
     motor->mech_angle_prev_valid = 0U;
@@ -154,6 +156,8 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->duty_b = 0.0f;
     motor->duty_c = 0.0f;
     motor->sector = 0U;
+
+    FOC_ControlConfigResetDefault(motor);
 
 #if (FOC_INIT_CALIBRATION_ENABLE == FOC_CFG_ENABLE)
     FOC_CalibrateElectricalAngleAndDirection(motor);

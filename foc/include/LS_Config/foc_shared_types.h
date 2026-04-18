@@ -47,6 +47,38 @@ typedef struct {
     uint8_t encoder_valid;
 } sensor_data_t;
 
+/* Motor-side cogging LUT capacity used by runtime context storage. */
+#ifndef FOC_MOTOR_COGGING_LUT_CAPACITY
+#define FOC_MOTOR_COGGING_LUT_CAPACITY 64U
+#endif
+
+typedef struct {
+    float min_mech_angle_accum_delta_rad;
+    float angle_hold_integral_limit;
+    float angle_hold_pid_deadband_rad;
+    float speed_angle_transition_start_rad;
+    float speed_angle_transition_end_rad;
+} foc_control_runtime_config_t;
+
+typedef struct {
+    uint8_t enabled;
+    uint8_t configured_mode;
+    uint8_t active_mode;
+    float blend_factor;
+    float auto_open_iq_a;
+    float auto_closed_iq_a;
+} foc_current_soft_switch_status_t;
+
+typedef struct {
+    uint8_t enabled;
+    uint8_t available;
+    uint8_t source;
+    uint16_t point_count;
+    float iq_lsb_a;
+    float speed_gate_rad_s;
+    float iq_limit_a;
+} foc_cogging_comp_status_t;
+
 typedef struct {
     /* Motor physical parameters and calibration outputs. */
     float phase_resistance;
@@ -64,6 +96,7 @@ typedef struct {
     /* Current-loop runtime states. */
     float iq_target;
     float iq_measured;
+    float cogging_speed_ref_rad_s;
 
     /* Mechanical angle accumulation states. */
     float mech_angle_accum_rad;
@@ -81,6 +114,13 @@ typedef struct {
     float duty_b;
     float duty_c;
     uint8_t sector;
+
+    /* Control runtime context migrated from shared C25 singletons. */
+    foc_control_runtime_config_t control_runtime_cfg;
+    foc_current_soft_switch_status_t current_soft_switch_status;
+    uint8_t current_soft_switch_blend_initialized;
+    foc_cogging_comp_status_t cogging_comp_status;
+    int16_t cogging_comp_table_q15[FOC_MOTOR_COGGING_LUT_CAPACITY];
 } foc_motor_t;
 
 typedef struct {

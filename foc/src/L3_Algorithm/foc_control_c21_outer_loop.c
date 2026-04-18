@@ -2,8 +2,6 @@
 
 #include <math.h>
 
-#include "L3_Algorithm/foc_control_c25_cfg_state.h"
-#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L3_Algorithm/foc_control_c31_actuation.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
@@ -50,14 +48,17 @@ static float FOC_PIDRunCore(foc_pid_t *pid, float target, float measurement, flo
     return output;
 }
 
-static float FOC_AngleHoldPIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec)
+static float FOC_AngleHoldPIDRun(foc_pid_t *pid,
+                                 const foc_control_runtime_config_t *runtime_cfg,
+                                 float target,
+                                 float measurement,
+                                 float dt_sec)
 {
-    const foc_control_runtime_config_t *runtime_cfg = FOC_ControlGetRuntimeConfig();
     float error;
     float derivative;
     float output;
 
-    if (pid == 0)
+    if ((pid == 0) || (runtime_cfg == 0))
     {
         return 0.0f;
     }
@@ -115,7 +116,6 @@ static void FOC_ResetSpeedState(void)
 
 static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_angle_rad)
 {
-    const foc_control_runtime_config_t *runtime_cfg = FOC_ControlGetRuntimeConfig();
     float delta;
 
     if (motor == 0)
@@ -132,7 +132,7 @@ static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_
     }
 
     delta = Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_prev_rad);
-    if (fabsf(delta) >= runtime_cfg->min_mech_angle_accum_delta_rad)
+    if (fabsf(delta) >= motor->control_runtime_cfg.min_mech_angle_accum_delta_rad)
     {
         motor->mech_angle_accum_rad += delta;
     }
@@ -202,8 +202,6 @@ void FOC_SpeedOuterLoopStep(foc_motor_t *motor,
                             const sensor_data_t *sensor,
                             float dt_sec)
 {
-    const foc_cogging_comp_status_t *cogging_status;
-    const int16_t *cogging_table_q15;
     float speed_angle_error_rad;
 
     if ((motor == 0) || (speed_pid == 0) || (sensor == 0))
@@ -222,12 +220,7 @@ void FOC_SpeedOuterLoopStep(foc_motor_t *motor,
                                       speed_angle_error_rad,
                                       0.0f,
                                       dt_sec);
-
-    FOC_ControlGetCoggingCompContext(&cogging_status, &cogging_table_q15);
-    motor->iq_target += FOC_ControlCoggingLookupIq(cogging_status,
-                                                   cogging_table_q15,
-                                                   sensor->mech_angle_rad.output_value,
-                                                   speed_ref_rad_s);
+    motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
 
     motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor,
                                                                             sensor->mech_angle_rad.output_value);
@@ -241,9 +234,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
                                  const sensor_data_t *sensor,
                                  float dt_sec)
 {
-    const foc_control_runtime_config_t *runtime_cfg = FOC_ControlGetRuntimeConfig();
-    const foc_cogging_comp_status_t *cogging_status;
-    const int16_t *cogging_table_q15;
+    const foc_control_runtime_config_t *runtime_cfg;
     float torque_ref_speed;
     float torque_ref_hold;
     float mech_signed_total_rad;
@@ -258,6 +249,8 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
     {
         return;
     }
+
+    runtime_cfg = &motor->control_runtime_cfg;
 
     dt_sec = FOC_NormalizeDt(dt_sec);
 
@@ -309,17 +302,13 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
     }
 
     torque_ref_hold = FOC_AngleHoldPIDRun(angle_hold_pid,
+                                          runtime_cfg,
                                           angle_ref_rad,
                                           mech_signed_total_rad,
                                           dt_sec);
 
     motor->iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
-
-    FOC_ControlGetCoggingCompContext(&cogging_status, &cogging_table_q15);
-    motor->iq_target += FOC_ControlCoggingLookupIq(cogging_status,
-                                                   cogging_table_q15,
-                                                   sensor->mech_angle_rad.output_value,
-                                                   speed_ref_rad_s);
+    motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
 
     motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor,
                                                                             sensor->mech_angle_rad.output_value);
