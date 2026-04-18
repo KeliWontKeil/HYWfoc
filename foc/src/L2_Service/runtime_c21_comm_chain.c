@@ -1,42 +1,11 @@
-#include "L2_Service/protocol_service.h"
+#include "L2_Service/runtime_chain_internal.h"
 
 #include <string.h>
 
-#include "L2_Service/runtime_service.h"
 #include "L2_Service/protocol_parser.h"
 #include "L2_Service/command_manager.h"
 
-void RuntimeService_Init(void)
-{
-    CommandManager_Init();
-}
-
-void RuntimeService_ReportInitCheck(uint16_t check_bit, uint8_t success)
-{
-    CommandManager_ReportInitCheck(check_bit, success);
-}
-
-void RuntimeService_FinalizeInitDiagnostics(void)
-{
-    CommandManager_FinalizeInitDiagnostics();
-}
-
-void RuntimeService_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid)
-{
-    CommandManager_ReportRuntimeSensorState(adc_valid, encoder_valid);
-}
-
-void RuntimeService_ReportUndervoltageFault(float vbus_voltage)
-{
-    CommandManager_ReportUndervoltageFault(vbus_voltage);
-}
-
-void RuntimeService_ReportControlLoopSkip(void)
-{
-    CommandManager_ReportControlLoopSkip();
-}
-
-uint8_t ProtocolService_ProcessStep(uint8_t max_frames)
+uint8_t RuntimeChain_ProcessCommStep(uint8_t max_frames)
 {
     uint8_t consumed = 0U;
     uint8_t has_comm_activity = 0U;
@@ -61,7 +30,7 @@ uint8_t ProtocolService_ProcessStep(uint8_t max_frames)
     return has_comm_activity;
 }
 
-void ProtocolService_BuildSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeChain_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
     const command_manager_runtime_state_t *runtime;
 
@@ -113,24 +82,7 @@ void ProtocolService_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->telemetry.osc_parameter_mask = CommandManager_GetOscilloscopeParameterMask();
 }
 
-void ProtocolService_CommitAppliedConfig(void)
+void RuntimeChain_CommitAppliedConfig(void)
 {
     CommandManager_ClearDirtyFlag();
-}
-
-uint8_t RuntimeService_ProcessCommStep(uint8_t max_frames, runtime_snapshot_t *snapshot)
-{
-    uint8_t has_comm_activity = ProtocolService_ProcessStep(max_frames);
-    ProtocolService_BuildSnapshot(snapshot);
-    return has_comm_activity;
-}
-
-void RuntimeService_RefreshSnapshot(runtime_snapshot_t *snapshot)
-{
-    ProtocolService_BuildSnapshot(snapshot);
-}
-
-void RuntimeService_CommitAppliedConfig(void)
-{
-    ProtocolService_CommitAppliedConfig();
 }

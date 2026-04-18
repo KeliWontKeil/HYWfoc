@@ -28,14 +28,15 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
-        - path: ../../../foc/src/L2_Service/protocol_parser.c
-        - path: ../../../foc/src/L2_Service/command_manager.c
-        - path: ../../../foc/src/L2_Service/command_manager_diag.c
-        - path: ../../../foc/src/L2_Service/command_manager_dispatch.c
-        - path: ../../../foc/src/L2_Service/command_manager_store.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c
-        - path: ../../../foc/src/L2_Service/protocol_service.c
+        - path: ../../../foc/src/L2_Service/runtime_c11_entry.c
+        - path: ../../../foc/src/L2_Service/runtime_c21_comm_chain.c
+        - path: ../../../foc/src/L2_Service/runtime_c22_protocol_parser.c
+        - path: ../../../foc/src/L2_Service/runtime_c23_command_manager.c
+        - path: ../../../foc/src/L2_Service/runtime_c24_command_dispatch.c
+        - path: ../../../foc/src/L2_Service/runtime_c25_command_store.c
+        - path: ../../../foc/src/L2_Service/runtime_c26_command_diag.c
       folders: []
     - name: CMSIS
       files:
