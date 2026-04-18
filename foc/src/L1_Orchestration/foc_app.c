@@ -4,7 +4,7 @@
 
 #include "L1_Orchestration/control_scheduler.h"
 #include "L2_Service/debug_stream.h"
-#include "L2_Service/l2_service_c11_entry.h"
+#include "L2_Service/runtime_service.h"
 #include "L2_Service/motor_control_service.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
@@ -41,7 +41,7 @@ static uint8_t g_led_run_on = 1U;
 static uint8_t g_app_init_completed = 0U;
 static uint16_t g_led_run_blink_counter = 0U;
 static uint16_t g_led_comm_pulse_counter = 0U;
-static l2_service_snapshot_t g_l2_snapshot;
+static runtime_snapshot_t g_l2_snapshot;
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
 static uint8_t g_undervoltage_fault_latched = 0U;
 #endif
@@ -67,10 +67,10 @@ void FOC_App_Init(void)
 
     FOC_Platform_CommInit();
 
-    L2_ServiceC11_Init();
+    RuntimeService_Init();
     FOC_App_RefreshL2Snapshot();
-    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_COMMAND, 1U);
-    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_COMM, 1U);
+    RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_COMMAND, 1U);
+    RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_COMM, 1U);
 
     MotorControlService_ResetControlConfigDefault(&g_motor);
     FOC_Platform_WriteDebugText("\r\n=== FOC System Started ===\r\n");
@@ -83,27 +83,27 @@ void FOC_App_Init(void)
     FOC_Platform_WriteDebugText("Control debug telemetry enabled\r\n");
     FOC_Platform_WriteDebugText("Init feedback pipeline...\r\n\r\n");
 
-    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_PROTOCOL, 1U);
+    RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_PROTOCOL, 1U);
 
     DebugStream_Init();
-    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_DEBUG, 1U);
+    RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_DEBUG, 1U);
 
     MotorControlService_InitSensorInput(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) != 0U)
     {
-        L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_SENSOR,
-                                      (uint8_t)((g_sensor_snapshot.adc_valid != 0U) &&
-                                                (g_sensor_snapshot.encoder_valid != 0U)));
+        RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_SENSOR,
+                                       (uint8_t)((g_sensor_snapshot.adc_valid != 0U) &&
+                                                 (g_sensor_snapshot.encoder_valid != 0U)));
     }
     else
     {
-        L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_SENSOR, 0U);
+        RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_SENSOR, 0U);
     }
 
     /* Initialize SVPWM output and interpolation callback. */
     MotorControlService_InitPwmOutput(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
-    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_PWM, 1U);
+    RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_PWM, 1U);
 
     /* Initialize motor model and targets. */
     MotorControlService_InitMotor(&g_motor,
@@ -113,7 +113,7 @@ void FOC_App_Init(void)
                                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
-    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_MOTOR, 1U);
+    RuntimeService_ReportInitCheck(RUNTIME_INIT_CHECK_MOTOR, 1U);
 
     /* PID initialization and runtime config applying are managed by L2 service. */
     MotorControlService_InitPidControllers(&g_motor,
@@ -131,7 +131,7 @@ void FOC_App_Init(void)
             g_motor.pole_pairs);
     FOC_Platform_WriteDebugText(startup_info);
 
-    L2_ServiceC11_FinalizeInitDiagnostics();
+    RuntimeService_FinalizeInitDiagnostics();
     g_app_init_completed = 1U;
     FOC_App_UpdateIndicators();
 
@@ -169,12 +169,12 @@ void FOC_App_Loop(void)
 
 static void FOC_App_RefreshL2Snapshot(void)
 {
-    L2_ServiceC11_RefreshSnapshot(&g_l2_snapshot);
+    RuntimeService_RefreshSnapshot(&g_l2_snapshot);
 }
 
 static void FOC_App_ProcessCommStep(void)
 {
-    if (L2_ServiceC11_ProcessCommStep(FOC_APP_COMM_FRAMES_PER_STEP, &g_l2_snapshot) != 0U)
+    if (RuntimeService_ProcessCommStep(FOC_APP_COMM_FRAMES_PER_STEP, &g_l2_snapshot) != 0U)
     {
         FOC_App_TriggerCommIndicatorPulse();
     }
@@ -223,7 +223,7 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
 
     if (report_skip != 0U)
     {
-        L2_ServiceC11_ReportControlLoopSkip();
+        RuntimeService_ReportControlLoopSkip();
     }
 }
 
@@ -364,12 +364,12 @@ static void Motor_Control_Loop(void)
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) == 0U)
     {
         FOC_App_EnterSafeOutputState(0U);
-        L2_ServiceC11_ReportRuntimeSensorState(0U, 0U);
+        RuntimeService_ReportRuntimeSensorState(0U, 0U);
         return;
     }
 
-    L2_ServiceC11_ReportRuntimeSensorState(g_sensor_snapshot.adc_valid,
-                                           g_sensor_snapshot.encoder_valid);
+    RuntimeService_ReportRuntimeSensorState(g_sensor_snapshot.adc_valid,
+                                            g_sensor_snapshot.encoder_valid);
 
     if ((g_sensor_snapshot.adc_valid == 0U) || (g_sensor_snapshot.encoder_valid == 0U))
     {
@@ -402,7 +402,7 @@ static void Motor_Control_Loop(void)
                                                 &g_speed_pid,
                                                 &g_angle_pid,
                                                 &g_l2_snapshot.control_cfg);
-        L2_ServiceC11_CommitAppliedConfig();
+        RuntimeService_CommitAppliedConfig();
     }
 
     FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
@@ -428,7 +428,7 @@ static uint8_t FOC_App_IsUndervoltageFaultActive(void)
     if (vbus_voltage < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
         g_undervoltage_fault_latched = 1U;
-        L2_ServiceC11_ReportUndervoltageFault(vbus_voltage);
+        RuntimeService_ReportUndervoltageFault(vbus_voltage);
         return 1U;
     }
 

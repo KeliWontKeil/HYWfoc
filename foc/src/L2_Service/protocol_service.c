@@ -2,36 +2,36 @@
 
 #include <string.h>
 
-#include "L2_Service/l2_service_c11_entry.h"
+#include "L2_Service/runtime_service.h"
 #include "L2_Service/protocol_parser.h"
 #include "L2_Service/command_manager.h"
 
-void L2_ServiceC11_Init(void)
+void RuntimeService_Init(void)
 {
     CommandManager_Init();
 }
 
-void L2_ServiceC11_ReportInitCheck(uint16_t check_bit, uint8_t success)
+void RuntimeService_ReportInitCheck(uint16_t check_bit, uint8_t success)
 {
     CommandManager_ReportInitCheck(check_bit, success);
 }
 
-void L2_ServiceC11_FinalizeInitDiagnostics(void)
+void RuntimeService_FinalizeInitDiagnostics(void)
 {
     CommandManager_FinalizeInitDiagnostics();
 }
 
-void L2_ServiceC11_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid)
+void RuntimeService_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid)
 {
     CommandManager_ReportRuntimeSensorState(adc_valid, encoder_valid);
 }
 
-void L2_ServiceC11_ReportUndervoltageFault(float vbus_voltage)
+void RuntimeService_ReportUndervoltageFault(float vbus_voltage)
 {
     CommandManager_ReportUndervoltageFault(vbus_voltage);
 }
 
-void L2_ServiceC11_ReportControlLoopSkip(void)
+void RuntimeService_ReportControlLoopSkip(void)
 {
     CommandManager_ReportControlLoopSkip();
 }
@@ -61,7 +61,7 @@ uint8_t ProtocolService_ProcessStep(uint8_t max_frames)
     return has_comm_activity;
 }
 
-void ProtocolService_BuildSnapshot(l2_service_snapshot_t *snapshot)
+void ProtocolService_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
     const command_manager_runtime_state_t *runtime;
 
@@ -118,19 +118,19 @@ void ProtocolService_CommitAppliedConfig(void)
     CommandManager_ClearDirtyFlag();
 }
 
-uint8_t L2_ServiceC11_ProcessCommStep(uint8_t max_frames, l2_service_snapshot_t *snapshot)
+uint8_t RuntimeService_ProcessCommStep(uint8_t max_frames, runtime_snapshot_t *snapshot)
 {
     uint8_t has_comm_activity = ProtocolService_ProcessStep(max_frames);
     ProtocolService_BuildSnapshot(snapshot);
     return has_comm_activity;
 }
 
-void L2_ServiceC11_RefreshSnapshot(l2_service_snapshot_t *snapshot)
+void RuntimeService_RefreshSnapshot(runtime_snapshot_t *snapshot)
 {
     ProtocolService_BuildSnapshot(snapshot);
 }
 
-void L2_ServiceC11_CommitAppliedConfig(void)
+void RuntimeService_CommitAppliedConfig(void)
 {
     ProtocolService_CommitAppliedConfig();
 }

@@ -1,5 +1,5 @@
-#ifndef L2_SERVICE_CONTRACT_H
-#define L2_SERVICE_CONTRACT_H
+#ifndef RUNTIME_SNAPSHOT_H
+#define RUNTIME_SNAPSHOT_H
 
 #include <stdint.h>
 
@@ -31,7 +31,7 @@ typedef struct {
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
-} l2_control_config_snapshot_t;
+} control_config_snapshot_t;
 
 typedef struct {
     uint8_t semantic_report_enabled;
@@ -39,19 +39,19 @@ typedef struct {
     uint16_t semantic_report_freq_hz;
     uint16_t osc_report_freq_hz;
     uint16_t osc_parameter_mask;
-} l2_telemetry_policy_snapshot_t;
+} telemetry_policy_snapshot_t;
 
 typedef struct {
     uint8_t system_running;
     uint8_t system_fault;
     uint8_t params_dirty;
     uint8_t last_exec_ok;
-} l2_runtime_status_snapshot_t;
+} runtime_state_snapshot_t;
 
 typedef struct {
-    l2_control_config_snapshot_t control_cfg;
-    l2_telemetry_policy_snapshot_t telemetry;
-    l2_runtime_status_snapshot_t runtime;
-} l2_service_snapshot_t;
+    control_config_snapshot_t control_cfg;
+    telemetry_policy_snapshot_t telemetry;
+    runtime_state_snapshot_t runtime;
+} runtime_snapshot_t;
 
-#endif /* L2_SERVICE_CONTRACT_H */
+#endif /* RUNTIME_SNAPSHOT_H */

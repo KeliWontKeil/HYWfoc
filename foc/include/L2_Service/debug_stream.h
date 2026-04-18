@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L2_Service/l2_service_contract.h"
+#include "L2_Service/runtime_snapshot.h"
 #include "LS_Config/foc_shared_types.h"
 #include "LS_Config/foc_config.h"
 
@@ -15,7 +15,7 @@ void DebugStream_Init(void);
 void DebugStream_SetExecutionCycles(uint32_t exec_cycles);
 void DebugStream_Process(const sensor_data_t *sensor,
                          const foc_motor_t *motor,
-                         const l2_runtime_status_snapshot_t *runtime,
-                         const l2_telemetry_policy_snapshot_t *telemetry);
+                         const runtime_state_snapshot_t *runtime,
+                         const telemetry_policy_snapshot_t *telemetry);
 
 #endif /* DEBUG_STREAM_H */

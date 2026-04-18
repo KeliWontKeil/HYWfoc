@@ -125,7 +125,7 @@ void MotorControlService_InitPidControllers(foc_motor_t *motor,
                                             foc_pid_t *current_pid,
                                             foc_pid_t *speed_pid,
                                             foc_pid_t *angle_hold_pid,
-                                            const l2_control_config_snapshot_t *control_cfg)
+                                            const control_config_snapshot_t *control_cfg)
 {
     if ((motor == 0) || (current_pid == 0) || (speed_pid == 0) || (angle_hold_pid == 0) || (control_cfg == 0))
     {
@@ -162,7 +162,7 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
                                              foc_pid_t *current_pid,
                                              foc_pid_t *speed_pid,
                                              foc_pid_t *angle_hold_pid,
-                                             const l2_control_config_snapshot_t *control_cfg)
+                                             const control_config_snapshot_t *control_cfg)
 {
     if ((motor == 0) || (current_pid == 0) || (speed_pid == 0) || (angle_hold_pid == 0) || (control_cfg == 0))
     {

@@ -39,8 +39,8 @@ void DebugStream_SetExecutionCycles(uint32_t exec_cycles)
 
 void DebugStream_Process(const sensor_data_t *sensor,
                          const foc_motor_t *motor,
-                         const l2_runtime_status_snapshot_t *runtime,
-                         const l2_telemetry_policy_snapshot_t *telemetry)
+                         const runtime_state_snapshot_t *runtime,
+                         const telemetry_policy_snapshot_t *telemetry)
 {
     const uint32_t exec_cycles = g_last_exec_cycles;
 

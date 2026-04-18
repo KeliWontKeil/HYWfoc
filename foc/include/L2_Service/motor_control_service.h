@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L2_Service/l2_service_contract.h"
+#include "L2_Service/runtime_snapshot.h"
 #include "LS_Config/foc_shared_types.h"
 
 typedef enum {
@@ -56,12 +56,12 @@ void MotorControlService_InitPidControllers(foc_motor_t *motor,
                                             foc_pid_t *current_pid,
                                             foc_pid_t *speed_pid,
                                             foc_pid_t *angle_hold_pid,
-                                            const l2_control_config_snapshot_t *control_cfg);
+                                            const control_config_snapshot_t *control_cfg);
 
 void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
                                              foc_pid_t *current_pid,
                                              foc_pid_t *speed_pid,
                                              foc_pid_t *angle_hold_pid,
-                                             const l2_control_config_snapshot_t *control_cfg);
+                                             const control_config_snapshot_t *control_cfg);
 
 #endif /* MOTOR_CONTROL_SERVICE_H */
