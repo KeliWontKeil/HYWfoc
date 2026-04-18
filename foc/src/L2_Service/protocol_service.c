@@ -6,6 +6,36 @@
 #include "L2_Service/protocol_parser.h"
 #include "L2_Service/command_manager.h"
 
+void L2_ServiceC11_Init(void)
+{
+    CommandManager_Init();
+}
+
+void L2_ServiceC11_ReportInitCheck(uint16_t check_bit, uint8_t success)
+{
+    CommandManager_ReportInitCheck(check_bit, success);
+}
+
+void L2_ServiceC11_FinalizeInitDiagnostics(void)
+{
+    CommandManager_FinalizeInitDiagnostics();
+}
+
+void L2_ServiceC11_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid)
+{
+    CommandManager_ReportRuntimeSensorState(adc_valid, encoder_valid);
+}
+
+void L2_ServiceC11_ReportUndervoltageFault(float vbus_voltage)
+{
+    CommandManager_ReportUndervoltageFault(vbus_voltage);
+}
+
+void L2_ServiceC11_ReportControlLoopSkip(void)
+{
+    CommandManager_ReportControlLoopSkip();
+}
+
 uint8_t ProtocolService_ProcessStep(uint8_t max_frames)
 {
     uint8_t consumed = 0U;

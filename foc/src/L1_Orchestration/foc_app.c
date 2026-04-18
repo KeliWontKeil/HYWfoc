@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 #include "L1_Orchestration/control_scheduler.h"
-#include "L2_Service/command_manager.h"
 #include "L2_Service/debug_stream.h"
 #include "L2_Service/l2_service_c11_entry.h"
 #include "L2_Service/motor_control_service.h"
@@ -68,10 +67,10 @@ void FOC_App_Init(void)
 
     FOC_Platform_CommInit();
 
-    CommandManager_Init();
+    L2_ServiceC11_Init();
     FOC_App_RefreshL2Snapshot();
-    CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMMAND, 1U);
-    CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMM, 1U);
+    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_COMMAND, 1U);
+    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_COMM, 1U);
 
     MotorControlService_ResetControlConfigDefault(&g_motor);
     FOC_Platform_WriteDebugText("\r\n=== FOC System Started ===\r\n");
@@ -84,27 +83,27 @@ void FOC_App_Init(void)
     FOC_Platform_WriteDebugText("Control debug telemetry enabled\r\n");
     FOC_Platform_WriteDebugText("Init feedback pipeline...\r\n\r\n");
 
-    CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_PROTOCOL, 1U);
+    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_PROTOCOL, 1U);
 
     DebugStream_Init();
-    CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_DEBUG, 1U);
+    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_DEBUG, 1U);
 
     MotorControlService_InitSensorInput(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) != 0U)
     {
-        CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_SENSOR,
-                                       (uint8_t)((g_sensor_snapshot.adc_valid != 0U) &&
-                                                 (g_sensor_snapshot.encoder_valid != 0U)));
+        L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_SENSOR,
+                                      (uint8_t)((g_sensor_snapshot.adc_valid != 0U) &&
+                                                (g_sensor_snapshot.encoder_valid != 0U)));
     }
     else
     {
-        CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_SENSOR, 0U);
+        L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_SENSOR, 0U);
     }
 
     /* Initialize SVPWM output and interpolation callback. */
     MotorControlService_InitPwmOutput(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
-    CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_PWM, 1U);
+    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_PWM, 1U);
 
     /* Initialize motor model and targets. */
     MotorControlService_InitMotor(&g_motor,
@@ -114,7 +113,7 @@ void FOC_App_Init(void)
                                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
-    CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_MOTOR, 1U);
+    L2_ServiceC11_ReportInitCheck(L2_SERVICE_C11_INIT_CHECK_MOTOR, 1U);
 
     /* PID initialization and runtime config applying are managed by L2 service. */
     MotorControlService_InitPidControllers(&g_motor,
@@ -132,7 +131,7 @@ void FOC_App_Init(void)
             g_motor.pole_pairs);
     FOC_Platform_WriteDebugText(startup_info);
 
-    CommandManager_FinalizeInitDiagnostics();
+    L2_ServiceC11_FinalizeInitDiagnostics();
     g_app_init_completed = 1U;
     FOC_App_UpdateIndicators();
 
@@ -224,7 +223,7 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
 
     if (report_skip != 0U)
     {
-        CommandManager_ReportControlLoopSkip();
+        L2_ServiceC11_ReportControlLoopSkip();
     }
 }
 
@@ -365,12 +364,12 @@ static void Motor_Control_Loop(void)
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) == 0U)
     {
         FOC_App_EnterSafeOutputState(0U);
-        CommandManager_ReportRuntimeSensorState(0U, 0U);
+        L2_ServiceC11_ReportRuntimeSensorState(0U, 0U);
         return;
     }
 
-    CommandManager_ReportRuntimeSensorState(g_sensor_snapshot.adc_valid,
-                                            g_sensor_snapshot.encoder_valid);
+    L2_ServiceC11_ReportRuntimeSensorState(g_sensor_snapshot.adc_valid,
+                                           g_sensor_snapshot.encoder_valid);
 
     if ((g_sensor_snapshot.adc_valid == 0U) || (g_sensor_snapshot.encoder_valid == 0U))
     {
@@ -429,7 +428,7 @@ static uint8_t FOC_App_IsUndervoltageFaultActive(void)
     if (vbus_voltage < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
         g_undervoltage_fault_latched = 1U;
-        CommandManager_ReportUndervoltageFault(vbus_voltage);
+        L2_ServiceC11_ReportUndervoltageFault(vbus_voltage);
         return 1U;
     }
 
