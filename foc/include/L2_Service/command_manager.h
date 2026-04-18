@@ -75,7 +75,7 @@ typedef struct {
 } command_manager_runtime_state_t;
 
 void CommandManager_Init(void);
-void CommandManager_Process(void);
+uint8_t CommandManager_Process(void);
 void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success);
 void CommandManager_FinalizeInitDiagnostics(void);
 void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid);

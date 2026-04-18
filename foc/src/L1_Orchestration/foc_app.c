@@ -2,12 +2,12 @@
 
 #include <stdio.h>
 
-#include "L42_PAL/foc_platform_api.h"
 #include "L1_Orchestration/control_scheduler.h"
-#include "L2_Service/protocol_service.h"
 #include "L2_Service/command_manager.h"
 #include "L2_Service/debug_stream.h"
+#include "L2_Service/l2_service_c11_entry.h"
 #include "L2_Service/motor_control_service.h"
+#include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
 /* Internal function prototypes */
@@ -22,6 +22,7 @@ static void FOC_App_ProcessCommStep(void);
 static void FOC_App_UpdateIndicators(void);
 static void FOC_App_TriggerCommIndicatorPulse(void);
 static uint8_t FOC_App_IsUndervoltageFaultActive(void);
+static void FOC_App_RefreshL2Snapshot(void);
 
 #define FOC_APP_COMM_FRAMES_PER_STEP 1U
 
@@ -41,6 +42,7 @@ static uint8_t g_led_run_on = 1U;
 static uint8_t g_app_init_completed = 0U;
 static uint16_t g_led_run_blink_counter = 0U;
 static uint16_t g_led_comm_pulse_counter = 0U;
+static l2_service_snapshot_t g_l2_snapshot;
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
 static uint8_t g_undervoltage_fault_latched = 0U;
 #endif
@@ -67,10 +69,11 @@ void FOC_App_Init(void)
     FOC_Platform_CommInit();
 
     CommandManager_Init();
+    FOC_App_RefreshL2Snapshot();
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMMAND, 1U);
     CommandManager_ReportInitCheck(COMMAND_MANAGER_INIT_CHECK_COMM, 1U);
 
-    MotorControlService_ResetControlConfigDefault();
+    MotorControlService_ResetControlConfigDefault(&g_motor);
     FOC_Platform_WriteDebugText("\r\n=== FOC System Started ===\r\n");
     FOC_Platform_WriteDebugText("USART1 telemetry channel enabled\r\n");
     FOC_Platform_WriteDebugText("PWM update ISR interpolation path enabled\r\n");
@@ -117,7 +120,8 @@ void FOC_App_Init(void)
     MotorControlService_InitPidControllers(&g_motor,
                                            &g_torque_current_pid,
                                            &g_speed_pid,
-                                           &g_angle_pid);
+                                           &g_angle_pid,
+                                           &g_l2_snapshot.control_cfg);
 
     char startup_info[128];
     snprintf(startup_info,
@@ -155,14 +159,23 @@ void FOC_App_Loop(void)
     {
         g_monitor_task_pending = 0U;
         /* Debug stream cadence is bounded by monitor task trigger rate. */
+        FOC_App_RefreshL2Snapshot();
         DebugStream_SetExecutionCycles(ControlScheduler_GetExecutionCycles());
-        DebugStream_Process(&g_sensor_snapshot, &g_motor);
+        DebugStream_Process(&g_sensor_snapshot,
+                            &g_motor,
+                            &g_l2_snapshot.runtime,
+                            &g_l2_snapshot.telemetry);
     }
+}
+
+static void FOC_App_RefreshL2Snapshot(void)
+{
+    L2_ServiceC11_RefreshSnapshot(&g_l2_snapshot);
 }
 
 static void FOC_App_ProcessCommStep(void)
 {
-    if (ProtocolService_ProcessStep(FOC_APP_COMM_FRAMES_PER_STEP) != 0U)
+    if (L2_ServiceC11_ProcessCommStep(FOC_APP_COMM_FRAMES_PER_STEP, &g_l2_snapshot) != 0U)
     {
         FOC_App_TriggerCommIndicatorPulse();
     }
@@ -191,7 +204,7 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
     motor_control_service_task_args_t task_args;
 
     FOC_App_StopFastCurrentLoop();
-    MotorControlService_ResetCurrentSoftSwitchState();
+    MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
 
     task_args.sensor = 0;
     task_args.control_mode = 0U;
@@ -283,7 +296,8 @@ static void FOC_App_UpdateIndicators(void)
 {
     uint8_t led_run_on = 0U;
     uint8_t led_fault_on = 0U;
-    const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
+
+    FOC_App_RefreshL2Snapshot();
 
     if (g_app_init_completed == 0U)
     {
@@ -291,14 +305,14 @@ static void FOC_App_UpdateIndicators(void)
         g_led_run_on = 1U;
         g_led_run_blink_counter = 0U;
     }
-    else if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
+    else if (g_l2_snapshot.runtime.system_fault != 0U)
     {
         led_run_on = 0U;
         led_fault_on = 1U;
         g_led_run_on = 0U;
         g_led_run_blink_counter = 0U;
     }
-    else if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_RUNNING))
+    else if (g_l2_snapshot.runtime.system_running != 0U)
     {
         if (g_led_run_blink_counter >= (FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS - 1U))
         {
@@ -339,11 +353,9 @@ static void FOC_App_TriggerCommIndicatorPulse(void)
 
 static void Motor_Control_Loop(void)
 {
-    const command_manager_runtime_state_t *state;
+    FOC_App_RefreshL2Snapshot();
 
-    state = CommandManager_GetRuntimeState();
-
-    if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
+    if (g_l2_snapshot.runtime.system_fault != 0U)
     {
         /* Stop runtime I2C read path in fault state to avoid repeated bus timeout load. */
         FOC_App_EnterSafeOutputState(1U);
@@ -366,10 +378,10 @@ static void Motor_Control_Loop(void)
         return;
     }
 
-    if ((state != 0) && (state->params_dirty != 0U))
+    if (g_l2_snapshot.runtime.params_dirty != 0U)
     {
         /* Apply sampling offset before motor/fault gates so protocol updates work in disabled state. */
-        MotorControlService_SetSensorSampleOffsetPercent(CommandManager_GetSensorSampleOffsetPercent());
+        MotorControlService_SetSensorSampleOffsetPercent(g_l2_snapshot.control_cfg.sensor_sample_offset_percent);
     }
 
     if (FOC_App_IsUndervoltageFaultActive() != 0U)
@@ -378,19 +390,20 @@ static void Motor_Control_Loop(void)
         return;
     }
 
-    if (CommandManager_IsMotorEnabled() == COMMAND_MANAGER_ENABLED_DISABLE)
+    if (g_l2_snapshot.control_cfg.motor_enabled == 0U)
     {
         FOC_App_EnterSafeOutputState(1U);
         return;
     }
 
-    if ((state != 0) && (state->params_dirty != 0U))
+    if (g_l2_snapshot.runtime.params_dirty != 0U)
     {
-        MotorControlService_ApplyPendingConfig(&g_motor,
-                                               &g_torque_current_pid,
-                                               &g_speed_pid,
-                                               &g_angle_pid);
-        CommandManager_ClearDirtyFlag();
+        MotorControlService_ApplyConfigSnapshot(&g_motor,
+                                                &g_torque_current_pid,
+                                                &g_speed_pid,
+                                                &g_angle_pid,
+                                                &g_l2_snapshot.control_cfg);
+        L2_ServiceC11_CommitAppliedConfig();
     }
 
     FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
@@ -432,10 +445,10 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     motor_control_service_task_args_t task_args;
 
     task_args.sensor = sensor_data;
-    task_args.control_mode = CommandManager_GetControlMode();
-    task_args.speed_only_rad_s = CommandManager_GetSpeedOnlyRadS();
-    task_args.target_angle_rad = CommandManager_GetTargetAngleRad();
-    task_args.angle_position_speed_rad_s = CommandManager_GetAngleSpeedRadS();
+    task_args.control_mode = g_l2_snapshot.control_cfg.control_mode;
+    task_args.speed_only_rad_s = g_l2_snapshot.control_cfg.speed_only_rad_s;
+    task_args.target_angle_rad = g_l2_snapshot.control_cfg.target_angle_rad;
+    task_args.angle_position_speed_rad_s = g_l2_snapshot.control_cfg.angle_position_speed_rad_s;
     task_args.electrical_angle = 0.0f;
     task_args.open_loop_voltage = 0.0f;
     task_args.open_loop_turn_speed = 0.0f;

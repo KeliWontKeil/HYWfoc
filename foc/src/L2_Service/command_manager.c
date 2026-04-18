@@ -116,14 +116,14 @@ void CommandManager_Init(void)
     CommandManager_DispatchReportInitDiag();
 }
 
-void CommandManager_Process(void)
+uint8_t CommandManager_Process(void)
 {
     const protocol_command_t *cmd = ProtocolParser_GetLatestCommand();
     command_exec_result_t exec_result;
 
     if ((cmd == 0) || (cmd->updated == 0U))
     {
-        return;
+        return 0U;
     }
 
     g_runtime_state.comm_state = COMMAND_MANAGER_COMM_ACTIVE;
@@ -155,6 +155,7 @@ void CommandManager_Process(void)
     CommandManager_UpdateReportMode();
 
     ProtocolParser_ClearUpdatedFlag();
+    return g_runtime_state.last_exec_ok;
 }
 
 void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success)

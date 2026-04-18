@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "L2_Service/l2_service_contract.h"
 #include "LS_Config/foc_shared_types.h"
 
 typedef enum {
@@ -23,7 +24,7 @@ typedef struct {
     float dt_sec;
 } motor_control_service_task_args_t;
 
-void MotorControlService_ResetControlConfigDefault(void);
+void MotorControlService_ResetControlConfigDefault(foc_motor_t *motor);
 
 void MotorControlService_InitMotor(foc_motor_t *motor,
                                    float vbus_voltage,
@@ -42,7 +43,7 @@ uint8_t MotorControlService_ReadAllSensorSnapshot(sensor_data_t *snapshot);
 uint8_t MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot);
 
 uint8_t MotorControlService_RequiresCurrentSample(void);
-void MotorControlService_ResetCurrentSoftSwitchState(void);
+void MotorControlService_ResetCurrentSoftSwitchState(foc_motor_t *motor);
 
 uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
                                            foc_motor_t *motor,
@@ -54,11 +55,13 @@ uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
 void MotorControlService_InitPidControllers(foc_motor_t *motor,
                                             foc_pid_t *current_pid,
                                             foc_pid_t *speed_pid,
-                                            foc_pid_t *angle_hold_pid);
+                                            foc_pid_t *angle_hold_pid,
+                                            const l2_control_config_snapshot_t *control_cfg);
 
-void MotorControlService_ApplyPendingConfig(foc_motor_t *motor,
-                                            foc_pid_t *current_pid,
-                                            foc_pid_t *speed_pid,
-                                            foc_pid_t *angle_hold_pid);
+void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
+                                             foc_pid_t *current_pid,
+                                             foc_pid_t *speed_pid,
+                                             foc_pid_t *angle_hold_pid,
+                                             const l2_control_config_snapshot_t *control_cfg);
 
 #endif /* MOTOR_CONTROL_SERVICE_H */

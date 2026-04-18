@@ -2,11 +2,13 @@
 
 #include <stdio.h>
 
-#include "L2_Service/command_manager.h"
 #include "L42_PAL/foc_platform_api.h"
 
 static void DebugStream_OutputSemanticTelemetry(const sensor_data_t *sensor, uint32_t exec_cycles);
-static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor, const foc_motor_t *motor, uint32_t exec_cycles);
+static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor,
+                                                const foc_motor_t *motor,
+                                                uint32_t exec_cycles,
+                                                uint16_t osc_param_mask);
 static void DebugStream_AppendOscParam(char *buffer, uint16_t buffer_len, uint16_t *offset, float value);
 static uint16_t DebugStream_ComputePeriodTicks(uint16_t report_freq_hz);
 static uint8_t DebugStream_IsOscInputValid(const sensor_data_t *sensor, const foc_motor_t *motor);
@@ -35,20 +37,22 @@ void DebugStream_SetExecutionCycles(uint32_t exec_cycles)
     g_last_exec_cycles = exec_cycles;
 }
 
-void DebugStream_Process(const sensor_data_t *sensor, const foc_motor_t *motor)
+void DebugStream_Process(const sensor_data_t *sensor,
+                         const foc_motor_t *motor,
+                         const l2_runtime_status_snapshot_t *runtime,
+                         const l2_telemetry_policy_snapshot_t *telemetry)
 {
-    const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
     const uint32_t exec_cycles = g_last_exec_cycles;
 
-    if ((state != 0) && (state->system_state == COMMAND_MANAGER_SYSTEM_FAULT))
+    if ((runtime != 0) && (runtime->system_fault != 0U))
     {
         return;
     }
 
 #if (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE)
-    if (CommandManager_IsSemanticReportEnabled() != 0U)
+    if ((telemetry != 0) && (telemetry->semantic_report_enabled != 0U))
     {
-        uint16_t semantic_freq_hz = CommandManager_GetSemanticReportFrequencyHz();
+        uint16_t semantic_freq_hz = telemetry->semantic_report_freq_hz;
 
         if (semantic_freq_hz != g_semantic_last_freq_hz)
         {
@@ -66,13 +70,13 @@ void DebugStream_Process(const sensor_data_t *sensor, const foc_motor_t *motor)
 #endif
 
 #if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE)
-    if (CommandManager_IsOscilloscopeReportEnabled() != 0U)
+    if ((telemetry != 0) && (telemetry->osc_report_enabled != 0U))
     {
         uint16_t osc_freq_hz;
 
         if (DebugStream_IsOscInputValid(sensor, motor) != 0U)
         {
-            osc_freq_hz = CommandManager_GetOscilloscopeReportFrequencyHz();
+            osc_freq_hz = telemetry->osc_report_freq_hz;
             if (osc_freq_hz != g_osc_last_freq_hz)
             {
                 g_osc_last_freq_hz = osc_freq_hz;
@@ -83,7 +87,10 @@ void DebugStream_Process(const sensor_data_t *sensor, const foc_motor_t *motor)
             if (g_osc_report_counter >= g_osc_period_ticks)
             {
                 g_osc_report_counter = 0U;
-                DebugStream_OutputOscilloscopeFrame(sensor, motor, exec_cycles);
+                DebugStream_OutputOscilloscopeFrame(sensor,
+                                                    motor,
+                                                    exec_cycles,
+                                                    telemetry->osc_parameter_mask);
             }
         }
     }
@@ -128,11 +135,14 @@ static uint16_t DebugStream_ComputePeriodTicks(uint16_t report_freq_hz)
     return period_ticks;
 }
 
-static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor, const foc_motor_t *motor, uint32_t exec_cycles)
+static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor,
+                                                const foc_motor_t *motor,
+                                                uint32_t exec_cycles,
+                                                uint16_t osc_param_mask)
 {
     char payload[DEBUG_STREAM_OSC_PAYLOAD_LEN];
     uint16_t offset = 0U;
-    uint16_t mask = CommandManager_GetOscilloscopeParameterMask();
+    uint16_t mask = osc_param_mask;
     int written;
 
     if ((sensor == 0) || (motor == 0))
