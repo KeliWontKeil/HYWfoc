@@ -1,5 +1,5 @@
-#ifndef PROTOCOL_PARSER_H
-#define PROTOCOL_PARSER_H
+#ifndef RUNTIME_C35_PROTOCOL_PARSER_H
+#define RUNTIME_C35_PROTOCOL_PARSER_H
 
 #include <stdint.h>
 
@@ -13,4 +13,4 @@ const protocol_command_t *ProtocolParser_GetLatestCommand(void);
 void ProtocolParser_ClearUpdatedFlag(void);
 protocol_parser_result_t ProtocolParser_GetLastResult(void);
 
-#endif /* PROTOCOL_PARSER_H */
+#endif /* RUNTIME_C35_PROTOCOL_PARSER_H */

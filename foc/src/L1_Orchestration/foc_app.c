@@ -4,7 +4,7 @@
 
 #include "L1_Orchestration/control_scheduler.h"
 #include "L2_Service/debug_stream.h"
-#include "L2_Service/runtime_service.h"
+#include "L2_Service/runtime_c21_comm_chain.h"
 #include "L2_Service/motor_control_service.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"

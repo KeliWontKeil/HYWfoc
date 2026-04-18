@@ -1,5 +1,5 @@
-#ifndef COMMAND_MANAGER_DISPATCH_H
-#define COMMAND_MANAGER_DISPATCH_H
+#ifndef RUNTIME_C42_COMMAND_DISPATCH_H
+#define RUNTIME_C42_COMMAND_DISPATCH_H
 
 /* Dispatch consumes shared protocol command types from L3 core only. */
 #include "L3_Algorithm/protocol_core_types.h"
@@ -13,4 +13,4 @@ typedef enum {
 void CommandManager_DispatchReportInitDiag(void);
 command_exec_result_t CommandManager_DispatchExecute(const protocol_command_t *cmd);
 
-#endif /* COMMAND_MANAGER_DISPATCH_H */
+#endif /* RUNTIME_C42_COMMAND_DISPATCH_H */

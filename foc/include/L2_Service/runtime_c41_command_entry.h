@@ -1,9 +1,10 @@
-#ifndef COMMAND_MANAGER_H
-#define COMMAND_MANAGER_H
+#ifndef RUNTIME_C41_COMMAND_ENTRY_H
+#define RUNTIME_C41_COMMAND_ENTRY_H
 
 #include <stdint.h>
 
 #include "LS_Config/foc_config.h"
+#include "L2_Service/runtime_snapshot.h"
 
 typedef enum {
     COMMAND_MANAGER_SYSTEM_INIT = 0,
@@ -91,6 +92,7 @@ void CommandManager_ReportAllParams(void);
 uint8_t CommandManager_WriteState(char subcommand, uint8_t state);
 uint8_t CommandManager_ReadState(char subcommand, uint8_t *state_out);
 void CommandManager_ReportAllStates(void);
+void CommandManager_CaptureSnapshot(runtime_snapshot_t *snapshot);
 
 float CommandManager_GetTargetAngleRad(void);
 float CommandManager_GetAngleSpeedRadS(void);
@@ -130,4 +132,4 @@ float CommandManager_GetCurrentSoftSwitchAutoOpenIqA(void);
 float CommandManager_GetCurrentSoftSwitchAutoClosedIqA(void);
 uint8_t CommandManager_RecoverFaultAndReinit(void);
 
-#endif /* COMMAND_MANAGER_H */
+#endif /* RUNTIME_C41_COMMAND_ENTRY_H */

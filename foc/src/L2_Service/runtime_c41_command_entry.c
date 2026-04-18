@@ -1,12 +1,13 @@
-#include "L2_Service/command_manager.h"
+#include "L2_Service/runtime_c41_command_entry.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "L42_PAL/foc_platform_api.h"
-#include "L2_Service/protocol_parser.h"
-#include "L2_Service/command_manager_diag.h"
-#include "L2_Service/command_manager_dispatch.h"
-#include "L2_Service/command_manager_internal.h"
+#include "L2_Service/runtime_c35_protocol_parser.h"
+#include "L2_Service/runtime_c44_command_diag.h"
+#include "L2_Service/runtime_c42_command_dispatch.h"
+#include "L2_Service/runtime_c43_command_store.h"
 #include "LS_Config/foc_config.h"
 
 static command_manager_runtime_state_t g_runtime_state;
@@ -162,6 +163,85 @@ uint8_t CommandManager_Process(void)
     ProtocolParser_ClearUpdatedFlag();
     return g_runtime_state.last_exec_ok;
 }
+
+    void CommandManager_ReportAllParams(void)
+    {
+        float value;
+        const char params[] = {
+        COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE,
+        COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED,
+        COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED,
+    #if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET,
+    #endif
+    #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV,
+        COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV,
+        COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK,
+    #endif
+    #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD,
+    #endif
+    #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD,
+    #endif
+    #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD,
+    #endif
+    #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA,
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT,
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND,
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START,
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END,
+    #endif
+        COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE,
+    #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE,
+        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ,
+        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ
+    #endif
+        };
+        uint16_t i;
+
+        for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
+        {
+        if (CommandManager_ReadParam(params[i], &value) != 0U)
+        {
+            CommandManager_OutputParam(params[i], value);
+        }
+        }
+    }
+
+    void CommandManager_ReportAllStates(void)
+    {
+        uint8_t state;
+        const char states[] = {
+        COMMAND_MANAGER_STATE_SUBCMD_MOTOR_ENABLE,
+    #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE,
+        COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE,
+    #endif
+    #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE
+    #endif
+        };
+        uint16_t i;
+
+        for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
+        {
+        if (CommandManager_ReadState(states[i], &state) != 0U)
+        {
+            CommandManager_OutputState(states[i], state);
+        }
+        }
+    }
 
 void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success)
 {
@@ -330,6 +410,52 @@ uint8_t CommandManager_RecoverFaultAndReinit(void)
 #endif
 
     return 1U;
+}
+
+void CommandManager_CaptureSnapshot(runtime_snapshot_t *snapshot)
+{
+    if (snapshot == 0)
+    {
+        return;
+    }
+
+    (void)memset(snapshot, 0, sizeof(*snapshot));
+
+    snapshot->runtime.system_running = (g_runtime_state.system_state == COMMAND_MANAGER_SYSTEM_RUNNING) ? 1U : 0U;
+    snapshot->runtime.system_fault = (g_runtime_state.system_state == COMMAND_MANAGER_SYSTEM_FAULT) ? 1U : 0U;
+    snapshot->runtime.params_dirty = g_runtime_state.params_dirty;
+    snapshot->runtime.last_exec_ok = g_runtime_state.last_exec_ok;
+
+    snapshot->control_cfg.control_mode = g_params.control_mode;
+    snapshot->control_cfg.target_angle_rad = g_params.target_angle_rad;
+    snapshot->control_cfg.angle_position_speed_rad_s = g_params.angle_speed_rad_s;
+    snapshot->control_cfg.speed_only_rad_s = g_params.speed_only_rad_s;
+    snapshot->control_cfg.sensor_sample_offset_percent = g_params.sensor_sample_offset_percent;
+    snapshot->control_cfg.pid_current_kp = g_params.pid_current_kp;
+    snapshot->control_cfg.pid_current_ki = g_params.pid_current_ki;
+    snapshot->control_cfg.pid_current_kd = g_params.pid_current_kd;
+    snapshot->control_cfg.pid_angle_kp = g_params.pid_angle_kp;
+    snapshot->control_cfg.pid_angle_ki = g_params.pid_angle_ki;
+    snapshot->control_cfg.pid_angle_kd = g_params.pid_angle_kd;
+    snapshot->control_cfg.pid_speed_kp = g_params.pid_speed_kp;
+    snapshot->control_cfg.pid_speed_ki = g_params.pid_speed_ki;
+    snapshot->control_cfg.pid_speed_kd = g_params.pid_speed_kd;
+    snapshot->control_cfg.cfg_min_mech_angle_accum_delta_rad = g_params.cfg_min_mech_angle_accum_delta_rad;
+    snapshot->control_cfg.cfg_angle_hold_integral_limit = g_params.cfg_angle_hold_integral_limit;
+    snapshot->control_cfg.cfg_angle_hold_pid_deadband_rad = g_params.cfg_angle_hold_pid_deadband_rad;
+    snapshot->control_cfg.cfg_speed_angle_transition_start_rad = g_params.cfg_speed_angle_transition_start_rad;
+    snapshot->control_cfg.cfg_speed_angle_transition_end_rad = g_params.cfg_speed_angle_transition_end_rad;
+    snapshot->control_cfg.motor_enabled = g_states.motor_enable;
+    snapshot->control_cfg.current_soft_switch_enable = g_states.current_soft_switch_enable;
+    snapshot->control_cfg.current_soft_switch_mode = g_params.current_soft_switch_mode;
+    snapshot->control_cfg.current_soft_switch_auto_open_iq_a = g_params.current_soft_switch_auto_open_iq_a;
+    snapshot->control_cfg.current_soft_switch_auto_closed_iq_a = g_params.current_soft_switch_auto_closed_iq_a;
+
+    snapshot->telemetry.semantic_report_enabled = g_states.semantic_enable;
+    snapshot->telemetry.osc_report_enabled = g_states.osc_enable;
+    snapshot->telemetry.semantic_report_freq_hz = g_params.semantic_freq_hz;
+    snapshot->telemetry.osc_report_freq_hz = g_params.osc_freq_hz;
+    snapshot->telemetry.osc_parameter_mask = g_params.osc_param_mask;
 }
 
 const command_manager_runtime_state_t *CommandManager_GetRuntimeState(void)

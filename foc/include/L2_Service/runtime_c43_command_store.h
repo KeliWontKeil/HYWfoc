@@ -1,9 +1,9 @@
-#ifndef COMMAND_MANAGER_INTERNAL_H
-#define COMMAND_MANAGER_INTERNAL_H
+#ifndef RUNTIME_C43_COMMAND_STORE_H
+#define RUNTIME_C43_COMMAND_STORE_H
 
 #include <stdint.h>
 
-#include "L2_Service/command_manager.h"
+#include "L2_Service/runtime_c41_command_entry.h"
 
 typedef struct {
     float target_angle_rad;
@@ -44,4 +44,4 @@ command_manager_runtime_state_t *CommandManager_InternalRuntimeState(void);
 command_manager_params_t *CommandManager_InternalParams(void);
 command_manager_states_t *CommandManager_InternalStates(void);
 
-#endif /* COMMAND_MANAGER_INTERNAL_H */
+#endif /* RUNTIME_C43_COMMAND_STORE_H */

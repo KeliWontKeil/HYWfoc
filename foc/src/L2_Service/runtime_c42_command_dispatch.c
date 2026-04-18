@@ -1,9 +1,9 @@
-#include "L2_Service/command_manager_dispatch.h"
+#include "L2_Service/runtime_c42_command_dispatch.h"
 
 #include <stdio.h>
 
-#include "L2_Service/command_manager.h"
-#include "L2_Service/command_manager_diag.h"
+#include "L2_Service/runtime_c41_command_entry.h"
+#include "L2_Service/runtime_c44_command_diag.h"
 #include "L3_Algorithm/protocol_core.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"

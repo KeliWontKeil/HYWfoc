@@ -1,4 +1,4 @@
-#include "L2_Service/command_manager_diag.h"
+#include "L2_Service/runtime_c44_command_diag.h"
 
 #include <stdio.h>
 

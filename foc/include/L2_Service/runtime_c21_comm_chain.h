@@ -1,5 +1,5 @@
-#ifndef RUNTIME_SERVICE_H
-#define RUNTIME_SERVICE_H
+#ifndef RUNTIME_C21_COMM_CHAIN_H
+#define RUNTIME_C21_COMM_CHAIN_H
 
 #include <stdint.h>
 
@@ -26,4 +26,4 @@ uint8_t RuntimeService_ProcessCommStep(uint8_t max_frames, runtime_snapshot_t *s
 void RuntimeService_RefreshSnapshot(runtime_snapshot_t *snapshot);
 void RuntimeService_CommitAppliedConfig(void);
 
-#endif /* RUNTIME_SERVICE_H */
+#endif /* RUNTIME_C21_COMM_CHAIN_H */
