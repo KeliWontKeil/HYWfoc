@@ -22,6 +22,7 @@ void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
                                 const sensor_data_t *sensor,
                                 float electrical_angle,
                                 float dt_sec);
+void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor);
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
 void FOC_ControlConfigResetDefault(foc_motor_t *motor);

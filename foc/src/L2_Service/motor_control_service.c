@@ -3,7 +3,6 @@
 #include "L2_Service/command_manager.h"
 #include "L3_Algorithm/foc_control_c11_entry.h"
 #include "L3_Algorithm/foc_control_c12_init.h"
-#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L3_Algorithm/sensor.h"
 #include "L3_Algorithm/svpwm.h"
 
@@ -99,9 +98,7 @@ uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
 
             if (args->sensor != 0)
             {
-                FOC_ControlApplyCoggingCompensation(motor,
-                                                    args->sensor->mech_angle_rad.output_value,
-                                                    motor->cogging_speed_ref_rad_s);
+                FOC_ControlCompensationStep(motor, args->sensor);
             }
 
             return 1U;

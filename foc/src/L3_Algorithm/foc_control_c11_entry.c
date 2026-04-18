@@ -3,6 +3,7 @@
 #include "LS_Config/foc_config.h"
 #include "L3_Algorithm/foc_control_c21_outer_loop.h"
 #include "L3_Algorithm/foc_control_c22_current_loop.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L41_Math/math_transforms.h"
 
 #define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
@@ -39,6 +40,18 @@ void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
                            sensor,
                            electrical_angle,
                            dt_sec);
+}
+
+void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor)
+{
+    if ((motor == 0) || (sensor == 0))
+    {
+        return;
+    }
+
+    FOC_ControlApplyCoggingCompensation(motor,
+                                        sensor->mech_angle_rad.output_value,
+                                        motor->cogging_speed_ref_rad_s);
 }
 
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
