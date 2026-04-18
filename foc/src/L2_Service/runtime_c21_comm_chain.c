@@ -1,31 +1,10 @@
 #include "L2_Service/runtime_c21_comm_chain.h"
 
 #include "L2_Service/runtime_c41_command_entry.h"
-#include "L2_Service/runtime_c35_protocol_parser.h"
 
 static uint8_t RuntimeChain_ProcessCommStepInternal(uint8_t max_frames)
 {
-    uint8_t consumed = 0U;
-    uint8_t has_comm_activity = 0U;
-
-    if (max_frames == 0U)
-    {
-        return 0U;
-    }
-
-    while ((ProtocolParser_IsParsePending() != 0U) && (consumed < max_frames))
-    {
-        ProtocolParser_Process();
-
-        if (CommandManager_Process() != 0U)
-        {
-            has_comm_activity = 1U;
-        }
-
-        consumed++;
-    }
-
-    return has_comm_activity;
+    return CommandManager_ProcessCommStep(max_frames);
 }
 
 static void RuntimeChain_BuildSnapshotInternal(runtime_snapshot_t *snapshot)

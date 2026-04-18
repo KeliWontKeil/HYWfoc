@@ -15,6 +15,11 @@
 #define g_states (*CommandManager_InternalStates())
 
 static void CommandManager_UpdateReportMode(void);
+static uint8_t CommandManager_ProcessLatestCommand(void);
+static command_exec_result_t CommandManager_HandleSystemCommand(const protocol_command_t *cmd);
+static void CommandManager_OutputRuntimeSummary(const command_manager_runtime_state_t *state);
+static void CommandManager_ReportProtocolFrameError(void);
+static uint8_t CommandManager_RecoverFaultAndReinit(void);
 
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
 #define CMD_DIAG_OUTPUT(text) FOC_Platform_WriteDebugText(text)
@@ -102,7 +107,32 @@ void CommandManager_Init(void)
     CommandManager_DispatchReportInitDiag();
 }
 
-uint8_t CommandManager_Process(void)
+uint8_t CommandManager_ProcessCommStep(uint8_t max_frames)
+{
+    uint8_t consumed = 0U;
+    uint8_t has_comm_activity = 0U;
+
+    if (max_frames == 0U)
+    {
+        return 0U;
+    }
+
+    while ((ProtocolParser_IsParsePending() != 0U) && (consumed < max_frames))
+    {
+        ProtocolParser_Process();
+
+        if (CommandManager_ProcessLatestCommand() != 0U)
+        {
+            has_comm_activity = 1U;
+        }
+
+        consumed++;
+    }
+
+    return has_comm_activity;
+}
+
+static uint8_t CommandManager_ProcessLatestCommand(void)
 {
     const protocol_command_t *cmd = ProtocolParser_GetLatestCommand();
     command_exec_result_t exec_result;
@@ -118,7 +148,16 @@ uint8_t CommandManager_Process(void)
     }
 
     g_runtime_state.comm_state = COMMAND_MANAGER_COMM_ACTIVE;
-    exec_result = CommandManager_DispatchExecute(cmd);
+
+    if (cmd->command == COMMAND_MANAGER_CMD_SYSTEM)
+    {
+        exec_result = CommandManager_HandleSystemCommand(cmd);
+    }
+    else
+    {
+        exec_result = CommandManager_DispatchExecute(cmd);
+    }
+
     g_runtime_state.last_exec_ok = (exec_result == COMMAND_EXEC_RESULT_OK) ? 1U : 0U;
 
     if (exec_result != COMMAND_EXEC_RESULT_OK)
@@ -149,84 +188,61 @@ uint8_t CommandManager_Process(void)
     return g_runtime_state.last_exec_ok;
 }
 
-    void CommandManager_ReportAllParams(void)
+static command_exec_result_t CommandManager_HandleSystemCommand(const protocol_command_t *cmd)
+{
+    if (cmd->has_param != 0U)
     {
-        float value;
-        const char params[] = {
-        COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE,
-        COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED,
-        COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED,
-    #if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET,
-    #endif
-    #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV,
-        COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV,
-        COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK,
-    #endif
-    #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP,
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI,
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD,
-    #endif
-    #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP,
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI,
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD,
-    #endif
-    #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP,
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI,
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD,
-    #endif
-    #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA,
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT,
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND,
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START,
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END,
-    #endif
-        COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE,
-    #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE,
-        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ,
-        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ
-    #endif
-        };
-        uint16_t i;
-
-        for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
-        {
-        if (CommandManager_ReadParam(params[i], &value) != 0U)
-        {
-            CommandManager_OutputParam(params[i], value);
-        }
-        }
+        FOC_Platform_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+        return COMMAND_EXEC_RESULT_PARAM_ERROR;
     }
 
-    void CommandManager_ReportAllStates(void)
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_RUNTIME_SUMMARY)
     {
-        uint8_t state;
-        const char states[] = {
-        COMMAND_MANAGER_STATE_SUBCMD_MOTOR_ENABLE,
-    #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE,
-        COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE,
-    #endif
-    #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE
-    #endif
-        };
-        uint16_t i;
-
-        for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
-        {
-        if (CommandManager_ReadState(states[i], &state) != 0U)
-        {
-            CommandManager_OutputState(states[i], state);
-        }
-        }
+        CommandManager_OutputRuntimeSummary(&g_runtime_state);
+        return COMMAND_EXEC_RESULT_OK;
     }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT)
+    {
+        if (CommandManager_RecoverFaultAndReinit() != 0U)
+        {
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
+            CommandManager_OutputRuntimeSummary(&g_runtime_state);
+#endif
+            return COMMAND_EXEC_RESULT_OK;
+        }
+
+        return COMMAND_EXEC_RESULT_COMMAND_ERROR;
+    }
+
+    FOC_Platform_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+    return COMMAND_EXEC_RESULT_PARAM_ERROR;
+}
+
+static void CommandManager_OutputRuntimeSummary(const command_manager_runtime_state_t *state)
+{
+#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    snprintf(out,
+             sizeof(out),
+             "STATE SYS=%u COMM=%u REPORT=%u DIRTY=%u LAST=%u INIT=%u FAULT=%s SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n",
+             (unsigned int)state->system_state,
+             (unsigned int)state->comm_state,
+             (unsigned int)state->report_mode,
+             (unsigned int)state->params_dirty,
+             (unsigned int)state->last_exec_ok,
+             (unsigned int)state->init_diag,
+             CommandManager_GetFaultName(state->last_fault_code),
+             (unsigned int)state->sensor_invalid_consecutive,
+             (unsigned long)state->protocol_error_count,
+             (unsigned long)state->param_error_count,
+             (unsigned long)state->control_skip_count);
+    FOC_Platform_WriteDebugText(out);
+#else
+    (void)state;
+#endif
+}
 
 void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success)
 {
@@ -349,7 +365,7 @@ void CommandManager_ReportUndervoltageFault(float vbus_voltage)
 #endif
 }
 
-void CommandManager_ReportProtocolFrameError(void)
+static void CommandManager_ReportProtocolFrameError(void)
 {
     CMD_DIAG_STATS_INC(protocol_error_count);
     g_runtime_state.last_fault_code = COMMAND_MANAGER_FAULT_PROTOCOL_FRAME;
@@ -360,7 +376,7 @@ void CommandManager_ReportControlLoopSkip(void)
     CMD_DIAG_STATS_INC(control_skip_count);
 }
 
-uint8_t CommandManager_RecoverFaultAndReinit(void)
+static uint8_t CommandManager_RecoverFaultAndReinit(void)
 {
     g_runtime_state.sensor_invalid_consecutive = 0U;
     g_runtime_state.protocol_error_count = 0U;
@@ -443,7 +459,3 @@ void CommandManager_CaptureSnapshot(runtime_snapshot_t *snapshot)
     snapshot->telemetry.osc_parameter_mask = g_params.osc_param_mask;
 }
 
-const command_manager_runtime_state_t *CommandManager_GetRuntimeState(void)
-{
-    return &g_runtime_state;
-}

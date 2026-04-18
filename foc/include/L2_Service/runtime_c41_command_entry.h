@@ -5,7 +5,6 @@
 
 #include "LS_Config/foc_config.h"
 #include "L2_Service/runtime_snapshot.h"
-#include "L2_Service/runtime_c43_command_store.h"
 
 typedef enum {
     COMMAND_MANAGER_SYSTEM_INIT = 0,
@@ -61,60 +60,14 @@ typedef enum {
 #endif
 
 void CommandManager_Init(void);
-uint8_t CommandManager_Process(void);
+uint8_t CommandManager_ProcessCommStep(uint8_t max_frames);
 void CommandManager_ReportInitCheck(uint16_t check_bit, uint8_t success);
 void CommandManager_FinalizeInitDiagnostics(void);
 void CommandManager_ReportRuntimeSensorState(uint8_t adc_valid, uint8_t encoder_valid);
 void CommandManager_ReportUndervoltageFault(float vbus_voltage);
-void CommandManager_ReportProtocolFrameError(void);
 void CommandManager_ReportControlLoopSkip(void);
-
-const command_manager_runtime_state_t *CommandManager_GetRuntimeState(void);
-
-uint8_t CommandManager_WriteParam(char subcommand, float value);
-uint8_t CommandManager_ReadParam(char subcommand, float *value_out);
-void CommandManager_ReportAllParams(void);
-uint8_t CommandManager_WriteState(char subcommand, uint8_t state);
-uint8_t CommandManager_ReadState(char subcommand, uint8_t *state_out);
-void CommandManager_ReportAllStates(void);
 void CommandManager_CaptureSnapshot(runtime_snapshot_t *snapshot);
 
-float CommandManager_GetTargetAngleRad(void);
-float CommandManager_GetAngleSpeedRadS(void);
-float CommandManager_GetSpeedOnlyRadS(void);
-float CommandManager_GetSensorSampleOffsetPercent(void);
-
-uint8_t CommandManager_IsSemanticReportEnabled(void);
-uint8_t CommandManager_IsOscilloscopeReportEnabled(void);
-uint16_t CommandManager_GetSemanticReportFrequencyHz(void);
-uint16_t CommandManager_GetOscilloscopeReportFrequencyHz(void);
-uint16_t CommandManager_GetOscilloscopeParameterMask(void);
-
 void CommandManager_ClearDirtyFlag(void);
-
-float CommandManager_GetCurrentPidKp(void);
-float CommandManager_GetCurrentPidKi(void);
-float CommandManager_GetCurrentPidKd(void);
-
-float CommandManager_GetAnglePidKp(void);
-float CommandManager_GetAnglePidKi(void);
-float CommandManager_GetAnglePidKd(void);
-
-float CommandManager_GetSpeedPidKp(void);
-float CommandManager_GetSpeedPidKi(void);
-float CommandManager_GetSpeedPidKd(void);
-float CommandManager_GetControlMinMechAngleAccumDeltaRad(void);
-float CommandManager_GetControlAngleHoldIntegralLimit(void);
-float CommandManager_GetControlAngleHoldPidDeadbandRad(void);
-float CommandManager_GetControlSpeedAngleTransitionStartRad(void);
-float CommandManager_GetControlSpeedAngleTransitionEndRad(void);
-
-uint8_t CommandManager_GetControlMode(void);
-uint8_t CommandManager_IsMotorEnabled(void);
-uint8_t CommandManager_IsCurrentSoftSwitchEnabled(void);
-uint8_t CommandManager_GetCurrentSoftSwitchMode(void);
-float CommandManager_GetCurrentSoftSwitchAutoOpenIqA(void);
-float CommandManager_GetCurrentSoftSwitchAutoClosedIqA(void);
-uint8_t CommandManager_RecoverFaultAndReinit(void);
 
 #endif /* RUNTIME_C41_COMMAND_ENTRY_H */

@@ -1,8 +1,6 @@
 #include "L2_Service/runtime_c42_command_dispatch.h"
 
-#include <stdio.h>
-
-#include "L2_Service/runtime_c41_command_entry.h"
+#include "L2_Service/runtime_c43_command_store.h"
 #include "L2_Service/runtime_c44_command_diag.h"
 #include "L3_Algorithm/protocol_core.h"
 #include "L42_PAL/foc_platform_api.h"
@@ -124,69 +122,6 @@ command_exec_result_t CommandManager_DispatchExecute(const protocol_command_t *c
         }
 
         return COMMAND_EXEC_RESULT_OK;
-    }
-
-    if (cmd->command == COMMAND_MANAGER_CMD_SYSTEM)
-    {
-        const command_manager_runtime_state_t *state = CommandManager_GetRuntimeState();
-
-        if (cmd->has_param != 0U)
-        {
-            FOC_Platform_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
-            return COMMAND_EXEC_RESULT_PARAM_ERROR;
-        }
-
-        if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_RUNTIME_SUMMARY)
-        {
-#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
-            char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-            snprintf(out,
-                     sizeof(out),
-                     "STATE SYS=%u COMM=%u REPORT=%u DIRTY=%u LAST=%u INIT=%u FAULT=%s SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n",
-                     (unsigned int)state->system_state,
-                     (unsigned int)state->comm_state,
-                     (unsigned int)state->report_mode,
-                     (unsigned int)state->params_dirty,
-                     (unsigned int)state->last_exec_ok,
-                     (unsigned int)state->init_diag,
-                     CommandManager_GetFaultName(state->last_fault_code),
-                     (unsigned int)state->sensor_invalid_consecutive,
-                     (unsigned long)state->protocol_error_count,
-                     (unsigned long)state->param_error_count,
-                     (unsigned long)state->control_skip_count);
-            FOC_Platform_WriteDebugText(out);
-#else
-            (void)state;
-#endif
-            return COMMAND_EXEC_RESULT_OK;
-        }
-
-        if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT)
-        {
-            if (CommandManager_RecoverFaultAndReinit() != 0U)
-            {
-#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
-                const command_manager_runtime_state_t *state_reinit = CommandManager_GetRuntimeState();
-                char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-
-                snprintf(out,
-                         sizeof(out),
-                         "FAULT_CTRL state=%u fault=%s proto_err=%lu param_err=%lu ctrl_skip=%lu\r\n",
-                         (unsigned int)state_reinit->system_state,
-                         CommandManager_GetFaultName(state_reinit->last_fault_code),
-                         (unsigned long)state_reinit->protocol_error_count,
-                         (unsigned long)state_reinit->param_error_count,
-                         (unsigned long)state_reinit->control_skip_count);
-                FOC_Platform_WriteDebugText(out);
-#endif
-                return COMMAND_EXEC_RESULT_OK;
-            }
-
-            return COMMAND_EXEC_RESULT_COMMAND_ERROR;
-        }
-
-        FOC_Platform_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
-        return COMMAND_EXEC_RESULT_PARAM_ERROR;
     }
 
     FOC_Platform_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);

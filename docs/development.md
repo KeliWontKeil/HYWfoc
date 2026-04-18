@@ -143,8 +143,8 @@
 
 ### M6（L2 结构链）
 
-1. `command_manager.c` 仅保留运行编排与故障/诊断编排。
-2. 参数与状态存储查询已迁移到 `command_manager_store.c`、`command_manager_query.c`。
+1. `runtime_c41_command_entry.c` 仅保留运行编排与系统故障处理入口。
+2. 参数与状态存储查询已迁移到 `runtime_c43_command_store.c`，分发与诊断分别位于 `runtime_c42_command_dispatch.c`、`runtime_c44_command_diag.c`。
 3. 检索验证通过：主编排文件不再包含 `WriteParam/ReadParam/WriteState/ReadState/ReportAll*` 实现。
 
 ### M8（L3 Cxx 控制链，R3 收口）

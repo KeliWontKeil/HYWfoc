@@ -58,4 +58,49 @@ command_manager_runtime_state_t *CommandManager_InternalRuntimeState(void);
 command_manager_params_t *CommandManager_InternalParams(void);
 command_manager_states_t *CommandManager_InternalStates(void);
 
+uint8_t CommandManager_WriteParam(char subcommand, float value);
+uint8_t CommandManager_ReadParam(char subcommand, float *value_out);
+void CommandManager_ReportAllParams(void);
+
+uint8_t CommandManager_WriteState(char subcommand, uint8_t state);
+uint8_t CommandManager_ReadState(char subcommand, uint8_t *state_out);
+void CommandManager_ReportAllStates(void);
+
+float CommandManager_GetTargetAngleRad(void);
+float CommandManager_GetAngleSpeedRadS(void);
+float CommandManager_GetSpeedOnlyRadS(void);
+float CommandManager_GetSensorSampleOffsetPercent(void);
+
+uint8_t CommandManager_IsSemanticReportEnabled(void);
+uint8_t CommandManager_IsOscilloscopeReportEnabled(void);
+uint16_t CommandManager_GetSemanticReportFrequencyHz(void);
+uint16_t CommandManager_GetOscilloscopeReportFrequencyHz(void);
+uint16_t CommandManager_GetOscilloscopeParameterMask(void);
+
+void CommandManager_ClearDirtyFlag(void);
+
+float CommandManager_GetCurrentPidKp(void);
+float CommandManager_GetCurrentPidKi(void);
+float CommandManager_GetCurrentPidKd(void);
+
+float CommandManager_GetAnglePidKp(void);
+float CommandManager_GetAnglePidKi(void);
+float CommandManager_GetAnglePidKd(void);
+
+float CommandManager_GetSpeedPidKp(void);
+float CommandManager_GetSpeedPidKi(void);
+float CommandManager_GetSpeedPidKd(void);
+float CommandManager_GetControlMinMechAngleAccumDeltaRad(void);
+float CommandManager_GetControlAngleHoldIntegralLimit(void);
+float CommandManager_GetControlAngleHoldPidDeadbandRad(void);
+float CommandManager_GetControlSpeedAngleTransitionStartRad(void);
+float CommandManager_GetControlSpeedAngleTransitionEndRad(void);
+
+uint8_t CommandManager_GetControlMode(void);
+uint8_t CommandManager_IsMotorEnabled(void);
+uint8_t CommandManager_IsCurrentSoftSwitchEnabled(void);
+uint8_t CommandManager_GetCurrentSoftSwitchMode(void);
+float CommandManager_GetCurrentSoftSwitchAutoOpenIqA(void);
+float CommandManager_GetCurrentSoftSwitchAutoClosedIqA(void);
+
 #endif /* RUNTIME_C43_COMMAND_STORE_H */
