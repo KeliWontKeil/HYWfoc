@@ -6,15 +6,15 @@
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-#define RUNTIME_C44_FAULT_NONE 0U
-#define RUNTIME_C44_FAULT_SENSOR_ADC_INVALID 1U
-#define RUNTIME_C44_FAULT_SENSOR_ENCODER_INVALID 2U
-#define RUNTIME_C44_FAULT_UNDERVOLTAGE 3U
-#define RUNTIME_C44_FAULT_PROTOCOL_FRAME 4U
-#define RUNTIME_C44_FAULT_PARAM_INVALID 5U
-#define RUNTIME_C44_FAULT_INIT_FAILED 6U
+#define RUNTIME_OUTPUT_FAULT_NONE 0U
+#define RUNTIME_OUTPUT_FAULT_SENSOR_ADC_INVALID 1U
+#define RUNTIME_OUTPUT_FAULT_SENSOR_ENCODER_INVALID 2U
+#define RUNTIME_OUTPUT_FAULT_UNDERVOLTAGE 3U
+#define RUNTIME_OUTPUT_FAULT_PROTOCOL_FRAME 4U
+#define RUNTIME_OUTPUT_FAULT_PARAM_INVALID 5U
+#define RUNTIME_OUTPUT_FAULT_INIT_FAILED 6U
 
-void RuntimeC44_WriteText(const char *text)
+void RuntimeOutput_WriteText(const char *text)
 {
     if (text == 0)
     {
@@ -24,35 +24,35 @@ void RuntimeC44_WriteText(const char *text)
     FOC_Platform_WriteDebugText(text);
 }
 
-void RuntimeC44_WriteStatusByte(uint8_t status)
+void RuntimeOutput_WriteStatusByte(uint8_t status)
 {
     FOC_Platform_WriteStatusByte(status);
 }
 
-const char *RuntimeC44_GetFaultName(uint8_t fault_code)
+const char *RuntimeOutput_GetFaultName(uint8_t fault_code)
 {
     switch (fault_code)
     {
-    case RUNTIME_C44_FAULT_NONE:
+    case RUNTIME_OUTPUT_FAULT_NONE:
         return "NONE";
-    case RUNTIME_C44_FAULT_SENSOR_ADC_INVALID:
+    case RUNTIME_OUTPUT_FAULT_SENSOR_ADC_INVALID:
         return "SENSOR_ADC_INVALID";
-    case RUNTIME_C44_FAULT_SENSOR_ENCODER_INVALID:
+    case RUNTIME_OUTPUT_FAULT_SENSOR_ENCODER_INVALID:
         return "SENSOR_ENCODER_INVALID";
-    case RUNTIME_C44_FAULT_UNDERVOLTAGE:
+    case RUNTIME_OUTPUT_FAULT_UNDERVOLTAGE:
         return "UNDERVOLTAGE";
-    case RUNTIME_C44_FAULT_PROTOCOL_FRAME:
+    case RUNTIME_OUTPUT_FAULT_PROTOCOL_FRAME:
         return "PROTOCOL_FRAME";
-    case RUNTIME_C44_FAULT_PARAM_INVALID:
+    case RUNTIME_OUTPUT_FAULT_PARAM_INVALID:
         return "PARAM_INVALID";
-    case RUNTIME_C44_FAULT_INIT_FAILED:
+    case RUNTIME_OUTPUT_FAULT_INIT_FAILED:
         return "INIT_FAILED";
     default:
         return "UNKNOWN";
     }
 }
 
-void RuntimeC44_OutputDiag(const char *level, const char *module, const char *detail)
+void RuntimeOutput_OutputDiag(const char *level, const char *module, const char *detail)
 {
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -63,7 +63,7 @@ void RuntimeC44_OutputDiag(const char *level, const char *module, const char *de
              (level != 0) ? level : "INFO",
              (module != 0) ? module : "general",
              (detail != 0) ? detail : "none");
-    RuntimeC44_WriteText(out);
+    RuntimeOutput_WriteText(out);
 #else
     (void)level;
     (void)module;
@@ -71,7 +71,7 @@ void RuntimeC44_OutputDiag(const char *level, const char *module, const char *de
 #endif
 }
 
-void RuntimeC44_OutputParam(char subcommand, float value)
+void RuntimeOutput_OutputParam(char subcommand, float value)
 {
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -80,10 +80,10 @@ void RuntimeC44_OutputParam(char subcommand, float value)
                                  subcommand,
                                  value);
 
-    RuntimeC44_WriteText(out);
+    RuntimeOutput_WriteText(out);
 }
 
-void RuntimeC44_OutputState(char subcommand, uint8_t value)
+void RuntimeOutput_OutputState(char subcommand, uint8_t value)
 {
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -91,5 +91,6 @@ void RuntimeC44_OutputState(char subcommand, uint8_t value)
                                  (uint16_t)sizeof(out),
                                  subcommand,
                                  value);
-    RuntimeC44_WriteText(out);
+    RuntimeOutput_WriteText(out);
 }
+

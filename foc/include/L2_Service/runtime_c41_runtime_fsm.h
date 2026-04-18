@@ -1,5 +1,5 @@
-#ifndef RUNTIME_C41_RUNTIME_FSM_H
-#define RUNTIME_C41_RUNTIME_FSM_H
+#ifndef RUNTIME_STATE_MACHINE_H
+#define RUNTIME_STATE_MACHINE_H
 
 #include <stdint.h>
 
@@ -18,13 +18,14 @@ typedef struct {
 
     uint8_t undervoltage_fault;
     float undervoltage_vbus;
-} runtime_c41_signal_t;
+} runtime_state_signal_t;
 
-void RuntimeC41_Init(void);
-void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal);
-uint8_t RuntimeC41_OnCommand(const protocol_command_t *cmd);
-void RuntimeC41_OnFrameError(void);
-void RuntimeC41_Snapshot(runtime_snapshot_t *snapshot);
-void RuntimeC41_Commit(void);
+void RuntimeStateMachine_Init(void);
+void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal);
+uint8_t RuntimeStateMachine_HandleCommand(const protocol_command_t *cmd);
+void RuntimeStateMachine_ReportFrameError(void);
+void RuntimeStateMachine_BuildSnapshot(runtime_snapshot_t *snapshot);
+void RuntimeStateMachine_Commit(void);
 
-#endif /* RUNTIME_C41_RUNTIME_FSM_H */
+#endif /* RUNTIME_STATE_MACHINE_H */
+

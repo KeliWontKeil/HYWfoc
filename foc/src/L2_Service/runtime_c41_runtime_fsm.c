@@ -4,27 +4,27 @@
 
 #include "LS_Config/foc_config.h"
 
-#define RUNTIME_C41_SYSTEM_INIT 0U
-#define RUNTIME_C41_SYSTEM_RUNNING 1U
-#define RUNTIME_C41_SYSTEM_FAULT 2U
+#define RUNTIME_STATE_SYSTEM_INIT 0U
+#define RUNTIME_STATE_SYSTEM_RUNNING 1U
+#define RUNTIME_STATE_SYSTEM_FAULT 2U
 
-#define RUNTIME_C41_COMM_IDLE 0U
-#define RUNTIME_C41_COMM_ACTIVE 1U
-#define RUNTIME_C41_COMM_ERROR 2U
+#define RUNTIME_STATE_COMM_IDLE 0U
+#define RUNTIME_STATE_COMM_ACTIVE 1U
+#define RUNTIME_STATE_COMM_ERROR 2U
 
-#define RUNTIME_C41_DIAG_NOT_EXECUTED 0U
-#define RUNTIME_C41_DIAG_SUCCESS 1U
-#define RUNTIME_C41_DIAG_FAILED 2U
+#define RUNTIME_STATE_DIAG_NOT_EXECUTED 0U
+#define RUNTIME_STATE_DIAG_SUCCESS 1U
+#define RUNTIME_STATE_DIAG_FAILED 2U
 
-#define RUNTIME_C41_FAULT_NONE 0U
-#define RUNTIME_C41_FAULT_SENSOR_ADC_INVALID 1U
-#define RUNTIME_C41_FAULT_SENSOR_ENCODER_INVALID 2U
-#define RUNTIME_C41_FAULT_UNDERVOLTAGE 3U
-#define RUNTIME_C41_FAULT_PROTOCOL_FRAME 4U
-#define RUNTIME_C41_FAULT_PARAM_INVALID 5U
-#define RUNTIME_C41_FAULT_INIT_FAILED 6U
+#define RUNTIME_STATE_FAULT_NONE 0U
+#define RUNTIME_STATE_FAULT_SENSOR_ADC_INVALID 1U
+#define RUNTIME_STATE_FAULT_SENSOR_ENCODER_INVALID 2U
+#define RUNTIME_STATE_FAULT_UNDERVOLTAGE 3U
+#define RUNTIME_STATE_FAULT_PROTOCOL_FRAME 4U
+#define RUNTIME_STATE_FAULT_PARAM_INVALID 5U
+#define RUNTIME_STATE_FAULT_INIT_FAILED 6U
 
-#define RUNTIME_C41_INIT_REQUIRED_MASK ((1U << 0) | \
+#define RUNTIME_STATE_INIT_REQUIRED_MASK ((1U << 0) | \
                                        (1U << 1) | \
                                        (1U << 2) | \
                                        (1U << 3) | \
@@ -32,18 +32,18 @@
                                        (1U << 5) | \
                                        (1U << 6))
 
-static void RuntimeC41_FinalizeInitDiagnostics(void);
-static runtime_c42_exec_result_t RuntimeC41_HandleSystemCommand(const protocol_command_t *cmd);
+static void RuntimeStateMachine_FinalizeInitDiagnostics(void);
+static runtime_command_exec_result_t RuntimeStateMachine_HandleSystemCommand(const protocol_command_t *cmd);
 
-void RuntimeC41_Init(void)
+void RuntimeStateMachine_Init(void)
 {
-    RuntimeC42_Init();
-    RuntimeC42_UpdateReportMode();
+    RuntimeCommandRouter_Init();
+    RuntimeCommandRouter_UpdateReportMode();
 }
 
-void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal)
+void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
 {
-    runtime_c42_runtime_view_t *runtime = RuntimeC42_Runtime();
+    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
 
     if (signal == 0)
     {
@@ -58,9 +58,9 @@ void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal)
         if ((signal->adc_valid != 0U) && (signal->encoder_valid != 0U))
         {
             runtime->sensor_invalid_consecutive = 0U;
-            if (runtime->system_state != RUNTIME_C41_SYSTEM_FAULT)
+            if (runtime->system_state != RUNTIME_STATE_SYSTEM_FAULT)
             {
-                runtime->last_fault_code = RUNTIME_C41_FAULT_NONE;
+                runtime->last_fault_code = RUNTIME_STATE_FAULT_NONE;
             }
         }
         else
@@ -70,25 +70,25 @@ void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal)
 
             if (signal->adc_valid == 0U)
             {
-                runtime->last_fault_code = RUNTIME_C41_FAULT_SENSOR_ADC_INVALID;
+                runtime->last_fault_code = RUNTIME_STATE_FAULT_SENSOR_ADC_INVALID;
             }
             else
             {
-                runtime->last_fault_code = RUNTIME_C41_FAULT_SENSOR_ENCODER_INVALID;
+                runtime->last_fault_code = RUNTIME_STATE_FAULT_SENSOR_ENCODER_INVALID;
             }
 
             if (runtime->sensor_invalid_consecutive >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
             {
-                if (runtime->system_state != RUNTIME_C41_SYSTEM_FAULT)
+                if (runtime->system_state != RUNTIME_STATE_SYSTEM_FAULT)
                 {
                     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-                    runtime->system_state = RUNTIME_C41_SYSTEM_FAULT;
+                    runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
 
                     snprintf(out,
                              sizeof(out),
                              "sensor invalid threshold reached: %u",
                              (unsigned int)runtime->sensor_invalid_consecutive);
-                    RuntimeC42_OutputDiag("ERR", "sensor", out);
+                    RuntimeCommandRouter_OutputDiag("ERR", "sensor", out);
                 }
             }
         }
@@ -103,8 +103,8 @@ void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal)
     {
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
         char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-        runtime->system_state = RUNTIME_C41_SYSTEM_FAULT;
-        runtime->last_fault_code = RUNTIME_C41_FAULT_UNDERVOLTAGE;
+        runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
+        runtime->last_fault_code = RUNTIME_STATE_FAULT_UNDERVOLTAGE;
         runtime->control_skip_count++;
 
         snprintf(out,
@@ -112,7 +112,7 @@ void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal)
                  "vbus undervoltage: %.3fV < %.3fV",
                  signal->undervoltage_vbus,
                  FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT);
-        RuntimeC42_OutputDiag("ERR", "protection", out);
+        RuntimeCommandRouter_OutputDiag("ERR", "protection", out);
 #else
         (void)signal->undervoltage_vbus;
 #endif
@@ -120,103 +120,103 @@ void RuntimeC41_ApplySignals(const runtime_c41_signal_t *signal)
 
     if (signal->finalize_init != 0U)
     {
-        RuntimeC41_FinalizeInitDiagnostics();
+        RuntimeStateMachine_FinalizeInitDiagnostics();
     }
 }
 
-uint8_t RuntimeC41_OnCommand(const protocol_command_t *cmd)
+uint8_t RuntimeStateMachine_HandleCommand(const protocol_command_t *cmd)
 {
-    runtime_c42_runtime_view_t *runtime = RuntimeC42_Runtime();
-    runtime_c42_exec_result_t exec_result;
+    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
+    runtime_command_exec_result_t exec_result;
 
     if (cmd == 0)
     {
         return 0U;
     }
 
-    runtime->comm_state = RUNTIME_C41_COMM_ACTIVE;
+    runtime->comm_state = RUNTIME_STATE_COMM_ACTIVE;
 
     if (cmd->command == COMMAND_MANAGER_CMD_SYSTEM)
     {
-        exec_result = RuntimeC41_HandleSystemCommand(cmd);
+        exec_result = RuntimeStateMachine_HandleSystemCommand(cmd);
     }
     else
     {
-        exec_result = RuntimeC42_RouteCommand(cmd);
+        exec_result = RuntimeCommandRouter_Execute(cmd);
     }
 
-    runtime->last_exec_ok = (exec_result == RUNTIME_C42_EXEC_OK) ? 1U : 0U;
+    runtime->last_exec_ok = (exec_result == RUNTIME_CMD_EXEC_OK) ? 1U : 0U;
 
-    if (exec_result != RUNTIME_C42_EXEC_OK)
+    if (exec_result != RUNTIME_CMD_EXEC_OK)
     {
-        runtime->comm_state = RUNTIME_C41_COMM_ERROR;
+        runtime->comm_state = RUNTIME_STATE_COMM_ERROR;
 
-        if (exec_result == RUNTIME_C42_EXEC_PARAM_ERROR)
+        if (exec_result == RUNTIME_CMD_EXEC_PARAM_ERROR)
         {
             runtime->param_error_count++;
-            runtime->last_fault_code = RUNTIME_C41_FAULT_PARAM_INVALID;
+            runtime->last_fault_code = RUNTIME_STATE_FAULT_PARAM_INVALID;
         }
         else
         {
             runtime->protocol_error_count++;
-            runtime->last_fault_code = RUNTIME_C41_FAULT_PROTOCOL_FRAME;
+            runtime->last_fault_code = RUNTIME_STATE_FAULT_PROTOCOL_FRAME;
         }
 
-        RuntimeC42_OutputDiag("ERR", "fallback", "keep previous params");
+        RuntimeCommandRouter_OutputDiag("ERR", "fallback", "keep previous params");
     }
     else
     {
-        runtime->comm_state = RUNTIME_C41_COMM_ACTIVE;
+        runtime->comm_state = RUNTIME_STATE_COMM_ACTIVE;
     }
 
-    RuntimeC42_UpdateReportMode();
+    RuntimeCommandRouter_UpdateReportMode();
     return runtime->last_exec_ok;
 }
 
-void RuntimeC41_OnFrameError(void)
+void RuntimeStateMachine_ReportFrameError(void)
 {
-    runtime_c42_runtime_view_t *runtime = RuntimeC42_Runtime();
+    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
 
     runtime->protocol_error_count++;
-    runtime->last_fault_code = RUNTIME_C41_FAULT_PROTOCOL_FRAME;
-    RuntimeC42_WriteStatusFrameError();
+    runtime->last_fault_code = RUNTIME_STATE_FAULT_PROTOCOL_FRAME;
+    RuntimeCommandRouter_WriteStatusFrameError();
 }
 
-void RuntimeC41_Snapshot(runtime_snapshot_t *snapshot)
+void RuntimeStateMachine_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeC42_BuildSnapshot(snapshot);
+    RuntimeCommandRouter_BuildSnapshot(snapshot);
 }
 
-void RuntimeC41_Commit(void)
+void RuntimeStateMachine_Commit(void)
 {
-    RuntimeC42_ClearDirty();
+    RuntimeCommandRouter_ClearDirty();
 }
 
-static void RuntimeC41_FinalizeInitDiagnostics(void)
+static void RuntimeStateMachine_FinalizeInitDiagnostics(void)
 {
-    runtime_c42_runtime_view_t *runtime = RuntimeC42_Runtime();
-    uint16_t missing_mask = (uint16_t)(RUNTIME_C41_INIT_REQUIRED_MASK & (~runtime->init_check_mask));
+    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
+    uint16_t missing_mask = (uint16_t)(RUNTIME_STATE_INIT_REQUIRED_MASK & (~runtime->init_check_mask));
 
     if (runtime->init_check_mask == 0U)
     {
-        runtime->init_diag = RUNTIME_C41_DIAG_NOT_EXECUTED;
-        runtime->system_state = RUNTIME_C41_SYSTEM_FAULT;
-        runtime->last_fault_code = RUNTIME_C41_FAULT_INIT_FAILED;
-        RuntimeC42_OutputDiag("ERR", "init", "no checks executed");
+        runtime->init_diag = RUNTIME_STATE_DIAG_NOT_EXECUTED;
+        runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
+        runtime->last_fault_code = RUNTIME_STATE_FAULT_INIT_FAILED;
+        RuntimeCommandRouter_OutputDiag("ERR", "init", "no checks executed");
         return;
     }
 
     if ((runtime->init_fail_mask == 0U) && (missing_mask == 0U))
     {
-        runtime->init_diag = RUNTIME_C41_DIAG_SUCCESS;
-        runtime->system_state = RUNTIME_C41_SYSTEM_RUNNING;
-        runtime->last_fault_code = RUNTIME_C41_FAULT_NONE;
+        runtime->init_diag = RUNTIME_STATE_DIAG_SUCCESS;
+        runtime->system_state = RUNTIME_STATE_SYSTEM_RUNNING;
+        runtime->last_fault_code = RUNTIME_STATE_FAULT_NONE;
     }
     else
     {
-        runtime->init_diag = RUNTIME_C41_DIAG_FAILED;
-        runtime->system_state = RUNTIME_C41_SYSTEM_FAULT;
-        runtime->last_fault_code = RUNTIME_C41_FAULT_INIT_FAILED;
+        runtime->init_diag = RUNTIME_STATE_DIAG_FAILED;
+        runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
+        runtime->last_fault_code = RUNTIME_STATE_FAULT_INIT_FAILED;
     }
 
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
@@ -229,8 +229,8 @@ static void RuntimeC41_FinalizeInitDiagnostics(void)
                      sizeof(out),
                      "diag.init.missing=0x%04X required=0x%04X\r\n",
                      (unsigned int)missing_mask,
-                     (unsigned int)RUNTIME_C41_INIT_REQUIRED_MASK);
-            RuntimeC42_WriteText(out);
+                     (unsigned int)RUNTIME_STATE_INIT_REQUIRED_MASK);
+            RuntimeCommandRouter_WriteText(out);
         }
 
         snprintf(out,
@@ -239,36 +239,37 @@ static void RuntimeC41_FinalizeInitDiagnostics(void)
                  (unsigned int)runtime->init_diag,
                  (unsigned int)runtime->init_check_mask,
                  (unsigned int)runtime->init_fail_mask);
-        RuntimeC42_WriteText(out);
+        RuntimeCommandRouter_WriteText(out);
     }
 #endif
 }
 
-static runtime_c42_exec_result_t RuntimeC41_HandleSystemCommand(const protocol_command_t *cmd)
+static runtime_command_exec_result_t RuntimeStateMachine_HandleSystemCommand(const protocol_command_t *cmd)
 {
     if (cmd->has_param != 0U)
     {
-        RuntimeC42_WriteStatusParamInvalid();
-        return RUNTIME_C42_EXEC_PARAM_ERROR;
+        RuntimeCommandRouter_WriteStatusParamInvalid();
+        return RUNTIME_CMD_EXEC_PARAM_ERROR;
     }
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_RUNTIME_SUMMARY)
     {
-        RuntimeC42_OutputRuntimeSummary();
-        return RUNTIME_C42_EXEC_OK;
+        RuntimeCommandRouter_OutputRuntimeSummary();
+        return RUNTIME_CMD_EXEC_OK;
     }
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT)
     {
-        if (RuntimeC42_RecoverFaultAndReinit() != 0U)
+        if (RuntimeCommandRouter_RecoverFaultAndReinit() != 0U)
         {
-            RuntimeC42_OutputFaultControlSummary();
-            return RUNTIME_C42_EXEC_OK;
+            RuntimeCommandRouter_OutputFaultControlSummary();
+            return RUNTIME_CMD_EXEC_OK;
         }
 
-        return RUNTIME_C42_EXEC_COMMAND_ERROR;
+        return RUNTIME_CMD_EXEC_COMMAND_ERROR;
     }
 
-    RuntimeC42_WriteStatusParamInvalid();
-    return RUNTIME_C42_EXEC_PARAM_ERROR;
+    RuntimeCommandRouter_WriteStatusParamInvalid();
+    return RUNTIME_CMD_EXEC_PARAM_ERROR;
 }
+

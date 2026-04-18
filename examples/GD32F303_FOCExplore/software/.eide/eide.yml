@@ -29,15 +29,13 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
         - path: ../../../foc/src/L2_Service/runtime_c11_entry.c
-        - path: ../../../foc/src/L2_Service/runtime_c21_cycle_driver.c
+        - path: ../../../foc/src/L2_Service/debug_stream.c
+        - path: ../../../foc/src/L2_Service/motor_control_service.c
         - path: ../../../foc/src/L2_Service/runtime_c31_frame_source.c
-        - path: ../../../foc/src/L2_Service/runtime_c32_frame_adapter.c
         - path: ../../../foc/src/L2_Service/runtime_c41_runtime_fsm.c
         - path: ../../../foc/src/L2_Service/runtime_c42_command_router.c
         - path: ../../../foc/src/L2_Service/runtime_c43_store.c
         - path: ../../../foc/src/L2_Service/runtime_c44_output.c
-        - path: ../../../foc/src/L2_Service/debug_stream.c
-        - path: ../../../foc/src/L2_Service/motor_control_service.c
       folders: []
     - name: CMSIS
       files:
@@ -128,6 +126,12 @@ targets:
       - <virtual_root>/Utilities/i2c.c
       - <virtual_root>/Utilities/usart.c
       - <virtual_root>/Application/foc_irq_api.c
+      - <virtual_root>/Application/runtime_c21_comm_chain.c
+      - <virtual_root>/Application/runtime_c22_protocol_parser.c
+      - <virtual_root>/Application/runtime_c31_command_entry.c
+      - <virtual_root>/Application/runtime_c32_command_dispatch.c
+      - <virtual_root>/Application/runtime_c33_command_store.c
+      - <virtual_root>/Application/runtime_c34_command_diag.c
     settings:
       debugger: cortex-debug
     toolchain: AC5

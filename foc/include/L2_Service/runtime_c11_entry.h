@@ -6,14 +6,14 @@
 #include "L2_Service/runtime_snapshot.h"
 
 typedef enum {
-    RUNTIME_C11_INIT_CHECK_COMM = (1U << 0),
-    RUNTIME_C11_INIT_CHECK_PROTOCOL = (1U << 1),
-    RUNTIME_C11_INIT_CHECK_COMMAND = (1U << 2),
-    RUNTIME_C11_INIT_CHECK_DEBUG = (1U << 3),
-    RUNTIME_C11_INIT_CHECK_SENSOR = (1U << 4),
-    RUNTIME_C11_INIT_CHECK_PWM = (1U << 5),
-    RUNTIME_C11_INIT_CHECK_MOTOR = (1U << 6)
-} runtime_c11_init_check_t;
+    RUNTIME_INIT_CHECK_COMM = (1U << 0),
+    RUNTIME_INIT_CHECK_PROTOCOL = (1U << 1),
+    RUNTIME_INIT_CHECK_COMMAND = (1U << 2),
+    RUNTIME_INIT_CHECK_DEBUG = (1U << 3),
+    RUNTIME_INIT_CHECK_SENSOR = (1U << 4),
+    RUNTIME_INIT_CHECK_PWM = (1U << 5),
+    RUNTIME_INIT_CHECK_MOTOR = (1U << 6)
+} runtime_init_check_t;
 
 typedef struct {
     uint16_t init_checks_pass_mask;
@@ -28,11 +28,12 @@ typedef struct {
 
     uint8_t undervoltage_fault;
     float undervoltage_vbus;
-} runtime_c11_step_input_t;
+} runtime_service_step_input_t;
 
-void RuntimeC11_Init(void);
-uint8_t RuntimeC11_Step(uint8_t frame_budget, const runtime_c11_step_input_t *input);
-void RuntimeC11_Snapshot(runtime_snapshot_t *snapshot);
-void RuntimeC11_Commit(void);
+void RuntimeService_Init(void);
+uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_input_t *input);
+void RuntimeService_GetSnapshot(runtime_snapshot_t *snapshot);
+void RuntimeService_Commit(void);
 
 #endif /* RUNTIME_C11_ENTRY_H */
+

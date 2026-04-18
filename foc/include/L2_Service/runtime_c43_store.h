@@ -1,5 +1,5 @@
-#ifndef RUNTIME_C43_STORE_H
-#define RUNTIME_C43_STORE_H
+#ifndef RUNTIME_STORE_H
+#define RUNTIME_STORE_H
 
 #include <stdint.h>
 
@@ -20,7 +20,7 @@ typedef struct {
     uint32_t control_skip_count;
     uint8_t params_dirty;
     uint8_t last_exec_ok;
-} runtime_c43_runtime_state_t;
+} runtime_runtime_state_t;
 
 typedef struct {
     float target_angle_rad;
@@ -48,38 +48,39 @@ typedef struct {
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
-} runtime_c43_params_t;
+} runtime_params_t;
 
 typedef struct {
     uint8_t motor_enable;
     uint8_t semantic_enable;
     uint8_t osc_enable;
     uint8_t current_soft_switch_enable;
-} runtime_c43_states_t;
+} runtime_states_t;
 
-void RuntimeC43_ResetStorageDefaults(void);
-runtime_c43_runtime_state_t *RuntimeC43_Runtime(void);
-runtime_c43_params_t *RuntimeC43_Params(void);
-runtime_c43_states_t *RuntimeC43_States(void);
+void RuntimeStore_ResetStorageDefaults(void);
+runtime_runtime_state_t *RuntimeStore_Runtime(void);
+runtime_params_t *RuntimeStore_Params(void);
+runtime_states_t *RuntimeStore_States(void);
 
-uint8_t RuntimeC43_WriteParam(char subcommand, float value);
-uint8_t RuntimeC43_ReadParam(char subcommand, float *value_out);
-void RuntimeC43_ReportAllParams(void);
-void RuntimeC43_OutputParam(char subcommand, float value);
+uint8_t RuntimeStore_WriteParam(char subcommand, float value);
+uint8_t RuntimeStore_ReadParam(char subcommand, float *value_out);
+void RuntimeStore_ReportAllParams(void);
+void RuntimeStore_OutputParam(char subcommand, float value);
 
-uint8_t RuntimeC43_WriteState(char subcommand, uint8_t state);
-uint8_t RuntimeC43_ReadState(char subcommand, uint8_t *state_out);
-void RuntimeC43_ReportAllStates(void);
-void RuntimeC43_OutputState(char subcommand, uint8_t value);
+uint8_t RuntimeStore_WriteState(char subcommand, uint8_t state);
+uint8_t RuntimeStore_ReadState(char subcommand, uint8_t *state_out);
+void RuntimeStore_ReportAllStates(void);
+void RuntimeStore_OutputState(char subcommand, uint8_t value);
 
-void RuntimeC43_BuildSnapshot(runtime_snapshot_t *snapshot);
-void RuntimeC43_ClearDirty(void);
+void RuntimeStore_BuildSnapshot(runtime_snapshot_t *snapshot);
+void RuntimeStore_ClearDirty(void);
 
-void RuntimeC43_OutputDiag(const char *level, const char *module, const char *detail);
-void RuntimeC43_OutputRuntimeSummary(void);
-void RuntimeC43_OutputFaultControlSummary(void);
-const char *RuntimeC43_GetFaultName(uint8_t fault_code);
-void RuntimeC43_WriteText(const char *text);
-void RuntimeC43_WriteStatusByte(uint8_t status);
+void RuntimeStore_OutputDiag(const char *level, const char *module, const char *detail);
+void RuntimeStore_OutputRuntimeSummary(void);
+void RuntimeStore_OutputFaultControlSummary(void);
+const char *RuntimeStore_GetFaultName(uint8_t fault_code);
+void RuntimeStore_WriteText(const char *text);
+void RuntimeStore_WriteStatusByte(uint8_t status);
 
-#endif /* RUNTIME_C43_STORE_H */
+#endif /* RUNTIME_STORE_H */
+

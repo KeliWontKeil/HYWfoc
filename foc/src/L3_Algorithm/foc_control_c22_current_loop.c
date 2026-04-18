@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-#include "L3_Algorithm/foc_control_c25_cfg_state.h"
 #include "L3_Algorithm/foc_control_c31_actuation.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
@@ -276,8 +275,8 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
                                              const sensor_data_t *sensor,
                                              float dt_sec)
 {
-    foc_current_soft_switch_status_t *soft_switch_status = FOC_ControlGetCurrentSoftSwitchStatusMutable();
-    uint8_t *blend_initialized = FOC_ControlGetCurrentSoftSwitchBlendInitFlag();
+    foc_current_soft_switch_status_t *soft_switch_status;
+    uint8_t *blend_initialized;
     float open_ud = 0.0f;
     float open_uq = 0.0f;
     float open_iq = 0.0f;
@@ -288,10 +287,13 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
     float target_blend;
     uint8_t active_mode;
 
-    if ((motor == 0) || (current_pid == 0) || (sensor == 0) || (soft_switch_status == 0))
+    if ((motor == 0) || (current_pid == 0) || (sensor == 0))
     {
         return;
     }
+
+    soft_switch_status = &motor->current_soft_switch_status;
+    blend_initialized = &motor->current_soft_switch_blend_initialized;
 
     FOC_CurrentControlClosedLoopStep(motor,
                                      current_pid,
@@ -329,13 +331,14 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
                             float electrical_angle,
                             float dt_sec)
 {
-    foc_current_soft_switch_status_t *soft_switch_status = FOC_ControlGetCurrentSoftSwitchStatusMutable();
-    uint8_t *blend_initialized = FOC_ControlGetCurrentSoftSwitchBlendInitFlag();
+    uint8_t *blend_initialized;
 
-    if ((motor == 0) || (soft_switch_status == 0))
+    if (motor == 0)
     {
         return;
     }
+
+    blend_initialized = &motor->current_soft_switch_blend_initialized;
 
     motor->electrical_phase_angle = Math_WrapRad(electrical_angle);
     dt_sec = FOC_NormalizeDt(dt_sec);
@@ -347,7 +350,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    if (soft_switch_status->enabled != 0U)
+    if (motor->current_soft_switch_status.enabled != 0U)
     {
         FOC_CurrentControlSoftSwitchStep(motor,
                                          current_pid,
@@ -362,16 +365,16 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             *blend_initialized = 0U;
         }
 
-        if (soft_switch_status->configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN)
+        if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN)
         {
-            soft_switch_status->active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-            soft_switch_status->blend_factor = 0.0f;
+            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+            motor->current_soft_switch_status.blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
         }
         else
         {
-            soft_switch_status->active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-            soft_switch_status->blend_factor = 1.0f;
+            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
+            motor->current_soft_switch_status.blend_factor = 1.0f;
             FOC_CurrentControlClosedLoopStep(motor,
                                              current_pid,
                                              sensor,

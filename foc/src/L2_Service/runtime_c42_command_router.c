@@ -3,33 +3,33 @@
 #include "L3_Algorithm/protocol_core.h"
 #include "LS_Config/foc_config.h"
 
-void RuntimeC42_Init(void)
+void RuntimeCommandRouter_Init(void)
 {
-    RuntimeC43_ResetStorageDefaults();
-    RuntimeC43_OutputDiag("INFO", "command_manager", "READY");
-    RuntimeC43_OutputDiag("INFO", "protocol_exec", "NOT_EXECUTED");
-    RuntimeC43_OutputDiag("INFO", "fallback", "KEEP_LAST_VALID");
+    RuntimeStore_ResetStorageDefaults();
+    RuntimeStore_OutputDiag("INFO", "command_manager", "READY");
+    RuntimeStore_OutputDiag("INFO", "protocol_exec", "NOT_EXECUTED");
+    RuntimeStore_OutputDiag("INFO", "fallback", "KEEP_LAST_VALID");
 }
 
-runtime_c42_runtime_view_t *RuntimeC42_Runtime(void)
+runtime_runtime_view_t *RuntimeCommandRouter_Runtime(void)
 {
-    return RuntimeC43_Runtime();
+    return RuntimeStore_Runtime();
 }
 
-runtime_c42_params_view_t *RuntimeC42_Params(void)
+runtime_params_view_t *RuntimeCommandRouter_Params(void)
 {
-    return RuntimeC43_Params();
+    return RuntimeStore_Params();
 }
 
-runtime_c42_states_view_t *RuntimeC42_States(void)
+runtime_states_view_t *RuntimeCommandRouter_States(void)
 {
-    return RuntimeC43_States();
+    return RuntimeStore_States();
 }
 
-void RuntimeC42_UpdateReportMode(void)
+void RuntimeCommandRouter_UpdateReportMode(void)
 {
-    runtime_c42_runtime_view_t *runtime = RuntimeC42_Runtime();
-    const runtime_c42_states_view_t *states = RuntimeC42_States();
+    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
+    const runtime_states_view_t *states = RuntimeCommandRouter_States();
 
     if ((states->semantic_enable != 0U) && (states->osc_enable != 0U))
     {
@@ -49,72 +49,72 @@ void RuntimeC42_UpdateReportMode(void)
     }
 }
 
-static uint8_t RuntimeC42_ReportSingleParam(char subcommand)
+static uint8_t RuntimeCommandRouter_ReportSingleParam(char subcommand)
 {
     float value;
 
-    if (RuntimeC43_ReadParam(subcommand, &value) == 0U)
+    if (RuntimeStore_ReadParam(subcommand, &value) == 0U)
     {
         return 0U;
     }
 
-    RuntimeC43_OutputParam(subcommand, value);
+    RuntimeStore_OutputParam(subcommand, value);
     return 1U;
 }
 
-static uint8_t RuntimeC42_ReportSingleState(char subcommand)
+static uint8_t RuntimeCommandRouter_ReportSingleState(char subcommand)
 {
     uint8_t state;
 
-    if (RuntimeC43_ReadState(subcommand, &state) == 0U)
+    if (RuntimeStore_ReadState(subcommand, &state) == 0U)
     {
         return 0U;
     }
 
-    RuntimeC43_OutputState(subcommand, state);
+    RuntimeStore_OutputState(subcommand, state);
     return 1U;
 }
 
-runtime_c42_exec_result_t RuntimeC42_RouteCommand(const protocol_command_t *cmd)
+runtime_command_exec_result_t RuntimeCommandRouter_Execute(const protocol_command_t *cmd)
 {
     float value = 0.0f;
 
     if ((cmd == 0) || (cmd->frame_valid == 0U))
     {
-        RuntimeC42_WriteStatusFrameError();
-        return RUNTIME_C42_EXEC_COMMAND_ERROR;
+        RuntimeCommandRouter_WriteStatusFrameError();
+        return RUNTIME_CMD_EXEC_COMMAND_ERROR;
     }
 
     if (cmd->command == COMMAND_MANAGER_CMD_PARAM)
     {
         if (cmd->has_param != 0U)
         {
-            if (RuntimeC43_WriteParam(cmd->subcommand, cmd->param_value) == 0U)
+            if (RuntimeStore_WriteParam(cmd->subcommand, cmd->param_value) == 0U)
             {
-                RuntimeC42_WriteStatusParamInvalid();
-                return RUNTIME_C42_EXEC_PARAM_ERROR;
+                RuntimeCommandRouter_WriteStatusParamInvalid();
+                return RUNTIME_CMD_EXEC_PARAM_ERROR;
             }
 
-            if (RuntimeC43_ReadParam(cmd->subcommand, &value) != 0U)
+            if (RuntimeStore_ReadParam(cmd->subcommand, &value) != 0U)
             {
-                RuntimeC43_OutputParam(cmd->subcommand, value);
+                RuntimeStore_OutputParam(cmd->subcommand, value);
             }
-            return RUNTIME_C42_EXEC_OK;
+            return RUNTIME_CMD_EXEC_OK;
         }
 
         if (cmd->subcommand == COMMAND_MANAGER_PARAM_SUBCMD_READ_ALL)
         {
-            RuntimeC43_ReportAllParams();
-            return RUNTIME_C42_EXEC_OK;
+            RuntimeStore_ReportAllParams();
+            return RUNTIME_CMD_EXEC_OK;
         }
 
-        if (RuntimeC42_ReportSingleParam(cmd->subcommand) == 0U)
+        if (RuntimeCommandRouter_ReportSingleParam(cmd->subcommand) == 0U)
         {
-            RuntimeC42_WriteStatusParamInvalid();
-            return RUNTIME_C42_EXEC_PARAM_ERROR;
+            RuntimeCommandRouter_WriteStatusParamInvalid();
+            return RUNTIME_CMD_EXEC_PARAM_ERROR;
         }
 
-        return RUNTIME_C42_EXEC_OK;
+        return RUNTIME_CMD_EXEC_OK;
     }
 
     if (cmd->command == COMMAND_MANAGER_CMD_STATE)
@@ -125,100 +125,100 @@ runtime_c42_exec_result_t RuntimeC42_RouteCommand(const protocol_command_t *cmd)
         {
             if (ProtocolCore_ParseStateValue(cmd->param_value, &state) == 0U)
             {
-                RuntimeC42_WriteStatusParamInvalid();
-                return RUNTIME_C42_EXEC_PARAM_ERROR;
+                RuntimeCommandRouter_WriteStatusParamInvalid();
+                return RUNTIME_CMD_EXEC_PARAM_ERROR;
             }
 
-            if (RuntimeC43_WriteState(cmd->subcommand, state) == 0U)
+            if (RuntimeStore_WriteState(cmd->subcommand, state) == 0U)
             {
-                RuntimeC42_WriteStatusParamInvalid();
-                return RUNTIME_C42_EXEC_PARAM_ERROR;
+                RuntimeCommandRouter_WriteStatusParamInvalid();
+                return RUNTIME_CMD_EXEC_PARAM_ERROR;
             }
 
-            if (RuntimeC43_ReadState(cmd->subcommand, &state) == 0U)
+            if (RuntimeStore_ReadState(cmd->subcommand, &state) == 0U)
             {
-                RuntimeC42_WriteStatusParamInvalid();
-                return RUNTIME_C42_EXEC_PARAM_ERROR;
+                RuntimeCommandRouter_WriteStatusParamInvalid();
+                return RUNTIME_CMD_EXEC_PARAM_ERROR;
             }
 
-            RuntimeC43_OutputState(cmd->subcommand, state);
-            return RUNTIME_C42_EXEC_OK;
+            RuntimeStore_OutputState(cmd->subcommand, state);
+            return RUNTIME_CMD_EXEC_OK;
         }
 
         if (cmd->subcommand == COMMAND_MANAGER_STATE_SUBCMD_READ_ALL)
         {
-            RuntimeC43_ReportAllStates();
-            return RUNTIME_C42_EXEC_OK;
+            RuntimeStore_ReportAllStates();
+            return RUNTIME_CMD_EXEC_OK;
         }
 
-        if (RuntimeC42_ReportSingleState(cmd->subcommand) == 0U)
+        if (RuntimeCommandRouter_ReportSingleState(cmd->subcommand) == 0U)
         {
-            RuntimeC42_WriteStatusParamInvalid();
-            return RUNTIME_C42_EXEC_PARAM_ERROR;
+            RuntimeCommandRouter_WriteStatusParamInvalid();
+            return RUNTIME_CMD_EXEC_PARAM_ERROR;
         }
 
-        return RUNTIME_C42_EXEC_OK;
+        return RUNTIME_CMD_EXEC_OK;
     }
 
-    RuntimeC42_WriteStatusCmdInvalid();
-    return RUNTIME_C42_EXEC_COMMAND_ERROR;
+    RuntimeCommandRouter_WriteStatusCmdInvalid();
+    return RUNTIME_CMD_EXEC_COMMAND_ERROR;
 }
 
-void RuntimeC42_BuildSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeCommandRouter_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeC43_BuildSnapshot(snapshot);
+    RuntimeStore_BuildSnapshot(snapshot);
 }
 
-void RuntimeC42_ClearDirty(void)
+void RuntimeCommandRouter_ClearDirty(void)
 {
-    RuntimeC43_ClearDirty();
+    RuntimeStore_ClearDirty();
 }
 
-void RuntimeC42_OutputDiag(const char *level, const char *module, const char *detail)
+void RuntimeCommandRouter_OutputDiag(const char *level, const char *module, const char *detail)
 {
-    RuntimeC43_OutputDiag(level, module, detail);
+    RuntimeStore_OutputDiag(level, module, detail);
 }
 
-void RuntimeC42_OutputRuntimeSummary(void)
+void RuntimeCommandRouter_OutputRuntimeSummary(void)
 {
-    RuntimeC43_OutputRuntimeSummary();
+    RuntimeStore_OutputRuntimeSummary();
 }
 
-void RuntimeC42_OutputFaultControlSummary(void)
+void RuntimeCommandRouter_OutputFaultControlSummary(void)
 {
-    RuntimeC43_OutputFaultControlSummary();
+    RuntimeStore_OutputFaultControlSummary();
 }
 
-const char *RuntimeC42_GetFaultName(uint8_t fault_code)
+const char *RuntimeCommandRouter_GetFaultName(uint8_t fault_code)
 {
-    return RuntimeC43_GetFaultName(fault_code);
+    return RuntimeStore_GetFaultName(fault_code);
 }
 
-void RuntimeC42_WriteText(const char *text)
+void RuntimeCommandRouter_WriteText(const char *text)
 {
-    RuntimeC43_WriteText(text);
+    RuntimeStore_WriteText(text);
 }
 
-void RuntimeC42_WriteStatusFrameError(void)
+void RuntimeCommandRouter_WriteStatusFrameError(void)
 {
-    RuntimeC43_WriteStatusByte((uint8_t)PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR);
+    RuntimeStore_WriteStatusByte((uint8_t)PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR);
 }
 
-void RuntimeC42_WriteStatusParamInvalid(void)
+void RuntimeCommandRouter_WriteStatusParamInvalid(void)
 {
-    RuntimeC43_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+    RuntimeStore_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
 }
 
-void RuntimeC42_WriteStatusCmdInvalid(void)
+void RuntimeCommandRouter_WriteStatusCmdInvalid(void)
 {
-    RuntimeC43_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
+    RuntimeStore_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
 }
 
-uint8_t RuntimeC42_RecoverFaultAndReinit(void)
+uint8_t RuntimeCommandRouter_RecoverFaultAndReinit(void)
 {
-    runtime_c42_runtime_view_t *runtime = RuntimeC42_Runtime();
-    runtime_c42_params_view_t *params = RuntimeC42_Params();
-    runtime_c42_states_view_t *states = RuntimeC42_States();
+    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
+    runtime_params_view_t *params = RuntimeCommandRouter_Params();
+    runtime_states_view_t *states = RuntimeCommandRouter_States();
 
     runtime->sensor_invalid_consecutive = 0U;
     runtime->protocol_error_count = 0U;
@@ -242,3 +242,4 @@ uint8_t RuntimeC42_RecoverFaultAndReinit(void)
 
     return 1U;
 }
+

@@ -1,4 +1,5 @@
 #include "L1_Orchestration/control_scheduler.h"
+
 #include "L42_PAL/foc_platform_api.h"
 
 static volatile uint16_t g_sched_tick_counter = 0;

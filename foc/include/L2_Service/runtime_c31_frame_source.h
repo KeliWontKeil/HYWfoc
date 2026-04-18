@@ -18,12 +18,13 @@ typedef struct {
 
     uint8_t undervoltage_fault;
     float undervoltage_vbus;
-} runtime_c31_step_signal_t;
+} runtime_frame_pipeline_signal_t;
 
-void RuntimeC31_Init(void);
-void RuntimeC31_ApplySignals(const runtime_c31_step_signal_t *signal);
-uint8_t RuntimeC31_ProcessOneFrame(void);
-void RuntimeC31_Snapshot(runtime_snapshot_t *snapshot);
-void RuntimeC31_Commit(void);
+void RuntimeFramePipeline_Init(void);
+void RuntimeFramePipeline_UpdateSignals(const runtime_frame_pipeline_signal_t *signal);
+uint8_t RuntimeFramePipeline_ProcessOneFrame(void);
+void RuntimeFramePipeline_BuildSnapshot(runtime_snapshot_t *snapshot);
+void RuntimeFramePipeline_Commit(void);
 
 #endif /* RUNTIME_C31_FRAME_SOURCE_H */
+

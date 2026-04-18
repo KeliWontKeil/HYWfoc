@@ -50,7 +50,7 @@ void FOC_App_Init(void)
 {
     uint16_t init_check_pass_mask = 0U;
     uint16_t init_check_fail_mask = 0U;
-    runtime_c11_step_input_t init_step = {0};
+    runtime_service_step_input_t init_step = {0};
 
     FOC_Platform_RuntimeInit();
 
@@ -71,11 +71,11 @@ void FOC_App_Init(void)
 
     FOC_Platform_CommInit();
 
-    RuntimeC11_Init();
+    RuntimeService_Init();
     FOC_App_RefreshL2Snapshot();
     init_check_pass_mask = (uint16_t)(init_check_pass_mask |
-                                      RUNTIME_C11_INIT_CHECK_COMMAND |
-                                      RUNTIME_C11_INIT_CHECK_COMM);
+                                      RUNTIME_INIT_CHECK_COMMAND |
+                                      RUNTIME_INIT_CHECK_COMM);
 
     MotorControlService_ResetControlConfigDefault(&g_motor);
     FOC_Platform_WriteDebugText("\r\n=== FOC System Started ===\r\n");
@@ -88,32 +88,32 @@ void FOC_App_Init(void)
     FOC_Platform_WriteDebugText("Control debug telemetry enabled\r\n");
     FOC_Platform_WriteDebugText("Init feedback pipeline...\r\n\r\n");
 
-    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_C11_INIT_CHECK_PROTOCOL);
+    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_PROTOCOL);
 
     DebugStream_Init();
-    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_C11_INIT_CHECK_DEBUG);
+    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_DEBUG);
 
     MotorControlService_InitSensorInput(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) != 0U)
     {
         if ((g_sensor_snapshot.adc_valid != 0U) && (g_sensor_snapshot.encoder_valid != 0U))
         {
-            init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_C11_INIT_CHECK_SENSOR);
+            init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_SENSOR);
         }
         else
         {
-            init_check_fail_mask = (uint16_t)(init_check_fail_mask | RUNTIME_C11_INIT_CHECK_SENSOR);
+            init_check_fail_mask = (uint16_t)(init_check_fail_mask | RUNTIME_INIT_CHECK_SENSOR);
         }
     }
     else
     {
-        init_check_fail_mask = (uint16_t)(init_check_fail_mask | RUNTIME_C11_INIT_CHECK_SENSOR);
+        init_check_fail_mask = (uint16_t)(init_check_fail_mask | RUNTIME_INIT_CHECK_SENSOR);
     }
 
     /* Initialize SVPWM output and interpolation callback. */
     MotorControlService_InitPwmOutput(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
-    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_C11_INIT_CHECK_PWM);
+    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_PWM);
 
     /* Initialize motor model and targets. */
     MotorControlService_InitMotor(&g_motor,
@@ -123,7 +123,7 @@ void FOC_App_Init(void)
                                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
-    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_C11_INIT_CHECK_MOTOR);
+    init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_MOTOR);
 
     /* PID initialization and runtime config applying are managed by L2 service. */
     MotorControlService_InitPidControllers(&g_motor,
@@ -144,7 +144,7 @@ void FOC_App_Init(void)
     init_step.init_checks_pass_mask = init_check_pass_mask;
     init_step.init_checks_fail_mask = init_check_fail_mask;
     init_step.finalize_init = 1U;
-    (void)RuntimeC11_Step(0U, &init_step);
+    (void)RuntimeService_RunStep(0U, &init_step);
 
     g_app_init_completed = 1U;
     FOC_App_UpdateIndicators();
@@ -183,17 +183,17 @@ void FOC_App_Loop(void)
 
 static void FOC_App_RefreshL2Snapshot(void)
 {
-    RuntimeC11_Snapshot(&g_l2_snapshot);
+    RuntimeService_GetSnapshot(&g_l2_snapshot);
 }
 
 static void FOC_App_ProcessCommStep(void)
 {
-    if (RuntimeC11_Step(FOC_APP_COMM_FRAMES_PER_STEP, 0) != 0U)
+    if (RuntimeService_RunStep(FOC_APP_COMM_FRAMES_PER_STEP, 0) != 0U)
     {
         FOC_App_TriggerCommIndicatorPulse();
     }
 
-    RuntimeC11_Snapshot(&g_l2_snapshot);
+    RuntimeService_GetSnapshot(&g_l2_snapshot);
 }
 
 static void Service_Task_Trigger(void)
@@ -239,9 +239,9 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
 
     if (report_skip != 0U)
     {
-        runtime_c11_step_input_t step_input = {0};
+        runtime_service_step_input_t step_input = {0};
         step_input.control_loop_skipped = 1U;
-        (void)RuntimeC11_Step(0U, &step_input);
+        (void)RuntimeService_RunStep(0U, &step_input);
     }
 }
 
@@ -381,22 +381,22 @@ static void Motor_Control_Loop(void)
 
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) == 0U)
     {
-        runtime_c11_step_input_t step_input = {0};
+        runtime_service_step_input_t step_input = {0};
         step_input.sensor_state_updated = 1U;
         step_input.adc_valid = 0U;
         step_input.encoder_valid = 0U;
-        (void)RuntimeC11_Step(0U, &step_input);
+        (void)RuntimeService_RunStep(0U, &step_input);
 
         FOC_App_EnterSafeOutputState(0U);
         return;
     }
 
     {
-        runtime_c11_step_input_t step_input = {0};
+        runtime_service_step_input_t step_input = {0};
         step_input.sensor_state_updated = 1U;
         step_input.adc_valid = g_sensor_snapshot.adc_valid;
         step_input.encoder_valid = g_sensor_snapshot.encoder_valid;
-        (void)RuntimeC11_Step(0U, &step_input);
+        (void)RuntimeService_RunStep(0U, &step_input);
     }
 
     if ((g_sensor_snapshot.adc_valid == 0U) || (g_sensor_snapshot.encoder_valid == 0U))
@@ -430,7 +430,7 @@ static void Motor_Control_Loop(void)
                                                 &g_speed_pid,
                                                 &g_angle_pid,
                                                 &g_l2_snapshot.control_cfg);
-        RuntimeC11_Commit();
+        RuntimeService_Commit();
     }
 
     FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
@@ -455,11 +455,11 @@ static uint8_t FOC_App_IsUndervoltageFaultActive(void)
 
     if (vbus_voltage < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
-        runtime_c11_step_input_t step_input = {0};
+        runtime_service_step_input_t step_input = {0};
         g_undervoltage_fault_latched = 1U;
         step_input.undervoltage_fault = 1U;
         step_input.undervoltage_vbus = vbus_voltage;
-        (void)RuntimeC11_Step(0U, &step_input);
+        (void)RuntimeService_RunStep(0U, &step_input);
         return 1U;
     }
 
@@ -500,4 +500,5 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
     g_fast_current_loop_enabled = 1U;
 }
+
 

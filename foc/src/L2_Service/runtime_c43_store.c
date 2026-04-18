@@ -5,28 +5,28 @@
 
 #include "LS_Config/foc_config.h"
 
-#define RUNTIME_C43_SYSTEM_INIT 0U
-#define RUNTIME_C43_SYSTEM_RUNNING 1U
-#define RUNTIME_C43_SYSTEM_FAULT 2U
+#define RUNTIME_STORE_SYSTEM_INIT 0U
+#define RUNTIME_STORE_SYSTEM_RUNNING 1U
+#define RUNTIME_STORE_SYSTEM_FAULT 2U
 
-#define RUNTIME_C43_COMM_IDLE 0U
-#define RUNTIME_C43_COMM_ACTIVE 1U
-#define RUNTIME_C43_COMM_ERROR 2U
+#define RUNTIME_STORE_COMM_IDLE 0U
+#define RUNTIME_STORE_COMM_ACTIVE 1U
+#define RUNTIME_STORE_COMM_ERROR 2U
 
-#define RUNTIME_C43_REPORT_OFF 0U
-#define RUNTIME_C43_REPORT_SEMANTIC_ONLY 1U
-#define RUNTIME_C43_REPORT_OSC_ONLY 2U
-#define RUNTIME_C43_REPORT_BOTH 3U
+#define RUNTIME_STORE_REPORT_OFF 0U
+#define RUNTIME_STORE_REPORT_SEMANTIC_ONLY 1U
+#define RUNTIME_STORE_REPORT_OSC_ONLY 2U
+#define RUNTIME_STORE_REPORT_BOTH 3U
 
-#define RUNTIME_C43_DIAG_NOT_EXECUTED 0U
+#define RUNTIME_STORE_DIAG_NOT_EXECUTED 0U
 
-#define RUNTIME_C43_FAULT_NONE 0U
+#define RUNTIME_STORE_FAULT_NONE 0U
 
-static runtime_c43_runtime_state_t g_runtime;
-static runtime_c43_params_t g_params;
-static runtime_c43_states_t g_states;
+static runtime_runtime_state_t g_runtime;
+static runtime_params_t g_params;
+static runtime_states_t g_states;
 
-static uint8_t RuntimeC43_IsInRange(float value, float min_value, float max_value)
+static uint8_t RuntimeStore_IsInRange(float value, float min_value, float max_value)
 {
     if ((value < min_value) || (value > max_value))
     {
@@ -36,17 +36,17 @@ static uint8_t RuntimeC43_IsInRange(float value, float min_value, float max_valu
     return 1U;
 }
 
-void RuntimeC43_ResetStorageDefaults(void)
+void RuntimeStore_ResetStorageDefaults(void)
 {
     (void)memset(&g_runtime, 0, sizeof(g_runtime));
     (void)memset(&g_params, 0, sizeof(g_params));
     (void)memset(&g_states, 0, sizeof(g_states));
 
-    g_runtime.system_state = RUNTIME_C43_SYSTEM_INIT;
-    g_runtime.comm_state = RUNTIME_C43_COMM_IDLE;
-    g_runtime.report_mode = RUNTIME_C43_REPORT_SEMANTIC_ONLY;
-    g_runtime.init_diag = RUNTIME_C43_DIAG_NOT_EXECUTED;
-    g_runtime.last_fault_code = RUNTIME_C43_FAULT_NONE;
+    g_runtime.system_state = RUNTIME_STORE_SYSTEM_INIT;
+    g_runtime.comm_state = RUNTIME_STORE_COMM_IDLE;
+    g_runtime.report_mode = RUNTIME_STORE_REPORT_SEMANTIC_ONLY;
+    g_runtime.init_diag = RUNTIME_STORE_DIAG_NOT_EXECUTED;
+    g_runtime.last_fault_code = RUNTIME_STORE_FAULT_NONE;
 
     g_params.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
     g_params.angle_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
@@ -80,30 +80,30 @@ void RuntimeC43_ResetStorageDefaults(void)
     g_states.current_soft_switch_enable = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
 }
 
-runtime_c43_runtime_state_t *RuntimeC43_Runtime(void)
+runtime_runtime_state_t *RuntimeStore_Runtime(void)
 {
     return &g_runtime;
 }
 
-runtime_c43_params_t *RuntimeC43_Params(void)
+runtime_params_t *RuntimeStore_Params(void)
 {
     return &g_params;
 }
 
-runtime_c43_states_t *RuntimeC43_States(void)
+runtime_states_t *RuntimeStore_States(void)
 {
     return &g_states;
 }
 
-uint8_t RuntimeC43_WriteParam(char subcommand, float value)
+uint8_t RuntimeStore_WriteParam(char subcommand, float value)
 {
-    runtime_c43_runtime_state_t *runtime = RuntimeC43_Runtime();
-    runtime_c43_params_t *params = RuntimeC43_Params();
+    runtime_runtime_state_t *runtime = RuntimeStore_Runtime();
+    runtime_params_t *params = RuntimeStore_Params();
 
     switch (subcommand)
     {
     case COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_TARGET_ANGLE_MIN_RAD,
                                  COMMAND_MANAGER_PARAM_TARGET_ANGLE_MAX_RAD) == 0U)
         {
@@ -113,7 +113,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_ANGLE_SPEED_MIN_RAD_S,
                                  COMMAND_MANAGER_PARAM_ANGLE_SPEED_MAX_RAD_S) == 0U)
         {
@@ -123,7 +123,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_SPEED_ONLY_MIN_RAD_S,
                                  COMMAND_MANAGER_PARAM_SPEED_ONLY_MAX_RAD_S) == 0U)
         {
@@ -134,7 +134,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MIN_PERCENT,
                                  COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MAX_PERCENT) == 0U)
         {
@@ -175,7 +175,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U)
         {
@@ -185,7 +185,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U)
         {
@@ -195,7 +195,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U)
         {
@@ -207,7 +207,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U)
         {
@@ -217,7 +217,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MIN,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MAX) == 0U)
         {
@@ -227,7 +227,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MIN,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MAX) == 0U)
         {
@@ -239,7 +239,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U)
         {
@@ -249,7 +249,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KI_MIN,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KI_MAX) == 0U)
         {
@@ -259,7 +259,7 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD:
-        if (RuntimeC43_IsInRange(value,
+        if (RuntimeStore_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KD_MIN,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KD_MAX) == 0U)
         {
@@ -359,10 +359,10 @@ uint8_t RuntimeC43_WriteParam(char subcommand, float value)
     return 1U;
 }
 
-uint8_t RuntimeC43_WriteState(char subcommand, uint8_t state)
+uint8_t RuntimeStore_WriteState(char subcommand, uint8_t state)
 {
-    runtime_c43_runtime_state_t *runtime = RuntimeC43_Runtime();
-    runtime_c43_states_t *states = RuntimeC43_States();
+    runtime_runtime_state_t *runtime = RuntimeStore_Runtime();
+    runtime_states_t *states = RuntimeStore_States();
     uint8_t normalized_state = (state != 0U) ? COMMAND_MANAGER_ENABLED_ENABLE : COMMAND_MANAGER_ENABLED_DISABLE;
 
     switch (subcommand)
@@ -395,9 +395,9 @@ uint8_t RuntimeC43_WriteState(char subcommand, uint8_t state)
     return 1U;
 }
 
-uint8_t RuntimeC43_ReadParam(char subcommand, float *value_out)
+uint8_t RuntimeStore_ReadParam(char subcommand, float *value_out)
 {
-    const runtime_c43_params_t *params = RuntimeC43_Params();
+    const runtime_params_t *params = RuntimeStore_Params();
 
     if (value_out == 0)
     {
@@ -527,9 +527,9 @@ uint8_t RuntimeC43_ReadParam(char subcommand, float *value_out)
     return 1U;
 }
 
-uint8_t RuntimeC43_ReadState(char subcommand, uint8_t *state_out)
+uint8_t RuntimeStore_ReadState(char subcommand, uint8_t *state_out)
 {
-    const runtime_c43_states_t *states = RuntimeC43_States();
+    const runtime_states_t *states = RuntimeStore_States();
 
     if (state_out == 0)
     {
@@ -565,7 +565,7 @@ uint8_t RuntimeC43_ReadState(char subcommand, uint8_t *state_out)
     return 1U;
 }
 
-void RuntimeC43_ReportAllParams(void)
+void RuntimeStore_ReportAllParams(void)
 {
     float value;
     const char params[] = {
@@ -613,19 +613,19 @@ void RuntimeC43_ReportAllParams(void)
 
     for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
     {
-        if (RuntimeC43_ReadParam(params[i], &value) != 0U)
+        if (RuntimeStore_ReadParam(params[i], &value) != 0U)
         {
-            RuntimeC44_OutputParam(params[i], value);
+            RuntimeOutput_OutputParam(params[i], value);
         }
     }
 }
 
-void RuntimeC43_OutputParam(char subcommand, float value)
+void RuntimeStore_OutputParam(char subcommand, float value)
 {
-    RuntimeC44_OutputParam(subcommand, value);
+    RuntimeOutput_OutputParam(subcommand, value);
 }
 
-void RuntimeC43_ReportAllStates(void)
+void RuntimeStore_ReportAllStates(void)
 {
     uint8_t state;
     const char states[] = {
@@ -642,19 +642,19 @@ void RuntimeC43_ReportAllStates(void)
 
     for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
     {
-        if (RuntimeC43_ReadState(states[i], &state) != 0U)
+        if (RuntimeStore_ReadState(states[i], &state) != 0U)
         {
-            RuntimeC44_OutputState(states[i], state);
+            RuntimeOutput_OutputState(states[i], state);
         }
     }
 }
 
-void RuntimeC43_OutputState(char subcommand, uint8_t value)
+void RuntimeStore_OutputState(char subcommand, uint8_t value)
 {
-    RuntimeC44_OutputState(subcommand, value);
+    RuntimeOutput_OutputState(subcommand, value);
 }
 
-void RuntimeC43_BuildSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeStore_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
     if (snapshot == 0)
     {
@@ -663,8 +663,8 @@ void RuntimeC43_BuildSnapshot(runtime_snapshot_t *snapshot)
 
     (void)memset(snapshot, 0, sizeof(*snapshot));
 
-    snapshot->runtime.system_running = (g_runtime.system_state == RUNTIME_C43_SYSTEM_RUNNING) ? 1U : 0U;
-    snapshot->runtime.system_fault = (g_runtime.system_state == RUNTIME_C43_SYSTEM_FAULT) ? 1U : 0U;
+    snapshot->runtime.system_running = (g_runtime.system_state == RUNTIME_STORE_SYSTEM_RUNNING) ? 1U : 0U;
+    snapshot->runtime.system_fault = (g_runtime.system_state == RUNTIME_STORE_SYSTEM_FAULT) ? 1U : 0U;
     snapshot->runtime.params_dirty = g_runtime.params_dirty;
     snapshot->runtime.last_exec_ok = g_runtime.last_exec_ok;
 
@@ -700,17 +700,17 @@ void RuntimeC43_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->telemetry.osc_parameter_mask = g_params.osc_param_mask;
 }
 
-void RuntimeC43_ClearDirty(void)
+void RuntimeStore_ClearDirty(void)
 {
     g_runtime.params_dirty = 0U;
 }
 
-void RuntimeC43_OutputDiag(const char *level, const char *module, const char *detail)
+void RuntimeStore_OutputDiag(const char *level, const char *module, const char *detail)
 {
-    RuntimeC44_OutputDiag(level, module, detail);
+    RuntimeOutput_OutputDiag(level, module, detail);
 }
 
-void RuntimeC43_OutputRuntimeSummary(void)
+void RuntimeStore_OutputRuntimeSummary(void)
 {
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -724,16 +724,16 @@ void RuntimeC43_OutputRuntimeSummary(void)
              (unsigned int)g_runtime.params_dirty,
              (unsigned int)g_runtime.last_exec_ok,
              (unsigned int)g_runtime.init_diag,
-             RuntimeC44_GetFaultName(g_runtime.last_fault_code),
+             RuntimeOutput_GetFaultName(g_runtime.last_fault_code),
              (unsigned int)g_runtime.sensor_invalid_consecutive,
              (unsigned long)g_runtime.protocol_error_count,
              (unsigned long)g_runtime.param_error_count,
              (unsigned long)g_runtime.control_skip_count);
-    RuntimeC44_WriteText(out);
+    RuntimeOutput_WriteText(out);
 #endif
 }
 
-void RuntimeC43_OutputFaultControlSummary(void)
+void RuntimeStore_OutputFaultControlSummary(void)
 {
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -742,25 +742,26 @@ void RuntimeC43_OutputFaultControlSummary(void)
              sizeof(out),
              "FAULT_CTRL state=%u fault=%s proto_err=%lu param_err=%lu ctrl_skip=%lu\r\n",
              (unsigned int)g_runtime.system_state,
-             RuntimeC44_GetFaultName(g_runtime.last_fault_code),
+             RuntimeOutput_GetFaultName(g_runtime.last_fault_code),
              (unsigned long)g_runtime.protocol_error_count,
              (unsigned long)g_runtime.param_error_count,
              (unsigned long)g_runtime.control_skip_count);
-    RuntimeC44_WriteText(out);
+    RuntimeOutput_WriteText(out);
 #endif
 }
 
-const char *RuntimeC43_GetFaultName(uint8_t fault_code)
+const char *RuntimeStore_GetFaultName(uint8_t fault_code)
 {
-    return RuntimeC44_GetFaultName(fault_code);
+    return RuntimeOutput_GetFaultName(fault_code);
 }
 
-void RuntimeC43_WriteText(const char *text)
+void RuntimeStore_WriteText(const char *text)
 {
-    RuntimeC44_WriteText(text);
+    RuntimeOutput_WriteText(text);
 }
 
-void RuntimeC43_WriteStatusByte(uint8_t status)
+void RuntimeStore_WriteStatusByte(uint8_t status)
 {
-    RuntimeC44_WriteStatusByte(status);
+    RuntimeOutput_WriteStatusByte(status);
 }
+
