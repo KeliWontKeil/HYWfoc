@@ -215,6 +215,6 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     FOC_ControlSetCoggingCompEnable(motor, FOC_CFG_ENABLE);
 #else
-    FOC_ControlSetCoggingCompEnable(motor, FOC_CFG_DISABLE);
+    /* Keep feature default when protocol cogging chain is trimmed out. */
 #endif
 }

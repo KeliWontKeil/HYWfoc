@@ -66,10 +66,11 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
         }
         else
         {
-            motor->mech_angle_at_elec_zero_rad = 0.0f;
+            motor->mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
             motor->mech_angle_accum_rad = 0.0f;
             motor->mech_angle_prev_rad = 0.0f;
-            motor->mech_angle_prev_valid = 1U;
+            motor->mech_angle_prev_valid = 0U;
+            FOC_Platform_WriteDebugText("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
         }
     }
     else
@@ -95,12 +96,13 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
         {
             if (need_direction != 0U)
             {
-                motor->direction = FOC_DIR_NORMAL;
+                motor->direction = FOC_DIR_UNDEFINED;
             }
             if (need_pole_pairs != 0U)
             {
-                motor->pole_pairs = 1U;
+                motor->pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
             }
+            FOC_Platform_WriteDebugText("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
         }
     }
 

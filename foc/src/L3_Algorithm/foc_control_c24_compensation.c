@@ -9,6 +9,60 @@
 #include "LS_Config/foc_config.h"
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+static uint8_t g_cogging_speed_est_valid = 0U;
+static float g_cogging_prev_mech_angle_rad = 0.0f;
+
+static void FOC_CoggingResetSpeedEstimator(void)
+{
+    g_cogging_speed_est_valid = 0U;
+    g_cogging_prev_mech_angle_rad = 0.0f;
+}
+
+static uint8_t FOC_CoggingComputePhaseRad(const foc_motor_t *motor,
+                                          float mech_angle_rad,
+                                          float *phase_rad)
+{
+    float mech_delta_rad;
+
+    if ((motor == 0) || (phase_rad == 0))
+    {
+        return 0U;
+    }
+
+    if ((motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
+        (motor->direction == FOC_DIR_UNDEFINED) ||
+        (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
+    {
+        return 0U;
+    }
+
+    mech_delta_rad = Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_at_elec_zero_rad);
+    *phase_rad = Math_WrapRad((float)motor->direction * mech_delta_rad * (float)motor->pole_pairs);
+    return 1U;
+}
+
+static float FOC_CoggingEstimateSpeedAbsRadS(float mech_angle_rad, float speed_ref_rad_s)
+{
+    float dt_sec = FOC_CONTROL_DT_SEC;
+    float speed_abs_rad_s;
+
+    if (dt_sec <= 1e-6f)
+    {
+        return fabsf(speed_ref_rad_s);
+    }
+
+    if (g_cogging_speed_est_valid == 0U)
+    {
+        g_cogging_prev_mech_angle_rad = mech_angle_rad;
+        g_cogging_speed_est_valid = 1U;
+        return fabsf(speed_ref_rad_s);
+    }
+
+    speed_abs_rad_s = fabsf(Math_WrapRadDelta(mech_angle_rad - g_cogging_prev_mech_angle_rad) / dt_sec);
+    g_cogging_prev_mech_angle_rad = mech_angle_rad;
+    return speed_abs_rad_s;
+}
+
 static int16_t FOC_QuantizeCoggingIqToQ15(float iq_a, float iq_lsb_a)
 {
     float scaled;
@@ -149,7 +203,9 @@ static uint8_t FOC_LearnCoggingTable(foc_motor_t *motor,
         return 0U;
     }
 
-    if ((motor->pole_pairs == 0U) || (motor->direction == FOC_DIR_UNDEFINED))
+    if ((motor->pole_pairs == 0U) ||
+        (motor->direction == FOC_DIR_UNDEFINED) ||
+        (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
     {
         return 0U;
     }
@@ -217,8 +273,8 @@ static uint8_t FOC_LearnCoggingTable(foc_motor_t *motor,
 
 float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
                                  const int16_t *table_q15,
-                                 float mech_angle_rad,
-                                 float speed_ref_rad_s)
+                                 float cogging_phase_rad,
+                                 float speed_abs_rad_s)
 {
     float angle_rad;
     float index_f;
@@ -242,7 +298,7 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
         return 0.0f;
     }
 
-    angle_rad = Math_WrapRad(mech_angle_rad);
+    angle_rad = Math_WrapRad(cogging_phase_rad);
     index_f = angle_rad * ((float)status->point_count / FOC_MATH_TWO_PI);
     index_0 = (uint16_t)index_f;
     if (index_0 >= status->point_count)
@@ -256,7 +312,7 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
     iq_1 = (float)table_q15[index_1] * status->iq_lsb_a;
     iq_comp = iq_0 + (iq_1 - iq_0) * frac;
 
-    speed_abs = fabsf(speed_ref_rad_s);
+    speed_abs = (speed_abs_rad_s >= 0.0f) ? speed_abs_rad_s : -speed_abs_rad_s;
     if (status->speed_gate_rad_s > 1e-6f)
     {
         if (speed_abs >= status->speed_gate_rad_s)
@@ -276,15 +332,25 @@ void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                          float mech_angle_rad,
                                          float speed_ref_rad_s)
 {
+    float phase_rad;
+    float speed_abs_rad_s;
+
     if (motor == 0)
     {
         return;
     }
 
+    if (FOC_CoggingComputePhaseRad(motor, mech_angle_rad, &phase_rad) == 0U)
+    {
+        return;
+    }
+
+    speed_abs_rad_s = FOC_CoggingEstimateSpeedAbsRadS(mech_angle_rad, speed_ref_rad_s);
+
     motor->iq_target += FOC_ControlCoggingLookupIq(&motor->cogging_comp_status,
                                                    motor->cogging_comp_table_q15,
-                                                   mech_angle_rad,
-                                                   speed_ref_rad_s);
+                                                   phase_rad,
+                                                   speed_abs_rad_s);
 }
 
 uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
@@ -332,6 +398,9 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source)
 
     motor->cogging_comp_status.available = 0U;
     motor->cogging_comp_status.source = source;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    FOC_CoggingResetSpeedEstimator();
+#endif
 }
 
 void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
@@ -343,6 +412,8 @@ void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
     int16_t table_q15[FOC_COGGING_LUT_POINT_COUNT];
     uint8_t loaded = 0U;
     char out[128];
+
+    FOC_CoggingResetSpeedEstimator();
 
     if (FOC_LoadStaticCoggingTable(table_q15,
                                    FOC_COGGING_LUT_POINT_COUNT,
@@ -362,21 +433,30 @@ void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
 
     if ((loaded == 0U) && (FOC_COGGING_INIT_LEARN_ENABLE == FOC_CFG_ENABLE))
     {
-        FOC_Platform_WriteDebugText("cogging.init: static table not found, start learning\r\n");
-        if (FOC_LearnCoggingTable(motor,
-                                  table_q15,
-                                  FOC_COGGING_LUT_POINT_COUNT,
-                                  FOC_COGGING_LUT_IQ_LSB_A) != 0U)
+        if ((motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
+            (motor->direction == FOC_DIR_UNDEFINED) ||
+            (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
         {
-            if (FOC_ControlLoadCoggingCompTableQ15(motor,
-                                                   table_q15,
-                                                   FOC_COGGING_LUT_POINT_COUNT,
-                                                   FOC_COGGING_LUT_IQ_LSB_A,
-                                                   FOC_COGGING_COMP_SOURCE_INIT_LEARN) != 0U)
+            FOC_Platform_WriteDebugText("cogging.init: skip learning due to invalid calibration base\r\n");
+        }
+        else
+        {
+            FOC_Platform_WriteDebugText("cogging.init: static table not found, start learning\r\n");
+            if (FOC_LearnCoggingTable(motor,
+                                      table_q15,
+                                      FOC_COGGING_LUT_POINT_COUNT,
+                                      FOC_COGGING_LUT_IQ_LSB_A) != 0U)
             {
-                loaded = 1U;
-                FOC_Platform_WriteDebugText("cogging.init: learning finished\r\n");
-                FOC_DumpCoggingCompTable("learned", table_q15, FOC_COGGING_LUT_POINT_COUNT, FOC_COGGING_LUT_IQ_LSB_A);
+                if (FOC_ControlLoadCoggingCompTableQ15(motor,
+                                                       table_q15,
+                                                       FOC_COGGING_LUT_POINT_COUNT,
+                                                       FOC_COGGING_LUT_IQ_LSB_A,
+                                                       FOC_COGGING_COMP_SOURCE_INIT_LEARN) != 0U)
+                {
+                    loaded = 1U;
+                    FOC_Platform_WriteDebugText("cogging.init: learning finished\r\n");
+                    FOC_DumpCoggingCompTable("learned", table_q15, FOC_COGGING_LUT_POINT_COUNT, FOC_COGGING_LUT_IQ_LSB_A);
+                }
             }
         }
     }
