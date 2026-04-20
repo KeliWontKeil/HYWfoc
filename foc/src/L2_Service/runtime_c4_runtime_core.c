@@ -96,6 +96,9 @@ void RuntimeC4Store_ResetStorageDefaults(void)
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     g_states.current_soft_switch_enable = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
 #endif
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    g_states.cogging_comp_enable = (uint8_t)FOC_COGGING_COMP_ENABLE;
+#endif
 }
 
 runtime_c4_state_t *RuntimeC4Store_Runtime(void)
@@ -406,6 +409,13 @@ uint8_t RuntimeC4Store_WriteState(char subcommand, uint8_t state)
         break;
 #endif
 
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
+        states->cogging_comp_enable = normalized_state;
+        runtime->params_dirty = 1U;
+        break;
+#endif
+
     default:
         return 0U;
     }
@@ -576,6 +586,12 @@ uint8_t RuntimeC4Store_ReadState(char subcommand, uint8_t *state_out)
         break;
 #endif
 
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
+        *state_out = states->cogging_comp_enable;
+        break;
+#endif
+
     default:
         return 0U;
     }
@@ -653,7 +669,10 @@ void RuntimeC4Store_ReportAllStates(void)
         COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE,
 #endif
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE
+        COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE,
+#endif
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE
 #endif
     };
     uint16_t i;
@@ -715,6 +734,9 @@ void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->control_cfg.current_soft_switch_mode = g_params.current_soft_switch_mode;
     snapshot->control_cfg.current_soft_switch_auto_open_iq_a = g_params.current_soft_switch_auto_open_iq_a;
     snapshot->control_cfg.current_soft_switch_auto_closed_iq_a = g_params.current_soft_switch_auto_closed_iq_a;
+#endif
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    snapshot->control_cfg.cogging_comp_enable = g_states.cogging_comp_enable;
 #endif
 
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
@@ -1118,6 +1140,9 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     params->current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
     params->current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
     states->current_soft_switch_enable = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
+#endif
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    states->cogging_comp_enable = (uint8_t)FOC_COGGING_COMP_ENABLE;
 #endif
 
     return 1U;

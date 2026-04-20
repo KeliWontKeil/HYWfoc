@@ -61,6 +61,7 @@ typedef struct {
     uint8_t semantic_enable;
     uint8_t osc_enable;
     uint8_t current_soft_switch_enable;
+    uint8_t cogging_comp_enable;
 } runtime_c4_states_view_t;
 
 void RuntimeC4_Init(void);
