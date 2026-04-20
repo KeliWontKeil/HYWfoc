@@ -168,27 +168,9 @@ void RuntimeFramePipeline_Init(void)
     RuntimeStateMachine_Init();
 }
 
-void RuntimeFramePipeline_UpdateSignals(const runtime_frame_pipeline_signal_t *signal)
+void RuntimeFramePipeline_UpdateSignals(const runtime_step_signal_t *signal)
 {
-    runtime_state_signal_t state_signal;
-
-    if (signal == 0)
-    {
-        RuntimeStateMachine_UpdateSignals(0);
-        return;
-    }
-
-    state_signal.init_checks_pass_mask = signal->init_checks_pass_mask;
-    state_signal.init_checks_fail_mask = signal->init_checks_fail_mask;
-    state_signal.finalize_init = signal->finalize_init;
-    state_signal.sensor_state_updated = signal->sensor_state_updated;
-    state_signal.adc_valid = signal->adc_valid;
-    state_signal.encoder_valid = signal->encoder_valid;
-    state_signal.control_loop_skipped = signal->control_loop_skipped;
-    state_signal.undervoltage_fault = signal->undervoltage_fault;
-    state_signal.undervoltage_vbus = signal->undervoltage_vbus;
-
-    RuntimeStateMachine_UpdateSignals(&state_signal);
+    RuntimeStateMachine_UpdateSignals(signal);
 }
 
 uint8_t RuntimeFramePipeline_ProcessOneFrame(void)
@@ -212,11 +194,11 @@ uint8_t RuntimeFramePipeline_ProcessOneFrame(void)
 
 void RuntimeFramePipeline_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeStateMachine_BuildSnapshot(snapshot);
+    RuntimeCommandRouter_BuildSnapshot(snapshot);
 }
 
 void RuntimeFramePipeline_Commit(void)
 {
-    RuntimeStateMachine_Commit();
+    RuntimeCommandRouter_ClearDirty();
 }
 

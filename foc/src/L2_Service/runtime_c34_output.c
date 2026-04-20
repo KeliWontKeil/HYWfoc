@@ -3,16 +3,9 @@
 #include <stdio.h>
 
 #include "L3_Algorithm/protocol_core.h"
+#include "L2_Service/runtime_internal_types.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
-
-#define RUNTIME_OUTPUT_FAULT_NONE 0U
-#define RUNTIME_OUTPUT_FAULT_SENSOR_ADC_INVALID 1U
-#define RUNTIME_OUTPUT_FAULT_SENSOR_ENCODER_INVALID 2U
-#define RUNTIME_OUTPUT_FAULT_UNDERVOLTAGE 3U
-#define RUNTIME_OUTPUT_FAULT_PROTOCOL_FRAME 4U
-#define RUNTIME_OUTPUT_FAULT_PARAM_INVALID 5U
-#define RUNTIME_OUTPUT_FAULT_INIT_FAILED 6U
 
 void RuntimeOutput_WriteText(const char *text)
 {
@@ -33,19 +26,19 @@ const char *RuntimeOutput_GetFaultName(uint8_t fault_code)
 {
     switch (fault_code)
     {
-    case RUNTIME_OUTPUT_FAULT_NONE:
+    case RUNTIME_FAULT_NONE:
         return "NONE";
-    case RUNTIME_OUTPUT_FAULT_SENSOR_ADC_INVALID:
+    case RUNTIME_FAULT_SENSOR_ADC_INVALID:
         return "SENSOR_ADC_INVALID";
-    case RUNTIME_OUTPUT_FAULT_SENSOR_ENCODER_INVALID:
+    case RUNTIME_FAULT_SENSOR_ENCODER_INVALID:
         return "SENSOR_ENCODER_INVALID";
-    case RUNTIME_OUTPUT_FAULT_UNDERVOLTAGE:
+    case RUNTIME_FAULT_UNDERVOLTAGE:
         return "UNDERVOLTAGE";
-    case RUNTIME_OUTPUT_FAULT_PROTOCOL_FRAME:
+    case RUNTIME_FAULT_PROTOCOL_FRAME:
         return "PROTOCOL_FRAME";
-    case RUNTIME_OUTPUT_FAULT_PARAM_INVALID:
+    case RUNTIME_FAULT_PARAM_INVALID:
         return "PARAM_INVALID";
-    case RUNTIME_OUTPUT_FAULT_INIT_FAILED:
+    case RUNTIME_FAULT_INIT_FAILED:
         return "INIT_FAILED";
     default:
         return "UNKNOWN";

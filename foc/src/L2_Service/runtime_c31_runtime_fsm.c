@@ -16,14 +16,6 @@
 #define RUNTIME_STATE_DIAG_SUCCESS 1U
 #define RUNTIME_STATE_DIAG_FAILED 2U
 
-#define RUNTIME_STATE_FAULT_NONE 0U
-#define RUNTIME_STATE_FAULT_SENSOR_ADC_INVALID 1U
-#define RUNTIME_STATE_FAULT_SENSOR_ENCODER_INVALID 2U
-#define RUNTIME_STATE_FAULT_UNDERVOLTAGE 3U
-#define RUNTIME_STATE_FAULT_PROTOCOL_FRAME 4U
-#define RUNTIME_STATE_FAULT_PARAM_INVALID 5U
-#define RUNTIME_STATE_FAULT_INIT_FAILED 6U
-
 #define RUNTIME_STATE_INIT_REQUIRED_MASK ((1U << 0) | \
                                        (1U << 1) | \
                                        (1U << 2) | \
@@ -41,7 +33,7 @@ void RuntimeStateMachine_Init(void)
     RuntimeCommandRouter_UpdateReportMode();
 }
 
-void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
+void RuntimeStateMachine_UpdateSignals(const runtime_step_signal_t *signal)
 {
     runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
 
@@ -60,7 +52,7 @@ void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
             runtime->sensor_invalid_consecutive = 0U;
             if (runtime->system_state != RUNTIME_STATE_SYSTEM_FAULT)
             {
-                runtime->last_fault_code = RUNTIME_STATE_FAULT_NONE;
+                runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_NONE;
             }
         }
         else
@@ -72,11 +64,11 @@ void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
 
             if (signal->adc_valid == 0U)
             {
-                runtime->last_fault_code = RUNTIME_STATE_FAULT_SENSOR_ADC_INVALID;
+                runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_SENSOR_ADC_INVALID;
             }
             else
             {
-                runtime->last_fault_code = RUNTIME_STATE_FAULT_SENSOR_ENCODER_INVALID;
+                runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_SENSOR_ENCODER_INVALID;
             }
 
             if (runtime->sensor_invalid_consecutive >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
@@ -108,7 +100,7 @@ void RuntimeStateMachine_UpdateSignals(const runtime_state_signal_t *signal)
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
         char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
         runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
-        runtime->last_fault_code = RUNTIME_STATE_FAULT_UNDERVOLTAGE;
+        runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_UNDERVOLTAGE;
     #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
         runtime->control_skip_count++;
     #endif
@@ -162,14 +154,14 @@ uint8_t RuntimeStateMachine_HandleCommand(const protocol_command_t *cmd)
 #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
             runtime->param_error_count++;
 #endif
-            runtime->last_fault_code = RUNTIME_STATE_FAULT_PARAM_INVALID;
+            runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_PARAM_INVALID;
         }
         else
         {
 #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
             runtime->protocol_error_count++;
 #endif
-            runtime->last_fault_code = RUNTIME_STATE_FAULT_PROTOCOL_FRAME;
+            runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_PROTOCOL_FRAME;
         }
 
         RuntimeCommandRouter_OutputDiag("ERR", "fallback", "keep previous params");
@@ -190,18 +182,8 @@ void RuntimeStateMachine_ReportFrameError(void)
 #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
     runtime->protocol_error_count++;
 #endif
-    runtime->last_fault_code = RUNTIME_STATE_FAULT_PROTOCOL_FRAME;
+    runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_PROTOCOL_FRAME;
     RuntimeCommandRouter_WriteStatusFrameError();
-}
-
-void RuntimeStateMachine_BuildSnapshot(runtime_snapshot_t *snapshot)
-{
-    RuntimeCommandRouter_BuildSnapshot(snapshot);
-}
-
-void RuntimeStateMachine_Commit(void)
-{
-    RuntimeCommandRouter_ClearDirty();
 }
 
 static void RuntimeStateMachine_FinalizeInitDiagnostics(void)
@@ -213,7 +195,7 @@ static void RuntimeStateMachine_FinalizeInitDiagnostics(void)
     {
         runtime->init_diag = RUNTIME_STATE_DIAG_NOT_EXECUTED;
         runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
-        runtime->last_fault_code = RUNTIME_STATE_FAULT_INIT_FAILED;
+        runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_INIT_FAILED;
         RuntimeCommandRouter_OutputDiag("ERR", "init", "no checks executed");
         return;
     }
@@ -222,13 +204,13 @@ static void RuntimeStateMachine_FinalizeInitDiagnostics(void)
     {
         runtime->init_diag = RUNTIME_STATE_DIAG_SUCCESS;
         runtime->system_state = RUNTIME_STATE_SYSTEM_RUNNING;
-        runtime->last_fault_code = RUNTIME_STATE_FAULT_NONE;
+        runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_NONE;
     }
     else
     {
         runtime->init_diag = RUNTIME_STATE_DIAG_FAILED;
         runtime->system_state = RUNTIME_STATE_SYSTEM_FAULT;
-        runtime->last_fault_code = RUNTIME_STATE_FAULT_INIT_FAILED;
+        runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_INIT_FAILED;
     }
 
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)

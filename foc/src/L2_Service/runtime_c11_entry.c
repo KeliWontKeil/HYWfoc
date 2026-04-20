@@ -9,7 +9,7 @@ void RuntimeService_Init(void)
 
 uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_input_t *input)
 {
-    runtime_frame_pipeline_signal_t pipeline_signal;
+    runtime_step_signal_t pipeline_signal;
     uint8_t consumed = 0U;
     uint8_t has_comm_activity = 0U;
 
