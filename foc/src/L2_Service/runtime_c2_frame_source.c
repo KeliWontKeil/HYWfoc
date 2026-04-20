@@ -1,6 +1,6 @@
-#include "L2_Service/runtime_c21_frame_source.h"
+#include "L2_Service/runtime_c2_frame_source.h"
 
-#include "L2_Service/runtime_c31_runtime_fsm.h"
+#include "L2_Service/runtime_c3_runtime_fsm.h"
 #include "L3_Algorithm/protocol_core.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
@@ -142,7 +142,7 @@ static uint8_t ParseAndDispatchFrame(const uint8_t *frame, uint16_t len)
 
     if (ProtocolCore_ExtractFrame(frame, len, &payload, &payload_len) == 0U)
     {
-        RuntimeStateMachine_ReportFrameError();
+        RuntimeC3_ReportFrameError();
         return 0U;
     }
 
@@ -154,26 +154,26 @@ static uint8_t ParseAndDispatchFrame(const uint8_t *frame, uint16_t len)
 
     if (parse_result != PROTOCOL_CORE_FRAME_PARSE_OK)
     {
-        RuntimeStateMachine_ReportFrameError();
+        RuntimeC3_ReportFrameError();
         return 0U;
     }
 
     command.updated = 1U;
-    return RuntimeStateMachine_HandleCommand(&command);
+    return RuntimeC3_HandleCommand(&command);
 }
 
-void RuntimeFramePipeline_Init(void)
+void RuntimeC2_Init(void)
 {
     g_preferred_source = 0U;
-    RuntimeStateMachine_Init();
+    RuntimeC3_Init();
 }
 
-void RuntimeFramePipeline_UpdateSignals(const runtime_step_signal_t *signal)
+void RuntimeC2_UpdateSignals(const runtime_step_signal_t *signal)
 {
-    RuntimeStateMachine_UpdateSignals(signal);
+    RuntimeC3_UpdateSignals(signal);
 }
 
-uint8_t RuntimeFramePipeline_ProcessOneFrame(void)
+uint8_t RuntimeC2_ProcessOneFrame(void)
 {
     uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
     uint16_t len;
@@ -192,13 +192,14 @@ uint8_t RuntimeFramePipeline_ProcessOneFrame(void)
     return ParseAndDispatchFrame(frame, len);
 }
 
-void RuntimeFramePipeline_BuildSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeC2_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeStateMachine_BuildSnapshot(snapshot);
+    RuntimeC3_BuildSnapshot(snapshot);
 }
 
-void RuntimeFramePipeline_Commit(void)
+void RuntimeC2_Commit(void)
 {
-    RuntimeStateMachine_Commit();
+    RuntimeC3_Commit();
 }
+
 

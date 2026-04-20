@@ -28,13 +28,13 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
-        - path: ../../../foc/src/L2_Service/runtime_c11_entry.c
+        - path: ../../../foc/src/L2_Service/runtime_c1_entry.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c
-        - path: ../../../foc/src/L2_Service/runtime_c21_frame_source.c
-        - path: ../../../foc/src/L2_Service/runtime_c31_runtime_fsm.c
-        - path: ../../../foc/src/L2_Service/runtime_c32_command_router.c
-        - path: ../../../foc/src/L2_Service/runtime_c33_output.c
+        - path: ../../../foc/src/L2_Service/runtime_c2_frame_source.c
+        - path: ../../../foc/src/L2_Service/runtime_c3_runtime_fsm.c
+        - path: ../../../foc/src/L2_Service/runtime_c4_runtime_core.c
+        - path: ../../../foc/src/L2_Service/runtime_c5_output_adapter.c
       folders: []
     - name: CMSIS
       files:

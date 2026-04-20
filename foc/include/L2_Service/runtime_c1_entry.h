@@ -1,5 +1,5 @@
-#ifndef RUNTIME_C11_ENTRY_H
-#define RUNTIME_C11_ENTRY_H
+#ifndef RUNTIME_C1_ENTRY_H
+#define RUNTIME_C1_ENTRY_H
 
 #include <stdint.h>
 
@@ -28,12 +28,13 @@ typedef struct {
 
     uint8_t undervoltage_fault;
     float undervoltage_vbus;
-} runtime_service_step_input_t;
+} runtime_c1_step_input_t;
 
-void RuntimeService_Init(void);
-uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_input_t *input);
-void RuntimeService_GetSnapshot(runtime_snapshot_t *snapshot);
-void RuntimeService_Commit(void);
+void RuntimeC1_Init(void);
+uint8_t RuntimeC1_RunStep(uint8_t frame_budget, const runtime_c1_step_input_t *input);
+void RuntimeC1_GetSnapshot(runtime_snapshot_t *snapshot);
+void RuntimeC1_Commit(void);
 
-#endif /* RUNTIME_C11_ENTRY_H */
+#endif /* RUNTIME_C1_ENTRY_H */
+
 

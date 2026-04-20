@@ -1,15 +1,15 @@
-#include "L2_Service/runtime_c32_command_router.h"
+#include "L2_Service/runtime_c4_runtime_core.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#include "L2_Service/runtime_c33_output.h"
+#include "L2_Service/runtime_c5_output_adapter.h"
 #include "L3_Algorithm/protocol_core.h"
 #include "LS_Config/foc_config.h"
 
-typedef runtime_runtime_view_t runtime_runtime_state_t;
-typedef runtime_params_view_t runtime_params_t;
-typedef runtime_states_view_t runtime_states_t;
+typedef runtime_c4_runtime_view_t runtime_c4_state_t;
+typedef runtime_c4_params_view_t runtime_c4_params_t;
+typedef runtime_c4_states_view_t runtime_c4_states_t;
 
 #define RUNTIME_STORE_SYSTEM_INIT 0U
 #define RUNTIME_STORE_SYSTEM_RUNNING 1U
@@ -28,11 +28,11 @@ typedef runtime_states_view_t runtime_states_t;
 
 #define RUNTIME_STORE_FAULT_NONE 0U
 
-static runtime_runtime_state_t g_runtime;
-static runtime_params_t g_params;
-static runtime_states_t g_states;
+static runtime_c4_state_t g_runtime;
+static runtime_c4_params_t g_params;
+static runtime_c4_states_t g_states;
 
-static uint8_t RuntimeStore_IsInRange(float value, float min_value, float max_value)
+static uint8_t RuntimeC4Store_IsInRange(float value, float min_value, float max_value)
 {
     if ((value < min_value) || (value > max_value))
     {
@@ -42,7 +42,7 @@ static uint8_t RuntimeStore_IsInRange(float value, float min_value, float max_va
     return 1U;
 }
 
-void RuntimeStore_ResetStorageDefaults(void)
+void RuntimeC4Store_ResetStorageDefaults(void)
 {
     (void)memset(&g_runtime, 0, sizeof(g_runtime));
     (void)memset(&g_params, 0, sizeof(g_params));
@@ -98,30 +98,30 @@ void RuntimeStore_ResetStorageDefaults(void)
 #endif
 }
 
-runtime_runtime_state_t *RuntimeStore_Runtime(void)
+runtime_c4_state_t *RuntimeC4Store_Runtime(void)
 {
     return &g_runtime;
 }
 
-runtime_params_t *RuntimeStore_Params(void)
+runtime_c4_params_t *RuntimeC4Store_Params(void)
 {
     return &g_params;
 }
 
-runtime_states_t *RuntimeStore_States(void)
+runtime_c4_states_t *RuntimeC4Store_States(void)
 {
     return &g_states;
 }
 
-uint8_t RuntimeStore_WriteParam(char subcommand, float value)
+uint8_t RuntimeC4Store_WriteParam(char subcommand, float value)
 {
-    runtime_runtime_state_t *runtime = RuntimeStore_Runtime();
-    runtime_params_t *params = RuntimeStore_Params();
+    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_params_t *params = RuntimeC4Store_Params();
 
     switch (subcommand)
     {
     case COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_TARGET_ANGLE_MIN_RAD,
                                  COMMAND_MANAGER_PARAM_TARGET_ANGLE_MAX_RAD) == 0U)
         {
@@ -131,7 +131,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_ANGLE_SPEED_MIN_RAD_S,
                                  COMMAND_MANAGER_PARAM_ANGLE_SPEED_MAX_RAD_S) == 0U)
         {
@@ -141,7 +141,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_SPEED_ONLY_MIN_RAD_S,
                                  COMMAND_MANAGER_PARAM_SPEED_ONLY_MAX_RAD_S) == 0U)
         {
@@ -152,7 +152,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MIN_PERCENT,
                                  COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MAX_PERCENT) == 0U)
         {
@@ -193,7 +193,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U)
         {
@@ -203,7 +203,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U)
         {
@@ -213,7 +213,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN,
                                  COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U)
         {
@@ -225,7 +225,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U)
         {
@@ -235,7 +235,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MIN,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MAX) == 0U)
         {
@@ -245,7 +245,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MIN,
                                  COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MAX) == 0U)
         {
@@ -257,7 +257,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
 
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U)
         {
@@ -267,7 +267,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KI_MIN,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KI_MAX) == 0U)
         {
@@ -277,7 +277,7 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD:
-        if (RuntimeStore_IsInRange(value,
+        if (RuntimeC4Store_IsInRange(value,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KD_MIN,
                                  COMMAND_MANAGER_PARAM_PID_SPEED_KD_MAX) == 0U)
         {
@@ -377,10 +377,10 @@ uint8_t RuntimeStore_WriteParam(char subcommand, float value)
     return 1U;
 }
 
-uint8_t RuntimeStore_WriteState(char subcommand, uint8_t state)
+uint8_t RuntimeC4Store_WriteState(char subcommand, uint8_t state)
 {
-    runtime_runtime_state_t *runtime = RuntimeStore_Runtime();
-    runtime_states_t *states = RuntimeStore_States();
+    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_states_t *states = RuntimeC4Store_States();
     uint8_t normalized_state = (state != 0U) ? COMMAND_MANAGER_ENABLED_ENABLE : COMMAND_MANAGER_ENABLED_DISABLE;
 
     switch (subcommand)
@@ -413,9 +413,9 @@ uint8_t RuntimeStore_WriteState(char subcommand, uint8_t state)
     return 1U;
 }
 
-uint8_t RuntimeStore_ReadParam(char subcommand, float *value_out)
+uint8_t RuntimeC4Store_ReadParam(char subcommand, float *value_out)
 {
-    const runtime_params_t *params = RuntimeStore_Params();
+    const runtime_c4_params_t *params = RuntimeC4Store_Params();
 
     if (value_out == 0)
     {
@@ -545,9 +545,9 @@ uint8_t RuntimeStore_ReadParam(char subcommand, float *value_out)
     return 1U;
 }
 
-uint8_t RuntimeStore_ReadState(char subcommand, uint8_t *state_out)
+uint8_t RuntimeC4Store_ReadState(char subcommand, uint8_t *state_out)
 {
-    const runtime_states_t *states = RuntimeStore_States();
+    const runtime_c4_states_t *states = RuntimeC4Store_States();
 
     if (state_out == 0)
     {
@@ -583,7 +583,7 @@ uint8_t RuntimeStore_ReadState(char subcommand, uint8_t *state_out)
     return 1U;
 }
 
-void RuntimeStore_ReportAllParams(void)
+void RuntimeC4Store_ReportAllParams(void)
 {
     float value;
     const char params[] = {
@@ -631,19 +631,19 @@ void RuntimeStore_ReportAllParams(void)
 
     for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
     {
-        if (RuntimeStore_ReadParam(params[i], &value) != 0U)
+        if (RuntimeC4Store_ReadParam(params[i], &value) != 0U)
         {
-            RuntimeOutput_OutputParam(params[i], value);
+            RuntimeC5_OutputParam(params[i], value);
         }
     }
 }
 
-void RuntimeStore_OutputParam(char subcommand, float value)
+void RuntimeC4Store_OutputParam(char subcommand, float value)
 {
-    RuntimeOutput_OutputParam(subcommand, value);
+    RuntimeC5_OutputParam(subcommand, value);
 }
 
-void RuntimeStore_ReportAllStates(void)
+void RuntimeC4Store_ReportAllStates(void)
 {
     uint8_t state;
     const char states[] = {
@@ -660,19 +660,19 @@ void RuntimeStore_ReportAllStates(void)
 
     for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
     {
-        if (RuntimeStore_ReadState(states[i], &state) != 0U)
+        if (RuntimeC4Store_ReadState(states[i], &state) != 0U)
         {
-            RuntimeOutput_OutputState(states[i], state);
+            RuntimeC5_OutputState(states[i], state);
         }
     }
 }
 
-void RuntimeStore_OutputState(char subcommand, uint8_t value)
+void RuntimeC4Store_OutputState(char subcommand, uint8_t value)
 {
-    RuntimeOutput_OutputState(subcommand, value);
+    RuntimeC5_OutputState(subcommand, value);
 }
 
-void RuntimeStore_BuildSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
     if (snapshot == 0)
     {
@@ -726,17 +726,17 @@ void RuntimeStore_BuildSnapshot(runtime_snapshot_t *snapshot)
 #endif
 }
 
-void RuntimeStore_ClearDirty(void)
+void RuntimeC4Store_ClearDirty(void)
 {
     g_runtime.params_dirty = 0U;
 }
 
-void RuntimeStore_OutputDiag(const char *level, const char *module, const char *detail)
+void RuntimeC4Store_OutputDiag(const char *level, const char *module, const char *detail)
 {
-    RuntimeOutput_OutputDiag(level, module, detail);
+    RuntimeC5_OutputDiag(level, module, detail);
 }
 
-void RuntimeStore_OutputRuntimeSummary(void)
+void RuntimeC4Store_OutputRuntimeSummary(void)
 {
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -750,16 +750,16 @@ void RuntimeStore_OutputRuntimeSummary(void)
              (unsigned int)g_runtime.params_dirty,
              (unsigned int)g_runtime.last_exec_ok,
              (unsigned int)g_runtime.init_diag,
-             RuntimeOutput_GetFaultName(g_runtime.last_fault_code),
+             RuntimeC5_GetFaultName(g_runtime.last_fault_code),
              (unsigned int)g_runtime.sensor_invalid_consecutive,
              (unsigned long)g_runtime.protocol_error_count,
              (unsigned long)g_runtime.param_error_count,
              (unsigned long)g_runtime.control_skip_count);
-    RuntimeOutput_WriteText(out);
+    RuntimeC5_WriteText(out);
 #endif
 }
 
-void RuntimeStore_OutputFaultControlSummary(void)
+void RuntimeC4Store_OutputFaultControlSummary(void)
 {
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -768,57 +768,136 @@ void RuntimeStore_OutputFaultControlSummary(void)
              sizeof(out),
              "FAULT_CTRL state=%u fault=%s proto_err=%lu param_err=%lu ctrl_skip=%lu\r\n",
              (unsigned int)g_runtime.system_state,
-             RuntimeOutput_GetFaultName(g_runtime.last_fault_code),
+             RuntimeC5_GetFaultName(g_runtime.last_fault_code),
              (unsigned long)g_runtime.protocol_error_count,
              (unsigned long)g_runtime.param_error_count,
              (unsigned long)g_runtime.control_skip_count);
-    RuntimeOutput_WriteText(out);
+    RuntimeC5_WriteText(out);
 #endif
 }
 
-const char *RuntimeStore_GetFaultName(uint8_t fault_code)
+const char *RuntimeC4Store_GetFaultName(uint8_t fault_code)
 {
-    return RuntimeOutput_GetFaultName(fault_code);
+    return RuntimeC5_GetFaultName(fault_code);
 }
 
-void RuntimeStore_WriteText(const char *text)
+void RuntimeC4Store_WriteText(const char *text)
 {
-    RuntimeOutput_WriteText(text);
+    RuntimeC5_WriteText(text);
 }
 
-void RuntimeStore_WriteStatusByte(uint8_t status)
+void RuntimeC4Store_WriteStatusByte(uint8_t status)
 {
-    RuntimeOutput_WriteStatusByte(status);
+    RuntimeC5_WriteStatusByte(status);
 }
 
 
-void RuntimeCommandRouter_Init(void)
+void RuntimeC4_Init(void)
 {
-    RuntimeStore_ResetStorageDefaults();
-    RuntimeStore_OutputDiag("INFO", "command_manager", "READY");
-    RuntimeStore_OutputDiag("INFO", "protocol_exec", "NOT_EXECUTED");
-    RuntimeStore_OutputDiag("INFO", "fallback", "KEEP_LAST_VALID");
+    RuntimeC4Store_ResetStorageDefaults();
+    RuntimeC4Store_OutputDiag("INFO", "command_manager", "READY");
+    RuntimeC4Store_OutputDiag("INFO", "protocol_exec", "NOT_EXECUTED");
+    RuntimeC4Store_OutputDiag("INFO", "fallback", "KEEP_LAST_VALID");
 }
 
-runtime_runtime_view_t *RuntimeCommandRouter_Runtime(void)
+void RuntimeC4_AccumulateInitChecks(uint16_t pass_mask, uint16_t fail_mask)
 {
-    return RuntimeStore_Runtime();
+    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
+
+    runtime->init_check_mask = (uint16_t)(runtime->init_check_mask | pass_mask | fail_mask);
+    runtime->init_fail_mask = (uint16_t)(runtime->init_fail_mask | fail_mask);
 }
 
-runtime_params_view_t *RuntimeCommandRouter_Params(void)
+uint16_t RuntimeC4_GetInitCheckMask(void)
 {
-    return RuntimeStore_Params();
+    return RuntimeC4Store_Runtime()->init_check_mask;
 }
 
-runtime_states_view_t *RuntimeCommandRouter_States(void)
+uint16_t RuntimeC4_GetInitFailMask(void)
 {
-    return RuntimeStore_States();
+    return RuntimeC4Store_Runtime()->init_fail_mask;
 }
 
-void RuntimeCommandRouter_UpdateReportMode(void)
+void RuntimeC4_ResetSensorInvalidConsecutive(void)
 {
-    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
-    const runtime_states_view_t *states = RuntimeCommandRouter_States();
+    RuntimeC4Store_Runtime()->sensor_invalid_consecutive = 0U;
+}
+
+void RuntimeC4_IncrementSensorInvalidConsecutive(void)
+{
+    RuntimeC4Store_Runtime()->sensor_invalid_consecutive++;
+}
+
+uint16_t RuntimeC4_GetSensorInvalidConsecutive(void)
+{
+    return RuntimeC4Store_Runtime()->sensor_invalid_consecutive;
+}
+
+void RuntimeC4_IncrementControlSkipCount(void)
+{
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
+    RuntimeC4Store_Runtime()->control_skip_count++;
+#endif
+}
+
+void RuntimeC4_IncrementProtocolErrorCount(void)
+{
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
+    RuntimeC4Store_Runtime()->protocol_error_count++;
+#endif
+}
+
+void RuntimeC4_IncrementParamErrorCount(void)
+{
+#if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
+    RuntimeC4Store_Runtime()->param_error_count++;
+#endif
+}
+
+void RuntimeC4_SetSystemState(uint8_t system_state)
+{
+    RuntimeC4Store_Runtime()->system_state = system_state;
+}
+
+uint8_t RuntimeC4_GetSystemState(void)
+{
+    return RuntimeC4Store_Runtime()->system_state;
+}
+
+void RuntimeC4_SetCommState(uint8_t comm_state)
+{
+    RuntimeC4Store_Runtime()->comm_state = comm_state;
+}
+
+void RuntimeC4_SetInitDiag(uint8_t init_diag)
+{
+    RuntimeC4Store_Runtime()->init_diag = init_diag;
+}
+
+uint8_t RuntimeC4_GetInitDiag(void)
+{
+    return RuntimeC4Store_Runtime()->init_diag;
+}
+
+void RuntimeC4_SetLastFaultCode(uint8_t fault_code)
+{
+    RuntimeC4Store_Runtime()->last_fault_code = fault_code;
+}
+
+uint8_t RuntimeC4_GetLastExecOk(void)
+{
+    return RuntimeC4Store_Runtime()->last_exec_ok;
+}
+
+void RuntimeC4_SetLastExecOk(uint8_t last_exec_ok)
+{
+    RuntimeC4Store_Runtime()->last_exec_ok = last_exec_ok;
+}
+
+void RuntimeC4_UpdateReportMode(void)
+{
+    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
+    const runtime_c4_states_t *states = RuntimeC4Store_States();
 
     if ((states->semantic_enable != 0U) && (states->osc_enable != 0U))
     {
@@ -838,72 +917,72 @@ void RuntimeCommandRouter_UpdateReportMode(void)
     }
 }
 
-static uint8_t RuntimeCommandRouter_ReportSingleParam(char subcommand)
+static uint8_t RuntimeC4_ReportSingleParam(char subcommand)
 {
     float value;
 
-    if (RuntimeStore_ReadParam(subcommand, &value) == 0U)
+    if (RuntimeC4Store_ReadParam(subcommand, &value) == 0U)
     {
         return 0U;
     }
 
-    RuntimeStore_OutputParam(subcommand, value);
+    RuntimeC4Store_OutputParam(subcommand, value);
     return 1U;
 }
 
-static uint8_t RuntimeCommandRouter_ReportSingleState(char subcommand)
+static uint8_t RuntimeC4_ReportSingleState(char subcommand)
 {
     uint8_t state;
 
-    if (RuntimeStore_ReadState(subcommand, &state) == 0U)
+    if (RuntimeC4Store_ReadState(subcommand, &state) == 0U)
     {
         return 0U;
     }
 
-    RuntimeStore_OutputState(subcommand, state);
+    RuntimeC4Store_OutputState(subcommand, state);
     return 1U;
 }
 
-runtime_command_exec_result_t RuntimeCommandRouter_Execute(const protocol_command_t *cmd)
+runtime_c4_exec_result_t RuntimeC4_ExecuteCommand(const protocol_command_t *cmd)
 {
     float value = 0.0f;
 
     if ((cmd == 0) || (cmd->frame_valid == 0U))
     {
-        RuntimeCommandRouter_WriteStatusFrameError();
-        return RUNTIME_CMD_EXEC_COMMAND_ERROR;
+        RuntimeC4_WriteStatusFrameError();
+        return RUNTIME_C4_EXEC_COMMAND_ERROR;
     }
 
     if (cmd->command == COMMAND_MANAGER_CMD_PARAM)
     {
         if (cmd->has_param != 0U)
         {
-            if (RuntimeStore_WriteParam(cmd->subcommand, cmd->param_value) == 0U)
+            if (RuntimeC4Store_WriteParam(cmd->subcommand, cmd->param_value) == 0U)
             {
-                RuntimeCommandRouter_WriteStatusParamInvalid();
-                return RUNTIME_CMD_EXEC_PARAM_ERROR;
+                RuntimeC4_WriteStatusParamInvalid();
+                return RUNTIME_C4_EXEC_PARAM_ERROR;
             }
 
-            if (RuntimeStore_ReadParam(cmd->subcommand, &value) != 0U)
+            if (RuntimeC4Store_ReadParam(cmd->subcommand, &value) != 0U)
             {
-                RuntimeStore_OutputParam(cmd->subcommand, value);
+                RuntimeC4Store_OutputParam(cmd->subcommand, value);
             }
-            return RUNTIME_CMD_EXEC_OK;
+            return RUNTIME_C4_EXEC_OK;
         }
 
         if (cmd->subcommand == COMMAND_MANAGER_PARAM_SUBCMD_READ_ALL)
         {
-            RuntimeStore_ReportAllParams();
-            return RUNTIME_CMD_EXEC_OK;
+            RuntimeC4Store_ReportAllParams();
+            return RUNTIME_C4_EXEC_OK;
         }
 
-        if (RuntimeCommandRouter_ReportSingleParam(cmd->subcommand) == 0U)
+        if (RuntimeC4_ReportSingleParam(cmd->subcommand) == 0U)
         {
-            RuntimeCommandRouter_WriteStatusParamInvalid();
-            return RUNTIME_CMD_EXEC_PARAM_ERROR;
+            RuntimeC4_WriteStatusParamInvalid();
+            return RUNTIME_C4_EXEC_PARAM_ERROR;
         }
 
-        return RUNTIME_CMD_EXEC_OK;
+        return RUNTIME_C4_EXEC_OK;
     }
 
     if (cmd->command == COMMAND_MANAGER_CMD_STATE)
@@ -914,100 +993,100 @@ runtime_command_exec_result_t RuntimeCommandRouter_Execute(const protocol_comman
         {
             if (ProtocolCore_ParseStateValue(cmd->param_value, &state) == 0U)
             {
-                RuntimeCommandRouter_WriteStatusParamInvalid();
-                return RUNTIME_CMD_EXEC_PARAM_ERROR;
+                RuntimeC4_WriteStatusParamInvalid();
+                return RUNTIME_C4_EXEC_PARAM_ERROR;
             }
 
-            if (RuntimeStore_WriteState(cmd->subcommand, state) == 0U)
+            if (RuntimeC4Store_WriteState(cmd->subcommand, state) == 0U)
             {
-                RuntimeCommandRouter_WriteStatusParamInvalid();
-                return RUNTIME_CMD_EXEC_PARAM_ERROR;
+                RuntimeC4_WriteStatusParamInvalid();
+                return RUNTIME_C4_EXEC_PARAM_ERROR;
             }
 
-            if (RuntimeStore_ReadState(cmd->subcommand, &state) == 0U)
+            if (RuntimeC4Store_ReadState(cmd->subcommand, &state) == 0U)
             {
-                RuntimeCommandRouter_WriteStatusParamInvalid();
-                return RUNTIME_CMD_EXEC_PARAM_ERROR;
+                RuntimeC4_WriteStatusParamInvalid();
+                return RUNTIME_C4_EXEC_PARAM_ERROR;
             }
 
-            RuntimeStore_OutputState(cmd->subcommand, state);
-            return RUNTIME_CMD_EXEC_OK;
+            RuntimeC4Store_OutputState(cmd->subcommand, state);
+            return RUNTIME_C4_EXEC_OK;
         }
 
         if (cmd->subcommand == COMMAND_MANAGER_STATE_SUBCMD_READ_ALL)
         {
-            RuntimeStore_ReportAllStates();
-            return RUNTIME_CMD_EXEC_OK;
+            RuntimeC4Store_ReportAllStates();
+            return RUNTIME_C4_EXEC_OK;
         }
 
-        if (RuntimeCommandRouter_ReportSingleState(cmd->subcommand) == 0U)
+        if (RuntimeC4_ReportSingleState(cmd->subcommand) == 0U)
         {
-            RuntimeCommandRouter_WriteStatusParamInvalid();
-            return RUNTIME_CMD_EXEC_PARAM_ERROR;
+            RuntimeC4_WriteStatusParamInvalid();
+            return RUNTIME_C4_EXEC_PARAM_ERROR;
         }
 
-        return RUNTIME_CMD_EXEC_OK;
+        return RUNTIME_C4_EXEC_OK;
     }
 
-    RuntimeCommandRouter_WriteStatusCmdInvalid();
-    return RUNTIME_CMD_EXEC_COMMAND_ERROR;
+    RuntimeC4_WriteStatusCmdInvalid();
+    return RUNTIME_C4_EXEC_COMMAND_ERROR;
 }
 
-void RuntimeCommandRouter_BuildSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeC4_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeStore_BuildSnapshot(snapshot);
+    RuntimeC4Store_BuildSnapshot(snapshot);
 }
 
-void RuntimeCommandRouter_ClearDirty(void)
+void RuntimeC4_ClearDirty(void)
 {
-    RuntimeStore_ClearDirty();
+    RuntimeC4Store_ClearDirty();
 }
 
-void RuntimeCommandRouter_OutputDiag(const char *level, const char *module, const char *detail)
+void RuntimeC4_OutputDiag(const char *level, const char *module, const char *detail)
 {
-    RuntimeStore_OutputDiag(level, module, detail);
+    RuntimeC4Store_OutputDiag(level, module, detail);
 }
 
-void RuntimeCommandRouter_OutputRuntimeSummary(void)
+void RuntimeC4_OutputRuntimeSummary(void)
 {
-    RuntimeStore_OutputRuntimeSummary();
+    RuntimeC4Store_OutputRuntimeSummary();
 }
 
-void RuntimeCommandRouter_OutputFaultControlSummary(void)
+void RuntimeC4_OutputFaultControlSummary(void)
 {
-    RuntimeStore_OutputFaultControlSummary();
+    RuntimeC4Store_OutputFaultControlSummary();
 }
 
-const char *RuntimeCommandRouter_GetFaultName(uint8_t fault_code)
+const char *RuntimeC4_GetFaultName(uint8_t fault_code)
 {
-    return RuntimeStore_GetFaultName(fault_code);
+    return RuntimeC4Store_GetFaultName(fault_code);
 }
 
-void RuntimeCommandRouter_WriteText(const char *text)
+void RuntimeC4_WriteText(const char *text)
 {
-    RuntimeStore_WriteText(text);
+    RuntimeC4Store_WriteText(text);
 }
 
-void RuntimeCommandRouter_WriteStatusFrameError(void)
+void RuntimeC4_WriteStatusFrameError(void)
 {
-    RuntimeStore_WriteStatusByte((uint8_t)PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR);
+    RuntimeC4Store_WriteStatusByte((uint8_t)PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR);
 }
 
-void RuntimeCommandRouter_WriteStatusParamInvalid(void)
+void RuntimeC4_WriteStatusParamInvalid(void)
 {
-    RuntimeStore_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+    RuntimeC4Store_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
 }
 
-void RuntimeCommandRouter_WriteStatusCmdInvalid(void)
+void RuntimeC4_WriteStatusCmdInvalid(void)
 {
-    RuntimeStore_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
+    RuntimeC4Store_WriteStatusByte((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
 }
 
-uint8_t RuntimeCommandRouter_RecoverFaultAndReinit(void)
+uint8_t RuntimeC4_RecoverFaultAndReinit(void)
 {
-    runtime_runtime_view_t *runtime = RuntimeCommandRouter_Runtime();
-    runtime_params_view_t *params = RuntimeCommandRouter_Params();
-    runtime_states_view_t *states = RuntimeCommandRouter_States();
+    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_params_t *params = RuntimeC4Store_Params();
+    runtime_c4_states_t *states = RuntimeC4Store_States();
 
     runtime->sensor_invalid_consecutive = 0U;
 #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
@@ -1043,4 +1122,6 @@ uint8_t RuntimeCommandRouter_RecoverFaultAndReinit(void)
 
     return 1U;
 }
+
+
 

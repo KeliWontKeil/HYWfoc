@@ -1,4 +1,4 @@
-#include "L2_Service/runtime_c33_output.h"
+#include "L2_Service/runtime_c5_output_adapter.h"
 
 #include <stdio.h>
 
@@ -7,7 +7,7 @@
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-void RuntimeOutput_WriteText(const char *text)
+void RuntimeC5_WriteText(const char *text)
 {
     if (text == 0)
     {
@@ -17,12 +17,12 @@ void RuntimeOutput_WriteText(const char *text)
     FOC_Platform_WriteDebugText(text);
 }
 
-void RuntimeOutput_WriteStatusByte(uint8_t status)
+void RuntimeC5_WriteStatusByte(uint8_t status)
 {
     FOC_Platform_WriteStatusByte(status);
 }
 
-const char *RuntimeOutput_GetFaultName(uint8_t fault_code)
+const char *RuntimeC5_GetFaultName(uint8_t fault_code)
 {
     switch (fault_code)
     {
@@ -45,7 +45,7 @@ const char *RuntimeOutput_GetFaultName(uint8_t fault_code)
     }
 }
 
-void RuntimeOutput_OutputDiag(const char *level, const char *module, const char *detail)
+void RuntimeC5_OutputDiag(const char *level, const char *module, const char *detail)
 {
 #if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -56,7 +56,7 @@ void RuntimeOutput_OutputDiag(const char *level, const char *module, const char 
              (level != 0) ? level : "INFO",
              (module != 0) ? module : "general",
              (detail != 0) ? detail : "none");
-    RuntimeOutput_WriteText(out);
+    RuntimeC5_WriteText(out);
 #else
     (void)level;
     (void)module;
@@ -64,7 +64,7 @@ void RuntimeOutput_OutputDiag(const char *level, const char *module, const char 
 #endif
 }
 
-void RuntimeOutput_OutputParam(char subcommand, float value)
+void RuntimeC5_OutputParam(char subcommand, float value)
 {
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -73,10 +73,10 @@ void RuntimeOutput_OutputParam(char subcommand, float value)
                                  subcommand,
                                  value);
 
-    RuntimeOutput_WriteText(out);
+    RuntimeC5_WriteText(out);
 }
 
-void RuntimeOutput_OutputState(char subcommand, uint8_t value)
+void RuntimeC5_OutputState(char subcommand, uint8_t value)
 {
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
@@ -84,5 +84,6 @@ void RuntimeOutput_OutputState(char subcommand, uint8_t value)
                                  (uint16_t)sizeof(out),
                                  subcommand,
                                  value);
-    RuntimeOutput_WriteText(out);
+    RuntimeC5_WriteText(out);
 }
+

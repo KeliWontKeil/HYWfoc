@@ -1,13 +1,13 @@
-#include "L2_Service/runtime_c11_entry.h"
+#include "L2_Service/runtime_c1_entry.h"
 
-#include "L2_Service/runtime_c21_frame_source.h"
+#include "L2_Service/runtime_c2_frame_source.h"
 
-void RuntimeService_Init(void)
+void RuntimeC1_Init(void)
 {
-    RuntimeFramePipeline_Init();
+    RuntimeC2_Init();
 }
 
-uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_input_t *input)
+uint8_t RuntimeC1_RunStep(uint8_t frame_budget, const runtime_c1_step_input_t *input)
 {
     runtime_step_signal_t pipeline_signal;
     uint8_t consumed = 0U;
@@ -15,7 +15,7 @@ uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_
 
     if (input == 0)
     {
-        RuntimeFramePipeline_UpdateSignals(0);
+        RuntimeC2_UpdateSignals(0);
     }
     else
     {
@@ -28,12 +28,12 @@ uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_
         pipeline_signal.control_loop_skipped = input->control_loop_skipped;
         pipeline_signal.undervoltage_fault = input->undervoltage_fault;
         pipeline_signal.undervoltage_vbus = input->undervoltage_vbus;
-        RuntimeFramePipeline_UpdateSignals(&pipeline_signal);
+        RuntimeC2_UpdateSignals(&pipeline_signal);
     }
 
     while (consumed < frame_budget)
     {
-        if (RuntimeFramePipeline_ProcessOneFrame() != 0U)
+        if (RuntimeC2_ProcessOneFrame() != 0U)
         {
             has_comm_activity = 1U;
         }
@@ -43,13 +43,14 @@ uint8_t RuntimeService_RunStep(uint8_t frame_budget, const runtime_service_step_
     return has_comm_activity;
 }
 
-void RuntimeService_GetSnapshot(runtime_snapshot_t *snapshot)
+void RuntimeC1_GetSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeFramePipeline_BuildSnapshot(snapshot);
+    RuntimeC2_BuildSnapshot(snapshot);
 }
 
-void RuntimeService_Commit(void)
+void RuntimeC1_Commit(void)
 {
-    RuntimeFramePipeline_Commit();
+    RuntimeC2_Commit();
 }
+
 

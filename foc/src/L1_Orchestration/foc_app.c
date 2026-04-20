@@ -4,7 +4,7 @@
 
 #include "L1_Orchestration/control_scheduler.h"
 #include "L2_Service/debug_stream.h"
-#include "L2_Service/runtime_c11_entry.h"
+#include "L2_Service/runtime_c1_entry.h"
 #include "L2_Service/motor_control_service.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
@@ -50,7 +50,7 @@ void FOC_App_Init(void)
 {
     uint16_t init_check_pass_mask = 0U;
     uint16_t init_check_fail_mask = 0U;
-    runtime_service_step_input_t init_step = {0};
+    runtime_c1_step_input_t init_step = {0};
 
     FOC_Platform_RuntimeInit();
 
@@ -71,7 +71,7 @@ void FOC_App_Init(void)
 
     FOC_Platform_CommInit();
 
-    RuntimeService_Init();
+    RuntimeC1_Init();
     FOC_App_RefreshL2Snapshot();
     init_check_pass_mask = (uint16_t)(init_check_pass_mask |
                                       RUNTIME_INIT_CHECK_COMMAND |
@@ -146,7 +146,7 @@ void FOC_App_Init(void)
     init_step.init_checks_pass_mask = init_check_pass_mask;
     init_step.init_checks_fail_mask = init_check_fail_mask;
     init_step.finalize_init = 1U;
-    (void)RuntimeService_RunStep(0U, &init_step);
+    (void)RuntimeC1_RunStep(0U, &init_step);
 
     g_app_init_completed = 1U;
     FOC_App_UpdateIndicators();
@@ -187,17 +187,17 @@ void FOC_App_Loop(void)
 
 static void FOC_App_RefreshL2Snapshot(void)
 {
-    RuntimeService_GetSnapshot(&g_l2_snapshot);
+    RuntimeC1_GetSnapshot(&g_l2_snapshot);
 }
 
 static void FOC_App_ProcessCommStep(void)
 {
-    if (RuntimeService_RunStep(FOC_APP_COMM_FRAMES_PER_STEP, 0) != 0U)
+    if (RuntimeC1_RunStep(FOC_APP_COMM_FRAMES_PER_STEP, 0) != 0U)
     {
         FOC_App_TriggerCommIndicatorPulse();
     }
 
-    RuntimeService_GetSnapshot(&g_l2_snapshot);
+    RuntimeC1_GetSnapshot(&g_l2_snapshot);
 }
 
 static void Service_Task_Trigger(void)
@@ -243,9 +243,9 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
 
     if (report_skip != 0U)
     {
-        runtime_service_step_input_t step_input = {0};
+        runtime_c1_step_input_t step_input = {0};
         step_input.control_loop_skipped = 1U;
-        (void)RuntimeService_RunStep(0U, &step_input);
+        (void)RuntimeC1_RunStep(0U, &step_input);
     }
 }
 
@@ -385,22 +385,22 @@ static void Motor_Control_Loop(void)
 
     if (MotorControlService_ReadAllSensorSnapshot(&g_sensor_snapshot) == 0U)
     {
-        runtime_service_step_input_t step_input = {0};
+        runtime_c1_step_input_t step_input = {0};
         step_input.sensor_state_updated = 1U;
         step_input.adc_valid = 0U;
         step_input.encoder_valid = 0U;
-        (void)RuntimeService_RunStep(0U, &step_input);
+        (void)RuntimeC1_RunStep(0U, &step_input);
 
         FOC_App_EnterSafeOutputState(0U);
         return;
     }
 
     {
-        runtime_service_step_input_t step_input = {0};
+        runtime_c1_step_input_t step_input = {0};
         step_input.sensor_state_updated = 1U;
         step_input.adc_valid = g_sensor_snapshot.adc_valid;
         step_input.encoder_valid = g_sensor_snapshot.encoder_valid;
-        (void)RuntimeService_RunStep(0U, &step_input);
+        (void)RuntimeC1_RunStep(0U, &step_input);
     }
 
     if ((g_sensor_snapshot.adc_valid == 0U) || (g_sensor_snapshot.encoder_valid == 0U))
@@ -434,7 +434,7 @@ static void Motor_Control_Loop(void)
                                                 &g_speed_pid,
                                                 &g_angle_pid,
                                                 &g_l2_snapshot.control_cfg);
-        RuntimeService_Commit();
+        RuntimeC1_Commit();
     }
 
     FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
@@ -460,11 +460,11 @@ static uint8_t FOC_App_IsUndervoltageFaultActive(void)
 
     if (vbus_voltage < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
-        runtime_service_step_input_t step_input = {0};
+        runtime_c1_step_input_t step_input = {0};
         g_undervoltage_fault_latched = 1U;
         step_input.undervoltage_fault = 1U;
         step_input.undervoltage_vbus = vbus_voltage;
-        (void)RuntimeService_RunStep(0U, &step_input);
+        (void)RuntimeC1_RunStep(0U, &step_input);
         return 1U;
     }
 
@@ -505,5 +505,6 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
     g_fast_current_loop_enabled = 1U;
 }
+
 
 

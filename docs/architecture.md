@@ -40,7 +40,7 @@ FOC_VSCODE/
 |---|---|---|
 | `LS` 配置层 | `foc/include/LS_Config/foc_cfg_*.h` | 开关、默认值、编译期约束、符号定义 |
 | `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c`、`foc/src/L1_Orchestration/control_scheduler.c` | 启动时序、任务调度、运行入口 |
-| `L2` 逻辑功能层 | `foc/src/L2_Service/runtime_c21_comm_chain.c`、`foc/src/L2_Service/runtime_c35_protocol_parser.c`、`foc/src/L2_Service/runtime_c41_command_entry.c`、`foc/src/L2_Service/runtime_c42_command_dispatch.c`、`foc/src/L2_Service/runtime_c43_command_store.c`、`foc/src/L2_Service/runtime_c44_command_diag.c`、`foc/src/L2_Service/debug_stream.c`、`foc/src/L2_Service/motor_control_service.c` | 协议运行时适配（多源收发、状态回执、故障统计）、参数存储/查询、诊断输出、调试输出 |
+| `L2` 逻辑功能层 | `foc/src/L2_Service/runtime_c1_entry.c`、`foc/src/L2_Service/runtime_c2_frame_source.c`、`foc/src/L2_Service/runtime_c3_runtime_fsm.c`、`foc/src/L2_Service/runtime_c4_runtime_core.c`、`foc/src/L2_Service/runtime_c5_output_adapter.c`、`foc/src/L2_Service/debug_stream.c`、`foc/src/L2_Service/motor_control_service.c` | 协议运行时链式适配（帧接入、状态机、命令执行/存储、输出适配）、故障统计、调试输出；链路固定为 `C1->C2->C3->C4->C5` |
 | `L3` 应用算法层 | 控制链：`foc_control_c11_entry.c`、`foc_control_c12_init.c`、`foc_control_c21_cfg_state.c`、`foc_control_c31_outer_loop.c`、`foc_control_c32_current_loop.c`、`foc_control_c33_softswitch.c`、`foc_control_c34_compensation.c`、`foc_control_c41_actuation.c`；采样与调制：`sensor.c`、`svpwm.c`；协议纯处理：`protocol_core.c` | 承载可裁剪算法与纯处理内核；v1.3.5 采用 `Cxy` 命名（`x`=调用链层级，`y`=并列层级编号），主链已收敛为 `C11/C12->C21->C31/C32->C41` 单向结构（一个整体、多级文件、禁止跨级与反向依赖） |
 | `L4-2` 平台接口桥 | `foc_platform_api.h`、实例 `foc_platform_api.c` | 将库调用桥接到具体外设实现 |
 | `L4-1` 纯算法复用层 | `foc/include/L41_Math/*`、`foc/src/L41_Math/*` | 不含板级依赖、可跨平台复用 |
@@ -52,6 +52,7 @@ FOC_VSCODE/
 2. `L1/L2/L3` 头文件不得暴露 `gd32f30x_*` 设备头。
 3. `L5` 不得反向依赖 `foc/src/` 业务逻辑。
 4. 可配置常量必须汇聚到 `foc_cfg_*.h`，禁止散落在 `.c`。
+5. `L2` 运行时仅允许 `C1->C2->C3->C4->C5` 单向依赖，禁止跨层 include 与反向调用。
 
 ## 可维护性约束（强制）
 
@@ -100,8 +101,8 @@ FOC_VSCODE/
 
 ## P2 结构重排落地记录（v1.3.4）
 
-1. 协议解析与运行状态管理在 v1.3.4 基线保持双模块边界；v1.3.5 起按“L2 运行态适配 + L3 纯处理内核”推进分层收敛。
-2. `runtime_c41_command_entry` 内部分拆为 `runtime_c42`/`runtime_c43`/`runtime_c44` 子模块：命令分发、参数状态存储与诊断文本职责物理解耦。
+1. 协议解析与运行状态管理已在 L2 收敛为五级链：`runtime_c1_entry -> runtime_c2_frame_source -> runtime_c3_runtime_fsm -> runtime_c4_runtime_core -> runtime_c5_output_adapter`。
+2. `C3` 仅通过 `C4` 语义 API 操作运行态，不再直接访问 `C4` 存储结构体字段。
 3. `foc_control` 已收敛为 `C11/C12 -> C21 -> C31/C32 -> C41` 分层单向链；`C22` 职责已并入 `C11`，并保持 `C21` 与 `C12` 分离（避免运行态配置与初始化生命周期耦合）。
 4. 纯数学与 LUT 头/源迁移到 `foc/include/L41_Math` 与 `foc/src/L41_Math`，从算法目录职责中解耦。
 5. 初始化标定链路中的三角函数调用统一到 LUT 路径（`FOC_MathLut_Sin`、`FOC_MathLut_Atan2`），保持与运行态数学路径一致。
@@ -109,14 +110,13 @@ FOC_VSCODE/
 7. 平台中断生命周期收敛到统一开关入口：运行态控制相关中断通过 `FOC_Platform_SetControlRuntimeInterrupts(enable)` 管理，`FOC_App_Init` 显式保持初始关闭，`FOC_App_Start` 统一开启。
 8. L4-2 到 L5 依赖保持单向：实例 `foc_platform_api.c` 仅桥接 `Utilities/*` 驱动，不回调 L1/L2/L3 业务实现。
 
-## v1.3.5 结构准备（M6~M8）
+## v1.3.6 L2 链式收敛（已落地）
 
-1. L2 按“运行编排 -> 分发执行 -> 参数状态存储/查询 -> 诊断输出”收敛为层内单向调用链，不再维持中心化超大实现文件。
-2. L3 控制算法当前链式命名已落地：`C11/C12 -> C21/C22/C23/C24/C25 -> C31`；原独立 `C33`（软切换）文件已并入电流环主链。
-3. 宏裁剪前前置约束：先完成 L2 调用链结构化与 L3 结构残留清理，再进入 M9/M10 宏裁剪闭环。
-4. 去内联约束分层处理：L2 允许少量受控 inline（模块内私有且可检索）；L3 业务逻辑完全去内联（除 `L41_Math` 既有数学 inline）。
-5. `sensor.c` 与 `svpwm.c` 本轮保持职责边界，不做拆分/重命名并发改造。
-6. 若出现单函数、单调用者的过细算法文件，允许按单向层级并回上一级实现文件，避免文件粒度碎片化。
+1. L2 命名统一为单层级编号：`C1/C2/C3/C4/C5`，不再使用 `Cxy` 并列编号口径。
+2. 运行链固定为 `C1->C2->C3->C4->C5`：C1 编排入口，C2 帧源与解析接入，C3 运行态状态机，C4 运行核心执行/存储，C5 输出适配。
+3. C4 对上仅暴露语义接口，C3 已移除对运行态结构体的直接字段读写。
+4. 工程清单与构建清单已同步到新文件名（`.eide/eide.yml`、`builder.params`）。
+5. 全量重建通过（0 error，1 条历史 warning：`L6914W`）。
 
 ## 控制时序（抽象）
 

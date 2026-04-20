@@ -143,9 +143,9 @@
 
 ### M6（L2 结构链）
 
-1. `runtime_c41_command_entry.c` 仅保留运行编排与系统故障处理入口。
-2. 参数与状态存储查询已迁移到 `runtime_c43_command_store.c`，分发与诊断分别位于 `runtime_c42_command_dispatch.c`、`runtime_c44_command_diag.c`。
-3. 检索验证通过：主编排文件不再包含 `WriteParam/ReadParam/WriteState/ReadState/ReportAll*` 实现。
+1. L2 命名已统一为 `runtime_c1_entry.c` 到 `runtime_c5_output_adapter.c`，运行链固定为 `C1->C2->C3->C4->C5`。
+2. `C1` 仅保留运行编排；`C2` 负责帧源接入与解析；`C3` 负责状态机策略；`C4` 负责命令执行与运行态存储；`C5` 负责协议输出适配。
+3. 检索验证通过：`C3` 不再直接读写 `C4` 运行态结构体字段，改为调用 `C4` 语义 API。
 
 ### M8（L3 Cxx 控制链，R3 收口）
 
