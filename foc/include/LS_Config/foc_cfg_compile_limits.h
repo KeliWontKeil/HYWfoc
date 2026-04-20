@@ -49,6 +49,16 @@
 #define COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MAX_A (100.0f)
 #define COMMAND_MANAGER_PARAM_NON_NEGATIVE_MIN (0.0f)
 
+/* Soft hint output helpers for non-blocking config consistency diagnostics. */
+#if defined(__ARMCC_VERSION) || defined(__GNUC__) || defined(__clang__)
+#define FOC_CFG_PRAGMA_STR2(x) #x
+#define FOC_CFG_PRAGMA_STR(x) FOC_CFG_PRAGMA_STR2(x)
+#define FOC_CFG_DO_PRAGMA(x) _Pragma(FOC_CFG_PRAGMA_STR(x))
+#define FOC_CFG_HINT(msg) FOC_CFG_DO_PRAGMA(message msg)
+#else
+#define FOC_CFG_HINT(msg)
+#endif
+
 /* Unified enable or disable compile-time checks. */
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT != FOC_CFG_DISABLE) && (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT != FOC_CFG_ENABLE))
 #error "DEBUG_STREAM_ENABLE_SEMANTIC_REPORT must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
@@ -144,13 +154,46 @@
 #endif
 
 #if ((FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_PID_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_CURRENT_SOFT_SWITCH_ENABLE requires FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE"
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_DEPENDENCY current soft-switch feature is enabled but current-loop PID is disabled; soft-switch code path is compiled out.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEPENDENCY: current soft-switch feature is enabled but current-loop PID is disabled; soft-switch code path is compiled out.")
+#endif
 #endif
 #if ((FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH requires FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE"
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_PROTOCOL current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
+#endif
 #endif
 #if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_PROTOCOL_ENABLE_COGGING_COMP requires FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE"
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_PROTOCOL cogging compensation protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging compensation protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
+#endif
+#endif
+#if ((FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_ENABLE) && (COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_DEFAULT current soft-switch default state is ENABLE but feature is disabled; runtime will force disable.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is ENABLE but feature is disabled; runtime will force disable.")
+#endif
+#endif
+#if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE) && (FOC_COGGING_INIT_LEARN_ENABLE == FOC_CFG_ENABLE))
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_DEFAULT cogging init learn is ENABLE while cogging compensation feature is disabled; learning path will be skipped.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: cogging init learn is ENABLE while cogging compensation feature is disabled; learning path will be skipped.")
+#endif
+#endif
+#if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE) && (FOC_COGGING_DEBUG_DUMP_ENABLE == FOC_CFG_ENABLE))
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_DEFAULT cogging debug dump is ENABLE while cogging compensation feature is disabled; dump path will be skipped.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: cogging debug dump is ENABLE while cogging compensation feature is disabled; dump path will be skipped.")
+#endif
 #endif
 
 #if (FOC_COGGING_LUT_POINT_COUNT < 8U)

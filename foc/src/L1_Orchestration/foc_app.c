@@ -412,7 +412,9 @@ static void Motor_Control_Loop(void)
     if (g_l2_snapshot.runtime.params_dirty != 0U)
     {
         /* Apply sampling offset before motor/fault gates so protocol updates work in disabled state. */
+#if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
         MotorControlService_SetSensorSampleOffsetPercent(g_l2_snapshot.control_cfg.sensor_sample_offset_percent);
+#endif
     }
 
     if (FOC_App_IsUndervoltageFaultActive() != 0U)

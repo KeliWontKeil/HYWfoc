@@ -49,9 +49,11 @@ void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor
         return;
     }
 
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlApplyCoggingCompensation(motor,
                                         sensor->mech_angle_rad.output_value,
                                         motor->cogging_speed_ref_rad_s);
+#endif
 }
 
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
