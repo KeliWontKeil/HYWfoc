@@ -194,11 +194,11 @@ uint8_t RuntimeFramePipeline_ProcessOneFrame(void)
 
 void RuntimeFramePipeline_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
-    RuntimeCommandRouter_BuildSnapshot(snapshot);
+    RuntimeStateMachine_BuildSnapshot(snapshot);
 }
 
 void RuntimeFramePipeline_Commit(void)
 {
-    RuntimeCommandRouter_ClearDirty();
+    RuntimeStateMachine_Commit();
 }
 

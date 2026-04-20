@@ -1,5 +1,5 @@
-#ifndef RUNTIME_OUTPUT_H
-#define RUNTIME_OUTPUT_H
+#ifndef RUNTIME_C33_OUTPUT_H
+#define RUNTIME_C33_OUTPUT_H
 
 #include <stdint.h>
 
@@ -11,5 +11,4 @@ void RuntimeOutput_OutputDiag(const char *level, const char *module, const char 
 void RuntimeOutput_OutputParam(char subcommand, float value);
 void RuntimeOutput_OutputState(char subcommand, uint8_t value);
 
-#endif /* RUNTIME_OUTPUT_H */
-
+#endif /* RUNTIME_C33_OUTPUT_H */

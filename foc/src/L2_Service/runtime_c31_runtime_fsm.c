@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include "L2_Service/runtime_c32_command_router.h"
 #include "LS_Config/foc_config.h"
 
 #define RUNTIME_STATE_SYSTEM_INIT 0U
@@ -184,6 +185,16 @@ void RuntimeStateMachine_ReportFrameError(void)
 #endif
     runtime->last_fault_code = (uint8_t)RUNTIME_FAULT_PROTOCOL_FRAME;
     RuntimeCommandRouter_WriteStatusFrameError();
+}
+
+void RuntimeStateMachine_BuildSnapshot(runtime_snapshot_t *snapshot)
+{
+    RuntimeCommandRouter_BuildSnapshot(snapshot);
+}
+
+void RuntimeStateMachine_Commit(void)
+{
+    RuntimeCommandRouter_ClearDirty();
 }
 
 static void RuntimeStateMachine_FinalizeInitDiagnostics(void)
