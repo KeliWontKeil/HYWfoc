@@ -99,7 +99,7 @@ Compatibility note:
 
 ### 3.1 Build-Time Protocol Trimming / 编译期协议裁剪
 
-Protocol availability is split into a fixed minimal set and optional groups controlled by compile macros in `foc/include/config/foc_cfg_feature_switches.h`.
+Protocol availability is split into a fixed minimal set and optional groups controlled by compile macros in `foc/include/LS_Config/foc_cfg_feature_switches.h`.
 
 Minimal set (always enabled, non-trimmable):
 
@@ -118,8 +118,14 @@ Optional groups:
 | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `P:P/U/V` |
 | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `P:M/B/E/F/T` |
 | `FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH` | `P:Q/Y/Z`, `S:C` |
+| `FOC_PROTOCOL_ENABLE_COGGING_COMP` | `S:G` |
 
 When an optional subcommand is trimmed off, write/read on that subcommand returns parameter-invalid (`P`) after frame parse success (`O`).
+
+Current implementation note:
+
+- Cogging parameter symbols (`P:J/K/N`) are reserved in symbol definitions but not yet wired into runtime parameter read/write handlers.
+- Cogging runtime control currently exposes the state subcommand `S:G` when `FOC_PROTOCOL_ENABLE_COGGING_COMP` is enabled.
 
 ## 4. Parameter Subcommands / 参数子命令
 
@@ -131,27 +137,27 @@ Note: this table corresponds to FULL protocol profile. In trimmed builds, option
 |---|---|---|---|---|---|---|---|
 | `A` | target_angle_rad | float | [-100, 100] | 3.14 | rad | `aaPA1.57b` | `aaPAb` |
 | `R` | angle_position_speed_rad_s | float | [0, 36] | 18.0 | rad/s | `aaPR12b` | `aaPRb` |
-| `S` | speed_only_speed_rad_s | float | [-36, 36] | 10.0 | rad/s | `aaPS-20b` | `aaPSb` |
+| `S` | speed_only_speed_rad_s | float | [-36, 36] | 2.0 | rad/s | `aaPS-20b` | `aaPSb` |
 | `W` | sensor_sample_offset_percent | float | [0, 100] | 96.0 | % | `aaPW96b` | `aaPWb` |
 | `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaPL20b` | `aaPLb` |
-| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 50 | Hz | `aaPH100b` | `aaPHb` |
-| `O` | oscilloscope_param_mask | uint | [0, 65535] | 7 (0x0007) | bitmask | `aaPO63b` | `aaPOb` |
-| `C` | pid_current_kp | float | [0, 50] | 0.0 | - | `aaPC0.2b` | `aaPCb` |
-| `I` | pid_current_ki | float | [0, 50] | 15.0 | - | `aaPI0.1b` | `aaPIb` |
+| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `aaPH100b` | `aaPHb` |
+| `O` | oscilloscope_param_mask | uint | [0, 65535] | 8 (0x0008) | bitmask | `aaPO63b` | `aaPOb` |
+| `C` | pid_current_kp | float | [0, 50] | 1.2 | - | `aaPC0.2b` | `aaPCb` |
+| `I` | pid_current_ki | float | [0, 50] | 12.0 | - | `aaPI0.1b` | `aaPIb` |
 | `J` | pid_current_kd | float | [0, 10] | 0.0 | - | `aaPJ0.01b` | `aaPJb` |
 | `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaPG2.5b` | `aaPGb` |
 | `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaPK0.9b` | `aaPKb` |
 | `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaPN0.02b` | `aaPNb` |
 | `P` | pid_speed_kp | float | [0, 50] | 1.5 | - | `aaPP3.0b` | `aaPPb` |
-| `U` | pid_speed_ki | float | [0, 50] | 0.8 | - | `aaPU0.6b` | `aaPUb` |
-| `V` | pid_speed_kd | float | [0, 10] | 0.02 | - | `aaPV0.05b` | `aaPVb` |
+| `U` | pid_speed_ki | float | [0, 50] | 0.6 | - | `aaPU0.6b` | `aaPUb` |
+| `V` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaPV0.05b` | `aaPVb` |
 | `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaPM0.002b` | `aaPMb` |
 | `B` | control_angle_hold_integral_limit | float | >= 0 | 0.2 | - | `aaPB0.3b` | `aaPBb` |
 | `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaPE0.004b` | `aaPEb` |
 | `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `aaPF0.45b` | `aaPFb` |
 | `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `aaPT0.70b` | `aaPTb` |
 | `D` | control_mode | uint | 0 or 1 | 0 (FULL build default) | - | `aaPD0b` | `aaPDb` |
-| `Q` | current_soft_switch_mode | uint | 0/1/2 | 1 | - | `aaPQ2b` | `aaPQb` |
+| `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `aaPQ2b` | `aaPQb` |
 | `Y` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.25 | A | `aaPY1.5b` | `aaPYb` |
 | `Z` | current_soft_switch_auto_closed_iq_a | float | [0, 100] and >= `Y` | 0.80 | A | `aaPZ3.0b` | `aaPZb` |
 | `X` | read_all sentinel | - | read only | - | - | N/A | `aaPXb` |
@@ -177,7 +183,7 @@ Speed parameter mapping:
 - `0`: OPEN (pure open-loop current model)
 - `1`: CLOSED (pure current PID)
 - `2`: AUTO (threshold+hysteresis with first-order blend)
-- Blend time constants currently use compile-time macros `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_MIN_SEC` and `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC` (not exposed as a `P` runtime parameter in this version).
+- Blend time constants currently use compile-time macro `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC` (not exposed as a `P` runtime parameter in this version).
 
 ### 4.4 Oscilloscope Mask Bits / 示波参数掩码位
 
@@ -190,7 +196,7 @@ Speed parameter mapping:
 | 4 | 0x0010 | angle_accum |
 | 5 | 0x0020 | execution_time_us |
 
-Default mask is `0x0007` (current_a + current_b + current_c).
+Default mask is `0x0008` (angle_filtered).
 
 ## 5. State Subcommands / 状态子命令
 
@@ -199,9 +205,10 @@ State channel uses command `S`, and state values are strict numeric `0` or `1`.
 | Subcmd | State name | Default | Write Example (`S`) | Read Example (`S`) |
 |---|---|---|---|---|
 | `M` | motor_enable | 1 | `aaSM1b` | `aaSMb` |
-| `S` | semantic_report_enabled | 1 | `aaSS1b` | `aaSSb` |
-| `O` | oscilloscope_report_enabled | 0 | `aaSO1b` | `aaSOb` |
-| `C` | current_soft_switch_enabled | 0 | `aaSC1b` | `aaSCb` |
+| `S` | semantic_report_enabled | 0 | `aaSS1b` | `aaSSb` |
+| `O` | oscilloscope_report_enabled | 1 | `aaSO1b` | `aaSOb` |
+| `C` | current_soft_switch_enabled | 1 (macro default, effective value depends on feature/protocol switches) | `aaSC1b` | `aaSCb` |
+| `G` | cogging_comp_enabled | 0 (follows `FOC_COGGING_COMP_ENABLE`) | `aaSG1b` | `aaSGb` |
 | `X` | read_all sentinel | - | N/A | `aaSXb` |
 
 ## 6. Responses and Status Codes / 返回与状态码
@@ -225,7 +232,7 @@ Execution order note:
 When diagnostics output is enabled, responses are plain text lines on the configured output channel, for example:
 
 ```
-param.pid_speed_kp=3.000
+parameter.pid_speed_kp=3.000
 state.semantic_report_enabled=ENABLE
 STATE SYS=1 COMM=1 REPORT=1 DIRTY=1 LAST=1 INIT=1 FAULT=NONE SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
 FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
@@ -284,6 +291,7 @@ aaSM0b      # motor disable
 aaSS1b      # semantic report enable
 aaSO1b      # osc report enable
 aaSC1b      # current soft switch enable
+aaSG1b      # cogging compensation enable (only when FOC_PROTOCOL_ENABLE_COGGING_COMP=ENABLE)
 ```
 
 ### 7.4 Typical reads / 常用读取示例

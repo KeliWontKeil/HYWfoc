@@ -16,8 +16,8 @@ user-invocable: true
 
 ## 工作范围
 
-1. `foc/src/algorithm/*.c`
-2. `foc/include/config/foc_cfg_*.h`
+1. `foc/src/L3_Algorithm/*.c`
+2. `foc/include/LS_Config/foc_cfg_*.h`
 3. 与控制链路相关的 `foc_app.c` 与平台 API 调用点
 
 ## 强制规则
