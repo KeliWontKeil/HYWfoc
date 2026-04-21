@@ -332,6 +332,12 @@ void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                          float mech_angle_rad,
                                          float speed_ref_rad_s)
 {
+#if (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE)
+    (void)mech_angle_rad;
+    (void)speed_ref_rad_s;
+    (void)motor;
+    return;
+#else
     float phase_rad;
     float speed_abs_rad_s;
 
@@ -351,6 +357,7 @@ void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                                    motor->cogging_comp_table_q15,
                                                    phase_rad,
                                                    speed_abs_rad_s);
+#endif
 }
 
 uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,

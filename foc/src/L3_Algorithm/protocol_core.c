@@ -309,6 +309,10 @@ const char *ProtocolText_GetStateName(char subcommand)
     case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
         return "current_soft_switch_enabled";
 #endif
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
+        return "cogging_comp_enabled";
+#endif
     default:
         return "unknown";
     }
