@@ -14,7 +14,7 @@
 
 ## 当前基线
 
-- 版本基线：v1.3.4
+- 版本基线：v1.3.6
 - 项目命名：HYW FOC（中文名：何易位FOC）
 - 任务目标：下一目标版本见 [../NEXT_MISSION.md](../NEXT_MISSION.md)
 - 第三方许可证声明：见 [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
@@ -44,4 +44,4 @@
 
 - API、配置头、层级归属变化时，需在同次迭代同步更新本目录文档。
 - [../CHANGELOG.md](../CHANGELOG.md) 的版本基线需与本索引一致。
-- [../NEXT_MISSION.md](../NEXT_MISSION.md) 的目标版本应始终领先当前稳定基线一步。
+- [../NEXT_MISSION.md](../NEXT_MISSION.md) 需与当前阶段状态一致（已完成项不可继续标注为进行中）。

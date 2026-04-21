@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-04-21
+
+### Changed
+- Completed structure-convergence closure as the current baseline: L2 production runtime pipeline is fixed at `runtime_c1_entry -> runtime_c2_frame_source -> runtime_c3_runtime_fsm -> runtime_c4_runtime_core -> runtime_c5_output_adapter`.
+- Aligned cogging compile guards in `foc_control_c24_compensation`: when cogging feature is trimmed off, runtime call path now exits before referencing feature-scoped helper functions.
+- Extended protocol state text mapping with cogging state entry (`S:G`) under `FOC_PROTOCOL_ENABLE_COGGING_COMP` guard.
+
+### Documentation
+- Rewrote `docs/architecture.md` as current-code SSOT using actual `L1/L2/L3/L41/L42/LS` paths and current control/runtime chain naming.
+- Rewrote `docs/development.md` to remove outdated temporary-plan and legacy numbering references, and synced it with current compile/macro-governance rules.
+- Updated protocol bilingual guide defaults/ranges/path references to current `foc_cfg_*` values and documented current cogging protocol-state scope.
+- Synced mission/workflow docs (`NEXT_MISSION.md`, `.github/AGENTS.md`, agent docs, instance software README) to current directory structure and version baseline.
+
 ## [1.3.4] - 2026-04-17
 
 ### Changed

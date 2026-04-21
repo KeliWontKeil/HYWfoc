@@ -20,10 +20,10 @@
 
 重点文件：
 
-1. `foc/src/algorithm/foc_control*.c`
-2. `foc/src/algorithm/svpwm.c`
-3. `foc/src/core/foc_app.c`
-4. `foc/include/config/foc_cfg_*.h`
+1. `foc/src/L3_Algorithm/foc_control*.c`
+2. `foc/src/L3_Algorithm/svpwm.c`
+3. `foc/src/L1_Orchestration/foc_app.c`
+4. `foc/include/LS_Config/foc_cfg_*.h`
 
 ### `architecture-review`
 
@@ -32,7 +32,7 @@
 重点文件：
 
 1. `foc/include/**/*.h`
-2. `foc/include/interface/foc_platform_api.h`
+2. `foc/include/L42_PAL/foc_platform_api.h`
 3. `examples/**/Application/Source/foc_platform_api.c`
 4. `examples/**/Utilities/**`
 
