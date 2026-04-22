@@ -120,7 +120,7 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
     AS5600_Init();
 
     /* TIMER2 is the sync master; TIMER0(PWM) and TIMER3(ADC trigger) restart from its update event. */
-    Timer2_Init(9U, timer_period * 2);
+    Timer2_Init(9U, timer_period);
     Timer2_Start();
 
     Timer3_Init(9U, timer_period);
@@ -160,10 +160,16 @@ void FOC_Platform_WaitMs(uint32_t ms)
     delay_1ms(ms);
 }
 
+uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v)
+{
+    return ADC2_ReadVbus(vbus_v);
+}
+
 void FOC_Platform_UndervoltageProtect(float vbus_voltage)
 {
     (void)vbus_voltage;
 }
+
 
 
 void FOC_Platform_EnableCycleCounter(void)

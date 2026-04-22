@@ -1110,6 +1110,7 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     runtime_c4_params_t *params = RuntimeC4Store_Params();
     runtime_c4_states_t *states = RuntimeC4Store_States();
 
+    /* Reset all fault-related counters and states */
     runtime->sensor_invalid_consecutive = 0U;
 #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
     runtime->protocol_error_count = 0U;
@@ -1118,7 +1119,16 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
 #endif
     runtime->last_fault_code = 0U;
     runtime->comm_state = 0U;
-    runtime->system_state = 1U;
+    
+    /* Reset system state to INIT to allow re-initialization */
+    runtime->system_state = RUNTIME_STORE_SYSTEM_INIT;
+    runtime->init_diag = RUNTIME_STORE_DIAG_NOT_EXECUTED;
+    
+    /* Clear initialization check masks to allow fresh accumulation */
+    runtime->init_check_mask = 0U;
+    runtime->init_fail_mask = 0U;
+    
+    /* Mark parameters as dirty to ensure they are reapplied */
 #if ((FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE) || \
      (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE) || \
      (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE))
@@ -1128,6 +1138,7 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
 #endif
     runtime->last_exec_ok = 1U;
 
+    /* Reset configurable parameters to defaults */
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
     params->cfg_min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
     params->cfg_angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
@@ -1144,6 +1155,18 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     states->cogging_comp_enable = (uint8_t)FOC_COGGING_COMP_ENABLE;
 #endif
+
+    /* Reset motor enable state to default */
+    states->motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
+
+    /* Reset LED indicator states by calling platform API */
+    /* This ensures LED states are synchronized with system state */
+    FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, 0U);
+    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 0U);
+    FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 0U);
+
+    /* Output diagnostic message for recovery */
+    RuntimeC4Store_OutputDiag("INFO", "fault_recovery", "system reset completed");
 
     return 1U;
 }

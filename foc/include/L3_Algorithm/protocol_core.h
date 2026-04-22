@@ -30,3 +30,4 @@ void ProtocolText_FormatStateLine(char *out,
                                   uint8_t value);
 
 #endif /* PROTOCOL_CORE_H */
+

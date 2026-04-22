@@ -45,6 +45,9 @@ typedef struct {
     kalman_filter_t mech_angle_rad;
     uint8_t adc_valid;
     uint8_t encoder_valid;
+    float vbus_voltage_raw;
+    float vbus_voltage_filtered;
+    uint8_t vbus_valid;
 } sensor_data_t;
 
 /* Motor-side cogging LUT capacity used by runtime context storage. */
@@ -86,8 +89,10 @@ typedef struct {
     float mech_angle_at_elec_zero_rad;
     int8_t direction;
     float vbus_voltage;
+    float voltage_limit_ratio;
 
     /* DQ and electrical-angle runtime states. */
+
     float electrical_phase_angle;
     float ud;
     float uq;

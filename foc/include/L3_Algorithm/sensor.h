@@ -17,6 +17,9 @@ void Sensor_ReadCurrentOnly(void);
 void Sensor_SetZeroOffset(void);
 void Sensor_ADCSampleTimeOffset(float percent);
 uint8_t Sensor_CopyData(sensor_data_t *out_data);
+void Sensor_ReadVBUS(void);
+float Sensor_GetVBUSVoltage(void);
+uint8_t Sensor_IsVBUSValid(void);
 
 #endif /* _SENSOR_H_ */
 

@@ -140,8 +140,9 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_motor_t *mo
         return;
     }
 
-    voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+    voltage_limit = Math_ClampFloat(motor->set_voltage * motor->voltage_limit_ratio, 0.0f, motor->vbus_voltage);
     phase_resistance = fabsf(motor->phase_resistance);
+
     if (phase_resistance < 1e-6f)
     {
         phase_resistance = 1e-6f;
@@ -214,8 +215,9 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
                                      &g_current_iq_lpf_state_valid);
 #endif
 
-    voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+    voltage_limit = Math_ClampFloat(motor->set_voltage * motor->voltage_limit_ratio, 0.0f, motor->vbus_voltage);
     uq_cmd = FOC_CurrentLoopPIDRun(current_pid, motor->iq_target, iq_measured, dt_sec);
+
     motor->iq_measured = iq_measured;
 
     motor->ud = 0.0f;

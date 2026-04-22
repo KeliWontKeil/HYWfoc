@@ -577,8 +577,7 @@ static void ADC_Config(void)
     adc_interrupt_enable(ADC0_PERIPH, ADC_INT_EOC);
     nvic_irq_enable(ADC0_1_IRQn, ADC0_1_PRIORITY_GROUP, ADC0_1_PRIORITY_SUBGROUP);
 }
-
-/*!
+/*
     \brief      DMA interrupt handler for ADC (internal)
     \param[in]  none
     \param[out] none
@@ -590,7 +589,7 @@ void ADC_DMA_IRQHandler_Internal(void)
     {
         dma_interrupt_flag_clear(DMA0, DMA_CH0, DMA_INT_FLAG_FTF);
         dma_complete = 1;
-
+#if (FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE == 1U)
         if (gpio_output_bit_get(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN) != RESET)
         {
             gpio_bit_reset(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN);
@@ -599,6 +598,7 @@ void ADC_DMA_IRQHandler_Internal(void)
         {
             gpio_bit_set(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN);
         }
+#endif
     }
 }
 
@@ -609,3 +609,90 @@ void ADC_IRQHandler_Internal(void)
         adc_interrupt_flag_clear(ADC0_PERIPH, ADC_INT_FLAG_EOC);
     }
 }
+
+/*
+ * VBUS voltage divider ratio: VBUS = Vadc / 0.1935
+ * (derived from: Vadc = VBUS * (R2 / (R1 + R2)), where R1+R2 divider gives ~0.1935)
+ */
+#define ADC2_VBUS_DIVIDER_RATIO 0.1935f
+#define ADC2_VBUS_CONVERSION_K  (1.0f / ADC2_VBUS_DIVIDER_RATIO)
+#define ADC2_VBUS_EOC_TIMEOUT_LOOPS 10000U
+
+static uint8_t g_adc2_initialized = 0U;
+
+static void ADC2_GPIO_Config(void)
+{
+    rcu_periph_clock_enable(ADC_GPIO_PA1_RCU);
+    gpio_init(ADC_GPIO_PA1_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_PA1_PIN);
+}
+
+static void ADC2_Config(void)
+{
+    rcu_periph_clock_enable(ADC2_RCU);
+    adc_deinit(ADC2_PERIPH);
+
+    adc_data_alignment_config(ADC2_PERIPH, ADC_DATAALIGN_RIGHT);
+    adc_resolution_config(ADC2_PERIPH, ADC_RESOLUTION_12B);
+
+    /* Single channel, software trigger, no scan mode. */
+    adc_channel_length_config(ADC2_PERIPH, ADC_ROUTINE_CHANNEL, 1U);
+    adc_routine_channel_config(ADC2_PERIPH, 0U, ADC_CHANNEL_PA1, ADC_SAMPLETIME_55POINT5);
+
+    /* ADC trigger config */
+    adc_external_trigger_source_config(ADC2, ADC_ROUTINE_CHANNEL, ADC0_1_2_EXTTRIG_ROUTINE_NONE); 
+    /* ADC external trigger config */
+    adc_external_trigger_config(ADC2, ADC_ROUTINE_CHANNEL, ENABLE);
+    adc_software_trigger_enable(ADC2, ADC_ROUTINE_CHANNEL);
+
+    /* Enable ADC2. */
+    adc_enable(ADC2_PERIPH);
+    delay_1ms(1U);
+    adc_calibration_enable(ADC2_PERIPH);
+}
+
+uint8_t ADC2_ReadVbus(float *vbus_v)
+{
+    uint32_t loop_count;
+    uint16_t raw_value;
+    float vbus;
+
+    if (vbus_v == 0)
+    {
+        return 0U;
+    }
+
+    if (g_adc2_initialized == 0U)
+    {
+        ADC2_GPIO_Config();
+        ADC2_Config();
+        g_adc2_initialized = 1U;
+    }
+
+    /* Software trigger regular conversion. */
+    adc_software_trigger_enable(ADC2_PERIPH, ADC_ROUTINE_CHANNEL);
+
+    /* Wait for EOC with timeout. */
+    loop_count = 0U;
+    while (adc_flag_get(ADC2_PERIPH, ADC_FLAG_EOC) == RESET)
+    {
+        loop_count++;
+        if (loop_count >= ADC2_VBUS_EOC_TIMEOUT_LOOPS)
+        {
+            return 0U; /* Timeout */
+        }
+    }
+    adc_flag_clear(ADC2_PERIPH, ADC_FLAG_EOC);
+
+    raw_value = (uint16_t)adc_routine_data_read(ADC2_PERIPH);
+    vbus = ((float)raw_value / ADC_MAX_VALUE) * ADC_VREF * ADC2_VBUS_CONVERSION_K;
+
+    if (vbus < 0.0f)
+    {
+        vbus = 0.0f;
+    }
+
+    *vbus_v = vbus;
+    return 1U;
+}
+
+

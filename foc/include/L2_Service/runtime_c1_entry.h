@@ -12,8 +12,10 @@ typedef enum {
     RUNTIME_INIT_CHECK_DEBUG = (1U << 3),
     RUNTIME_INIT_CHECK_SENSOR = (1U << 4),
     RUNTIME_INIT_CHECK_PWM = (1U << 5),
-    RUNTIME_INIT_CHECK_MOTOR = (1U << 6)
+    RUNTIME_INIT_CHECK_MOTOR = (1U << 6),
+    RUNTIME_INIT_CHECK_VBUS = (1U << 7)
 } runtime_init_check_t;
+
 
 typedef struct {
     uint16_t init_checks_pass_mask;

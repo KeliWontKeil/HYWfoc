@@ -135,7 +135,9 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->uq = 0.0f;
     motor->set_voltage = set_voltage;
     motor->vbus_voltage = vbus_voltage;
+    motor->voltage_limit_ratio = 1.0f;
     motor->iq_target = 0.0f;
+
     motor->iq_measured = 0.0f;
     motor->cogging_speed_ref_rad_s = 0.0f;
     motor->mech_angle_accum_rad = 0.0f;

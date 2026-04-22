@@ -28,9 +28,9 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
-        - path: ../../../foc/src/L2_Service/runtime_c1_entry.c
         - path: ../../../foc/src/L2_Service/debug_stream.c
         - path: ../../../foc/src/L2_Service/motor_control_service.c
+        - path: ../../../foc/src/L2_Service/runtime_c1_entry.c
         - path: ../../../foc/src/L2_Service/runtime_c2_frame_source.c
         - path: ../../../foc/src/L2_Service/runtime_c3_runtime_fsm.c
         - path: ../../../foc/src/L2_Service/runtime_c4_runtime_core.c

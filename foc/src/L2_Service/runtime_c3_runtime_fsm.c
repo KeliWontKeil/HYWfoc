@@ -17,6 +17,16 @@
 #define RUNTIME_STATE_DIAG_SUCCESS 1U
 #define RUNTIME_STATE_DIAG_FAILED 2U
 
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+#define RUNTIME_STATE_INIT_REQUIRED_MASK ((1U << 0) | \
+                                       (1U << 1) | \
+                                       (1U << 2) | \
+                                       (1U << 3) | \
+                                       (1U << 4) | \
+                                       (1U << 5) | \
+                                       (1U << 6) | \
+                                       (1U << 7))
+#else
 #define RUNTIME_STATE_INIT_REQUIRED_MASK ((1U << 0) | \
                                        (1U << 1) | \
                                        (1U << 2) | \
@@ -24,6 +34,8 @@
                                        (1U << 4) | \
                                        (1U << 5) | \
                                        (1U << 6))
+#endif
+
 
 static void RuntimeC3_FinalizeInitDiagnostics(void);
 static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_command_t *cmd);

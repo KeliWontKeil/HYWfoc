@@ -1,4 +1,5 @@
 #include "timer2.h"
+#include "timer3.h"
 
 /* Private variables */
 static timer2_callback_t timer2_callback = 0;

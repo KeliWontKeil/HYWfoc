@@ -437,3 +437,62 @@ static float Sensor_UpdateAngleLpf(float measurement)
     return g_sensor_angle_lpf_state;
 }
 #endif
+
+/* VBUS voltage sampling with moving average filter */
+#define VBUS_FILTER_SAMPLES 8
+static float g_vbus_filter_buffer[VBUS_FILTER_SAMPLES] = {0};
+static uint8_t g_vbus_filter_index = 0;
+static uint8_t g_vbus_filter_initialized = 0;
+
+void Sensor_ReadVBUS(void)
+{
+    float vbus_raw;
+    
+    if (FOC_Platform_ReadVbusVoltage(&vbus_raw) != 0U)
+    {
+        sensor_data.vbus_voltage_raw = vbus_raw;
+        sensor_data.vbus_valid = 1U;
+        
+        /* Apply moving average filter */
+        g_vbus_filter_buffer[g_vbus_filter_index] = vbus_raw;
+        g_vbus_filter_index = (g_vbus_filter_index + 1) % VBUS_FILTER_SAMPLES;
+        
+        if (g_vbus_filter_initialized == 0U && g_vbus_filter_index == 0U)
+        {
+            g_vbus_filter_initialized = 1U;
+        }
+        
+        /* Calculate filtered value */
+        if (g_vbus_filter_initialized != 0U)
+        {
+            float sum = 0.0f;
+            uint8_t i;
+            for (i = 0; i < VBUS_FILTER_SAMPLES; i++)
+            {
+                sum += g_vbus_filter_buffer[i];
+            }
+            sensor_data.vbus_voltage_filtered = sum / VBUS_FILTER_SAMPLES;
+        }
+        else
+        {
+            /* Use raw value until filter is initialized */
+            sensor_data.vbus_voltage_filtered = vbus_raw;
+        }
+    }
+    else
+    {
+        sensor_data.vbus_valid = 0U;
+        sensor_data.vbus_voltage_raw = 0.0f;
+        sensor_data.vbus_voltage_filtered = 0.0f;
+    }
+}
+
+float Sensor_GetVBUSVoltage(void)
+{
+    return sensor_data.vbus_voltage_filtered;
+}
+
+uint8_t Sensor_IsVBUSValid(void)
+{
+    return sensor_data.vbus_valid;
+}

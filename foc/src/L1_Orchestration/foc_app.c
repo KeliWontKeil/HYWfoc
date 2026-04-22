@@ -117,7 +117,24 @@ void FOC_App_Init(void)
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
     init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_PWM);
 
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+    /* VBUS voltage self-check: verify power supply is within safe range. */
+    {
+        float vbus_init;
+        if ((FOC_Platform_ReadVbusVoltage(&vbus_init) != 0U) && (vbus_init > 0.0f))
+        {
+            init_check_pass_mask = (uint16_t)(init_check_pass_mask | RUNTIME_INIT_CHECK_VBUS);
+        }
+        else
+        {
+            init_check_fail_mask = (uint16_t)(init_check_fail_mask | RUNTIME_INIT_CHECK_VBUS);
+            FOC_Platform_WriteDebugText("init.vbus: VBUS read failed or zero, check power supply\r\n");
+        }
+    }
+#endif
+
     /* Initialize motor model and targets. */
+
     MotorControlService_InitMotor(&g_motor,
                                   FOC_MOTOR_INIT_VBUS_DEFAULT,
                                   FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
@@ -134,13 +151,16 @@ void FOC_App_Init(void)
                                            &g_angle_pid,
                                            &g_l2_snapshot.control_cfg);
 
-    char startup_info[128];
+    char startup_info[160];
     snprintf(startup_info,
             sizeof(startup_info),
-            "mech zero at elec0: %.4f rad, direction: %d ,pole pairs: %d\r\n",
-            g_motor.mech_angle_at_elec_zero_rad,
-            g_motor.direction,
-            g_motor.pole_pairs);
+            "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, volt_ratio: %.2f\r\n",
+            (double)g_motor.mech_angle_at_elec_zero_rad,
+            (int)g_motor.direction,
+            (int)g_motor.pole_pairs,
+            (double)g_motor.vbus_voltage,
+            (double)g_motor.voltage_limit_ratio);
+
     FOC_Platform_WriteDebugText(startup_info);
 
     init_step.init_checks_pass_mask = init_check_pass_mask;
@@ -173,6 +193,16 @@ void FOC_App_Loop(void)
     if (g_monitor_task_pending != 0U)
     {
         g_monitor_task_pending = 0U;
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+        /* Refresh VBUS voltage on each monitor tick. */
+        {
+            float vbus_v;
+            if (FOC_Platform_ReadVbusVoltage(&vbus_v) != 0U)
+            {
+                g_motor.vbus_voltage = vbus_v;
+            }
+        }
+#endif
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
         /* Debug stream cadence is bounded by monitor task trigger rate. */
         FOC_App_RefreshL2Snapshot();
@@ -183,6 +213,7 @@ void FOC_App_Loop(void)
                             &g_l2_snapshot.telemetry);
 #endif
     }
+
 }
 
 static void FOC_App_RefreshL2Snapshot(void)
@@ -508,5 +539,10 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     g_fast_current_loop_enabled = 1U;
 }
 
-
+void FOC_App_ResetUndervoltageFault(void)
+{
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+    g_undervoltage_fault_latched = 0U;
+#endif
+}
 
