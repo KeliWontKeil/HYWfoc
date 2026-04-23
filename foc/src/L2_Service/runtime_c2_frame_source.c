@@ -10,8 +10,6 @@
 #define RUNTIME_COMM_SOURCE_3 3U
 #define RUNTIME_COMM_SOURCE_4 4U
 
-static uint8_t g_preferred_source = 0U;
-
 static uint8_t FrameSource_IsReady(uint8_t source)
 {
     if (source == RUNTIME_COMM_SOURCE_1)
@@ -72,23 +70,8 @@ static uint16_t FrameSource_TryReadReady(uint8_t *buffer, uint16_t max_len)
         return 0U;
     }
 
-    if ((g_preferred_source != 0U) &&
-        (FrameSource_IsReady(g_preferred_source) != 0U))
-    {
-        len = FrameSource_Read(g_preferred_source, buffer, max_len);
-        if (len > 0U)
-        {
-            return len;
-        }
-    }
-
     for (source = RUNTIME_COMM_SOURCE_1; source <= RUNTIME_COMM_SOURCE_4; source++)
     {
-        if (source == g_preferred_source)
-        {
-            continue;
-        }
-
         if (FrameSource_IsReady(source) == 0U)
         {
             continue;
@@ -97,7 +80,6 @@ static uint16_t FrameSource_TryReadReady(uint8_t *buffer, uint16_t max_len)
         len = FrameSource_Read(source, buffer, max_len);
         if (len > 0U)
         {
-            g_preferred_source = source;
             return len;
         }
     }
@@ -105,7 +87,7 @@ static uint16_t FrameSource_TryReadReady(uint8_t *buffer, uint16_t max_len)
     return 0U;
 }
 
-static uint16_t FrameSource_TryReadAny(uint8_t *buffer, uint16_t max_len)
+/*static uint16_t FrameSource_TryReadAny(uint8_t *buffer, uint16_t max_len)
 {
     uint8_t source;
     uint16_t len;
@@ -120,13 +102,12 @@ static uint16_t FrameSource_TryReadAny(uint8_t *buffer, uint16_t max_len)
         len = FrameSource_Read(source, buffer, max_len);
         if (len > 0U)
         {
-            g_preferred_source = source;
             return len;
         }
     }
 
     return 0U;
-}
+}*/
 
 static uint8_t ParseAndDispatchFrame(const uint8_t *frame, uint16_t len)
 {
@@ -162,27 +143,17 @@ static uint8_t ParseAndDispatchFrame(const uint8_t *frame, uint16_t len)
     return RuntimeC3_HandleCommand(&command);
 }
 
-void RuntimeC2_Init(void)
-{
-    g_preferred_source = 0U;
-    RuntimeC3_Init();
-}
-
-void RuntimeC2_UpdateSignals(const runtime_step_signal_t *signal)
-{
-    RuntimeC3_UpdateSignals(signal);
-}
-
 uint8_t RuntimeC2_ProcessOneFrame(void)
 {
     uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
     uint16_t len;
 
     len = FrameSource_TryReadReady(frame, (uint16_t)sizeof(frame));
-    if (len == 0U)
+    
+    /*if (len == 0U)
     {
         len = FrameSource_TryReadAny(frame, (uint16_t)sizeof(frame));
-    }
+    }*/
 
     if (len == 0U)
     {
@@ -190,6 +161,16 @@ uint8_t RuntimeC2_ProcessOneFrame(void)
     }
 
     return ParseAndDispatchFrame(frame, len);
+}
+
+void RuntimeC2_Init(void)
+{
+    RuntimeC3_Init();
+}
+
+void RuntimeC2_UpdateSignals(const runtime_step_signal_t *signal)
+{
+    RuntimeC3_UpdateSignals(signal);
 }
 
 void RuntimeC2_BuildSnapshot(runtime_snapshot_t *snapshot)
@@ -201,5 +182,3 @@ void RuntimeC2_Commit(void)
 {
     RuntimeC3_Commit();
 }
-
-

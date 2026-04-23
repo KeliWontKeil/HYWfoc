@@ -7,10 +7,6 @@
 #include "L3_Algorithm/protocol_core.h"
 #include "LS_Config/foc_config.h"
 
-typedef runtime_c4_runtime_view_t runtime_c4_state_t;
-typedef runtime_c4_params_view_t runtime_c4_params_t;
-typedef runtime_c4_states_view_t runtime_c4_states_t;
-
 #define RUNTIME_STORE_SYSTEM_INIT 0U
 #define RUNTIME_STORE_SYSTEM_RUNNING 1U
 #define RUNTIME_STORE_SYSTEM_FAULT 2U
@@ -28,9 +24,9 @@ typedef runtime_c4_states_view_t runtime_c4_states_t;
 
 #define RUNTIME_STORE_FAULT_NONE 0U
 
-static runtime_c4_state_t g_runtime;
-static runtime_c4_params_t g_params;
-static runtime_c4_states_t g_states;
+static runtime_c4_runtime_view_t g_runtime;
+static runtime_c4_params_view_t g_params;
+static runtime_c4_states_view_t g_states;
 
 static uint8_t RuntimeC4Store_IsInRange(float value, float min_value, float max_value)
 {
@@ -101,25 +97,25 @@ void RuntimeC4Store_ResetStorageDefaults(void)
 #endif
 }
 
-runtime_c4_state_t *RuntimeC4Store_Runtime(void)
+runtime_c4_runtime_view_t *RuntimeC4Store_Runtime(void)
 {
     return &g_runtime;
 }
 
-runtime_c4_params_t *RuntimeC4Store_Params(void)
+runtime_c4_params_view_t *RuntimeC4Store_Params(void)
 {
     return &g_params;
 }
 
-runtime_c4_states_t *RuntimeC4Store_States(void)
+runtime_c4_states_view_t *RuntimeC4Store_States(void)
 {
     return &g_states;
 }
 
 uint8_t RuntimeC4Store_WriteParam(char subcommand, float value)
 {
-    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
-    runtime_c4_params_t *params = RuntimeC4Store_Params();
+    runtime_c4_runtime_view_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_params_view_t *params = RuntimeC4Store_Params();
 
     switch (subcommand)
     {
@@ -382,8 +378,8 @@ uint8_t RuntimeC4Store_WriteParam(char subcommand, float value)
 
 uint8_t RuntimeC4Store_WriteState(char subcommand, uint8_t state)
 {
-    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
-    runtime_c4_states_t *states = RuntimeC4Store_States();
+    runtime_c4_runtime_view_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_states_view_t *states = RuntimeC4Store_States();
     uint8_t normalized_state = (state != 0U) ? COMMAND_MANAGER_ENABLED_ENABLE : COMMAND_MANAGER_ENABLED_DISABLE;
 
     switch (subcommand)
@@ -425,7 +421,7 @@ uint8_t RuntimeC4Store_WriteState(char subcommand, uint8_t state)
 
 uint8_t RuntimeC4Store_ReadParam(char subcommand, float *value_out)
 {
-    const runtime_c4_params_t *params = RuntimeC4Store_Params();
+    const runtime_c4_params_view_t *params = RuntimeC4Store_Params();
 
     if (value_out == 0)
     {
@@ -557,7 +553,7 @@ uint8_t RuntimeC4Store_ReadParam(char subcommand, float *value_out)
 
 uint8_t RuntimeC4Store_ReadState(char subcommand, uint8_t *state_out)
 {
-    const runtime_c4_states_t *states = RuntimeC4Store_States();
+    const runtime_c4_states_view_t *states = RuntimeC4Store_States();
 
     if (state_out == 0)
     {
@@ -824,7 +820,7 @@ void RuntimeC4_Init(void)
 
 void RuntimeC4_AccumulateInitChecks(uint16_t pass_mask, uint16_t fail_mask)
 {
-    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_runtime_view_t *runtime = RuntimeC4Store_Runtime();
 
     runtime->init_check_mask = (uint16_t)(runtime->init_check_mask | pass_mask | fail_mask);
     runtime->init_fail_mask = (uint16_t)(runtime->init_fail_mask | fail_mask);
@@ -918,8 +914,8 @@ void RuntimeC4_SetLastExecOk(uint8_t last_exec_ok)
 
 void RuntimeC4_UpdateReportMode(void)
 {
-    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
-    const runtime_c4_states_t *states = RuntimeC4Store_States();
+    runtime_c4_runtime_view_t *runtime = RuntimeC4Store_Runtime();
+    const runtime_c4_states_view_t *states = RuntimeC4Store_States();
 
     if ((states->semantic_enable != 0U) && (states->osc_enable != 0U))
     {
@@ -1106,9 +1102,9 @@ void RuntimeC4_WriteStatusCmdInvalid(void)
 
 uint8_t RuntimeC4_RecoverFaultAndReinit(void)
 {
-    runtime_c4_state_t *runtime = RuntimeC4Store_Runtime();
-    runtime_c4_params_t *params = RuntimeC4Store_Params();
-    runtime_c4_states_t *states = RuntimeC4Store_States();
+    runtime_c4_runtime_view_t *runtime = RuntimeC4Store_Runtime();
+    runtime_c4_params_view_t *params = RuntimeC4Store_Params();
+    runtime_c4_states_view_t *states = RuntimeC4Store_States();
 
     /* Reset all fault-related counters and states */
     runtime->sensor_invalid_consecutive = 0U;
@@ -1121,7 +1117,7 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     runtime->comm_state = 0U;
     
     /* Reset system state to INIT to allow re-initialization */
-    runtime->system_state = RUNTIME_STORE_SYSTEM_INIT;
+    runtime->system_state = RUNTIME_STORE_SYSTEM_RUNNING;
     runtime->init_diag = RUNTIME_STORE_DIAG_NOT_EXECUTED;
     
     /* Clear initialization check masks to allow fresh accumulation */

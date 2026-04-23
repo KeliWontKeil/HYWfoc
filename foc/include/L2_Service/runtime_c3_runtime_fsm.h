@@ -7,9 +7,9 @@
 #include "L2_Service/runtime_snapshot.h"
 #include "L3_Algorithm/protocol_core_types.h"
 
-void RuntimeC3_Init(void);
 void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal);
 uint8_t RuntimeC3_HandleCommand(const protocol_command_t *cmd);
+void RuntimeC3_Init(void);
 void RuntimeC3_ReportFrameError(void);
 void RuntimeC3_BuildSnapshot(runtime_snapshot_t *snapshot);
 void RuntimeC3_Commit(void);

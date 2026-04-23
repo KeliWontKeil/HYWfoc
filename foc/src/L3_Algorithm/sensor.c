@@ -159,6 +159,7 @@ void Sensor_ReadAll(void)
 {
     Sensor_ReadADC(0U);
     Sensor_ReadEncoder();
+    Sensor_ReadVBUS();
 }
 
 void Sensor_ReadCurrentOnly(void)
@@ -166,12 +167,7 @@ void Sensor_ReadCurrentOnly(void)
     Sensor_ReadADC(1U);
 }
 
-/*!
-    \brief      Read ADC current measurements
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
+/*Read ADC current measurements*/
 static void Sensor_ReadADC(uint8_t use_fast_window)
 {
     float current_a = 0.0f;
@@ -222,12 +218,7 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
     }
 }
 
-/*!
-    \brief      Read encoder angle
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
+/* Read encoder angle */
 static void Sensor_ReadEncoder(void)
 {
     float angle_rad;
@@ -259,21 +250,36 @@ static void Sensor_ReadEncoder(void)
     }
 }
 
-/*!
-    \brief      Get sensor data pointer
-    \param[in]  none
-    \param[out] none
-    \retval     sensor_data_t*: Pointer to sensor data structure
-*/
-uint8_t Sensor_CopyData(sensor_data_t *out_data)
+/* VBUS voltage sampling with moving average filter */
+void Sensor_ReadVBUS(void)
 {
-    if (out_data == 0)
-    {
-        return 0U;
-    }
+    float vbus_raw;
 
+    if (FOC_Platform_ReadVbusVoltage(&vbus_raw) != 0U)
+    {
+        sensor_data.vbus_voltage_raw = vbus_raw;
+        if(sensor_data.vbus_valid == 0U)
+        {
+            sensor_data.vbus_voltage_filtered = vbus_raw;
+            sensor_data.vbus_valid = 1U;
+        }        
+        /* Use raw value until filter is initialized */
+        sensor_data.vbus_voltage_filtered = Math_FirstOrderLpf(vbus_raw,
+                                                                &sensor_data.vbus_voltage_filtered,
+                                                                0.1F,
+                                                                &sensor_data.vbus_valid);
+    }
+    else
+    {
+        sensor_data.vbus_valid = 0U;
+        sensor_data.vbus_voltage_raw = 0.0f;
+        sensor_data.vbus_voltage_filtered = 0.0f;
+    }
+}
+
+void Sensor_CopyData(sensor_data_t *out_data)
+{
     *out_data = sensor_data;
-    return 1U;
 }
 
 void Sensor_ADCSampleTimeOffset(float percent)
@@ -316,13 +322,10 @@ static void Kalman_Update(kalman_filter_t* filter, float measurement)
 
     /* Store raw value */
     filter->raw_value = measurement;
-
     /* Predict covariance: P(k|k-1) = P(k-1|k-1) + Q */
     filter->estimate_error += filter->process_noise;
-
     /* Calculate denominator for Kalman gain */
     denominator = filter->estimate_error + filter->measurement_error;
-
     /* Prevent division by zero or very small numbers */
     if (denominator < 1e-6f)
     {
@@ -333,16 +336,12 @@ static void Kalman_Update(kalman_filter_t* filter, float measurement)
         filter->output_value = filter->filtered_value - filter->zero_offset;
         return;
     }
-
     /* Kalman gain calculation */
     filter->kalman_gain = filter->estimate_error / denominator;
-
     /* Update estimate */
     filter->filtered_value = filter->filtered_value + filter->kalman_gain * (measurement - filter->filtered_value);
-
     /* Update estimate error */
     filter->estimate_error = (1.0f - filter->kalman_gain) * filter->estimate_error;
-
     filter->output_value = filter->filtered_value - filter->zero_offset;  /* Apply zero offset to get final output */
 }
 #endif
@@ -438,61 +437,8 @@ static float Sensor_UpdateAngleLpf(float measurement)
 }
 #endif
 
-/* VBUS voltage sampling with moving average filter */
-#define VBUS_FILTER_SAMPLES 8
-static float g_vbus_filter_buffer[VBUS_FILTER_SAMPLES] = {0};
-static uint8_t g_vbus_filter_index = 0;
-static uint8_t g_vbus_filter_initialized = 0;
-
-void Sensor_ReadVBUS(void)
-{
-    float vbus_raw;
-    
-    if (FOC_Platform_ReadVbusVoltage(&vbus_raw) != 0U)
-    {
-        sensor_data.vbus_voltage_raw = vbus_raw;
-        sensor_data.vbus_valid = 1U;
-        
-        /* Apply moving average filter */
-        g_vbus_filter_buffer[g_vbus_filter_index] = vbus_raw;
-        g_vbus_filter_index = (g_vbus_filter_index + 1) % VBUS_FILTER_SAMPLES;
-        
-        if (g_vbus_filter_initialized == 0U && g_vbus_filter_index == 0U)
-        {
-            g_vbus_filter_initialized = 1U;
-        }
-        
-        /* Calculate filtered value */
-        if (g_vbus_filter_initialized != 0U)
-        {
-            float sum = 0.0f;
-            uint8_t i;
-            for (i = 0; i < VBUS_FILTER_SAMPLES; i++)
-            {
-                sum += g_vbus_filter_buffer[i];
-            }
-            sensor_data.vbus_voltage_filtered = sum / VBUS_FILTER_SAMPLES;
-        }
-        else
-        {
-            /* Use raw value until filter is initialized */
-            sensor_data.vbus_voltage_filtered = vbus_raw;
-        }
-    }
-    else
-    {
-        sensor_data.vbus_valid = 0U;
-        sensor_data.vbus_voltage_raw = 0.0f;
-        sensor_data.vbus_voltage_filtered = 0.0f;
-    }
-}
-
 float Sensor_GetVBUSVoltage(void)
 {
     return sensor_data.vbus_voltage_filtered;
 }
 
-uint8_t Sensor_IsVBUSValid(void)
-{
-    return sensor_data.vbus_valid;
-}
