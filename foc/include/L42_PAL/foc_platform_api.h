@@ -114,9 +114,16 @@ void FOC_Platform_EnableCycleCounter(void);
 /** @brief Read current cycle counter value. */
 uint32_t FOC_Platform_ReadCycleCounter(void);
 
+/* ===== VBUS Voltage Sampling ===== */
+
+/** @brief Read VBUS voltage via ADC2 (software trigger, EOC polling). */
+uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v);
+
 /* ===== Protection Hook ===== */
 
 /** @brief Execute optional undervoltage protection hook. */
 void FOC_Platform_UndervoltageProtect(float vbus_voltage);
 
 #endif /* FOC_PLATFORM_API_H */
+
+

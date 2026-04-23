@@ -208,6 +208,20 @@ static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor,
                                    (float)exec_cycles / 120.0f);
     }
 
+    if ((mask & DEBUG_STREAM_OSC_PARAM_VBUS_VOLTAGE) != 0U)
+    {
+        float vbus_voltage = 0.0f;
+        /* Try to get VBUS voltage from sensor data */
+        if (sensor->vbus_valid != 0U)
+        {
+            vbus_voltage = sensor->vbus_voltage_filtered;
+        }
+        DebugStream_AppendOscParam(payload,
+                                   sizeof(payload),
+                                   &offset,
+                                   vbus_voltage);
+    }
+
     if ((offset + 6U) < sizeof(payload))
     {
         written = snprintf(payload + offset,
@@ -285,6 +299,18 @@ static void DebugStream_OutputSemanticTelemetry(const sensor_data_t *sensor, uin
     else
     {
         FOC_Platform_WriteDebugText("measurement.encoder.status=invalid\r\n");
+    }
+
+    if (sensor->vbus_valid != 0U)
+    {
+        snprintf(buffer, sizeof(buffer), "measurement.vbus_voltage_raw_v=%.3f\r\n", sensor->vbus_voltage_raw);
+        FOC_Platform_WriteDebugText(buffer);
+        snprintf(buffer, sizeof(buffer), "measurement.vbus_voltage_filtered_v=%.3f\r\n", sensor->vbus_voltage_filtered);
+        FOC_Platform_WriteDebugText(buffer);
+    }
+    else
+    {
+        FOC_Platform_WriteDebugText("measurement.vbus.status=invalid\r\n");
     }
 
     snprintf(buffer, sizeof(buffer), "control.execution_time_us=%.3f\r\n\r\n", exec_cycles / 120.0f);

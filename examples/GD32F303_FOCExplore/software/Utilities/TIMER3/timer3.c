@@ -1,5 +1,7 @@
 #include "timer3.h"
 
+#include "interrupt_priority.h"
+
 static volatile uint8_t timer3_initialized = 0;
 static uint16_t g_timer3_period = 0U;
 
@@ -7,6 +9,15 @@ void Timer3_Init(uint32_t prescaler, uint32_t period)
 {
     timer_parameter_struct timer_initpara;
     timer_oc_parameter_struct timer_ocpara;
+
+#if (TIMER3_VIS_TOGGLE_ENABLE == 1U)
+    rcu_periph_clock_enable(TIMER3_VIS_GPIO_RCU);
+    gpio_init(TIMER3_VIS_GPIO_PORT,
+              GPIO_MODE_OUT_PP,
+              GPIO_OSPEED_50MHZ,
+              TIMER3_VIS_GPIO_PIN);
+    gpio_bit_reset(TIMER3_VIS_GPIO_PORT, TIMER3_VIS_GPIO_PIN);
+#endif
 
     rcu_periph_clock_enable(TIMER3_RCU);
     timer_deinit(TIMER3_PERIPH);
@@ -39,6 +50,9 @@ void Timer3_Init(uint32_t prescaler, uint32_t period)
     timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, period - 2);
     timer_channel_output_shadow_config(TIMER3_PERIPH, TIMER_CH_3, TIMER_OC_SHADOW_DISABLE);
 
+    timer_interrupt_enable(TIMER3_PERIPH, TIMER_INT_CH3);
+    NVIC_CONFIG(TIMER3_IRQn, TIMER3_PRIORITY_GROUP, TIMER3_PRIORITY_SUBGROUP);
+
     /* Ensure a known phase before first sync trigger arrives from TIMER2. */
     timer_counter_value_config(TIMER3_PERIPH, 0U);
     timer_auto_reload_shadow_enable(TIMER3_PERIPH);
@@ -70,4 +84,27 @@ void Timer3_SetSampleOffsetPercent(float percent)
 
     compare_value = (uint16_t)((float)g_timer3_period * percent / 100.0f);
     timer_channel_output_pulse_value_config(TIMER3_PERIPH, TIMER_CH_3, compare_value);
+}
+
+void TIMER3_IRQHandler(void)
+{
+    if (timer_interrupt_flag_get(TIMER3_PERIPH, TIMER_INT_FLAG_CH3) == RESET)
+    {
+        return;
+    }
+
+    timer_interrupt_flag_clear(TIMER3_PERIPH, TIMER_INT_FLAG_CH3);
+
+#if (TIMER3_VIS_TOGGLE_ENABLE == 1U)
+
+    if (gpio_output_bit_get(TIMER3_VIS_GPIO_PORT, TIMER3_VIS_GPIO_PIN) != RESET)
+    {
+        gpio_bit_reset(TIMER3_VIS_GPIO_PORT, TIMER3_VIS_GPIO_PIN);
+    }
+    else
+    {
+        gpio_bit_set(TIMER3_VIS_GPIO_PORT, TIMER3_VIS_GPIO_PIN);
+    }
+
+#endif
 }

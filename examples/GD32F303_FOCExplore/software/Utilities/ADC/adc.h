@@ -19,10 +19,13 @@
 #define ADC0_RCU              RCU_ADC0
 #define ADC1_PERIPH           ADC1
 #define ADC1_RCU              RCU_ADC1
+#define ADC2_PERIPH           ADC2
+#define ADC2_RCU              RCU_ADC2
 
 /* ADC channel definitions */
 #define ADC_CHANNEL_PA6       ADC_CHANNEL_6     /* Phase A current */
 #define ADC_CHANNEL_PA7       ADC_CHANNEL_7     /* Phase B current */
+#define ADC_CHANNEL_PA1       ADC_CHANNEL_1     /* VBUS voltage (ADC2) */
 
 /* ADC GPIO definitions */
 #define ADC_GPIO_PA6_RCU      RCU_GPIOA
@@ -33,9 +36,15 @@
 #define ADC_GPIO_PA7_PORT     GPIOA
 #define ADC_GPIO_PA7_PIN      GPIO_PIN_7
 
-#define FOC_ISR_VIS_ADC_DMA_GPIO_RCU RCU_GPIOB
-#define FOC_ISR_VIS_ADC_DMA_GPIO_PORT GPIOB
-#define FOC_ISR_VIS_ADC_DMA_GPIO_PIN GPIO_PIN_8
+#define ADC_GPIO_PA1_RCU      RCU_GPIOA
+#define ADC_GPIO_PA1_PORT     GPIOA
+#define ADC_GPIO_PA1_PIN      GPIO_PIN_1
+
+
+#define FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE 1U
+#define FOC_ISR_VIS_ADC_DMA_GPIO_RCU RCU_GPIOC
+#define FOC_ISR_VIS_ADC_DMA_GPIO_PORT GPIOC
+#define FOC_ISR_VIS_ADC_DMA_GPIO_PIN GPIO_PIN_13
 
 /* ADC configuration */
 #define ADC_SAMPLE_TIME       ADC_SAMPLETIME_55POINT5  /* Maximum resolution */
@@ -49,9 +58,9 @@
 #define ADC_DMA_RCU           RCU_DMA0
 
 /* Buffer configuration */
-#define ADC_BUFFER_SIZE       24     /* DMA buffer size (samples per channel) */
+#define ADC_BUFFER_SIZE       4     /* DMA buffer size (samples per channel) */
 #define ADC_CHANNEL_COUNT     2       /* Number of channels: PA6 and PA7 */
-#define ADC_AVG_DEFAULT_COUNT 24      /* 24kHz sampling / 1kHz control loop */
+#define ADC_AVG_DEFAULT_COUNT 4      /* 24kHz sampling / 1kHz control loop */
 
 /* Current calculation constants */
 #define ADC_VREF              3.3f    /* Reference voltage (V) */
@@ -104,6 +113,10 @@ void ADC_SetTriggerFrequency(uint32_t frequency_hz);
 /* DMA interrupt handler (called from ISR) */
 void ADC_DMA_IRQHandler_Internal(void);
 void ADC_IRQHandler_Internal(void);
+
+/* ADC2 VBUS voltage sampling (software trigger, EOC polling). */
+uint8_t ADC2_ReadVbus(float *vbus_v);
+
 
 #endif /* _ADC_H_ */
 

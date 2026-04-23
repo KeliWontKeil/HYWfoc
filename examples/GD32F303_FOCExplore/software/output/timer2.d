@@ -34,3 +34,4 @@
 .\output\timer2.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h
 .\output\timer2.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h
 .\output\timer2.o: .\Application\Include\interrupt_priority.h
+.\output\timer2.o: .\Utilities\TIMER3\timer3.h

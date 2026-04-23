@@ -33,3 +33,4 @@
 .\output\timer3.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_misc.h
 .\output\timer3.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h
 .\output\timer3.o: .\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h
+.\output\timer3.o: .\Application\Include\interrupt_priority.h

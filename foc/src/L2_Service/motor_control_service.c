@@ -48,16 +48,16 @@ void MotorControlService_SetSensorSampleOffsetPercent(float sample_offset_percen
     Sensor_ADCSampleTimeOffset(sample_offset_percent);
 }
 
-uint8_t MotorControlService_ReadAllSensorSnapshot(sensor_data_t *snapshot)
+void MotorControlService_ReadAllSensorSnapshot(sensor_data_t *snapshot)
 {
     Sensor_ReadAll();
-    return Sensor_CopyData(snapshot);
+    Sensor_CopyData(snapshot);
 }
 
-uint8_t MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot)
+void MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot)
 {
     Sensor_ReadCurrentOnly();
-    return Sensor_CopyData(snapshot);
+    Sensor_CopyData(snapshot);
 }
 
 uint8_t MotorControlService_RequiresCurrentSample(void)
@@ -81,26 +81,16 @@ uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
     {
         case MOTOR_CONTROL_SERVICE_TASK_OUTER_LOOP:
         {
-            uint8_t run_ok = FOC_ControlOuterLoopStep(motor,
-                                                      current_pid,
-                                                      speed_pid,
-                                                      angle_hold_pid,
-                                                      args->sensor,
-                                                      args->control_mode,
-                                                      args->speed_only_rad_s,
-                                                      args->target_angle_rad,
-                                                      args->angle_position_speed_rad_s,
-                                                      args->dt_sec);
-            if (run_ok == 0U)
-            {
-                return 0U;
-            }
-
-            if (args->sensor != 0)
-            {
-                FOC_ControlCompensationStep(motor, args->sensor);
-            }
-
+            FOC_ControlOuterLoopStep(motor,
+                                     current_pid,
+                                     speed_pid,
+                                     angle_hold_pid,
+                                     args->sensor,
+                                     args->control_mode,
+                                     args->speed_only_rad_s,
+                                     args->target_angle_rad,
+                                     args->angle_position_speed_rad_s,
+                                     args->dt_sec);
             return 1U;
         }
 

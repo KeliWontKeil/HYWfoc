@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-04-23
+### Changed
+- 修复部分状态机BUG，恢复电压限幅逻辑
+- 调整状态机组织结构，修复LED闪烁不正常以及错误恢复不正常的BUG
+- 完善欠压保护功能，监测VBUS电压并在过低时进入FAULT状态
+- 大量文档未更新
+
 ## [1.3.6] - 2026-04-21
 
 ### Changed
@@ -42,11 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - 将结构/依赖文档收敛到单一事实源 `docs/architecture.md`，并删除重复的结构文档入口，避免兼容式跳转维护。
 - 重写并中文化仓库流程治理文档，统一边界口径：`AI_INITIALIZATION.md`、`copilot-instructions.md`、`.github/AGENTS.md`、`.github/WORKFLOW_CHECKLIST.md`、`.github/DOCUMENTATION_STRUCTURE.md`。
-- 重构 `NEXT_MISSION.md` 为面向结构重排的分阶段任务单，并将“待确认问题”固化为“已确认决议”。
+- 重构 `NEXT_MISSION.md` 为面向结构重排的分阶段任务单，并将"待确认问题"固化为"已确认决议"。
 - 清理失效文档入口与过期工作流引用，修复 `docs/README.md`、`.github/*`、`README.md` 的断链与版本口径。
 
 ### Documentation
-- 在 `docs/development.md` 增补“编译/调试经验沉淀”条目，并与仓库长期记忆保持同措辞同步。
+- 在 `docs/development.md` 增补"编译/调试经验沉淀"条目，并与仓库长期记忆保持同措辞同步。
 
 ## [1.3.1] - 2026-04-14
 

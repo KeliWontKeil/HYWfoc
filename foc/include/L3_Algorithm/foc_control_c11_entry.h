@@ -47,7 +47,6 @@ void FOC_PIDInit(foc_pid_t *pid,
 
 void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
-/* L3 init path bridge: keep C12 on C1 entry and avoid direct C12->C41 dependency. */
 void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle);
 
 #endif /* FOC_CONTROL_C11_ENTRY_H */

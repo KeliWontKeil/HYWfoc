@@ -23,7 +23,8 @@
 3.高频率同步定时器强烈建议实现，避免控制和PWM更新时序错位引起震颤
 4.建议严格分离初始化和中断使能，避免中断提前开启导致不可预期的行为
 5.如果使用定时器触发+DMA进行ADC采样，请确保采样点与PWM周期内的预设位置对齐，建议使用高频率同步定时器作为定时器同步源
-6.通信接口可选实现，但建议至少实现一个UART接口以便于调试和参数调整
+6.通信接口可选实现，但建议至少实现一个UART接口以便于调试和参数调整，协议帧解析采用触发制，务必同时实现帧就绪查询和帧读取接口，并确保它们在ISR上下文中安全调用
+7.建议中断优先级:ADC采样>PWM定时器>任务定时器>其他外设，确保采样的正确性以及PWM更新的及时性
 
 */
 
@@ -134,7 +135,14 @@ void FOC_Platform_EnableCycleCounter(void) {}
 /** @brief Read cycle counter value; return 0 when unsupported. */
 uint32_t FOC_Platform_ReadCycleCounter(void) { return 0U; }
 
+/* ===== VBUS Voltage Sampling ===== */
+
+/** @brief Read VBUS voltage via ADC2; return 0 when unsupported. */
+uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v) { (void)vbus_v; return 0U; }
+
 /* ===== Protection Hook ===== */
 
 /** @brief Execute undervoltage protection hook using measured bus voltage. */
 void FOC_Platform_UndervoltageProtect(float vbus_voltage) { (void)vbus_voltage; }
+
+

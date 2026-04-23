@@ -39,8 +39,8 @@ void MotorControlService_RunPwmInterpolationIsr(void);
 
 void MotorControlService_InitSensorInput(uint8_t pwm_freq_khz, float sample_offset_percent);
 void MotorControlService_SetSensorSampleOffsetPercent(float sample_offset_percent);
-uint8_t MotorControlService_ReadAllSensorSnapshot(sensor_data_t *snapshot);
-uint8_t MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot);
+void MotorControlService_ReadAllSensorSnapshot(sensor_data_t *snapshot);
+void MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot);
 
 uint8_t MotorControlService_RequiresCurrentSample(void);
 void MotorControlService_ResetCurrentSoftSwitchState(foc_motor_t *motor);

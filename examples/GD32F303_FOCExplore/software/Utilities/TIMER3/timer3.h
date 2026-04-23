@@ -3,6 +3,13 @@
 
 #include "gd32f30x.h"
 
+#define TIMER3_VIS_TOGGLE_ENABLE 1U
+#if (TIMER3_VIS_TOGGLE_ENABLE == 1U)
+#define TIMER3_VIS_GPIO_RCU RCU_GPIOC
+#define TIMER3_VIS_GPIO_PORT GPIOC
+#define TIMER3_VIS_GPIO_PIN GPIO_PIN_13
+#endif
+
 /* TIMER3 peripheral definitions */
 #define TIMER3_PERIPH                    TIMER3
 #define TIMER3_RCU                       RCU_TIMER3
