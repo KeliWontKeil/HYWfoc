@@ -127,6 +127,13 @@ void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal)
                 }
             }
         }
+
+        if(signal->undervoltage_vbus < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
+        {
+            RuntimeC4_SetLastFaultCode((uint8_t)RUNTIME_FAULT_UNDERVOLTAGE);
+            RuntimeC4_SetSystemState(RUNTIME_STATE_SYSTEM_FAULT);
+            RuntimeC4_OutputDiag("ERR", "vbus", "undervoltage detected");
+        }
     }
 
     if (signal->control_loop_skipped != 0U)

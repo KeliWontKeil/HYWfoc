@@ -101,8 +101,7 @@
 
 /* Safety threshold defaults. */
 #define FOC_DIAG_SENSOR_FAULT_THRESHOLD 1U
-#define FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT 6.0f
-#define FOC_UNDERVOLTAGE_RECOVER_VBUS_DEFAULT 10.5f
+#define FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT 8.0f
 
 /* Control loop defaults and limits. */
 #define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (FOC_MATH_TWO_PI * 4.0f)

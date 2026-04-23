@@ -19,7 +19,6 @@ static float g_svpwm_lpf_phase_c = 0.0f;
 
 static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
 {
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
     if ((phase_a == 0) || (phase_b == 0) || (phase_c == 0))
     {
         return;
@@ -46,11 +45,6 @@ static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
                                   &g_svpwm_lpf_phase_c,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
                                   &g_svpwm_lpf_state_valid);
-#else
-    (void)phase_a;
-    (void)phase_b;
-    (void)phase_c;
-#endif
 }
 
 static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
@@ -91,10 +85,14 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
                                 &motor->phase_a,
                                 &motor->phase_b,
                                 &motor->phase_c);
+                                
+#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
 
     FOC_ApplySvpwmPreLpf(&motor->phase_a,
                          &motor->phase_b,
                          &motor->phase_c);
+
+#endif
 
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
 

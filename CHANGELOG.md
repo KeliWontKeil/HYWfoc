@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-04-23
+### Changed
+- 修复部分状态机BUG，恢复电压限幅逻辑
+- 调整状态机组织结构，修复LED闪烁不正常以及错误恢复不正常的BUG
+- 完善欠压保护功能，监测VBUS电压并在过低时进入FAULT状态
+- 大量文档未更新
+
 ## [1.3.6] - 2026-04-21
 
 ### Changed
