@@ -34,7 +34,7 @@ static volatile uint8_t g_fast_current_loop_enabled = 0U;
 static volatile uint8_t g_fast_current_loop_div_counter = 0U;
 static volatile float g_fast_current_loop_iq_target = 0.0f;
 static volatile float g_fast_current_loop_electrical_angle = 0.0f;
-
+static uint8_t g_fast_loop_control_mode_last = 0xFFU;
 
 uint8_t g_led_run_on = 0U;
 static uint16_t g_led_run_blink_counter = 0U;
@@ -150,6 +150,13 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
         return;
     }
 
+    /* Reset current soft-switch blend state when control mode changes. */
+    if (task_args.control_mode != g_fast_loop_control_mode_last)
+    {
+        MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
+        g_fast_loop_control_mode_last = task_args.control_mode;
+    }
+
     /* Current algorithm always runs in PWM ISR; task loop only publishes fast-loop targets. */
     g_fast_current_loop_iq_target = g_motor.iq_target;
     g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
@@ -190,13 +197,12 @@ void FOC_App_Init(void)
 
     MotorControlService_ResetControlConfigDefault(&g_motor);
     FOC_Platform_WriteDebugText("\r\n=== FOC System Started ===\r\n");
-    FOC_Platform_WriteDebugText("Init feedback pipeline...\r\n\r\n");
+    FOC_Platform_WriteDebugText("Init motor,please wait...\r\n\r\n");
 
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_PROTOCOL);
 
-#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
     DebugStream_Init();
-#endif
+
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_DEBUG);
 
     MotorControlService_InitSensorInput(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
@@ -211,6 +217,8 @@ void FOC_App_Init(void)
         init_step.init_checks_fail_mask = (uint16_t)(init_step.init_checks_fail_mask | RUNTIME_INIT_CHECK_SENSOR);
     }
 
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+
     if(g_sensor_snapshot.vbus_voltage_filtered > FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
         init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_VBUS);
@@ -219,6 +227,10 @@ void FOC_App_Init(void)
     {
         init_step.init_checks_fail_mask = (uint16_t)(init_step.init_checks_fail_mask | RUNTIME_INIT_CHECK_VBUS);
     }
+
+#else
+    init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_VBUS);
+#endif
 
     /* Initialize SVPWM output and interpolation callback. */
     MotorControlService_InitPwmOutput(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
@@ -246,12 +258,13 @@ void FOC_App_Init(void)
     char startup_info[160];
     snprintf(startup_info,
             sizeof(startup_info),
-            "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, volt_ratio: %.2f\r\n true_vbus: %.2fV\r\n",
+            "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, set_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
             (double)g_motor.mech_angle_at_elec_zero_rad,
             (int)g_motor.direction,
             (int)g_motor.pole_pairs,
             (double)g_motor.vbus_voltage,
-            (double)g_motor.voltage_limit_ratio,
+            (double)g_motor.set_voltage,
+            (double)(g_motor.vbus_voltage > 0.0f ? g_motor.set_voltage / g_motor.vbus_voltage : 0.0f),
             (double)g_sensor_snapshot.vbus_voltage_filtered);
     FOC_Platform_WriteDebugText(startup_info);
     init_step.finalize_init = 1U;
@@ -401,5 +414,3 @@ static void Motor_Control_Loop(void)
 
     FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
 }
-
-

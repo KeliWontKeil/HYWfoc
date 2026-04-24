@@ -6,7 +6,7 @@
 #include "L3_Algorithm/foc_control_c22_current_loop.h"
 #include "L3_Algorithm/foc_control_c23_motor_param_learn.h"
 #include "L3_Algorithm/foc_control_c24_compensation.h"
-#include "L3_Algorithm/foc_control_c25_cfg_state.h"
+#include "L3_Algorithm/foc_control_c13_cfg_state.h"
 #include "L41_Math/foc_math_lut.h"
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
@@ -135,7 +135,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->uq = 0.0f;
     motor->set_voltage = set_voltage;
     motor->vbus_voltage = vbus_voltage;
-    motor->voltage_limit_ratio = set_voltage / vbus_voltage;
     motor->iq_target = 0.0f;
 
     motor->iq_measured = 0.0f;
@@ -166,5 +165,9 @@ void FOC_MotorInit(foc_motor_t *motor,
 #if (FOC_INIT_CALIBRATION_ENABLE == FOC_CFG_ENABLE)
     FOC_CalibrateElectricalAngleAndDirection(motor);
 #endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlInitCoggingCompensation(motor);
+#else
+    FOC_ControlSetCoggingCompUnavailable(motor, FOC_COGGING_COMP_SOURCE_DISABLED);
+#endif
 }

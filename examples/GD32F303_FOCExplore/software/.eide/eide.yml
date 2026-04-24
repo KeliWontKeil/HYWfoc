@@ -24,7 +24,6 @@ virtualFolder:
         - path: ../../../foc/src/L3_Algorithm/foc_control_c22_current_loop.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c23_motor_param_learn.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c24_compensation.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c25_cfg_state.c
         - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
         - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
@@ -35,6 +34,7 @@ virtualFolder:
         - path: ../../../foc/src/L2_Service/runtime_c3_runtime_fsm.c
         - path: ../../../foc/src/L2_Service/runtime_c4_runtime_core.c
         - path: ../../../foc/src/L2_Service/runtime_c5_output_adapter.c
+        - path: ../../../foc/src/L3_Algorithm/foc_control_c13_cfg_state.c
       folders: []
     - name: CMSIS
       files:

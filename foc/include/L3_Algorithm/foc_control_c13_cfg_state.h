@@ -1,5 +1,5 @@
-#ifndef FOC_CONTROL_C25_CFG_STATE_H
-#define FOC_CONTROL_C25_CFG_STATE_H
+#ifndef FOC_CONTROL_C13_CFG_STATE_H
+#define FOC_CONTROL_C13_CFG_STATE_H
 
 #include <stdint.h>
 
@@ -20,7 +20,6 @@ void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float valu
 const foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatus(const foc_motor_t *motor);
 void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor);
 foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(foc_motor_t *motor);
-uint8_t *FOC_ControlGetCurrentSoftSwitchBlendInitFlag(foc_motor_t *motor);
 
 void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable);
 
@@ -31,4 +30,4 @@ void FOC_PIDInit(foc_pid_t *pid,
                  float out_min,
                  float out_max);
 
-#endif /* FOC_CONTROL_C25_CFG_STATE_H */
+#endif /* FOC_CONTROL_C13_CFG_STATE_H */

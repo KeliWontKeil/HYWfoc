@@ -89,7 +89,6 @@ typedef struct {
     float mech_angle_at_elec_zero_rad;
     int8_t direction;
     float vbus_voltage;
-    float voltage_limit_ratio;
 
     /* DQ and electrical-angle runtime states. */
 

@@ -1,4 +1,4 @@
-#include "L3_Algorithm/foc_control_c25_cfg_state.h"
+#include "L3_Algorithm/foc_control_c13_cfg_state.h"
 
 #include "LS_Config/foc_config.h"
 
@@ -13,7 +13,7 @@ static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
         return;
     }
 
-#if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_blend_initialized = 0U;
 #else
     (void)motor;
@@ -22,8 +22,6 @@ static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
 
 void FOC_ControlConfigResetDefault(foc_motor_t *motor)
 {
-    uint16_t i;
-
     if (motor == 0)
     {
         return;
@@ -35,7 +33,11 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
     motor->control_runtime_cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
     motor->control_runtime_cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
 
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.enabled = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
+#else
+    motor->current_soft_switch_status.enabled = FOC_CFG_DISABLE;
+#endif
     motor->current_soft_switch_status.configured_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     motor->current_soft_switch_status.active_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     motor->current_soft_switch_status.blend_factor =
@@ -52,7 +54,7 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
     motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
     motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
 
-    for (i = 0U; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
+    for (uint16_t i = 0U; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
     {
         motor->cogging_comp_table_q15[i] = 0;
     }
@@ -276,18 +278,3 @@ foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(f
 
     return &motor->current_soft_switch_status;
 }
-
-uint8_t *FOC_ControlGetCurrentSoftSwitchBlendInitFlag(foc_motor_t *motor)
-{
-    if (motor == 0)
-    {
-        return 0;
-    }
-
-#if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
-    return &motor->current_soft_switch_blend_initialized;
-#else
-    return 0;
-#endif
-}
-

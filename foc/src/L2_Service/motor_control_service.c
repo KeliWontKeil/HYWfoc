@@ -1,7 +1,10 @@
 #include "L2_Service/motor_control_service.h"
 
+#include <math.h>
+
 #include "L3_Algorithm/foc_control_c11_entry.h"
 #include "L3_Algorithm/foc_control_c12_init.h"
+#include "L3_Algorithm/foc_control_c13_cfg_state.h"
 #include "L3_Algorithm/sensor.h"
 #include "L3_Algorithm/svpwm.h"
 #include "LS_Config/foc_config.h"
@@ -117,9 +120,23 @@ void MotorControlService_InitPidControllers(foc_motor_t *motor,
                                             foc_pid_t *angle_hold_pid,
                                             const control_config_snapshot_t *control_cfg)
 {
+    float phase_res;
+    float i_max;
+
     if ((motor == 0) || (current_pid == 0) || (speed_pid == 0) || (angle_hold_pid == 0) || (control_cfg == 0))
     {
         return;
+    }
+
+    /* Outer-loop (speed/angle) PID output is iq_target in amperes.
+     * Use set_voltage / phase_resistance as a coarse clamp to prevent
+     * commanding an unachievable current target that would saturate the
+     * voltage-limited current loop. */
+    phase_res = (fabsf(motor->phase_resistance) > 1e-6f) ? fabsf(motor->phase_resistance) : 1e-6f;
+    i_max = motor->set_voltage / phase_res;
+    if (i_max < 0.0f)
+    {
+        i_max = 0.0f;
     }
 
     FOC_PIDInit(current_pid,
@@ -132,14 +149,14 @@ void MotorControlService_InitPidControllers(foc_motor_t *motor,
                 control_cfg->pid_angle_kp,
                 control_cfg->pid_angle_ki,
                 control_cfg->pid_angle_kd,
-                -motor->set_voltage,
-                motor->set_voltage);
+                -i_max,
+                i_max);
     FOC_PIDInit(speed_pid,
                 control_cfg->pid_speed_kp,
                 control_cfg->pid_speed_ki,
                 control_cfg->pid_speed_kd,
-                -motor->set_voltage,
-                motor->set_voltage);
+                -i_max,
+                i_max);
 
     MotorControlService_ApplyConfigSnapshot(motor,
                                             current_pid,
@@ -179,10 +196,26 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
 
     current_pid->out_min = -motor->set_voltage;
     current_pid->out_max = motor->set_voltage;
-    angle_hold_pid->out_min = -motor->set_voltage;
-    angle_hold_pid->out_max = motor->set_voltage;
-    speed_pid->out_min = -motor->set_voltage;
-    speed_pid->out_max = motor->set_voltage;
+
+    {
+        float phase_res;
+        float i_max;
+
+        /* Outer-loop (speed/angle) PID output is iq_target in amperes.
+         * Recompute coarse clamp from latest set_voltage and phase_resistance
+         * so protocol-driven parameter updates take effect immediately. */
+        phase_res = (fabsf(motor->phase_resistance) > 1e-6f) ? fabsf(motor->phase_resistance) : 1e-6f;
+        i_max = motor->set_voltage / phase_res;
+        if (i_max < 0.0f)
+        {
+            i_max = 0.0f;
+        }
+
+        angle_hold_pid->out_min = -i_max;
+        angle_hold_pid->out_max = i_max;
+        speed_pid->out_min = -i_max;
+        speed_pid->out_max = i_max;
+    }
 
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
     FOC_ControlSetMinMechAngleAccumDeltaRad(motor, control_cfg->cfg_min_mech_angle_accum_delta_rad);

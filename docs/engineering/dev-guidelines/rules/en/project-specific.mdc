@@ -39,9 +39,9 @@ void Function(void) {
 - Each `Utilities/*` module is self-contained
 - Clean API via header files
 - Avoid cross-module globals
-- Dependency layering uses: L1 application, L2 algorithm, L3 advanced peripheral, L4 peripheral + special dependency layer
-- L1/L2/L3 may access L4 only through the special dependency layer
-- L4 must not depend on L1/L2/L3
+- Dependency layering uses: `LS` config → `L1` orchestration → `L2` service/protocol → `L3` algorithm → `L41` math → `L42` PAL → `L5` board drivers
+- `L1/L2/L3` may access `L5` only through `L42_PAL`
+- `L5` must not depend on `L1/L2/L3`
 
 ## Header Include Policy
 - For non-self-contained modules, place primary dependency includes in the corresponding `.h` file instead of scattering them in `.c` files.

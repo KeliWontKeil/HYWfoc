@@ -60,7 +60,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     electrical_angle = Math_WrapRad(electrical_angle);
     motor->electrical_phase_angle = electrical_angle;
 
-    voltage_limit = Math_ClampFloat(motor->set_voltage * motor->voltage_limit_ratio, 0.0f, motor->vbus_voltage);
+    voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
 
     dq_magnitude = sqrtf(motor->ud * motor->ud + motor->uq * motor->uq);
     ud_applied = motor->ud;

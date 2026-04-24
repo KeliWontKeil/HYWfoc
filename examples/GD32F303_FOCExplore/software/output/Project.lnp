@@ -46,7 +46,7 @@
 ".\output\foc_control_c22_current_loop.o"
 ".\output\foc_control_c23_motor_param_learn.o"
 ".\output\foc_control_c24_compensation.o"
-".\output\foc_control_c25_cfg_state.o"
+".\output\foc_control_c13_cfg_state.o"
 ".\output\foc_control_c31_actuation.o"
 ".\output\protocol_core.o"
 ".\output\sensor.o"

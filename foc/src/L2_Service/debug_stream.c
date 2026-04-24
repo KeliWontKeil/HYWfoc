@@ -222,6 +222,22 @@ static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor,
                                    vbus_voltage);
     }
 
+    if ((mask & DEBUG_STREAM_OSC_PARAM_IQ_TARGET) != 0U)
+    {
+        DebugStream_AppendOscParam(payload,
+                                   sizeof(payload),
+                                   &offset,
+                                   motor->iq_target);
+    }
+
+    if ((mask & DEBUG_STREAM_OSC_PARAM_IQ_MEASURED) != 0U)
+    {
+        DebugStream_AppendOscParam(payload,
+                                   sizeof(payload),
+                                   &offset,
+                                   motor->iq_measured);
+    }
+
     if ((offset + 6U) < sizeof(payload))
     {
         written = snprintf(payload + offset,

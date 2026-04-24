@@ -1155,12 +1155,6 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     /* Reset motor enable state to default */
     states->motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
 
-    /* Reset LED indicator states by calling platform API */
-    /* This ensures LED states are synchronized with system state */
-    FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, 0U);
-    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 0U);
-    FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 0U);
-
     /* Output diagnostic message for recovery */
     RuntimeC4Store_OutputDiag("INFO", "fault_recovery", "system reset completed");
 

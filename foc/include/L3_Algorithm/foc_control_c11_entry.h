@@ -25,26 +25,6 @@ void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
 void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor);
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
-void FOC_ControlConfigResetDefault(foc_motor_t *motor);
-void FOC_ControlSetMinMechAngleAccumDeltaRad(foc_motor_t *motor, float value);
-void FOC_ControlSetAngleHoldIntegralLimit(foc_motor_t *motor, float value);
-void FOC_ControlSetAngleHoldPidDeadbandRad(foc_motor_t *motor, float value);
-void FOC_ControlSetSpeedAngleTransitionStartRad(foc_motor_t *motor, float value);
-void FOC_ControlSetSpeedAngleTransitionEndRad(foc_motor_t *motor, float value);
-void FOC_ControlSetCurrentSoftSwitchMode(foc_motor_t *motor, uint8_t mode);
-void FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(foc_motor_t *motor, float value);
-void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float value);
-void FOC_ControlSetCurrentSoftSwitchEnable(foc_motor_t *motor, uint8_t enable);
-void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable);
-void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor);
-
-void FOC_PIDInit(foc_pid_t *pid,
-                 float kp,
-                 float ki,
-                 float kd,
-                 float out_min,
-                 float out_max);
-
 void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
 void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle);

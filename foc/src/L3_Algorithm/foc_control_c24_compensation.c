@@ -328,16 +328,11 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
                            status->iq_limit_a);
 }
 
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                          float mech_angle_rad,
                                          float speed_ref_rad_s)
 {
-#if (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE)
-    (void)mech_angle_rad;
-    (void)speed_ref_rad_s;
-    (void)motor;
-    return;
-#else
     float phase_rad;
     float speed_abs_rad_s;
 
@@ -357,8 +352,8 @@ void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                                    motor->cogging_comp_table_q15,
                                                    phase_rad,
                                                    speed_abs_rad_s);
-#endif
 }
+#endif
 
 uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
                                            const int16_t *table_q15,
@@ -410,12 +405,9 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source)
 #endif
 }
 
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
 {
-#if (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE)
-    FOC_ControlSetCoggingCompUnavailable(motor, FOC_COGGING_COMP_SOURCE_DISABLED);
-    FOC_Platform_WriteDebugText("cogging.init: disabled by feature switch\r\n");
-#else
     int16_t table_q15[FOC_COGGING_LUT_POINT_COUNT];
     uint8_t loaded = 0U;
     char out[128];
@@ -477,5 +469,5 @@ void FOC_ControlInitCoggingCompensation(foc_motor_t *motor)
                  (unsigned int)FOC_COGGING_INIT_LEARN_ENABLE);
         FOC_Platform_WriteDebugText(out);
     }
-#endif
 }
+#endif

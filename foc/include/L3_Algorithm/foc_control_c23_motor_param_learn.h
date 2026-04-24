@@ -17,4 +17,3 @@ uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
 
 
 #endif /* FOC_CONTROL_C23_MOTOR_PARAM_LEARN_H */
-															
