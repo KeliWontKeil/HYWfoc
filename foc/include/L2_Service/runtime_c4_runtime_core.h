@@ -96,6 +96,7 @@ void RuntimeC4_OutputFaultControlSummary(void);
 const char *RuntimeC4_GetFaultName(uint8_t fault_code);
 void RuntimeC4_WriteText(const char *text);
 
+void RuntimeC4_WriteStatusOK(void);
 void RuntimeC4_WriteStatusFrameError(void);
 void RuntimeC4_WriteStatusParamInvalid(void);
 void RuntimeC4_WriteStatusCmdInvalid(void);

@@ -34,7 +34,7 @@
           <SLE66AMisc></SLE66AMisc>
           <SLE66LinkerMisc></SLE66LinkerMisc>
           <SFDFile>$$Device:GD32F303CC$SVD\GD32F30x_HD.svd</SFDFile>
-          <bCustSvd>0</bCustSvd>
+          <bCustSvd>1</bCustSvd>
           <UseEnv>0</UseEnv>
           <BinPath></BinPath>
           <IncludePath></IncludePath>
@@ -312,7 +312,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -723,6 +723,7 @@
       <TargetName>GD32F30X_XD</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      <pCCUsed>5060750::V5.06 update 6 (build 750)::ARMCC</pCCUsed>
       <uAC6>8</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -1435,6 +1436,7 @@
       <TargetName>GD32F30X_HD</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      <pCCUsed>6120000::V6.12::.\ARMCLANG</pCCUsed>
       <uAC6>8</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -1751,8 +1753,8 @@
             <uC99>0</uC99>
             <uGnu>0</uGnu>
             <useXO>0</useXO>
-            <v6Lang>1</v6Lang>
-            <v6LangP>1</v6LangP>
+            <v6Lang>3</v6Lang>
+            <v6LangP>3</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -1760,7 +1762,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>USE_STDPERIPH_DRIVER,GD32F30X_HD</Define>
+              <Define>USE_STDPERIPH_DRIVER,GD32F30X_CL</Define>
               <Undefine></Undefine>
               <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc\include</IncludePath>
             </VariousControls>

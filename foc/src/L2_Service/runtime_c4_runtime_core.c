@@ -1085,9 +1085,14 @@ void RuntimeC4_WriteText(const char *text)
     RuntimeC4Store_WriteText(text);
 }
 
+void RuntimeC4_WriteStatusOK(void)
+{
+    RuntimeC4Store_WriteStatusByte((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+}
+
 void RuntimeC4_WriteStatusFrameError(void)
 {
-    RuntimeC4Store_WriteStatusByte((uint8_t)PROTOCOL_PARSER_STATUS_FRAME_ERROR_CHAR);
+    RuntimeC4Store_WriteStatusByte((uint8_t)FOC_PROTOCOL_STATUS_FRAME_ERROR_CHAR);
 }
 
 void RuntimeC4_WriteStatusParamInvalid(void)

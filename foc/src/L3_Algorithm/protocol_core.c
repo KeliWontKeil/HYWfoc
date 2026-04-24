@@ -17,8 +17,8 @@ protocol_core_frame_parse_result_t ProtocolCore_ParseFrame(const uint8_t *frame,
         return PROTOCOL_CORE_FRAME_PARSE_INVALID;
     }
 
-    if ((frame[0] != (uint8_t)PROTOCOL_PARSER_FRAME_HEAD_DEFAULT) ||
-        (frame[len - 1U] != (uint8_t)PROTOCOL_PARSER_FRAME_TAIL_DEFAULT))
+    if ((frame[0] != (uint8_t)FOC_PROTOCOL_FRAME_HEAD_CHAR) ||
+        (frame[len - 1U] != (uint8_t)FOC_PROTOCOL_FRAME_TAIL_CHAR))
     {
         return PROTOCOL_CORE_FRAME_PARSE_INVALID;
     }
@@ -118,14 +118,14 @@ uint8_t ProtocolCore_ExtractFrame(const uint8_t *rx_data,
 
     for (i = 0U; i < rx_len; i++)
     {
-        if (rx_data[i] != (uint8_t)PROTOCOL_PARSER_FRAME_HEAD_DEFAULT)
+        if (rx_data[i] != (uint8_t)FOC_PROTOCOL_FRAME_HEAD_CHAR)
         {
             continue;
         }
 
         for (j = (uint16_t)(i + PROTOCOL_PARSER_MIN_FRAME_LEN - 1U); j < rx_len; j++)
         {
-            if (rx_data[j] == (uint8_t)PROTOCOL_PARSER_FRAME_TAIL_DEFAULT)
+            if (rx_data[j] == (uint8_t)FOC_PROTOCOL_FRAME_TAIL_CHAR)
             {
                 *frame_start = &rx_data[i];
                 *frame_len = (uint16_t)(j - i + 1U);

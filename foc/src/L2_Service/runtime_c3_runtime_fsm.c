@@ -221,6 +221,7 @@ uint8_t RuntimeC3_HandleCommand(const protocol_command_t *cmd)
     else
     {
         RuntimeC4_SetCommState(RUNTIME_STATE_COMM_ACTIVE);
+        RuntimeC4_WriteStatusOK();
     }
 
     RuntimeC4_UpdateReportMode();

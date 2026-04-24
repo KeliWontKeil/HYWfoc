@@ -298,6 +298,7 @@ void FOC_App_Loop(void)
     if (g_service_task_pending != 0U)
     {
         g_service_task_pending = 0U;
+			
         if (Runtime_FrameRunStep(FOC_APP_COMM_FRAMES_PER_STEP) != 0U)
             g_led_comm_pulse_counter = FOC_LED_COMM_PULSE_TICKS;
 
@@ -377,8 +378,8 @@ static void FOC_App_OnPwmUpdateISR(void)
 
 static void Service_Task_Trigger(void)
 {
-    Runtime_GetSnapshot(&g_StateSnapshot);
     FOC_App_UpdateIndicators();
+		Runtime_GetSnapshot(&g_StateSnapshot);
 
     g_service_task_pending = 1U;
 }
@@ -390,6 +391,7 @@ static void Monitor_Task_Trigger(void)
 
 static void Motor_Control_Loop(void)
 {
+		
     if (g_StateSnapshot.runtime.system_fault != 0U)
     {
         FOC_App_EnterSafeOutputState(1U);

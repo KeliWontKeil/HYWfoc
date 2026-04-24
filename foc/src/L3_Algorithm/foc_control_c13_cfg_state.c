@@ -122,18 +122,27 @@ void FOC_ControlSetSpeedAngleTransitionEndRad(foc_motor_t *motor, float value)
 
 void FOC_ControlSetCurrentSoftSwitchEnable(foc_motor_t *motor, uint8_t enable)
 {
+    uint8_t new_enable;
+
     if (motor == 0)
     {
         return;
     }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    motor->current_soft_switch_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
+    new_enable = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
 #else
     (void)enable;
-    motor->current_soft_switch_status.enabled = FOC_CFG_DISABLE;
+    new_enable = FOC_CFG_DISABLE;
 #endif
-    FOC_ResetSoftSwitchBlendInit(motor);
+
+    /* Only reset blend state when the enable flag actually changes to avoid
+     * unnecessarily resetting the soft-switch transition on every config apply. */
+    if (motor->current_soft_switch_status.enabled != new_enable)
+    {
+        motor->current_soft_switch_status.enabled = new_enable;
+        FOC_ResetSoftSwitchBlendInit(motor);
+    }
 }
 
 void FOC_ControlSetCurrentSoftSwitchMode(foc_motor_t *motor, uint8_t mode)

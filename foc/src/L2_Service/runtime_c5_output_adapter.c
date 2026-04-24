@@ -73,6 +73,7 @@ void RuntimeC5_OutputParam(char subcommand, float value)
                                  subcommand,
                                  value);
 
+    RuntimeC5_WriteText(out);
 }
 
 void RuntimeC5_OutputState(char subcommand, uint8_t value)

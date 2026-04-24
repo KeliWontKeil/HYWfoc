@@ -82,17 +82,8 @@ uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
     static uint8_t g_prev_control_mode_valid = 0U;
 #endif
 
-    if ((motor == 0) || (speed_pid == 0) || (sensor == 0))
-    {
-        return 0U;
-    }
-
 #if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)
-    (void)current_pid;
-    (void)angle_hold_pid;
-    (void)control_mode;
-    (void)target_angle_rad;
-    (void)angle_position_speed_rad_s;
+		
     FOC_SpeedOuterLoopStep(motor,
                            speed_pid,
                            speed_only_rad_s,
@@ -100,13 +91,7 @@ uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
                            dt_sec);
     return 1U;
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
-    (void)current_pid;
-    (void)control_mode;
-    (void)speed_only_rad_s;
-    if (angle_hold_pid == 0)
-    {
-        return 0U;
-    }
+
     FOC_SpeedAngleOuterLoopStep(motor,
                                 speed_pid,
                                 angle_hold_pid,
@@ -116,10 +101,6 @@ uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
                                 dt_sec);
     return 1U;
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
-    if (angle_hold_pid == 0)
-    {
-        return 0U;
-    }
 
     if ((control_mode != COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY) &&
         (control_mode != COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE))

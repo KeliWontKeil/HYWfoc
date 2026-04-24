@@ -15,7 +15,6 @@ static uint8_t g_svpwm_lpf_state_valid = 0U;
 static float g_svpwm_lpf_phase_a = 0.0f;
 static float g_svpwm_lpf_phase_b = 0.0f;
 static float g_svpwm_lpf_phase_c = 0.0f;
-#endif
 
 static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
 {
@@ -46,6 +45,7 @@ static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
                                   FOC_SVPWM_PRE_LPF_ALPHA,
                                   &g_svpwm_lpf_state_valid);
 }
+#endif
 
 static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
                                                 float electrical_angle,

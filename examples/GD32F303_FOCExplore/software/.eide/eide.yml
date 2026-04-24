@@ -148,7 +148,6 @@ targets:
             CXX_FLAGS: --diag_suppress=1 --diag_suppress=1295
             C_FLAGS: --diag_suppress=1 --diag_suppress=1295
             c99-mode: true
-            one-elf-section-per-function: true
             optimization: level-0
             warnings: all-warnings
           global:
