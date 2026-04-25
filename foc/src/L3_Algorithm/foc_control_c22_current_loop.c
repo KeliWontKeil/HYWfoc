@@ -192,7 +192,6 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
     float i_beta;
     float id_measured;
     float iq_measured;
-    float voltage_limit;
     float uq_cmd;
 
     Math_ClarkeTransform(sensor->current_a.output_value,
@@ -215,13 +214,12 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
                                      &g_current_iq_lpf_state_valid);
 #endif
 
-    voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
     uq_cmd = FOC_CurrentLoopPIDRun(current_pid, motor->iq_target, iq_measured, dt_sec);
 
     motor->iq_measured = iq_measured;
 
     motor->ud = 0.0f;
-    motor->uq = Math_ClampFloat(uq_cmd, -voltage_limit, voltage_limit);
+    motor->uq = uq_cmd;
 }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)

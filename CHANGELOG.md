@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- 修复 Clarke 变换 β 系数：`Math_ClarkeTransform` 中 β = (b-c) * √3/2 改为 β = (b-c) / √3，消除 Park 变换后 Iq 的 2 倍频电角度正弦波动和 25% 直流偏置，同时修复 Id 的串扰问题。
+- 精简电流环冗余电压钳位：`FOC_CurrentControlClosedLoopStep` 中移除 `Math_ClampFloat(uq_cmd, -voltage_limit, voltage_limit)`，因 PID 输出限幅和执行层缩比已提供双重保护。
+
+### Changed (Previous)
 - 将 `foc_control_c25_cfg_state` 提升至 C13 层（`foc_control_c13_cfg_state`），消除跨层依赖：C25 无任何 L3 内部依赖，仅操作结构体字段和宏配置，提升为 C13（配置状态管理），紧接 C12 构成「入口 → 初始化 → 配置」语义链。
 - 清理 `c11_entry.h` 接口污染：删除 11 个属于 c13_cfg_state 的函数声明（`FOC_ControlConfigResetDefault`、5个 fine-tuning setter、4个 soft-switch setter、`FOC_ControlSetCoggingCompEnable`、`FOC_PIDInit`）。c11_entry.h 仅保留 c11_entry.c 实现的 7 个入口函数，名实相符。
 - 更新 `motor_control_service.c`：直接 `#include "foc_control_c13_cfg_state.h"`，不再依赖 c11_entry.h 透传。

@@ -70,7 +70,7 @@ float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_
 void Math_ClarkeTransform(float a, float b, float c, float *alpha, float *beta)
 {
     *alpha = a;
-    *beta = FOC_MATH_SQRT3_BY_2 * (b - c);
+    *beta = (b - c) / FOC_MATH_SQRT3;
 }
 
 void Math_InverseClarkeTransform(float alpha, float beta, float *a, float *b, float *c)
