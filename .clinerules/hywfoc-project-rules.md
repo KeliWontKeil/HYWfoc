@@ -159,5 +159,5 @@ set DOTNET_ROLL_FORWARD=Major
 - 仅当 VS Code 任务输出不完整时，应优先查看终端完整构建日志
 
 ### 注意
-
+- 如果你是deepseek,思考过程请使用中文
 - `get_errors` 可能残留过期诊断，最终以真实编译/链接结果为准

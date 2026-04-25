@@ -81,11 +81,33 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
     output = pid->kp * error_effective + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
+    /*
+     * Conditional integration anti-windup (cond_int).
+     *
+     * If output is saturated and the effective error deepens the saturation
+     * direction, roll back the integration that was just added. This prevents
+     * the integrator from winding up during sustained saturation, while
+     * allowing full KI response during normal (unsaturated) operation.
+     *
+     * Compared to the previous back-calculation approach, conditional
+     * integration allows the integrator to build freely during transient
+     * response — ideal for current loop where small KP + large KI is desired.
+     */
+    if (((output <= pid->out_min) && (error_effective < 0.0f)) ||
+        ((output >= pid->out_max) && (error_effective > 0.0f)))
+    {
+        pid->integral -= error_effective * dt_sec;
+    }
+
+    /*
+     * Integral clamping safety net: |integral| <= |out_max / ki|.
+     * Ensures the integral term alone cannot drive the output beyond the
+     * clamp limit, even under extreme transient or disturbance conditions.
+     */
     if (pid->ki > 1e-6f)
     {
-        float i_min = (pid->out_min - pid->kp * error_effective - pid->kd * derivative) / pid->ki;
-        float i_max = (pid->out_max - pid->kp * error_effective - pid->kd * derivative) / pid->ki;
-        pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
+        float i_limit = fabsf(pid->out_max) / pid->ki;
+        pid->integral = Math_ClampFloat(pid->integral, -i_limit, i_limit);
     }
 
     pid->prev_error = error_effective;
@@ -154,16 +176,18 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_motor_t *motor,
 }
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
-static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
-                                             foc_pid_t *current_pid,
-                                             const sensor_data_t *sensor,
-                                             float dt_sec)
+static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
+                                             float electrical_angle,
+                                             float *iq_out)
 {
     float i_alpha;
     float i_beta;
     float id_measured;
-    float iq_measured;
-    float uq_cmd;
+
+    if ((sensor == 0) || (iq_out == 0))
+    {
+        return;
+    }
 
     Math_ClarkeTransform(sensor->current_a.output_value,
                          sensor->current_b.output_value,
@@ -173,17 +197,30 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
 
     Math_ParkTransform(i_alpha,
                        i_beta,
-                       motor->electrical_phase_angle,
+                       electrical_angle,
                        &id_measured,
-                       &iq_measured);
+                       iq_out);
     (void)id_measured;
 
-#if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
-    iq_measured = Math_FirstOrderLpf(iq_measured,
-                                     &g_current_iq_lpf_state,
-                                     FOC_CURRENT_LOOP_IQ_LPF_ALPHA,
-                                     &g_current_iq_lpf_state_valid);
+#if (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE)
+    *iq_out = Math_FirstOrderLpf(*iq_out,
+                                  &g_current_iq_lpf_state,
+                                  FOC_CURRENT_LOOP_IQ_LPF_ALPHA,
+                                  &g_current_iq_lpf_state_valid);
 #endif
+}
+
+static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
+                                             foc_pid_t *current_pid,
+                                             const sensor_data_t *sensor,
+                                             float dt_sec)
+{
+    float iq_measured;
+    float uq_cmd;
+
+    FOC_CurrentLoopComputeIqMeasured(sensor,
+                                     motor->electrical_phase_angle,
+                                     &iq_measured);
 
     uq_cmd = FOC_CurrentLoopPIDRun(current_pid, motor->iq_target, iq_measured, dt_sec);
 
@@ -341,6 +378,16 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
             motor->current_soft_switch_status.blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
+            /*
+             * Compute real iq_measured from ADC samples for diagnostic
+             * comparison against the open-loop resistance-model estimate.
+             * This allows verifying whether the "iq periodic wobble" originates
+             * from the current measurement chain (Clarke+Park) or from the PID
+             * algorithm itself.
+             */
+            FOC_CurrentLoopComputeIqMeasured(sensor,
+                                             motor->electrical_phase_angle,
+                                             &motor->iq_measured);
         }
         else
         {

@@ -13,6 +13,25 @@ static uint8_t g_sensor_angle_lpf_state_valid = 0U;
 static float g_sensor_angle_lpf_state = 0.0f;
 #endif
 
+/*
+ * DC offset drift tracker (slow LPF / HPF-equivalent).
+ *
+ * The startup calibration (zero_offset) captures the initial ADC offset.
+ * During operation, the analog offset may drift due to temperature or PWM
+ * switching noise. This tracker continuously tracks the residual DC on each
+ * phase's output (after startup zero_offset removal) and subtracts it.
+ *
+ * A very low alpha ensures only sub-Hz drift is tracked, leaving the
+ * fundamental AC current unaffected. Time constant ≈ dt / alpha.
+ *   dt ≈ 83 us (12 kHz current loop)
+ *   alpha = 1e-4f → tau ≈ 0.83 s, fc ≈ 0.19 Hz
+ *   alpha = 1e-5f → tau ≈ 8.3 s, fc ≈ 0.019 Hz
+ */
+#define FOC_DC_DRIFT_TRACK_ALPHA 5e-5f
+static float g_dc_drift_a = 0.0f;
+static float g_dc_drift_b = 0.0f;
+static uint8_t g_dc_drift_initialized = 0U;
+
 /* Private function prototypes */
 static void Sensor_ReadADC(uint8_t use_fast_window);
 static void Sensor_ReadEncoder(void);
@@ -167,22 +186,58 @@ void Sensor_ReadCurrentOnly(void)
     Sensor_ReadADC(1U);
 }
 
+float Sensor_MedianFiltrer(float *Input_Values, uint16_t len)
+{
+    uint16_t i, j;
+    float temp = 0.0f;
+    float values[len];
+
+    /* Simple bubble sort to find the median */
+    for (i = 0; i < len - 1; i++)
+    {
+        for (j = 0; j < len - i - 1; j++)
+        {
+            if (values[j] > values[j + 1])
+            {
+                temp = values[j];
+                values[j] = values[j + 1];
+                values[j + 1] = temp;
+            }
+        }
+    }
+
+    return values[len / 2];
+}
+
+#define SENSOR_MEDIAN_FILTER_LEN 5
+float current[2][SENSOR_MEDIAN_FILTER_LEN];
+
 /*Read ADC current measurements*/
 static void Sensor_ReadADC(uint8_t use_fast_window)
 {
     float current_a = 0.0f;
     float current_b = 0.0f;
-    float common_mode;
     uint8_t read_ok;
 
     if (use_fast_window != 0U)
     {
         read_ok = FOC_Platform_ReadPhaseCurrentABFast(&current_a, &current_b);
+        for(uint8_t i = SENSOR_MEDIAN_FILTER_LEN - 1; i > 0; i--)
+        {
+            current[0][i] = current[0][i - 1];
+            current[1][i] = current[1][i - 1];
+        }
+        current[0][0] = current_a;
+        current[1][0] = current_b;
     }
     else
     {
         read_ok = FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b);
     }
+
+    //current_a = Sensor_MedianFiltrer(current[0], SENSOR_MEDIAN_FILTER_LEN);
+    //current_b = Sensor_MedianFiltrer(current[1], SENSOR_MEDIAN_FILTER_LEN);
+
 
     if (read_ok != 0U)
     {
@@ -196,18 +251,47 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
         sensor_data.current_b.raw_value = current_b;
         sensor_data.current_b.filtered_value = current_b;
 #endif
-        /* For 3-phase, we can estimate phase C as -(A + B). */
-        sensor_data.current_c.filtered_value = -(sensor_data.current_a.filtered_value + sensor_data.current_b.filtered_value);
 
-        common_mode = (sensor_data.current_a.filtered_value +
-                   sensor_data.current_b.filtered_value +
-                   sensor_data.current_c.filtered_value) / 3.0f;
-        sensor_data.current_a.filtered_value -= common_mode;
-        sensor_data.current_b.filtered_value -= common_mode;
-        sensor_data.current_c.filtered_value -= common_mode;
-
+        /*
+         * Apply startup zero_offset calibration.
+         *
+         * NOTE: The original common-mode cancellation using
+         *   common_mode = (A + B + C) / 3
+         * is REMOVED because C is reconstructed as -(A+B), making the sum
+         * identically zero. The common-mode term was always zero regardless
+         * of actual ADC offset — rendering the subtraction completely
+         * ineffective as a DC-blocking mechanism.
+         */
         sensor_data.current_a.output_value = sensor_data.current_a.filtered_value - sensor_data.current_a.zero_offset;
         sensor_data.current_b.output_value = sensor_data.current_b.filtered_value - sensor_data.current_b.zero_offset;
+
+        /*
+         * DC drift tracker (slow LPF on output samples).
+         *
+         * The startup zero_offset captures the initial ADC bias, but the bias
+         * may drift over time (temperature, PWM noise). This tracker continuously
+         * estimates the residual DC on each phase using a first-order LPF with
+         * a very low alpha, then subtracts it from the output.
+         *
+         * Time constant: tau ≈ dt/alpha ≈ 83us/5e-5 ≈ 1.66 s  (fc ≈ 0.1 Hz)
+         * Only sub-Hz drift is tracked; the motor's fundamental AC is unaffected.
+         */
+        if (g_dc_drift_initialized == 0U)
+        {
+            g_dc_drift_a = sensor_data.current_a.output_value;
+            g_dc_drift_b = sensor_data.current_b.output_value;
+            g_dc_drift_initialized = 1U;
+        }
+        else
+        {
+            g_dc_drift_a += FOC_DC_DRIFT_TRACK_ALPHA * (sensor_data.current_a.output_value - g_dc_drift_a);
+            g_dc_drift_b += FOC_DC_DRIFT_TRACK_ALPHA * (sensor_data.current_b.output_value - g_dc_drift_b);
+        }
+
+        sensor_data.current_a.output_value -= g_dc_drift_a;
+        sensor_data.current_b.output_value -= g_dc_drift_b;
+
+        /* Reconstruct phase C from corrected A and B. */
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
 
         sensor_data.adc_valid = 1;

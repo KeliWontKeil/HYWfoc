@@ -1,12 +1,12 @@
 # GD32F303_FOCExplore Hardware Notes
 
+## 警告：当前硬件版本存在功能缺失和部分错误，仅作参考！新硬件还在测试中，未稳定，所以还没开源
+
 This folder stores board-level documents for the GD32F303_FOCExplore instance.
 
 - `hardware.md`: current pin mapping and wiring notes.
 
 Future additions can include schematic snapshots, BOM, and bring-up checklist.
-
-## 这是给人看的，不是AI
 
 该硬件使用立创EDA专业版设计，请直接将工程文档导入即可，应该能嫖的到板子吧
 

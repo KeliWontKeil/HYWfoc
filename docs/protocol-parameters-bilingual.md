@@ -178,14 +178,31 @@ Speed parameter mapping:
 - `R` (`angle_position_speed_rad_s`): speed reference used by speed+angle mode (non-negative limit)
 - `S` (`speed_only_speed_rad_s`): speed reference used by speed-only mode (supports negative direction)
 
-### 4.3 Current Soft Switch Mode Values / 电流软切换模式值
+### 4.3 Current PID Anti-Windup Algorithm / 电流环 PID 抗饱和算法
+
+电流环 PID 使用 **条件积分（Conditional Integration）** 抗饱和策略：
+
+```
+if (输出未饱和 OR 误差方向与饱和方向相反)
+    正常积分;
+else
+    冻结（回滚本次积分增量）;
+```
+
+并附加积分钳位安全网 `|integral| ≤ |out_max / ki|` 作为极端情况保护。
+
+与 back-calculation 相比，条件积分允许积分器在瞬态响应中自由建立，更适合电流环小 KP + 大 KI 的参数风格。
+
+### 4.4 Current Soft Switch Mode Values / 电流软切换模式值
 
 - `0`: OPEN (pure open-loop current model)
 - `1`: CLOSED (pure current PID)
 - `2`: AUTO (threshold+hysteresis with first-order blend)
 - Blend time constants currently use compile-time macro `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC` (not exposed as a `P` runtime parameter in this version).
 
-### 4.4 Oscilloscope Mask Bits / 示波参数掩码位
+
+### 4.5 Oscilloscope Mask Bits / 示波参数掩码位
+
 
 | Bit | Hex | Field |
 |---|---|---|

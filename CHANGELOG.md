@@ -8,9 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- 电流环 PID 抗饱和策略从 back-calculation（反算积分限幅）替换为 conditional integration（条件积分）：饱和冻结 + 积分钳位安全网。新策略在输出饱和且误差同向加深时回滚积分增量，并附加 `|integral| ≤ |out_max/ki|` 硬钳位。相比原 back-calculation 方法释放了积分器在瞬态响应中的建立能力，更适合电流环小 KP + 大 KI 的参数风格，阶跃响应更快且无过冲。
 - 删除 Ki 低电流缩放死代码：`FOC_CURRENT_LOOP_KI_LOW_CURRENT_START_A`、`END_A`、`SCALE` 三项宏及其消费函数 `FOC_CurrentLoopComputeKiScale`，默认值组合 (start=0.00, end=0.0, scale=1.0) 导致函数恒返回 1.0f，无实际效果。同时将 `FOC_CurrentLoopPIDRun` 中 `ki_effective` 局部变量精简为直接使用 `pid->ki`。
 - 修复 Clarke 变换 β 系数：`Math_ClarkeTransform` 中 β = (b-c) * √3/2 改为 β = (b-c) / √3，消除 Park 变换后 Iq 的 2 倍频电角度正弦波动和 25% 直流偏置，同时修复 Id 的串扰问题。
 - 精简电流环冗余电压钳位：`FOC_CurrentControlClosedLoopStep` 中移除 `Math_ClampFloat(uq_cmd, -voltage_limit, voltage_limit)`，因 PID 输出限幅和执行层缩比已提供双重保护。
+
+## [1.4.1] - 2026-04-25
+
+### Fixed
+- 修复电流环 iq 与电角度周期性同步波动问题：根因为 `Sensor_ReadADC()` 中共模抑制（CMR）因 C 相软件重构（C = -(A+B)）而完全失效，三相加和恒为零，无法消除 ADC 直流偏置。移除无效的共模抑制逻辑，添加在线 DC 偏置漂移跟踪器（一阶 LPF，α=5e-5, fc≈0.1Hz），持续跟踪 A/B 相的残差直流，在保留基频 AC 电流的前提下消除与电角度同频的 iq 波动。
+
+### Documentation
+- 更新版本基线至 v1.4.1，同步 `docs/README.md`、`copilot-instructions.md`、`NEXT_MISSION.md`、`README.md`。
 
 ### Changed (Previous)
 - 将 `foc_control_c25_cfg_state` 提升至 C13 层（`foc_control_c13_cfg_state`），消除跨层依赖：C25 无任何 L3 内部依赖，仅操作结构体字段和宏配置，提升为 C13（配置状态管理），紧接 C12 构成「入口 → 初始化 → 配置」语义链。
