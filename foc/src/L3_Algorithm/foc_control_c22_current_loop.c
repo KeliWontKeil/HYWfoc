@@ -42,38 +42,12 @@ static float FOC_CurrentSoftSwitchUpdateBlend(float current_blend,
 #endif
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
-static float FOC_CurrentLoopComputeKiScale(float iq_ref_abs)
-{
-    float start_a = FOC_CURRENT_LOOP_KI_LOW_CURRENT_START_A;
-    float end_a = FOC_CURRENT_LOOP_KI_LOW_CURRENT_END_A;
-    float low_scale = Math_ClampFloat(FOC_CURRENT_LOOP_KI_LOW_CURRENT_SCALE, 0.0f, 1.0f);
-
-    if (end_a <= (start_a + 1e-6f))
-    {
-        return (iq_ref_abs <= start_a) ? low_scale : 1.0f;
-    }
-
-    if (iq_ref_abs <= start_a)
-    {
-        return low_scale;
-    }
-
-    if (iq_ref_abs >= end_a)
-    {
-        return 1.0f;
-    }
-
-    return low_scale + (1.0f - low_scale) * ((iq_ref_abs - start_a) / (end_a - start_a));
-}
-
 static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec)
 {
     float error;
     float error_effective;
     float derivative;
     float output;
-    float ki_scale;
-    float ki_effective;
     float integral_leak;
 
     if (pid == 0)
@@ -103,17 +77,14 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
         pid->integral += error_effective * dt_sec;
     }
 
-    ki_scale = FOC_CurrentLoopComputeKiScale(fabsf(target));
-    ki_effective = pid->ki * ki_scale;
-
     derivative = (error_effective - pid->prev_error) / dt_sec;
-    output = pid->kp * error_effective + ki_effective * pid->integral + pid->kd * derivative;
+    output = pid->kp * error_effective + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
-    if (ki_effective > 1e-6f)
+    if (pid->ki > 1e-6f)
     {
-        float i_min = (pid->out_min - pid->kp * error_effective - pid->kd * derivative) / ki_effective;
-        float i_max = (pid->out_max - pid->kp * error_effective - pid->kd * derivative) / ki_effective;
+        float i_min = (pid->out_min - pid->kp * error_effective - pid->kd * derivative) / pid->ki;
+        float i_max = (pid->out_max - pid->kp * error_effective - pid->kd * derivative) / pid->ki;
         pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
     }
 

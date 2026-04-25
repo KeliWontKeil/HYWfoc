@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- 删除 Ki 低电流缩放死代码：`FOC_CURRENT_LOOP_KI_LOW_CURRENT_START_A`、`END_A`、`SCALE` 三项宏及其消费函数 `FOC_CurrentLoopComputeKiScale`，默认值组合 (start=0.00, end=0.0, scale=1.0) 导致函数恒返回 1.0f，无实际效果。同时将 `FOC_CurrentLoopPIDRun` 中 `ki_effective` 局部变量精简为直接使用 `pid->ki`。
 - 修复 Clarke 变换 β 系数：`Math_ClarkeTransform` 中 β = (b-c) * √3/2 改为 β = (b-c) / √3，消除 Park 变换后 Iq 的 2 倍频电角度正弦波动和 25% 直流偏置，同时修复 Id 的串扰问题。
 - 精简电流环冗余电压钳位：`FOC_CurrentControlClosedLoopStep` 中移除 `Math_ClampFloat(uq_cmd, -voltage_limit, voltage_limit)`，因 PID 输出限幅和执行层缩比已提供双重保护。
 
