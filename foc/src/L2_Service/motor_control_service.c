@@ -225,15 +225,11 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
     FOC_ControlSetSpeedAngleTransitionEndRad(motor, control_cfg->cfg_speed_angle_transition_end_rad);
 #endif
 
-#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     FOC_ControlSetCurrentSoftSwitchMode(motor, control_cfg->current_soft_switch_mode);
     FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(motor, control_cfg->current_soft_switch_auto_open_iq_a);
     FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(motor, control_cfg->current_soft_switch_auto_closed_iq_a);
     FOC_ControlSetCurrentSoftSwitchEnable(motor, control_cfg->current_soft_switch_enable);
     FOC_ControlResetCurrentSoftSwitchState(motor);
-#else
-    FOC_ControlSetCurrentSoftSwitchEnable(motor, FOC_CFG_DISABLE);
-#endif
 
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     FOC_ControlSetCoggingCompEnable(motor, control_cfg->cogging_comp_enable);

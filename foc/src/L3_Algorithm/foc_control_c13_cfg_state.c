@@ -177,10 +177,6 @@ void FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(foc_motor_t *motor, float value)
     }
 
     motor->current_soft_switch_status.auto_open_iq_a = sanitized;
-    if (motor->current_soft_switch_status.auto_closed_iq_a < motor->current_soft_switch_status.auto_open_iq_a)
-    {
-        motor->current_soft_switch_status.auto_closed_iq_a = motor->current_soft_switch_status.auto_open_iq_a;
-    }
 }
 
 void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float value)
@@ -190,11 +186,6 @@ void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float valu
     if (motor == 0)
     {
         return;
-    }
-
-    if (sanitized < motor->current_soft_switch_status.auto_open_iq_a)
-    {
-        sanitized = motor->current_soft_switch_status.auto_open_iq_a;
     }
 
     motor->current_soft_switch_status.auto_closed_iq_a = sanitized;

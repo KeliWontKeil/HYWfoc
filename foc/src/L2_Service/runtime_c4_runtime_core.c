@@ -78,11 +78,9 @@ void RuntimeC4Store_ResetStorageDefaults(void)
     g_params.cfg_speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
 #endif
     g_params.control_mode = COMMAND_MANAGER_DEFAULT_CONTROL_MODE;
-#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     g_params.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     g_params.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
     g_params.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
-#endif
 
     g_states.motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
@@ -725,12 +723,10 @@ void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->control_cfg.cfg_speed_angle_transition_end_rad = g_params.cfg_speed_angle_transition_end_rad;
 #endif
     snapshot->control_cfg.motor_enabled = g_states.motor_enable;
-#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     snapshot->control_cfg.current_soft_switch_enable = g_states.current_soft_switch_enable;
     snapshot->control_cfg.current_soft_switch_mode = g_params.current_soft_switch_mode;
     snapshot->control_cfg.current_soft_switch_auto_open_iq_a = g_params.current_soft_switch_auto_open_iq_a;
     snapshot->control_cfg.current_soft_switch_auto_closed_iq_a = g_params.current_soft_switch_auto_closed_iq_a;
-#endif
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     snapshot->control_cfg.cogging_comp_enable = g_states.cogging_comp_enable;
 #endif
@@ -1130,13 +1126,7 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     runtime->init_fail_mask = 0U;
     
     /* Mark parameters as dirty to ensure they are reapplied */
-#if ((FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE) || \
-     (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE) || \
-     (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE))
     runtime->params_dirty = 1U;
-#else
-    runtime->params_dirty = 0U;
-#endif
     runtime->last_exec_ok = 1U;
 
     /* Reset configurable parameters to defaults */

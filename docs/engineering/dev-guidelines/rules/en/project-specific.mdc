@@ -88,6 +88,11 @@ void Function(void) {
 - Flash/debug: ST-LINK (AI may execute tooling commands when user-requested; hardware behavior judgment and acceptance remain user-owned)
 - Warning policy: do not introduce new warnings; if legacy warnings exist, document cause/mitigation and convergence plan
 
+## Protocol trimming macros must not affect control algorithm behavior
+- `FOC_PROTOCOL_ENABLE_*` macros control only protocol command visibility and parameter read/write channels; they must not guard control algorithm logic branches.
+- Control algorithm behavior shall be trimmed only by `FOC_*_ENABLE` macros (e.g. `FOC_CURRENT_SOFT_SWITCH_ENABLE`).
+- If a protocol trimming macro needs to influence algorithm defaults, do so indirectly via default values in `foc_cfg_init_values.h`, not by `#if`-guarding control paths in `motor_control_service.c` or `runtime_c4_runtime_core.c`.
+
 ## Iteration & Documentation Contract
 - Only consider a change a new iteration when user explicitly requests "进行下一次迭代"
 - After each iteration, update:

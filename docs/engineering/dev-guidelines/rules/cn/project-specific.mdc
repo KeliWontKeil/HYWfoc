@@ -85,6 +85,11 @@ void Function(void) {
 - 烧录/调试：ST-LINK（AI可按用户要求执行工具命令；硬件现象判定与最终验收由用户完成）
 - 编译告警策略：禁止新增告警；若存在历史告警，需在文档中记录原因、处置与收敛计划
 
+## 协议裁剪宏不得影响控制算法行为
+- `FOC_PROTOCOL_ENABLE_*` 系列宏仅控制协议命令的可见性与参数读写通道，不得用于保护控制算法中的逻辑分支。
+- 控制算法行为应仅由 `FOC_*_ENABLE` 系列宏（如 `FOC_CURRENT_SOFT_SWITCH_ENABLE`）裁剪。
+- 协议裁剪宏若需影响算法默认值，应在 `foc_cfg_init_values.h` 中通过默认值间接实现，而非在 `motor_control_service.c` 或 `runtime_c4_runtime_core.c` 中用 `#if` 保护控制路径。
+
 ## 迭代与文档契约
 - 只有在用户明确要求“进行下一次迭代”时，才认为是新迭代
 - 每次迭代完成后需更新：

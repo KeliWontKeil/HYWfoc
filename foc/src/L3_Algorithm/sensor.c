@@ -347,17 +347,11 @@ void Sensor_ReadVBUS(void)
             sensor_data.vbus_voltage_filtered = vbus_raw;
             sensor_data.vbus_valid = 1U;
         }        
-        /* Use raw value until filter is initialized */
+
         sensor_data.vbus_voltage_filtered = Math_FirstOrderLpf(vbus_raw,
                                                                 &sensor_data.vbus_voltage_filtered,
                                                                 0.1F,
                                                                 &sensor_data.vbus_valid);
-    }
-    else
-    {
-        sensor_data.vbus_valid = 0U;
-        sensor_data.vbus_voltage_raw = 0.0f;
-        sensor_data.vbus_voltage_filtered = 0.0f;
     }
 }
 

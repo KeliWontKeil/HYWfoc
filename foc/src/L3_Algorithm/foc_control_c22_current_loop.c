@@ -251,10 +251,10 @@ static uint8_t FOC_CurrentSoftSwitchResolveActiveMode(foc_current_soft_switch_st
 
     open_threshold = Math_ClampFloat(soft_switch_status->auto_open_iq_a, 0.0f, 1e6f);
     closed_threshold = Math_ClampFloat(soft_switch_status->auto_closed_iq_a, 0.0f, 1e6f);
-    if (closed_threshold < (open_threshold + 1e-6f))
-    {
-        closed_threshold = open_threshold + 1e-6f;
-    }
+    /* Allow closed_threshold < open_threshold to create a hysteresis band.
+     * When closed_threshold < open_threshold, the transition from closed-loop
+     * to open-loop occurs at a lower iq_ref than the transition from open-loop
+     * to closed-loop, providing noise immunity around the switching point. */
 
     if ((soft_switch_status->active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
         (soft_switch_status->active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED))
@@ -373,8 +373,27 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             *blend_initialized = 0U;
         }
 
-        if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN)
+        if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
         {
+            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
+            motor->current_soft_switch_status.blend_factor = 1.0f;
+            FOC_CurrentControlClosedLoopStep(motor,
+                                             current_pid,
+                                             sensor,
+                                             dt_sec);
+        }
+        else
+        {
+            /*
+             * Fallback to open-loop resistance model when:
+             * - configured_mode == OPEN (explicit open-loop request), or
+             * - configured_mode == AUTO but soft-switch is disabled (enabled == 0).
+             *
+             * In the AUTO + disabled case, the soft-switch mechanism cannot
+             * dynamically resolve the active mode, so we conservatively fall
+             * back to open-loop to avoid running PID with noisy current
+             * samples at low target currents.
+             */
             motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
             motor->current_soft_switch_status.blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
@@ -388,15 +407,6 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             FOC_CurrentLoopComputeIqMeasured(sensor,
                                              motor->electrical_phase_angle,
                                              &motor->iq_measured);
-        }
-        else
-        {
-            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-            motor->current_soft_switch_status.blend_factor = 1.0f;
-            FOC_CurrentControlClosedLoopStep(motor,
-                                             current_pid,
-                                             sensor,
-                                             dt_sec);
         }
     }
 #else
