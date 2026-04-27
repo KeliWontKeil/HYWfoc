@@ -6,6 +6,7 @@
 #include "L2_Service/debug_stream.h"
 #include "L2_Service/runtime_c1_entry.h"
 #include "L2_Service/motor_control_service.h"
+#include "L3_Algorithm/foc_control_c11_entry.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -156,6 +157,13 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
         MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
         g_fast_loop_control_mode_last = task_args.control_mode;
     }
+
+    /*
+     * Apply compensation steps (e.g. cogging torque feed-forward).
+     * This modifies motor->iq_target so that the current loop sees
+     * the compensated target (Scheme A: compensation before current loop).
+     */
+    FOC_ControlCompensationStep(&g_motor, sensor_data);
 
     /* Current algorithm always runs in PWM ISR; task loop only publishes fast-loop targets. */
     g_fast_current_loop_iq_target = g_motor.iq_target;

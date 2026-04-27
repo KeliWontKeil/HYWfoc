@@ -52,7 +52,7 @@ typedef struct {
 
 /* Motor-side cogging LUT capacity used by runtime context storage. */
 #ifndef FOC_MOTOR_COGGING_LUT_CAPACITY
-#define FOC_MOTOR_COGGING_LUT_CAPACITY 64U
+#define FOC_MOTOR_COGGING_LUT_CAPACITY 128U
 #endif
 
 typedef struct {
@@ -80,6 +80,12 @@ typedef struct {
     float iq_lsb_a;
     float speed_gate_rad_s;
     float iq_limit_a;
+
+    /* Calibration state machine fields (used when FOC_COGGING_CALIB_ENABLE). */
+    uint8_t calib_in_progress;
+    uint8_t calib_progress_percent;
+    uint16_t calib_point_index;
+    uint8_t calib_pass_index;
 } foc_cogging_comp_status_t;
 
 typedef struct {

@@ -161,3 +161,10 @@ set DOTNET_ROLL_FORWARD=Major
 ### 注意
 - 如果你是deepseek,思考过程请使用中文
 - `get_errors` 可能残留过期诊断，最终以真实编译/链接结果为准
+
+### 项目规则/架构约束
+- 本处用于记载项目的架构约束/编码规范，或是调试过程中形成的经验型约束
+#### 协议裁剪宏不得影响控制算法行为
+- `FOC_PROTOCOL_ENABLE_*` 系列宏仅控制协议命令的可见性与参数读写通道，不得用于保护控制算法中的逻辑分支。
+- 控制算法行为应仅由 `FOC_*_ENABLE` 系列宏（如 `FOC_CURRENT_SOFT_SWITCH_ENABLE`）裁剪。
+- 协议裁剪宏若需影响算法默认值，应在 `foc_cfg_init_values.h` 中通过默认值间接实现，而非在 `motor_control_service.c` 或 `runtime_c4_runtime_core.c` 中用 `#if` 保护控制路径。

@@ -75,7 +75,7 @@ FOC_VSCODE/
 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
 
 1. 电流环与软切换特性：`FOC_CURRENT_LOOP_PID_ENABLE`、`FOC_CURRENT_SOFT_SWITCH_ENABLE`
-2. 齿槽补偿特性：`FOC_COGGING_COMP_ENABLE`、`FOC_COGGING_INIT_LEARN_ENABLE`、`FOC_COGGING_DEBUG_DUMP_ENABLE`
+2. 齿槽补偿特性：`FOC_COGGING_COMP_ENABLE`（补偿使能）、`FOC_COGGING_CALIB_ENABLE`（运行时手动标定使能）、`FOC_COGGING_INIT_LEARN_ENABLE`（旧版初始化自动标定，默认关闭）、`FOC_COGGING_DEBUG_DUMP_ENABLE`
 3. 采样滤波特性：`FOC_SENSOR_KALMAN_*`、`FOC_SENSOR_ANGLE_LPF_ENABLE`
 
 ### 协议裁剪开关（L2/L3 协同）
@@ -83,7 +83,7 @@ FOC_VSCODE/
 1. 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
 2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
-4. 当前已接入的齿槽协议链路：状态子命令 `S:G`（`COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE`）
+4. 当前已接入的齿槽协议链路：状态子命令 `S:G`（`COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE`）；系统子命令 `Y:G`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB`，触发运行时标定）、`Y:D`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP`，串口输出补偿表）
 
 说明：符号头中预留了齿槽参数子命令符号（`J/K/N`），当前运行时实现尚未接入对应参数读写链路。
 

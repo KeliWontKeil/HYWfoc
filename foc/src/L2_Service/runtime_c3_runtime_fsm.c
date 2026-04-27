@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "L2_Service/runtime_c4_runtime_core.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "LS_Config/foc_config.h"
 
 #define RUNTIME_STATE_SYSTEM_INIT 0U
@@ -174,6 +175,30 @@ static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_com
 
         return RUNTIME_C4_EXEC_COMMAND_ERROR;
     }
+
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB)
+    {
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        FOC_CoggingCalibRequestStart();
+        return RUNTIME_C4_EXEC_OK;
+#else
+        RuntimeC4_WriteStatusParamInvalid();
+        return RUNTIME_C4_EXEC_PARAM_ERROR;
+#endif
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP)
+    {
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        FOC_CoggingCalibDumpTable();
+        return RUNTIME_C4_EXEC_OK;
+#else
+        RuntimeC4_WriteStatusParamInvalid();
+        return RUNTIME_C4_EXEC_PARAM_ERROR;
+#endif
+    }
+#endif /* FOC_COGGING_COMP_ENABLE */
 
     RuntimeC4_WriteStatusParamInvalid();
     return RUNTIME_C4_EXEC_PARAM_ERROR;

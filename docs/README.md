@@ -14,7 +14,7 @@
 
 ## 当前基线
 
-- 版本基线：v1.4.1
+- 版本基线：v1.4.2
 - 项目命名：HYW FOC（中文名：何易位FOC）
 - 任务目标：下一目标版本见 [../NEXT_MISSION.md](../NEXT_MISSION.md)
 - 第三方许可证声明：见 [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)

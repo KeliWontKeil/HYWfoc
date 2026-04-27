@@ -5,9 +5,15 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.2] - 2026-04-27
 
 ### Changed
+- 齿槽补偿重构：将旧"初始化阶段自动标定"策略（`FOC_COGGING_INIT_LEARN_ENABLE`）替换为"运行时用户手动触发标定 + 补偿"新机制（`FOC_COGGING_CALIB_ENABLE`）。
+  - 新增运行时标定状态机，在补偿执行步骤（`FOC_ControlCompensationStep`）中通过 `FOC_CoggingCalibProcess()` 驱动，以 iq 计算值波动为输入。
+  - 初始化不再执行齿槽标定，仅输出齿槽表状态（已定义/空）。
+  - 新增协议命令：`Y:G`（触发标定）、`Y:D`（串口输出补偿表），通过系统命令通道接入。
+  - 新宏 `FOC_COGGING_CALIB_ENABLE` 控制标定功能，旧宏 `FOC_COGGING_INIT_LEARN_ENABLE` 设为默认禁用以保持兼容。
+  - 补偿仅在 `FOC_COGGING_COMP_ENABLE` 开启且齿槽表非空时生效。
 - 电流环 PID 抗饱和策略从 back-calculation（反算积分限幅）替换为 conditional integration（条件积分）：饱和冻结 + 积分钳位安全网。新策略在输出饱和且误差同向加深时回滚积分增量，并附加 `|integral| ≤ |out_max/ki|` 硬钳位。相比原 back-calculation 方法释放了积分器在瞬态响应中的建立能力，更适合电流环小 KP + 大 KI 的参数风格，阶跃响应更快且无过冲。
 - 删除 Ki 低电流缩放死代码：`FOC_CURRENT_LOOP_KI_LOW_CURRENT_START_A`、`END_A`、`SCALE` 三项宏及其消费函数 `FOC_CurrentLoopComputeKiScale`，默认值组合 (start=0.00, end=0.0, scale=1.0) 导致函数恒返回 1.0f，无实际效果。同时将 `FOC_CurrentLoopPIDRun` 中 `ki_effective` 局部变量精简为直接使用 `pid->ki`。
 - 修复 Clarke 变换 β 系数：`Math_ClarkeTransform` 中 β = (b-c) * √3/2 改为 β = (b-c) / √3，消除 Park 变换后 Iq 的 2 倍频电角度正弦波动和 25% 直流偏置，同时修复 Id 的串扰问题。

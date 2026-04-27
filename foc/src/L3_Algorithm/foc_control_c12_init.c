@@ -166,7 +166,33 @@ void FOC_MotorInit(foc_motor_t *motor,
     FOC_CalibrateElectricalAngleAndDirection(motor);
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    FOC_ControlInitCoggingCompensation(motor);
+    {
+        uint8_t table_defined = FOC_CFG_DISABLE;
+
+#if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
+        table_defined = FOC_CFG_ENABLE;
+#endif
+        motor->cogging_comp_status.available = table_defined;
+        motor->cogging_comp_status.enabled = table_defined;
+        motor->cogging_comp_status.source = table_defined ? FOC_COGGING_COMP_SOURCE_STATIC : FOC_COGGING_COMP_SOURCE_NONE;
+        motor->cogging_comp_status.point_count = FOC_COGGING_LUT_POINT_COUNT;
+        motor->cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
+        motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
+        motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+        motor->cogging_comp_status.calib_in_progress = 0U;
+        motor->cogging_comp_status.calib_progress_percent = 0U;
+        motor->cogging_comp_status.calib_point_index = 0U;
+        motor->cogging_comp_status.calib_pass_index = 0U;
+
+        if (table_defined != 0U)
+        {
+            FOC_Platform_WriteDebugText("init.cogging: static table defined, compensation ready\r\n");
+        }
+        else
+        {
+            FOC_Platform_WriteDebugText("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
+        }
+    }
 #else
     FOC_ControlSetCoggingCompUnavailable(motor, FOC_COGGING_COMP_SOURCE_DISABLED);
 #endif
