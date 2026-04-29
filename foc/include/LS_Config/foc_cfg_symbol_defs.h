@@ -99,7 +99,7 @@
 #define COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR 'P'
 
 /* Communication buffering. */
-#define COMMAND_MANAGER_REPLY_BUFFER_LEN 128U
+#define COMMAND_MANAGER_REPLY_BUFFER_LEN 72U
 
 /* Telemetry protocol bytes and payload symbols. */
 #define DEBUG_STREAM_OSC_PAYLOAD_LEN 80U

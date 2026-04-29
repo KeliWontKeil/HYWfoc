@@ -19,6 +19,11 @@
 
 #define FOC_POLE_PAIRS_UNDEFINED 0U
 
+/* Cogging compensation LUT size (single source for array allocation). */
+#ifndef FOC_COGGING_LUT_POINT_COUNT
+#define FOC_COGGING_LUT_POINT_COUNT 512U
+#endif
+
 typedef enum {
     FOC_TASK_RATE_FAST_CONTROL = 0,
     FOC_TASK_RATE_SERVICE,
@@ -49,11 +54,6 @@ typedef struct {
     float vbus_voltage_filtered;
     uint8_t vbus_valid;
 } sensor_data_t;
-
-/* Motor-side cogging LUT capacity used by runtime context storage. */
-#ifndef FOC_MOTOR_COGGING_LUT_CAPACITY
-#define FOC_MOTOR_COGGING_LUT_CAPACITY 128U
-#endif
 
 typedef struct {
     float min_mech_angle_accum_delta_rad;
@@ -133,7 +133,7 @@ typedef struct {
     foc_current_soft_switch_status_t current_soft_switch_status;
     uint8_t current_soft_switch_blend_initialized;
     foc_cogging_comp_status_t cogging_comp_status;
-    int16_t cogging_comp_table_q15[FOC_MOTOR_COGGING_LUT_CAPACITY];
+    int16_t cogging_comp_table_q15[FOC_COGGING_LUT_POINT_COUNT];
 } foc_motor_t;
 
 typedef struct {

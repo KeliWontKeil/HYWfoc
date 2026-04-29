@@ -33,36 +33,10 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
  */
 void FOC_CoggingCalibRequestStart(void);
 
-/*
- * Start the user-triggered runtime cogging calibration (direct).
- *
- * Resets accumulators and enters START phase.
- * Calibration is self-driven: maintains its own electrical angle and drives
- * Uq = I_calib * R_phase directly (no outer-loop PID, no current-loop PID).
- * The caller must set current_soft_switch to OPEN mode with enabled=0
- * before the next PWM ISR tick.
- *
- * Returns 1 on acceptance, 0 if already busy.
- */
+/*Returns 1 on acceptance, 0 if already busy.*/
 uint8_t FOC_CoggingCalibStart(foc_motor_t *motor);
 
-/*
- * Run one step of the calibration sample collection state machine.
- *
- * Must be called from the control task when FOC_CoggingCalibIsBusy() is true.
- * This function:
- *   1. Consumes deferred request flags (start/dump/export).
- *   2. When busy, runs the open-loop drive step AND advances the
- *      START/SETTLE/SCAN/CHECK/FINISH state machine.
- *   3. In SCAN phase: computes Δθ = θ_actual - θ_expected, maps to
- *      LUT bin by actual mechanical angle, accumulates position error.
- *   4. Self-drives motor->electrical_phase_angle, motor->uq, motor->iq_target
- *      and calls FOC_ControlApplyElectricalAngleRuntime() for SVPWM output.
- *   5. Does NOT call FOC_App_RunControlAlgorithm() - the caller must
- *      bypass the outer-loop PID when this function is active.
- *
- * Returns 1 while busy, 0 when idle/finished.
- */
+/*Returns 1 while busy, 0 when idle/finished.*/
 uint8_t FOC_CoggingCalibSampleStep(foc_motor_t *motor,
                                    const sensor_data_t *sensor,
                                    float dt_sec);

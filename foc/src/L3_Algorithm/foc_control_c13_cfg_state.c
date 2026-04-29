@@ -2,10 +2,6 @@
 
 #include "LS_Config/foc_config.h"
 
-#if (FOC_COGGING_LUT_POINT_COUNT > FOC_MOTOR_COGGING_LUT_CAPACITY)
-#error "FOC_MOTOR_COGGING_LUT_CAPACITY must be >= FOC_COGGING_LUT_POINT_COUNT"
-#endif
-
 static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
 {
     if (motor == 0)
@@ -55,7 +51,7 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
     motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
     motor->cogging_comp_status.calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
 
-    for (uint16_t i = 0U; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
+    for (uint16_t i = 0U; i < (uint16_t)FOC_COGGING_LUT_POINT_COUNT; i++)
     {
         motor->cogging_comp_table_q15[i] = 0;
     }

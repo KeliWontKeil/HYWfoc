@@ -5,17 +5,60 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.6] - 2026-04-29
+
+### Changed
+- **齿槽标定算法完全重写为纯积分预测器法**：替代原有的"开环积分 + 循环差分"方案。
+  - 旧算法系统性错误已修正：
+    1. **calib_gain_k 被应用两次**：CoggingCalib_Finish() 中 `iq_comp = diff * calib_gain_k` 写入表，
+       运行时 `FOC_ControlApplyCoggingCompensation()` 又执行 `motor->iq_target += iq_comp * calib_gain_k`，
+       净增益平方衰减（0.08 × 0.08 = 0.0064），导致补偿电流几乎为零。
+    2. **旧算法中 per-bin-once 逻辑使用 θ_pred 而非 θ_actual 定 bin**：
+       用 θ_pred 定 bin → bin 边界稳定、但 Δθ 测量点与 bin 绑定的"时机"在预测空间而非实际空间，
+       导致 Δθ 和 bin 不对齐。现在更正为用 θ_actual 定 bin。
+  - **新算法核心原理**：
+    - `θ_pred`（预测值）是**纯积分器**：`θ_pred(t) = θ₀ + ∫speed×dt`
+    - `θ_pred` 单调递增，永不从传感器重置，驱动开环 SVPWM
+    - `θ_actual`（实际值）是传感器读数，两条线**完全独立**
+    - `Δθ = wrap_delta(θ_actual - wrap(θ_pred))` 是齿槽导致的真实位置偏差
+    - Δθ 按 θ_actual 所属 LUT bin 累积（bin 由实际位置决定）
+  - **Finish 阶段改为直接映射**：`iq_comp[i] = -dtheta_avg[i] × DTHETA_SCALE`，
+    Δθ → iq 直接转换，不做循环差分。存储格式为 Q15(0.005A LSB)，运行时 `gain_k`
+
+    提供在线强度调节（gain_k=0 关闭，gain_k=1 按表值原样输出）。
+  - 新增 `FOC_COGGING_CALIB_DTHETA_SCALE` 宏（默认 50.0），Δθ(rad)→iq(A) 映射系数。
+  - 新增边界不连续修复 `CoggingCalib_FixBoundaryDiscontinuity()`：
+    检测并平滑 bin[0] 与 bin[N-1] 的 0/2π 接缝突变。
+  - 新增 IQR 离群值剔除（对 dtheta_avg 在 Finish 中执行），防止单次毛刺污染补偿表。
+- `FOC_ControlApplyCoggingCompensation()` 保留 `gain_k` 作为运行时强度系数（一次应用）。
+- `FOC_COGGING_CALIB_GAIN_K` 保持可调（协议命令 P:k），默认值 1.0。
+
+
 ## [1.4.5] - 2026-04-29
 
-### Fixed
-- 修复齿槽标定中预期机械角被 `Math_WrapRad` 错误截断 + 除以极对数导致的非线性漂移问题：根因为开环驱动步骤（`CoggingCalib_OpenLoopDriveStep`）直接维护电角度 `g_calib_expected_elec_angle`，在 `Math_WrapRad` 后除以极对数得到机械角时，若极对数为 4（或 >1），电角度的 2π 折叠会在除以极对数后产生 2π/4 = π/2 的分段跳跃，导致预期机械角与传感器实际机械角之间的 Δθ 包含系统性周期误差。修复方案：
-  - 新增独立静态变量 `g_calib_expected_mech_angle` 跟踪预期机械角度（开环速度 = 电角速度 / 极对数）。
-  - `CoggingCalib_OpenLoopDriveStep`：机械角按 `FOC_COGGING_CALIB_SPEED_RAD_S / pole_pairs` 递进，`Math_WrapRad` 维护在 [0, 2π)；电角度从机械角度派生：`θ_elec = θ_mech * pole_pairs`。
-  - START 阶段：`g_calib_expected_mech_angle` 从传感器 `sensor->mech_angle_rad.output_value` 种子化。
-  - SCAN 阶段：`mech_expected` 直接从 `g_calib_expected_mech_angle` 读取，不再做 `g_calib_expected_elec_angle / pole_pairs`。
+### Changed
+- 齿槽标定算法根本性修复：电角度/机械角度混用导致标定表完全错误。
+  - **根因**：标定算法自维护了一个电角度预期值 `g_calib_expected_elec_angle`，
+    但在 SCAN 阶段计算位置误差 Δθ 时，用 `θ_elec / pole_pairs` 反推机械角度预期值。
+    由于开环驱动中的 `Math_WrapRad()` 在 `pole_pairs=7` 时会将完整机械角度旋转
+    错误地截断到 `[0, 2π/7)` 范围内，导致 Δθ 记录的是电角度 wrap 的假偏差而非真实齿槽扰动。
+  - **修复方案**：标定算法全线改用机械角度作为主参考量：
+    - `OpenLoopDriveStep` 中自维护机械角度（单调累积，不 wrap），再从机械角度派生出电角度用于 SVPWM 驱动
+    - `θ_mech_drive = θ_mech_expected`（直接），`θ_elec_drive = θ_mech_wrapped * pole_pairs`
+    - SCAN 阶段的 Δθ 计算直接使用 `mech_angle_sensor - mech_angle_expected_wrapped`
+    - 消除了旧算法中 `Math_WrapRad(g_calib_expected_elec_angle)` 在除以极对数时产生的截断误差
+  - **影响**：标定表从此反映真实的机械位置齿槽偏差，补偿前馈量级和相位均正确。
+- 新增离群值剔除逻辑（Step 2b）：在计算差分表之前，对 dθ 的循环差分
+  `diff[i] = dtheta_avg[i+1] - dtheta_avg[i]` 执行 1.5×IQR 准则检测，
+  异常值用相邻差分的均值替代。避免单个传感器的毛刺或摩擦瞬态污染整张补偿表。
+- 调整默认标定参数：
+  - `FOC_COGGING_CALIB_SPEED_RAD_S`：0.5 → 1.5（更快扫过齿槽，减少摩擦非线性影响）
+  - `FOC_COGGING_CALIB_NUM_PASSES`：2 → 6（更多圈平均，提高信噪比）
+  - `FOC_COGGING_CALIB_IQ_A`：0.25 → 0.50（更大的标定电流使齿槽效应更显著）
+  - `FOC_COGGING_CALIB_SETTLE_REV`：1 → 2（更长的平衡建立时间）
+- 新增 `FOC_COGGING_LUT_RAD_LSB_A` 宏定义（0.0002），为未来以弧度为单位存储补偿表预留。
 
 ## [1.4.4] - 2026-04-28
-
 
 ### Changed
 - 齿槽标定算法完全重写为纯开环位置偏差法：替代旧的 iq 测量值累积方法。
