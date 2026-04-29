@@ -42,7 +42,7 @@ FOC_VSCODE/
 | `LS` 配置层 | `foc/include/LS_Config/foc_cfg_*.h` | 符号定义、功能开关、默认值、编译期约束 |
 | `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c`、`foc/src/L1_Orchestration/control_scheduler.c` | 启动流程、任务调度、控制入口 |
 | `L2` 服务与协议运行时层 | `runtime_c1_entry.c`、`runtime_c2_frame_source.c`、`runtime_c3_runtime_fsm.c`、`runtime_c4_runtime_core.c`、`runtime_c5_output_adapter.c`、`debug_stream.c`、`motor_control_service.c` | 协议帧接入、状态机、命令执行与存储、输出适配、控制服务桥接 |
-| `L3` 应用算法层 | `foc_control_c11_entry.c`、`foc_control_c12_init.c`、`foc_control_c13_cfg_state.c`、`foc_control_c21_outer_loop.c`、`foc_control_c22_current_loop.c`、`foc_control_c23_motor_param_learn.c`、`foc_control_c24_compensation.c`、`foc_control_c31_actuation.c`、`sensor.c`、`svpwm.c`、`protocol_core.c` | 控制算法、初始化标定、配置状态管理、采样处理、协议纯处理内核 |
+| `L3` 应用算法层 | `foc_control_c11_entry.c`、`foc_control_c12_init.c`、`foc_control_c13_cfg_state.c`、`foc_control_c21_outer_loop.c`、`foc_control_c22_current_loop.c`、`foc_control_c23_motor_param_learn.c`、`foc_control_c24_compensation.c`、`foc_control_c31_actuation.c`、`sensor.c`、`svpwm.c`、`protocol_core.c` | 控制算法（入口、初始化标定、配置状态管理、外环、电流内环、参数学习、齿槽补偿、SVPWM 执行）、采样处理、协议纯处理内核 |
 | `L41` 数学复用层 | `foc/include/L41_Math/*`、`foc/src/L41_Math/*` | 与平台无关的数学与 LUT |
 | `L42` 平台抽象层 | `foc/include/L42_PAL/foc_platform_api.h` + 实例 `foc_platform_api.c` | 库到板级驱动的唯一桥接接口 |
 | `L5` 板级驱动层 | `examples/.../software/Utilities/*`、`Firmware/*` | 外设驱动与芯片库实现 |
@@ -83,7 +83,7 @@ FOC_VSCODE/
 1. 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
 2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
-4. 当前已接入的齿槽协议链路：状态子命令 `S:G`（`COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE`）；系统子命令 `Y:G`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB`，触发运行时标定）、`Y:D`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP`，串口输出补偿表）
+4. 当前已接入的齿槽协议链路：状态子命令 `S:G`（`COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE`）；系统子命令 `Y:G`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB`，触发运行时标定）、`Y:D`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP`，串口输出补偿表）、`Y:T`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT`，串口输出可嵌入代码的 C 数组格式补偿表）
 
 说明：符号头中预留了齿槽参数子命令符号（`J/K/N`），当前运行时实现尚未接入对应参数读写链路。
 

@@ -32,6 +32,9 @@ typedef struct {
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
+    float cogging_comp_iq_limit_a;
+    float cogging_comp_speed_gate_rad_s;
+    float cogging_calib_gain_k;
 } control_config_snapshot_t;
 
 typedef struct {

@@ -5,15 +5,49 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.2] - 2026-04-27
+## [1.4.5] - 2026-04-29
+
+### Fixed
+- 修复齿槽标定中预期机械角被 `Math_WrapRad` 错误截断 + 除以极对数导致的非线性漂移问题：根因为开环驱动步骤（`CoggingCalib_OpenLoopDriveStep`）直接维护电角度 `g_calib_expected_elec_angle`，在 `Math_WrapRad` 后除以极对数得到机械角时，若极对数为 4（或 >1），电角度的 2π 折叠会在除以极对数后产生 2π/4 = π/2 的分段跳跃，导致预期机械角与传感器实际机械角之间的 Δθ 包含系统性周期误差。修复方案：
+  - 新增独立静态变量 `g_calib_expected_mech_angle` 跟踪预期机械角度（开环速度 = 电角速度 / 极对数）。
+  - `CoggingCalib_OpenLoopDriveStep`：机械角按 `FOC_COGGING_CALIB_SPEED_RAD_S / pole_pairs` 递进，`Math_WrapRad` 维护在 [0, 2π)；电角度从机械角度派生：`θ_elec = θ_mech * pole_pairs`。
+  - START 阶段：`g_calib_expected_mech_angle` 从传感器 `sensor->mech_angle_rad.output_value` 种子化。
+  - SCAN 阶段：`mech_expected` 直接从 `g_calib_expected_mech_angle` 读取，不再做 `g_calib_expected_elec_angle / pole_pairs`。
+
+## [1.4.4] - 2026-04-28
+
 
 ### Changed
-- 齿槽补偿重构：将旧"初始化阶段自动标定"策略（`FOC_COGGING_INIT_LEARN_ENABLE`）替换为"运行时用户手动触发标定 + 补偿"新机制（`FOC_COGGING_CALIB_ENABLE`）。
+- 齿槽标定算法完全重写为纯开环位置偏差法：替代旧的 iq 测量值累积方法。
+  - 标定期间电机纯开环驱动（自维护电角度 + Uq = iq * R），绕过外环 PID 和电流环 PID。
+  - SETTLE 阶段：电机先旋转 N 圈建立动平衡。
+  - SCAN 阶段：每步读取传感器角度，计算与预期开环位置的偏差 Δθ，按实际机械角度映射到 LUT bin 累加。
+  - FINISH 阶段：多圈平均 → 去DC → 循环差分 → iq 补偿表 → 加载到电机。
+  - 新增运行时增益系数 `FOC_COGGING_CALIB_GAIN_K`，可通过协议命令 `P:k` 在线修改。
+  - 新增软开关状态保存/恢复机制：标定开始保存、结束时恢复。
+  - 标定期间显式调用 `FOC_ControlSetCoggingCompUnavailable()` 禁用齿槽补偿。
+- 清理废弃宏：移除 `FOC_COGGING_CALIB_SETTLE_CYCLES`（替换为 `FOC_COGGING_CALIB_SETTLE_REV`）；移除 `FOC_COGGING_LEARN_SAMPLE_COUNT`、`FOC_COGGING_LEARN_MIN_VALID_PERCENT`、`FOC_COGGING_LEARN_ERR_TO_IQ_GAIN_A_PER_RAD`、`FOC_COGGING_LEARN_MAX_RETRIES`、`FOC_COGGING_LEARN_STEP_SETTLE_MS` 等旧学习算法宏。
+- 新增 `FOC_COGGING_CALIB_ENABLE` 编译期约束检查。
+- 协议文档更新：`P:k` 的参数说明和裁剪宏归属。
+
+## [1.4.3] - 2026-04-27
+
+### Changed
+- 齿槽补偿重构（v1.4.2 中初步提交，v1.4.3 完成清理）：将旧"初始化阶段自动标定"策略（`FOC_COGGING_INIT_LEARN_ENABLE`）替换为"运行时用户手动触发标定 + 补偿"新机制（`FOC_COGGING_CALIB_ENABLE`）。
   - 新增运行时标定状态机，在补偿执行步骤（`FOC_ControlCompensationStep`）中通过 `FOC_CoggingCalibProcess()` 驱动，以 iq 计算值波动为输入。
   - 初始化不再执行齿槽标定，仅输出齿槽表状态（已定义/空）。
   - 新增协议命令：`Y:G`（触发标定）、`Y:D`（串口输出补偿表），通过系统命令通道接入。
-  - 新宏 `FOC_COGGING_CALIB_ENABLE` 控制标定功能，旧宏 `FOC_COGGING_INIT_LEARN_ENABLE` 设为默认禁用以保持兼容。
+  - 新宏 `FOC_COGGING_CALIB_ENABLE` 控制标定功能，旧宏 `FOC_COGGING_INIT_LEARN_ENABLE` 设为默认禁用以保持兼容（默认关闭）。
   - 补偿仅在 `FOC_COGGING_COMP_ENABLE` 开启且齿槽表非空时生效。
+- 移除已废弃的初始化标定相关函数和符号：`FOC_CoggingInitLearn`、`FOC_CoggingInitStart`、`FOC_CoggingInitProcess`、`FOC_CoggingInitIsBusy`、`FOC_COGGING_INIT_LEARN_ENABLE`、`foc_cogging_init_learn_t`。
+- 清理齿槽补偿模块中残留的 `FOC_COGGING_INIT_LEARN_ENABLE` 条件编译分支和对应的初始化调用路径。
+- 清理 `foc_cfg_init_values.h` 中不再使用的初始化标定相关默认值。
+- 编译零 warning 通过（1 条 linker warning 为 scatter 文件固有，不计）。
+
+## [1.4.2] - 2026-04-27
+
+### Changed
+- 齿槽补偿重构（v1.4.2 初步提交包含标定状态机 + 协议命令框架，后续在 v1.4.3 完成废弃代码清理）。
 - 电流环 PID 抗饱和策略从 back-calculation（反算积分限幅）替换为 conditional integration（条件积分）：饱和冻结 + 积分钳位安全网。新策略在输出饱和且误差同向加深时回滚积分增量，并附加 `|integral| ≤ |out_max/ki|` 硬钳位。相比原 back-calculation 方法释放了积分器在瞬态响应中的建立能力，更适合电流环小 KP + 大 KI 的参数风格，阶跃响应更快且无过冲。
 - 删除 Ki 低电流缩放死代码：`FOC_CURRENT_LOOP_KI_LOW_CURRENT_START_A`、`END_A`、`SCALE` 三项宏及其消费函数 `FOC_CurrentLoopComputeKiScale`，默认值组合 (start=0.00, end=0.0, scale=1.0) 导致函数恒返回 1.0f，无实际效果。同时将 `FOC_CurrentLoopPIDRun` 中 `ki_effective` 局部变量精简为直接使用 `pid->ki`。
 - 修复 Clarke 变换 β 系数：`Math_ClarkeTransform` 中 β = (b-c) * √3/2 改为 β = (b-c) / √3，消除 Park 变换后 Iq 的 2 倍频电角度正弦波动和 25% 直流偏置，同时修复 Id 的串扰问题。

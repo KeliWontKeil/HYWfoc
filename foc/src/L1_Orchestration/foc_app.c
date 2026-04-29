@@ -7,6 +7,7 @@
 #include "L2_Service/runtime_c1_entry.h"
 #include "L2_Service/motor_control_service.h"
 #include "L3_Algorithm/foc_control_c11_entry.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -22,10 +23,10 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip);
 
 static foc_motor_t g_motor;
 static sensor_data_t g_sensor_snapshot;
+static sensor_data_t g_fast_current_sensor_snapshot;
 static foc_pid_t g_torque_current_pid;
 static foc_pid_t g_angle_pid;
 static foc_pid_t g_speed_pid;
-static sensor_data_t g_fast_current_sensor_snapshot;
 static runtime_snapshot_t g_StateSnapshot;
 
 static volatile uint8_t g_service_task_pending = 0U;
@@ -140,6 +141,13 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
     task_args.open_loop_turn_speed = 0.0f;
     task_args.dt_sec = FOC_CONTROL_DT_SEC;
 
+    /* Reset current soft-switch blend state when control mode changes. */
+    if (task_args.control_mode != g_fast_loop_control_mode_last)
+    {
+        MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
+        g_fast_loop_control_mode_last = task_args.control_mode;
+    }
+
     if (MotorControlService_RunControlTask(MOTOR_CONTROL_SERVICE_TASK_OUTER_LOOP,
                                            &g_motor,
                                            &g_torque_current_pid,
@@ -151,18 +159,11 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
         return;
     }
 
-    /* Reset current soft-switch blend state when control mode changes. */
-    if (task_args.control_mode != g_fast_loop_control_mode_last)
-    {
-        MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
-        g_fast_loop_control_mode_last = task_args.control_mode;
-    }
+    /* Run calibration sample step (handles deferred start/dump/export requests when idle). */
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+    (void)FOC_CoggingCalibSampleStep(&g_motor, sensor_data, task_args.dt_sec);
+#endif
 
-    /*
-     * Apply compensation steps (e.g. cogging torque feed-forward).
-     * This modifies motor->iq_target so that the current loop sees
-     * the compensated target (Scheme A: compensation before current loop).
-     */
     FOC_ControlCompensationStep(&g_motor, sensor_data);
 
     /* Current algorithm always runs in PWM ISR; task loop only publishes fast-loop targets. */
@@ -387,7 +388,7 @@ static void FOC_App_OnPwmUpdateISR(void)
 static void Service_Task_Trigger(void)
 {
     FOC_App_UpdateIndicators();
-		Runtime_GetSnapshot(&g_StateSnapshot);
+	Runtime_GetSnapshot(&g_StateSnapshot);
 
     g_service_task_pending = 1U;
 }
@@ -422,5 +423,28 @@ static void Motor_Control_Loop(void)
         return;
     }
 
-    FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
+    if (FOC_CoggingCalibIsBusy(&g_motor) != 0U)
+    {
+        /* ------ Calibration active: pure open-loop self-drive ------ */
+
+        /* Ensure PWM ISR runs open-loop (no current PID, no soft-switch). */
+        g_motor.current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+        g_motor.current_soft_switch_status.enabled = 0U;
+
+        /*
+         * Run calibration step: internally drives open-loop angle + Uq,
+         * accumulates position error per LUT bin, and calls
+         * FOC_ControlApplyElectricalAngleRuntime() for SVPWM output.
+         */
+        FOC_CoggingCalibSampleStep(&g_motor, &g_sensor_snapshot, FOC_CONTROL_DT_SEC);
+
+        /* Publish targets for the fast current loop (PWM ISR). */
+        g_fast_current_loop_iq_target = g_motor.iq_target;
+        g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
+        g_fast_current_loop_enabled = 1U;
+    }
+    else
+    {
+        FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
+    }
 }

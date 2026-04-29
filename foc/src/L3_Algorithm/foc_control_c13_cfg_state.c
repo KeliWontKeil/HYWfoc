@@ -53,6 +53,7 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
     motor->cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
     motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
     motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+    motor->cogging_comp_status.calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
 
     for (uint16_t i = 0U; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
     {
@@ -246,6 +247,36 @@ void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable)
     (void)enable;
     motor->cogging_comp_status.enabled = FOC_CFG_DISABLE;
 #endif
+}
+
+void FOC_ControlSetCoggingCompIqLimitA(foc_motor_t *motor, float value)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->cogging_comp_status.iq_limit_a = (value < 0.0f) ? 0.0f : value;
+}
+
+void FOC_ControlSetCoggingCompSpeedGateRadS(foc_motor_t *motor, float value)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->cogging_comp_status.speed_gate_rad_s = (value < 0.0f) ? 0.0f : value;
+}
+
+void FOC_ControlSetCoggingCalibGainK(foc_motor_t *motor, float value)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    motor->cogging_comp_status.calib_gain_k = (value < 0.0f) ? 0.0f : value;
 }
 
 void FOC_PIDInit(foc_pid_t *pid,

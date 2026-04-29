@@ -22,6 +22,9 @@ void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor);
 foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(foc_motor_t *motor);
 
 void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable);
+void FOC_ControlSetCoggingCompIqLimitA(foc_motor_t *motor, float value);
+void FOC_ControlSetCoggingCompSpeedGateRadS(foc_motor_t *motor, float value);
+void FOC_ControlSetCoggingCalibGainK(foc_motor_t *motor, float value);
 
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,

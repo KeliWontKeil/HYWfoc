@@ -118,14 +118,13 @@ Optional groups:
 | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `P:P/U/V` |
 | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `P:M/B/E/F/T` |
 | `FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH` | `P:Q/Y/Z`, `S:C` |
-| `FOC_PROTOCOL_ENABLE_COGGING_COMP` | `S:G` |
+| `FOC_PROTOCOL_ENABLE_COGGING_COMP` | `P:U/V`, `S:G`, `Y:G`, `Y:D`, `Y:T` |
 
 When an optional subcommand is trimmed off, write/read on that subcommand returns parameter-invalid (`P`) after frame parse success (`O`).
 
-Current implementation note:
+Note:
 
-- Cogging parameter symbols (`P:J/K/N`) are reserved in symbol definitions but not yet wired into runtime parameter read/write handlers.
-- Cogging runtime control currently exposes the state subcommand `S:G` when `FOC_PROTOCOL_ENABLE_COGGING_COMP` is enabled.
+- The `P:k` subcommand (cogging calibration gain) is guarded by `FOC_COGGING_CALIB_ENABLE`, not by `FOC_PROTOCOL_ENABLE_COGGING_COMP`.
 
 ## 4. Parameter Subcommands / 参数子命令
 
@@ -151,6 +150,8 @@ Note: this table corresponds to FULL protocol profile. In trimmed builds, option
 | `P` | pid_speed_kp | float | [0, 50] | 1.5 | - | `aaPP3.0b` | `aaPPb` |
 | `U` | pid_speed_ki | float | [0, 50] | 0.6 | - | `aaPU0.6b` | `aaPUb` |
 | `V` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaPV0.05b` | `aaPVb` |
+| `U`\* | cogging_comp_iq_limit_a | float | [0, 100] | 0.0 (see `FOC_COGGING_COMP_IQ_LIMIT_A`) | A | `aaPU2.0b` | `aaPUb` |
+| `V`\* | cogging_comp_speed_gate_rad_s | float | [0, 36] | 0.5 (see `FOC_COGGING_COMP_SPEED_GATE_RAD_S`) | rad/s | `aaPV0.3b` | `aaPVb` |
 | `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaPM0.002b` | `aaPMb` |
 | `B` | control_angle_hold_integral_limit | float | >= 0 | 0.2 | - | `aaPB0.3b` | `aaPBb` |
 | `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaPE0.004b` | `aaPEb` |
@@ -161,6 +162,8 @@ Note: this table corresponds to FULL protocol profile. In trimmed builds, option
 | `Y` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.25 | A | `aaPY1.5b` | `aaPYb` |
 | `Z` | current_soft_switch_auto_closed_iq_a | float | [0, 100] and >= `Y` | 0.80 | A | `aaPZ3.0b` | `aaPZb` |
 | `X` | read_all sentinel | - | read only | - | - | N/A | `aaPXb` |
+
+\*  Cogging compensation parameters share the `P:U`/`P:V` subcommand letters with speed PID tuning (`pid_speed_ki`, `pid_speed_kd`). Due to the uppercase-only parser constraint and the limited `A-Z` space, `FOC_PROTOCOL_ENABLE_COGGING_COMP` and `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` are **mutually exclusive** at compile time. If both are set to `ENABLE`, a build-time hint is emitted and only one code path takes effect (see `foc_cfg_compile_limits.h`).
 
 ### 4.2 Control Mode Values / 控制模式值
 
@@ -309,6 +312,10 @@ aaSS1b      # semantic report enable
 aaSO1b      # osc report enable
 aaSC1b      # current soft switch enable
 aaSG1b      # cogging compensation enable (only when FOC_PROTOCOL_ENABLE_COGGING_COMP=ENABLE)
+aaYGb       # start runtime cogging calibration (only when FOC_COGGING_CALIB_ENABLE=ENABLE)
+aaYDb       # dump cogging compensation table to serial (only when FOC_COGGING_CALIB_ENABLE=ENABLE)
+aaYTb       # export cogging compensation table as C code to serial (only when FOC_COGGING_CALIB_ENABLE=ENABLE)
+
 ```
 
 ### 7.4 Typical reads / 常用读取示例

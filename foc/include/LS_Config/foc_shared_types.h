@@ -81,6 +81,9 @@ typedef struct {
     float speed_gate_rad_s;
     float iq_limit_a;
 
+    /* Runtime calibration gain K (Δθ→iq conversion factor). */
+    float calib_gain_k;
+
     /* Calibration state machine fields (used when FOC_COGGING_CALIB_ENABLE). */
     uint8_t calib_in_progress;
     uint8_t calib_progress_percent;

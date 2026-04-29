@@ -3,12 +3,6 @@
 
 #include "LS_Config/foc_shared_types.h"
 
-/* Compensation source identifiers. */
-#define FOC_COGGING_COMP_SOURCE_DISABLED 0U
-#define FOC_COGGING_COMP_SOURCE_NONE 1U
-#define FOC_COGGING_COMP_SOURCE_STATIC 2U
-#define FOC_COGGING_COMP_SOURCE_CALIB 3U
-
 /* Lookup and apply compensation from the cogging LUT. */
 float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
                                  const int16_t *table_q15,
@@ -34,41 +28,44 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
 /*
  * Request-start the runtime cogging calibration (deferred).
  *
- * This is the protocol-safe entry point: it sets a static request flag
- * so that the next call to FOC_CoggingCalibProcess() (which has the
- * motor pointer) can call FOC_CoggingCalibStart(motor) internally.
- *
- * The actual start validation happens on the control tick.
+ * Sets a static request flag consumed by FOC_CoggingCalibSampleStep()
+ * on the next control tick.
  */
 void FOC_CoggingCalibRequestStart(void);
 
 /*
  * Start the user-triggered runtime cogging calibration (direct).
  *
- * The motor must already be spinning at low speed in speed-closed / current-open
- * loop (velocity mode).  This start function resets the state machine; actual
- * work is done in FOC_CoggingCalibProcess() which should be called from the
- * fast control loop (FOC_TASK_RATE_FAST_CONTROL).
+ * Resets accumulators and enters START phase.
+ * Calibration is self-driven: maintains its own electrical angle and drives
+ * Uq = I_calib * R_phase directly (no outer-loop PID, no current-loop PID).
+ * The caller must set current_soft_switch to OPEN mode with enabled=0
+ * before the next PWM ISR tick.
  *
- * Returns 1 on acceptance, 0 if already busy or conditions not met.
+ * Returns 1 on acceptance, 0 if already busy.
  */
 uint8_t FOC_CoggingCalibStart(foc_motor_t *motor);
 
 /*
- * Run one step of the calibration state machine.
+ * Run one step of the calibration sample collection state machine.
  *
- * Must be called from the fast control loop while FOC_CoggingCalibIsBusy()
- * returns true.  The calibration:
- *   1. Opens the current loop and applies a fixed Iq baseline.
- *   2. Sweeps through each LUT point by injecting a small velocity offset.
- *   3. Averages the measured Iq at each mechanical angle to build the LUT.
- *   4. Repeats for FOC_COGGING_CALIB_NUM_PASSES passes.
- *   5. When complete, loads the averaged table into motor->cogging_comp_table_q15
- *      and sets status.source = FOC_COGGING_COMP_SOURCE_CALIB.
+ * Must be called from the control task when FOC_CoggingCalibIsBusy() is true.
+ * This function:
+ *   1. Consumes deferred request flags (start/dump/export).
+ *   2. When busy, runs the open-loop drive step AND advances the
+ *      START/SETTLE/SCAN/CHECK/FINISH state machine.
+ *   3. In SCAN phase: computes Δθ = θ_actual - θ_expected, maps to
+ *      LUT bin by actual mechanical angle, accumulates position error.
+ *   4. Self-drives motor->electrical_phase_angle, motor->uq, motor->iq_target
+ *      and calls FOC_ControlApplyElectricalAngleRuntime() for SVPWM output.
+ *   5. Does NOT call FOC_App_RunControlAlgorithm() - the caller must
+ *      bypass the outer-loop PID when this function is active.
  *
- * Returns 1 while busy, 0 when finished.
+ * Returns 1 while busy, 0 when idle/finished.
  */
-uint8_t FOC_CoggingCalibProcess(foc_motor_t *motor);
+uint8_t FOC_CoggingCalibSampleStep(foc_motor_t *motor,
+                                   const sensor_data_t *sensor,
+                                   float dt_sec);
 
 /* Returns 1 if calibration is currently in progress. */
 static inline uint8_t FOC_CoggingCalibIsBusy(const foc_motor_t *motor)
@@ -84,10 +81,13 @@ static inline uint8_t FOC_CoggingCalibGetProgressPercent(const foc_motor_t *moto
 
 /*
  * Dump the current cogging compensation table via debug text stream.
- * Output format is the same as the calibration completion auto-dump.
- * Safe to call from L2 protocol layer (uses FOC_Platform_WriteDebugText).
  */
 void FOC_CoggingCalibDumpTable(void);
+
+/*
+ * Export the current cogging compensation LUT as a C-code initializer string.
+ */
+void FOC_CoggingCalibExportTable(void);
 
 #endif /* FOC_COGGING_CALIB_ENABLE */
 

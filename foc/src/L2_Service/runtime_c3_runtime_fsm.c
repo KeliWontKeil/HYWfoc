@@ -198,7 +198,19 @@ static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_com
         return RUNTIME_C4_EXEC_PARAM_ERROR;
 #endif
     }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT)
+    {
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        FOC_CoggingCalibExportTable();
+        return RUNTIME_C4_EXEC_OK;
+#else
+        RuntimeC4_WriteStatusParamInvalid();
+        return RUNTIME_C4_EXEC_PARAM_ERROR;
+#endif
+    }
 #endif /* FOC_COGGING_COMP_ENABLE */
+
 
     RuntimeC4_WriteStatusParamInvalid();
     return RUNTIME_C4_EXEC_PARAM_ERROR;

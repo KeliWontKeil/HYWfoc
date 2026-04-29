@@ -49,6 +49,12 @@
 #define COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MAX_A (100.0f)
 #define COMMAND_MANAGER_PARAM_NON_NEGATIVE_MIN (0.0f)
 
+/* Cogging compensation runtime parameter ranges. */
+#define COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MIN_A (0.0f)
+#define COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MAX_A (100.0f)
+#define COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MIN_RAD_S (0.0f)
+#define COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MAX_RAD_S (36.0f)
+
 /* Soft hint output helpers for non-blocking config consistency diagnostics. */
 #if defined(__ARMCC_VERSION) || defined(__GNUC__) || defined(__clang__)
 #define FOC_CFG_PRAGMA_STR2(x) #x
@@ -99,9 +105,6 @@
 #if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_COGGING_COMP_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
-#if ((FOC_COGGING_INIT_LEARN_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_INIT_LEARN_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_COGGING_INIT_LEARN_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
-#endif
 #if ((FOC_COGGING_DEBUG_DUMP_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_DEBUG_DUMP_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_COGGING_DEBUG_DUMP_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
@@ -131,6 +134,9 @@
 #endif
 #if ((FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_ENABLE))
 #error "FOC_PROTOCOL_ENABLE_COGGING_COMP must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
+#endif
+#if ((FOC_COGGING_CALIB_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
+#error "FOC_COGGING_CALIB_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
 
 /* Runtime default booleans also follow unified semantics. */
@@ -167,8 +173,17 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEPENDENCY: current soft-switch feature is en
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
 #endif
 #endif
+#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE))
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_PROTOCOL_CONFLICT speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_PROTOCOL_ENABLE_COGGING_COMP.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_PROTOCOL_CONFLICT: speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_PROTOCOL_ENABLE_COGGING_COMP.")
+#endif
+#endif
+
 #if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
 #if defined(__CC_ARM) && !defined(__clang__)
+
 #warning FOC_CFG_HINT_FEATURE_PROTOCOL cogging compensation protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
 #else
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging compensation protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
@@ -181,13 +196,6 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging compensation protocol chain
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is ENABLE but feature is disabled; runtime will force disable.")
 #endif
 #endif
-#if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE) && (FOC_COGGING_INIT_LEARN_ENABLE == FOC_CFG_ENABLE))
-#if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_FEATURE_DEFAULT cogging init learn is ENABLE while cogging compensation feature is disabled; learning path will be skipped.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: cogging init learn is ENABLE while cogging compensation feature is disabled; learning path will be skipped.")
-#endif
-#endif
 #if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE) && (FOC_COGGING_DEBUG_DUMP_ENABLE == FOC_CFG_ENABLE))
 #if defined(__CC_ARM) && !defined(__clang__)
 #warning FOC_CFG_HINT_FEATURE_DEFAULT cogging debug dump is ENABLE while cogging compensation feature is disabled; dump path will be skipped.
@@ -198,12 +206,6 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: cogging debug dump is ENABLE while c
 
 #if (FOC_COGGING_LUT_POINT_COUNT < 8U)
 #error "FOC_COGGING_LUT_POINT_COUNT must be >= 8"
-#endif
-#if (FOC_COGGING_LEARN_SAMPLE_COUNT == 0U)
-#error "FOC_COGGING_LEARN_SAMPLE_COUNT must be non-zero"
-#endif
-#if (FOC_COGGING_LEARN_MIN_VALID_PERCENT > 100U)
-#error "FOC_COGGING_LEARN_MIN_VALID_PERCENT must be in [0, 100]"
 #endif
 #if (FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT == 0U)
 #error "FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT must be non-zero"

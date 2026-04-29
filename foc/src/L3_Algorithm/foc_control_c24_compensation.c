@@ -1,132 +1,59 @@
 #include "L3_Algorithm/foc_control_c24_compensation.h"
 
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-#include "L3_Algorithm/foc_control_c31_actuation.h"
+
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
+#include "L3_Algorithm/foc_control_c31_actuation.h"
 
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+/* ======================================================================== *
+ *  Static LUT storage and Q15 helpers (shared by lookup and calibration)   *
+ * ======================================================================== */
 
-/* ------------------------------------------------------------------ */
-/*  Internal speed estimator (static, used by Apply).                 */
-/* ------------------------------------------------------------------ */
-static uint8_t g_cogging_speed_est_valid = 0U;
-static float g_cogging_prev_mech_angle_rad = 0.0f;
+/* Maximum LUT point count (must match FOC_MOTOR_COGGING_LUT_CAPACITY). */
+#define COGGING_LUT_MAX  128U
 
-static void FOC_CoggingResetSpeedEstimator(void)
+/*
+ * Q15 format: range [-1.0, 1.0) maps to [-32768, 32767].
+ * iq_value_a = q15_val * status->iq_lsb_a
+ */
+static inline int16_t FloatToQ15(float val, float lsb)
 {
-    g_cogging_speed_est_valid = 0U;
-    g_cogging_prev_mech_angle_rad = 0.0f;
-}
-
-static uint8_t FOC_CoggingComputePhaseRad(const foc_motor_t *motor,
-                                          float mech_angle_rad,
-                                          float *phase_rad)
-{
-    float mech_delta_rad;
-
-    if ((motor == 0) || (phase_rad == 0))
-    {
-        return 0U;
-    }
-
-    if ((motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
-        (motor->direction == FOC_DIR_UNDEFINED) ||
-        (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
-    {
-        return 0U;
-    }
-
-    mech_delta_rad = Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_at_elec_zero_rad);
-    *phase_rad = Math_WrapRad((float)motor->direction * mech_delta_rad * (float)motor->pole_pairs);
-    return 1U;
-}
-
-static float FOC_CoggingEstimateSpeedAbsRadS(float mech_angle_rad, float speed_ref_rad_s)
-{
-    float dt_sec = FOC_CONTROL_DT_SEC;
-    float speed_abs_rad_s;
-
-    if (dt_sec <= 1e-6f)
-    {
-        return fabsf(speed_ref_rad_s);
-    }
-
-    if (g_cogging_speed_est_valid == 0U)
-    {
-        g_cogging_prev_mech_angle_rad = mech_angle_rad;
-        g_cogging_speed_est_valid = 1U;
-        return fabsf(speed_ref_rad_s);
-    }
-
-    speed_abs_rad_s = fabsf(Math_WrapRadDelta(mech_angle_rad - g_cogging_prev_mech_angle_rad) / dt_sec);
-    g_cogging_prev_mech_angle_rad = mech_angle_rad;
-    return speed_abs_rad_s;
-}
-
-static int16_t FOC_QuantizeCoggingIqToQ15(float iq_a, float iq_lsb_a)
-{
-    float scaled;
-
-    if (iq_lsb_a <= 1e-6f)
+    float q;
+    if (lsb < 1e-12f)
     {
         return 0;
     }
-
-    scaled = iq_a / iq_lsb_a;
-    if (scaled > 32767.0f)
-    {
-        scaled = 32767.0f;
-    }
-    else if (scaled < -32768.0f)
-    {
-        scaled = -32768.0f;
-    }
-
-    return (int16_t)((scaled >= 0.0f) ? (scaled + 0.5f) : (scaled - 0.5f));
+    q = val / lsb;
+    if (q > 32767.0f) q = 32767.0f;
+    if (q < -32768.0f) q = -32768.0f;
+    return (int16_t)((int32_t)(q + (q >= 0.0f ? 0.5f : -0.5f)));
 }
 
-/* ------------------------------------------------------------------ */
-/*  Calibration-internal raw table accumulator (heap/static-free).    */
-/*  We store per-point sums in a local buffer passed on the stack,     */
-/*  but since FOC_COGGING_LUT_POINT_COUNT can be up to 128 we use     */
-/*  a single statically-allocated accumulator that lives only while   */
-/*  calibration is active.  This is safe because calibration is       */
-/*  mutually exclusive with normal compensation.                      */
-/* ------------------------------------------------------------------ */
-#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+static inline float Q15ToFloat(int16_t q15, float lsb)
+{
+    return (float)q15 * lsb;
+}
 
-static float g_calib_iq_accum[FOC_MOTOR_COGGING_LUT_CAPACITY];
-static uint16_t g_calib_sample_count[FOC_MOTOR_COGGING_LUT_CAPACITY];
-static float g_calib_prev_mech_rad;
-static uint8_t g_calib_prev_valid;
-
-/* Deferred request flags — set by L2 protocol, consumed on control tick. */
-static uint8_t g_calib_start_request_pending = 0U;
-static uint8_t g_calib_dump_request_pending = 0U;
-
-#endif /* FOC_COGGING_CALIB_ENABLE */
-
-/* ------------------------------------------------------------------ */
-/*  Core public API.                                                  */
-/* ------------------------------------------------------------------ */
+/* ======================================================================== *
+ *  Cogging compensation lookup and application                             *
+ * ======================================================================== */
 
 float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
                                  const int16_t *table_q15,
-                                 float cogging_phase_rad,
-                                 float speed_abs_rad_s)
+                                 float mech_angle_rad,
+                                 float speed_ref_rad_s)
 {
-    float angle_rad;
-    float index_f;
-    uint16_t index_0;
-    uint16_t index_1;
+    uint16_t idx0;
+    uint16_t idx1;
     float frac;
-    float iq_0;
-    float iq_1;
+    float val0;
+    float val1;
+    float interp;
     float iq_comp;
     float speed_abs;
 
@@ -135,109 +62,123 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
         return 0.0f;
     }
 
-    if ((status->enabled == 0U) ||
-        (status->available == 0U) ||
-        (status->point_count < 2U))
+    /* Only compensate when running above the speed gate. */
+    speed_abs = (speed_ref_rad_s >= 0.0f) ? speed_ref_rad_s : -speed_ref_rad_s;
+    if (speed_abs < status->speed_gate_rad_s)
     {
         return 0.0f;
     }
 
-    angle_rad = Math_WrapRad(cogging_phase_rad);
-    index_f = angle_rad * ((float)status->point_count / FOC_MATH_TWO_PI);
-    index_0 = (uint16_t)index_f;
-    if (index_0 >= status->point_count)
+    if ((status->available == 0U) || (status->point_count == 0U))
     {
-        index_0 = (uint16_t)(status->point_count - 1U);
-    }
-    index_1 = (uint16_t)((index_0 + 1U) % status->point_count);
-    frac = index_f - (float)index_0;
-
-    iq_0 = (float)table_q15[index_0] * status->iq_lsb_a;
-    iq_1 = (float)table_q15[index_1] * status->iq_lsb_a;
-    iq_comp = iq_0 + (iq_1 - iq_0) * frac;
-
-    /*
-     * Speed-dependent gain roll-off.
-     *
-     * At zero speed the full compensation is applied.
-     * As speed increases toward speed_gate_rad_s, the gain linearly
-     * decreases to zero. Beyond speed_gate_rad_s the compensation is
-     * fully suppressed (cogging torque averages out at high speed).
-     */
-    speed_abs = (speed_abs_rad_s >= 0.0f) ? speed_abs_rad_s : -speed_abs_rad_s;
-    if ((status->speed_gate_rad_s > 1e-6f) && (speed_abs < status->speed_gate_rad_s))
-    {
-        iq_comp *= (1.0f - (speed_abs / status->speed_gate_rad_s));
-    }
-    else
-    {
-        iq_comp = 0.0f;
+        return 0.0f;
     }
 
-    return Math_ClampFloat(iq_comp,
-                           -status->iq_limit_a,
-                           status->iq_limit_a);
+    /* Normalise mechanical angle to [0, 2*pi). */
+    {
+        float norm = mech_angle_rad;
+        while (norm < 0.0f)
+        {
+            norm += FOC_MATH_TWO_PI;
+        }
+        while (norm >= FOC_MATH_TWO_PI)
+        {
+            norm -= FOC_MATH_TWO_PI;
+        }
+        mech_angle_rad = norm;
+    }
+
+    /* Map angle to LUT index with linear interpolation. */
+    {
+        float step = FOC_MATH_TWO_PI / (float)status->point_count;
+        float pos  = mech_angle_rad / step;
+        idx0 = (uint16_t)pos;
+        frac = pos - (float)idx0;
+
+        if (idx0 >= status->point_count)
+        {
+            idx0 = (uint16_t)(status->point_count - 1U);
+        }
+
+        idx1 = idx0 + 1U;
+        if (idx1 >= status->point_count)
+        {
+            idx1 = 0U;
+        }
+    }
+
+    val0 = Q15ToFloat(table_q15[idx0], status->iq_lsb_a);
+    val1 = Q15ToFloat(table_q15[idx1], status->iq_lsb_a);
+    interp = val0 + frac * (val1 - val0);
+
+    /* Clamp to configured limit. */
+    iq_comp = interp;
+    if (iq_comp > status->iq_limit_a)
+    {
+        iq_comp = status->iq_limit_a;
+    }
+    if (iq_comp < -status->iq_limit_a)
+    {
+        iq_comp = -status->iq_limit_a;
+    }
+
+    return iq_comp;
 }
 
 void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                          float mech_angle_rad,
                                          float speed_ref_rad_s)
 {
-    float phase_rad;
-    float speed_abs_rad_s;
+    float iq_comp;
 
     if (motor == 0)
     {
         return;
     }
 
-    if (FOC_CoggingComputePhaseRad(motor, mech_angle_rad, &phase_rad) == 0U)
+    /* Skip if disabled or not available. */
+    if ((motor->cogging_comp_status.enabled == 0U) ||
+        (motor->cogging_comp_status.available == 0U))
     {
         return;
     }
 
-    speed_abs_rad_s = FOC_CoggingEstimateSpeedAbsRadS(mech_angle_rad, speed_ref_rad_s);
+    iq_comp = FOC_ControlCoggingLookupIq(&motor->cogging_comp_status,
+                                          motor->cogging_comp_table_q15,
+                                          mech_angle_rad,
+                                          speed_ref_rad_s);
 
-    motor->iq_target += FOC_ControlCoggingLookupIq(&motor->cogging_comp_status,
-                                                   motor->cogging_comp_table_q15,
-                                                   phase_rad,
-                                                   speed_abs_rad_s);
+    motor->iq_target += iq_comp * motor->cogging_comp_status.calib_gain_k;
 }
 
 uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
-                                           const int16_t *table_q15,
-                                           uint16_t point_count,
-                                           float iq_lsb_a,
-                                           uint8_t source)
+                                            const int16_t *table_q15,
+                                            uint16_t point_count,
+                                            float iq_lsb_a,
+                                            uint8_t source)
 {
-    uint16_t i;
+    uint16_t copy_count;
 
-    if ((motor == 0) || (table_q15 == 0) || (point_count < 2U) ||
-        (point_count > (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY))
+    if ((motor == 0) || (table_q15 == 0))
     {
         return 0U;
     }
 
-    if (iq_lsb_a <= 0.0f)
+    if (point_count > COGGING_LUT_MAX)
     {
-        return 0U;
+        point_count = COGGING_LUT_MAX;
     }
 
-    for (i = 0U; i < point_count; i++)
-    {
-        motor->cogging_comp_table_q15[i] = table_q15[i];
-    }
-
-    for (; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
-    {
-        motor->cogging_comp_table_q15[i] = 0;
-    }
+    copy_count = point_count;
+    (void)memcpy((void *)motor->cogging_comp_table_q15,
+                 (const void *)table_q15,
+                 (size_t)copy_count * sizeof(int16_t));
 
     motor->cogging_comp_status.point_count = point_count;
-    motor->cogging_comp_status.iq_lsb_a = iq_lsb_a;
-    motor->cogging_comp_status.available = 1U;
-    motor->cogging_comp_status.source = source;
-    motor->cogging_comp_status.calib_in_progress = 0U;
+    motor->cogging_comp_status.iq_lsb_a    = iq_lsb_a;
+    motor->cogging_comp_status.source      = source;
+    motor->cogging_comp_status.available   = 1U;
+
     return 1U;
 }
 
@@ -247,390 +188,740 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source)
     {
         return;
     }
-
     motor->cogging_comp_status.available = 0U;
-    motor->cogging_comp_status.source = source;
-    motor->cogging_comp_status.calib_in_progress = 0U;
-    FOC_CoggingResetSpeedEstimator();
+    motor->cogging_comp_status.source    = source;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Calibration state machine  (optional feature).                    */
-/* ------------------------------------------------------------------ */
+/* ======================================================================== *
+ *  Runtime cogging calibration (user-triggered, self-driven)                *
+ *                                                                           *
+ *  Pure open-loop position-error method:                                    *
+ *    - Drives the motor at constant Iq with self-maintained electrical      *
+ *      angle (no outer-loop PID, no current-loop PID).                      *
+ *    - Records the position error Δθ = θ_actual - θ_expected per LUT bin.  *
+ *    - On completion: circular-differentiates Δθ → iq compensation table.  *
+ * ======================================================================== */
+
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
 
-static void FOC_CoggingCalibResetAccum(void)
-{
-    uint16_t i;
-    for (i = 0U; i < (uint16_t)FOC_MOTOR_COGGING_LUT_CAPACITY; i++)
-    {
-        g_calib_iq_accum[i] = 0.0f;
-        g_calib_sample_count[i] = 0U;
-    }
-    g_calib_prev_mech_rad = 0.0f;
-    g_calib_prev_valid = 0U;
-}
+/* --- Static state (calibration request flags, LUT accumulators) --- */
+
+static uint8_t g_calib_request_start = 0U;
+static uint8_t g_calib_request_dump  = 0U;
+static uint8_t g_calib_request_export = 0U;
+
+/* Calibration internal state machine phases (stored in calib_point_index). */
+#define CALIB_PHASE_IDLE     0xFFFFU   /* idle / not started */
+#define CALIB_PHASE_START    0xFFFEU   /* init accumulators and expected angle */
+#define CALIB_PHASE_SETTLE   0xFFFDU   /* open-loop drive N revs to build equilibrium */
+#define CALIB_PHASE_SCAN     0xFFFCU   /* accumulate Δθ per LUT bin */
+#define CALIB_PHASE_CHECK    0xFFFBU   /* one scan pass complete, decide next */
+#define CALIB_PHASE_FINISH   0xFFFAU   /* compute differential table and load */
+#define CALIB_PHASE_DONE     0xFFF9U   /* finished */
+
+/* Accumulator for position error Δθ (radians) per LUT bin, summed over passes. */
+static float   g_calib_dtheta_accum[COGGING_LUT_MAX];
+static uint16_t g_calib_count[COGGING_LUT_MAX];
 
 /*
- * Map a mechanical angle to the nearest LUT bin index [0 .. point_count-1].
- * Uses the motor's mech_angle_at_elec_zero_rad as the reference.
+ * Last calibrated Q15 table (global copy for dump/export without
+ * requiring a motor pointer).  Populated on calibration completion
+ * by CoggingCalib_Finish().
  */
-static uint16_t FOC_CoggingCalibMechToBin(float mech_rad,
-                                          float mech_zero_rad,
-                                          uint8_t direction,
-                                          uint8_t pole_pairs,
-                                          uint16_t point_count)
-{
-    float delta_mech;
-    float elec_rad;
-    float norm;
-    uint16_t bin;
+static int16_t  g_calib_last_table_q15[COGGING_LUT_MAX];
+static uint16_t g_calib_last_point_count = 0U;
+static float    g_calib_last_iq_lsb_a    = 0.0f;
+static uint8_t  g_calib_table_available  = 0U;
 
-    delta_mech = Math_WrapRadDelta(mech_rad - mech_zero_rad);
-    elec_rad = Math_WrapRad((float)direction * delta_mech * (float)pole_pairs);
-    norm = elec_rad / FOC_MATH_TWO_PI; /* [0 .. 1) */
-    if (norm < 0.0f)
-    {
-        norm += 1.0f;
-    }
-    bin = (uint16_t)(norm * (float)point_count);
-    if (bin >= point_count)
-    {
-        bin = (uint16_t)(point_count - 1U);
-    }
-    return bin;
-}
+/*
+ * Current pass number (0-based). Incremented each time SCAN completes
+ * one full mechanical revolution.
+ */
+static uint8_t g_calib_pass_num = 0U;
+
+/* Self-maintained expected electrical angle for open-loop drive. */
+static float g_calib_expected_elec_angle = 0.0f;
+
+/* Self-maintained expected mechanical angle (independent of pole-pair wrap). */
+static float g_calib_expected_mech_angle = 0.0f;
+
+/* Revolution tracking: accumulated angular travel (rad) within current phase. */
+static float g_calib_travel_accum_rad = 0.0f;
+
+/* Previous sensor mechanical angle (rad) used for angular delta computation. */
+static float g_calib_angle_prev_rad = -1.0f;
+
+/*
+ * Per-bin-once tracking: last LUT bin index sampled in the current SCAN pass.
+ * Initialised to 0xFFFF so first crossing always triggers a sample.
+ */
+static uint16_t g_calib_last_lut_index = 0xFFFFU;
+
+/* Number of unique LUT bins sampled during the current SCAN pass. */
+static uint16_t g_calib_bins_collected = 0U;
+
+/* Revolution counter within the current SETTLE or SCAN phase. */
+static uint8_t g_calib_rev_count = 0U;
+
+/*
+ * Last reported progress percentage (stepped at 10 % granularity)
+ * to throttle periodic debug output during SCAN phase.
+ */
+static uint8_t g_calib_last_reported_progress = 0U;
+
+/*
+ * Soft-switch state saved at calibration start, restored on finish.
+ */
+static uint8_t g_calib_saved_softswitch_enabled = 1U;
+static uint8_t g_calib_saved_softswitch_mode    = 0U;
+
+/* ------------------------------------------------------------------ */
 
 void FOC_CoggingCalibRequestStart(void)
 {
-    g_calib_start_request_pending = 1U;
-}
-
-static void FOC_CoggingCalibInternalDumpTable(const foc_motor_t *motor)
-{
-    char out[192];
-    uint16_t i;
-    uint16_t total_points;
-
-    if (motor == 0)
-    {
-        return;
-    }
-
-    total_points = motor->cogging_comp_status.point_count;
-    if (total_points < 2U)
-    {
-        FOC_Platform_WriteDebugText("cogging.dump: table empty (no calibration data)\r\n");
-        return;
-    }
-
-    snprintf(out, sizeof(out),
-             "cogging.table.points=%u lsb=%.4f gate=%.3f limit=%.3f\r\n",
-             (unsigned int)total_points,
-             motor->cogging_comp_status.iq_lsb_a,
-             motor->cogging_comp_status.speed_gate_rad_s,
-             motor->cogging_comp_status.iq_limit_a);
-    FOC_Platform_WriteDebugText(out);
-
-    for (i = 0U; i < total_points; i += 8U)
-    {
-        uint16_t j;
-        uint16_t offset = 0U;
-        int written;
-
-        written = snprintf(out + offset, sizeof(out) - offset,
-                           "cogging.table[%u..]=", (unsigned int)i);
-        if ((written < 0) || ((uint16_t)written >= (sizeof(out) - offset)))
-        {
-            break;
-        }
-        offset += (uint16_t)written;
-
-        for (j = i; (j < total_points) && (j < (uint16_t)(i + 8U)); j++)
-        {
-            written = snprintf(out + offset, sizeof(out) - offset, "%d%s",
-                               (int)motor->cogging_comp_table_q15[j],
-                               ((j + 1U < total_points) && (j + 1U < (uint16_t)(i + 8U))) ? "," : "");
-            if ((written < 0) || ((uint16_t)written >= (sizeof(out) - offset)))
-            {
-                break;
-            }
-            offset += (uint16_t)written;
-        }
-
-        if (offset < (sizeof(out) - 3U))
-        {
-            out[offset++] = '\r';
-            out[offset++] = '\n';
-            out[offset] = '\0';
-            FOC_Platform_WriteDebugText(out);
-        }
-    }
-}
-
-void FOC_CoggingCalibDumpTable(void)
-{
-    g_calib_dump_request_pending = 1U;
+    g_calib_request_start = 1U;
 }
 
 uint8_t FOC_CoggingCalibStart(foc_motor_t *motor)
 {
+    uint16_t i;
+
     if (motor == 0)
     {
         return 0U;
     }
 
+    /* Reject if calibration already in progress. */
     if (motor->cogging_comp_status.calib_in_progress != 0U)
     {
-        return 0U; /* already busy */
-    }
-
-    /* Require valid calibration base (pole pairs, direction, mech zero). */
-    if ((motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
-        (motor->direction == FOC_DIR_UNDEFINED) ||
-        (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
-    {
-        FOC_Platform_WriteDebugText("cogging.calib: abort – missing pole/direction/zero\r\n");
         return 0U;
     }
 
-    /* Motor must be enabled and spinning (coast check: speed_ref near target). */
-    if (motor->cogging_speed_ref_rad_s < (FOC_COGGING_CALIB_SPEED_RAD_S * 0.5f))
+    /* Reset all accumulators. */
+    for (i = 0U; i < COGGING_LUT_MAX; i++)
     {
-        FOC_Platform_WriteDebugText("cogging.calib: abort – motor not spinning (speed too low)\r\n");
-        return 0U;
+        g_calib_dtheta_accum[i] = 0.0f;
+        g_calib_count[i] = 0U;
     }
 
-    motor->cogging_comp_status.calib_in_progress = 1U;
-    motor->cogging_comp_status.calib_progress_percent = 0U;
-    motor->cogging_comp_status.calib_point_index = 0U;
-    motor->cogging_comp_status.calib_pass_index = 0U;
+    /* Initialise calibration state. */
+    motor->cogging_comp_status.calib_in_progress      = 1U;
+    motor->cogging_comp_status.calib_progress_percent  = 0U;
+    motor->cogging_comp_status.calib_point_index       = CALIB_PHASE_START;
+    motor->cogging_comp_status.calib_pass_index        = 0U;
+    g_calib_pass_num                                   = 0U;
 
-    FOC_CoggingCalibResetAccum();
+    /* Angle tracking will be seeded in START phase from sensor data. */
+    g_calib_expected_elec_angle = 0.0f;
+    g_calib_expected_mech_angle = 0.0f;
+    g_calib_angle_prev_rad      = -1.0f;
+    g_calib_travel_accum_rad    = 0.0f;
 
-    FOC_Platform_WriteDebugText("cogging.calib: started\r\n");
+    /* Reset per-bin-once tracking and progress throttle. */
+    g_calib_last_lut_index         = 0xFFFFU;
+    g_calib_last_reported_progress = 0U;
+    g_calib_bins_collected         = 0U;
+    g_calib_rev_count              = 0U;
+
+    g_calib_table_available = 0U;
+
+    /* Save current soft-switch state so it can be restored on finish. */
+    g_calib_saved_softswitch_enabled = motor->current_soft_switch_status.enabled;
+    g_calib_saved_softswitch_mode    = motor->current_soft_switch_status.configured_mode;
+
+    FOC_Platform_WriteDebugText("COGGING CALIB START (open-loop position-error method)\r\n");
+
     return 1U;
 }
 
-uint8_t FOC_CoggingCalibProcess(foc_motor_t *motor)
+/* ------------------------------------------------------------------ */
+
+/*
+ * Helper: compute angular delta (rad) between two mechanical angle readings,
+ * handling the 0/2pi wrap-around.
+ */
+static float CoggingCalib_AngleDelta(float curr, float prev)
 {
-    float iq_floor;
-    uint16_t total_points;
-    uint16_t pass;
-    uint16_t step;
+    float delta = curr - prev;
+    if (delta > FOC_MATH_PI)
+    {
+        delta -= FOC_MATH_TWO_PI;
+    }
+    else if (delta < -FOC_MATH_PI)
+    {
+        delta += FOC_MATH_TWO_PI;
+    }
+    return delta;
+}
+
+/*
+ * Open-loop drive step for calibration.
+ *
+ * This function completely bypasses the outer-loop PID and current-loop PID.
+ * It self-maintains an expected electrical angle and drives Uq = I_calib * R_phase,
+ * then publishes the angle and iq_target for the PWM ISR to consume.
+ */
+static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
+{
+    float phase_resistance;
+    float uq;
 
     if (motor == 0)
+    {
+        return;
+    }
+
+    /*
+     * Advance expected mechanical angle directly.
+     * FOC_COGGING_CALIB_SPEED_RAD_S is the electrical angular velocity of the
+     * rotating field.  The mechanical angular velocity is speed / pole_pairs.
+     * We advance the mechanical angle so it stays in [0, 2π) and is directly
+     * comparable to the sensor's mechanical angle reading.
+     */
+    g_calib_expected_mech_angle += FOC_COGGING_CALIB_SPEED_RAD_S *
+                                    dt_sec *
+                                    (float)motor->direction;
+    g_calib_expected_mech_angle  = Math_WrapRad(g_calib_expected_mech_angle);
+
+    /* Derive electrical angle from mechanical: θ_elec = θ_mech * pole_pairs. */
+    g_calib_expected_elec_angle = g_calib_expected_mech_angle * (float)motor->pole_pairs;
+    g_calib_expected_elec_angle = Math_WrapRad(g_calib_expected_elec_angle);
+
+    /* Compute Uq = I_calib * R_phase (open-loop resistance model). */
+    phase_resistance = fabsf(motor->phase_resistance);
+    if (phase_resistance < 1e-6f)
+    {
+        phase_resistance = 1e-6f;
+    }
+    uq = FOC_COGGING_CALIB_IQ_A * phase_resistance;
+    uq = Math_ClampFloat(uq, -motor->set_voltage, motor->set_voltage);
+
+    /* Set motor DQ voltages for SVPWM drive. */
+    motor->ud = 0.0f;
+    motor->uq = uq;
+
+    /* Publish iq_target for the fast current loop (PWM ISR). */
+    motor->iq_target = FOC_COGGING_CALIB_IQ_A;
+
+    /* Apply electrical angle and drive SVPWM. */
+    motor->electrical_phase_angle = g_calib_expected_elec_angle;
+    FOC_ControlApplyElectricalAngleRuntime(motor, g_calib_expected_elec_angle);
+}
+
+/* ------------------------------------------------------------------ */
+
+/*
+ * Map a mechanical angle (rad) to a LUT bin index [0, FOC_COGGING_LUT_POINT_COUNT).
+ */
+static uint16_t CoggingCalib_AngleToBin(float mech_angle_rad)
+{
+    float step_rad;
+    uint16_t idx;
+
+    while (mech_angle_rad < 0.0f)
+    {
+        mech_angle_rad += FOC_MATH_TWO_PI;
+    }
+    while (mech_angle_rad >= FOC_MATH_TWO_PI)
+    {
+        mech_angle_rad -= FOC_MATH_TWO_PI;
+    }
+
+    step_rad = FOC_MATH_TWO_PI / (float)FOC_COGGING_LUT_POINT_COUNT;
+    idx = (uint16_t)(mech_angle_rad / step_rad);
+    if (idx >= FOC_COGGING_LUT_POINT_COUNT)
+    {
+        idx = (uint16_t)(FOC_COGGING_LUT_POINT_COUNT - 1U);
+    }
+    return idx;
+}
+
+/* ------------------------------------------------------------------ */
+
+static void CoggingCalib_Finish(foc_motor_t *motor)
+{
+    uint16_t i;
+    uint16_t valid_count;
+    float    dtheta_avg[COGGING_LUT_MAX];
+    int16_t  q15_table[COGGING_LUT_MAX];
+    float    mean;
+    char     buf[64];
+
+    /* ---- Step 1: Compute average Δθ per bin. ---- */
+    valid_count = 0U;
+    mean        = 0.0f;
+
+    for (i = 0U; i < FOC_COGGING_LUT_POINT_COUNT; i++)
+    {
+        if (g_calib_count[i] > 0U)
+        {
+            dtheta_avg[i] = g_calib_dtheta_accum[i] / (float)g_calib_count[i];
+            valid_count++;
+            mean += dtheta_avg[i];
+        }
+        else
+        {
+            dtheta_avg[i] = 0.0f;
+        }
+    }
+
+    /* Report validity. */
+    (void)snprintf(buf, sizeof(buf),
+                   "CALIB DONE: %u/%u valid bins\r\n",
+                   (unsigned)valid_count,
+                   (unsigned)FOC_COGGING_LUT_POINT_COUNT);
+    FOC_Platform_WriteDebugText(buf);
+
+    /* ---- Step 2: Remove DC offset. ---- */
+    if (valid_count > 0U)
+    {
+        mean /= (float)valid_count;
+        for (i = 0U; i < FOC_COGGING_LUT_POINT_COUNT; i++)
+        {
+            dtheta_avg[i] -= mean;
+        }
+    }
+
+    /* ---- Step 3: Circular difference → iq compensation. ---- */
+    for (i = 0U; i < FOC_COGGING_LUT_POINT_COUNT; i++)
+    {
+        uint16_t next = (i + 1U) % FOC_COGGING_LUT_POINT_COUNT;
+        //float diff    = dtheta_avg[next] - dtheta_avg[i];
+        //float iq_comp = diff * motor->cogging_comp_status.calib_gain_k;
+        float iq_comp = dtheta_avg[next] - dtheta_avg[i];
+
+        q15_table[i] = FloatToQ15(iq_comp, FOC_COGGING_LUT_IQ_LSB_A);
+    }
+
+    /* ---- Step 4: Load into motor compensation table. ---- */
+    (void)FOC_ControlLoadCoggingCompTableQ15(motor,
+                                              q15_table,
+                                              FOC_COGGING_LUT_POINT_COUNT,
+                                              FOC_COGGING_LUT_IQ_LSB_A,
+                                              FOC_COGGING_COMP_SOURCE_CALIB);
+
+    /* Save global copy for dump/export without motor pointer. */
+    (void)memcpy((void *)g_calib_last_table_q15,
+                 (const void *)q15_table,
+                 (size_t)FOC_COGGING_LUT_POINT_COUNT * sizeof(int16_t));
+    g_calib_last_point_count = FOC_COGGING_LUT_POINT_COUNT;
+    g_calib_last_iq_lsb_a    = FOC_COGGING_LUT_IQ_LSB_A;
+    g_calib_table_available  = 1U;
+
+    /* Restore soft-switch state saved at calibration start. */
+    motor->current_soft_switch_status.enabled       = g_calib_saved_softswitch_enabled;
+    motor->current_soft_switch_status.configured_mode = g_calib_saved_softswitch_mode;
+
+    /* Mark calibration complete. */
+    motor->cogging_comp_status.calib_in_progress      = 0U;
+    motor->cogging_comp_status.calib_progress_percent  = 100U;
+    motor->cogging_comp_status.calib_point_index       = CALIB_PHASE_DONE;
+
+    FOC_Platform_WriteDebugText("COGGING CALIB FINISHED\r\n");
+
+    /* Auto-dump the final table. */
+    FOC_CoggingCalibDumpTable();
+}
+
+/* ------------------------------------------------------------------ */
+
+uint8_t FOC_CoggingCalibSampleStep(foc_motor_t *motor,
+                                    const sensor_data_t *sensor,
+                                    float dt_sec)
+{
+    if ((motor == 0) || (sensor == 0))
     {
         return 0U;
     }
 
-    /* ---- consume deferred request flags ---- */
-    if (g_calib_dump_request_pending != 0U)
+    /* --- Consume deferred request flags --- */
+    if (g_calib_request_start != 0U)
     {
-        g_calib_dump_request_pending = 0U;
-        FOC_CoggingCalibInternalDumpTable(motor);
+        g_calib_request_start = 0U;
+        (void)FOC_CoggingCalibStart(motor);
     }
 
-    if (g_calib_start_request_pending != 0U)
+    if (g_calib_request_dump != 0U)
     {
-        g_calib_start_request_pending = 0U;
-        FOC_CoggingCalibStart(motor);
-        /* If start just kicked off, the state machine will run below. */
+        g_calib_request_dump = 0U;
+        FOC_CoggingCalibDumpTable();
     }
 
+    if (g_calib_request_export != 0U)
+    {
+        g_calib_request_export = 0U;
+        FOC_CoggingCalibExportTable();
+    }
+
+    /* If not in calibration, return 0 (idle). */
     if (motor->cogging_comp_status.calib_in_progress == 0U)
     {
         return 0U;
     }
 
-    total_points = FOC_COGGING_LUT_POINT_COUNT;
-
-    /*
-     * The motor is assumed to be spinning at FOC_COGGING_CALIB_SPEED_RAD_S
-     * in speed-closed / current-open (open-loop torque) mode.
-     *
-     * We run the current loop open (force iq_target to the baseline Id).
-     * Actual Iq control is intentionally bypassed so that the measured Iq
-     * reflects the cogging torque directly.
-     */
-
-    /* Override iq_target to the calibration baseline. */
-    motor->iq_target = FOC_COGGING_CALIB_IQ_BASELINE_A;
-
-    /*
-     * Accumulate one sample at the current mechanical angle.
-     *
-     * Strategy: at each control tick, gate on the direction of angle
-     * advance.  We collect a sample when the mechanical angle has
-     * advanced by at least one electrical step relative to the previous
-     * sample, but we bin by mechanical angle modulo one electrical
-     * revolution.
-     *
-     * For simplicity:  accumulate iq_measured into the appropriate bin
-     * on EVERY tick, and increment the sample counter.  This naturally
-     * fills the LUT as the motor rotates.  After enough samples per
-     * point (FOC_COGGING_CALIB_SAMPLES_PER_POINT * point_count total),
-     * we advance to the next pass.
-     */
+    /* Use a safe dt_sec fallback if not provided. */
+    if (dt_sec <= 0.0f)
     {
-        uint16_t bin;
-        float mech_rad;
-
-        mech_rad = motor->mech_angle_accum_rad;
-        bin = FOC_CoggingCalibMechToBin(mech_rad,
-                                        motor->mech_angle_at_elec_zero_rad,
-                                        (uint8_t)(motor->direction > 0 ? 1U : 0U),
-                                        motor->pole_pairs,
-                                        total_points);
-
-        g_calib_iq_accum[bin] += motor->iq_measured;
-        g_calib_sample_count[bin]++;
+        dt_sec = FOC_CONTROL_DT_SEC;
     }
 
-    /* Check completion: all bins have enough samples. */
+    /* ---------- State machine ---------- */
+    switch (motor->cogging_comp_status.calib_point_index)
     {
-        uint16_t i;
-        uint8_t all_done = 1U;
-
-        for (i = 0U; i < total_points; i++)
+        /* ================================================================ */
+        case CALIB_PHASE_START:
         {
-            if (g_calib_sample_count[i] < FOC_COGGING_CALIB_SAMPLES_PER_POINT)
-            {
-                all_done = 0U;
-                break;
-            }
+            /*
+             * Seed the expected electrical angle from the current motor
+             * electrical phase angle (which reflects the actual rotor position).
+             * This ensures the open-loop drive starts from the correct position.
+             */
+            g_calib_expected_elec_angle = motor->electrical_phase_angle;
+
+            /* Seed expected mechanical angle from the sensor's actual mechanical angle. */
+            g_calib_expected_mech_angle = sensor->mech_angle_rad.output_value;
+            g_calib_expected_mech_angle = Math_WrapRad(g_calib_expected_mech_angle);
+
+            /* Initialise angle tracking for revolution detection. */
+            g_calib_angle_prev_rad   = sensor->mech_angle_rad.output_value;
+            g_calib_travel_accum_rad = 0.0f;
+            g_calib_rev_count        = 0U;
+
+            /* Reset per-bin-once for subsequent SCAN phase. */
+            g_calib_last_lut_index   = 0xFFFFU;
+            g_calib_bins_collected   = 0U;
+
+            /* Drive open-loop to get the motor moving right away. */
+            CoggingCalib_OpenLoopDriveStep(motor, dt_sec);
+
+            /* Transition to SETTLE phase. */
+            motor->cogging_comp_status.calib_point_index = CALIB_PHASE_SETTLE;
+            motor->cogging_comp_status.calib_pass_index  = 0U;
+
+            FOC_Platform_WriteDebugText("CALIB: start done, entering settle\r\n");
+
+            return 1U;
         }
 
-        if (all_done == 0U)
+        /* ================================================================ */
+        case CALIB_PHASE_SETTLE:
         {
-            /* Report rough progress. */
+            float mech_angle;
+            float delta;
+
+            /* Run open-loop drive. */
+            CoggingCalib_OpenLoopDriveStep(motor, dt_sec);
+
+            /* Track angular travel for revolution counting. */
+            mech_angle = sensor->mech_angle_rad.output_value;
+            delta = CoggingCalib_AngleDelta(mech_angle, g_calib_angle_prev_rad);
+            g_calib_travel_accum_rad += delta;
+            g_calib_angle_prev_rad = mech_angle;
+
+            /* Check if a full revolution has completed. */
+            if (g_calib_travel_accum_rad >= FOC_MATH_TWO_PI)
             {
-                uint32_t total_needed = (uint32_t)total_points * (uint32_t)FOC_COGGING_CALIB_SAMPLES_PER_POINT;
-                uint32_t total_got = 0U;
-                uint16_t j;
-                for (j = 0U; j < total_points; j++)
+                g_calib_rev_count++;
+                g_calib_travel_accum_rad = 0.0f;
+
+                if (g_calib_rev_count >= FOC_COGGING_CALIB_SETTLE_REV)
                 {
-                    total_got += (uint32_t)g_calib_sample_count[j];
+                    /* Transition to SCAN phase. */
+                    motor->cogging_comp_status.calib_point_index = CALIB_PHASE_SCAN;
+                    motor->cogging_comp_status.calib_pass_index  = 0U;
+                    g_calib_rev_count              = 0U;
+                    g_calib_travel_accum_rad       = 0.0f;
+                    g_calib_last_lut_index         = 0xFFFFU;
+                    g_calib_bins_collected         = 0U;
+                    g_calib_last_reported_progress = 0U;
+
+                    /* Re-sync angle tracking to avoid a large delta on first SCAN step. */
+                    g_calib_angle_prev_rad = mech_angle;
+
+                    {
+                        char buf[48];
+                        (void)snprintf(buf, sizeof(buf),
+                                      "CALIB: settle done (%u revs), starting scan\r\n",
+                                      (unsigned)FOC_COGGING_CALIB_SETTLE_REV);
+                        FOC_Platform_WriteDebugText(buf);
+                    }
+                }
+            }
+
+            /* Update progress: fraction of SETTLE phase. */
+            {
+                float settle_frac = (float)g_calib_rev_count /
+                                    (float)FOC_COGGING_CALIB_SETTLE_REV;
+                if (settle_frac > 1.0f)
+                {
+                    settle_frac = 1.0f;
                 }
                 motor->cogging_comp_status.calib_progress_percent =
-                    (uint8_t)((total_got * 100U) / total_needed);
+                    (uint8_t)(settle_frac * 10.0f);  /* 0-10 % during settle */
             }
-            return 1U; /* still busy */
-        }
-    }
 
-    /*
-     * This pass is complete.
-     * Average the accumulated iq values, convert to Q15, and keep the
-     * table in motor->cogging_comp_table_q15.
-     */
-    {
-        uint16_t i;
-        float iq_mean;
-
-        for (i = 0U; i < total_points; i++)
-        {
-            iq_mean = g_calib_iq_accum[i] / (float)g_calib_sample_count[i];
-            /* Remove the floor = the DC component (average across all bins). */
-            motor->cogging_comp_table_q15[i] = FOC_QuantizeCoggingIqToQ15(
-                iq_mean, FOC_COGGING_LUT_IQ_LSB_A);
+            return 1U;
         }
 
-        /* Remove DC bias from Q15 table. */
+        /* ================================================================ */
+        case CALIB_PHASE_SCAN:
         {
-            int32_t sum = 0;
-            int16_t dc_bias;
-            for (i = 0U; i < total_points; i++)
+            float mech_angle;
+            float delta;
+            uint16_t lut_index;
+            float mech_expected;
+
+            /* Run open-loop drive. */
+            CoggingCalib_OpenLoopDriveStep(motor, dt_sec);
+
+            /* Read current mechanical angle from sensor. */
+            mech_angle = sensor->mech_angle_rad.output_value;
+
+            /* Compute angular travel since last call (handles 0/2pi wrap). */
+            delta = CoggingCalib_AngleDelta(mech_angle, g_calib_angle_prev_rad);
+            g_calib_travel_accum_rad += delta;
+            g_calib_angle_prev_rad = mech_angle;
+
+            /* Use self-maintained expected mechanical angle directly. */
+            mech_expected = g_calib_expected_mech_angle;
+
+            /* Compute position error Δθ. */
             {
-                sum += (int32_t)motor->cogging_comp_table_q15[i];
-            }
-            dc_bias = (int16_t)(sum / (int32_t)total_points);
-            for (i = 0U; i < total_points; i++)
-            {
-                motor->cogging_comp_table_q15[i] =
-                    (int16_t)(motor->cogging_comp_table_q15[i] - dc_bias);
-            }
-        }
-    }
+                float dtheta = Math_WrapRadDelta(mech_angle - mech_expected);
 
-    /*
-     * Check if we have completed all passes.  If not, reset accumulators
-     * for the next pass.
-     */
-    pass = motor->cogging_comp_status.calib_pass_index + 1U;
-    if (pass < FOC_COGGING_CALIB_NUM_PASSES)
-    {
-        motor->cogging_comp_status.calib_pass_index = (uint8_t)pass;
-        motor->cogging_comp_status.calib_progress_percent =
-            (uint8_t)((pass * 100U) / FOC_COGGING_CALIB_NUM_PASSES);
-        FOC_CoggingCalibResetAccum();
-        return 1U; /* more passes to go */
-    }
+                /* Map measured mechanical angle to LUT bin. */
+                lut_index = CoggingCalib_AngleToBin(mech_angle);
 
-    /* All passes done — finalize. */
-    motor->cogging_comp_status.point_count = total_points;
-    motor->cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
-    motor->cogging_comp_status.available = 1U;
-    motor->cogging_comp_status.source = FOC_COGGING_COMP_SOURCE_CALIB;
-    motor->cogging_comp_status.calib_in_progress = 0U;
-    motor->cogging_comp_status.calib_progress_percent = 100U;
-    motor->cogging_comp_status.enabled = 1U;
-
-    FOC_Platform_WriteDebugText("cogging.calib: completed, table loaded\r\n");
-
-#if (FOC_COGGING_DEBUG_DUMP_ENABLE == FOC_CFG_ENABLE)
-    {
-        char out[192];
-        uint16_t i;
-
-        snprintf(out, sizeof(out),
-                 "cogging.calib.points=%u lsb=%.4f gate=%.3f limit=%.3f\r\n",
-                 (unsigned int)total_points,
-                 FOC_COGGING_LUT_IQ_LSB_A,
-                 FOC_COGGING_COMP_SPEED_GATE_RAD_S,
-                 FOC_COGGING_COMP_IQ_LIMIT_A);
-        FOC_Platform_WriteDebugText(out);
-
-        for (i = 0U; i < total_points; i += 8U)
-        {
-            uint16_t j;
-            uint16_t offset = 0U;
-            int written;
-
-            written = snprintf(out + offset, sizeof(out) - offset,
-                               "cogging.calib[%u..]=", (unsigned int)i);
-            if ((written < 0) || ((uint16_t)written >= (sizeof(out) - offset)))
-            {
-                break;
-            }
-            offset += (uint16_t)written;
-
-            for (j = i; (j < total_points) && (j < (uint16_t)(i + 8U)); j++)
-            {
-                written = snprintf(out + offset, sizeof(out) - offset, "%d%s",
-                                   (int)motor->cogging_comp_table_q15[j],
-                                   ((j + 1U < total_points) && (j + 1U < (uint16_t)(i + 8U))) ? "," : "");
-                if ((written < 0) || ((uint16_t)written >= (sizeof(out) - offset)))
+                /* Per-bin-once sample: only accumulate when angle crosses into a new bin. */
+                if (lut_index != g_calib_last_lut_index)
                 {
-                    break;
+                    g_calib_dtheta_accum[lut_index] += dtheta;
+                    g_calib_count[lut_index]++;
+                    g_calib_last_lut_index = lut_index;
+                    g_calib_bins_collected++;
                 }
-                offset += (uint16_t)written;
             }
 
-            if (offset < (sizeof(out) - 3U))
+            /* --- Progress: bin-count based (immune to sensor noise backlash) --- */
             {
-                out[offset++] = '\r';
-                out[offset++] = '\n';
-                out[offset] = '\0';
-                FOC_Platform_WriteDebugText(out);
+                float pass_progress_frac;
+                uint8_t pct;
+
+                pass_progress_frac = (float)g_calib_bins_collected /
+                                     (float)FOC_COGGING_LUT_POINT_COUNT;
+                if (pass_progress_frac > 1.0f)
+                {
+                    pass_progress_frac = 1.0f;
+                }
+
+                pct = (uint8_t)(((float)g_calib_pass_num + pass_progress_frac) *
+                                100.0f / (float)FOC_COGGING_CALIB_NUM_PASSES);
+                if (pct > 100U)
+                {
+                    pct = 100U;
+                }
+                motor->cogging_comp_status.calib_progress_percent = pct;
+            }
+
+            /* --- Periodic debug output every ~10 % of bins within this pass --- */
+            {
+                uint8_t tenth = (uint8_t)(((uint32_t)g_calib_bins_collected * 10U) /
+                                          (uint32_t)FOC_COGGING_LUT_POINT_COUNT);
+                if (tenth != g_calib_last_reported_progress)
+                {
+                    g_calib_last_reported_progress = tenth;
+                    {
+                        char buf[48];
+                        (void)snprintf(buf, sizeof(buf),
+                                      "CALIB: pass %u/%u, progress %u%%\r\n",
+                                      (unsigned)(g_calib_pass_num + 1U),
+                                      (unsigned)FOC_COGGING_CALIB_NUM_PASSES,
+                                      (unsigned)motor->cogging_comp_status.calib_progress_percent);
+                        FOC_Platform_WriteDebugText(buf);
+                    }
+                }
+            }
+
+            /*
+             * Revolution detection (bin-count based): per-bin-once sampling
+             * gives exactly one sample per bin per revolution, so collecting
+             * all LUT bins means one full mechanical revolution is complete.
+             */
+            if (g_calib_bins_collected >= FOC_COGGING_LUT_POINT_COUNT)
+            {
+                g_calib_pass_num++;
+                motor->cogging_comp_status.calib_pass_index = 0U;
+                motor->cogging_comp_status.calib_point_index = CALIB_PHASE_CHECK;
+                return 1U;
+            }
+
+            return 1U;
+        }
+
+        /* ================================================================ */
+        case CALIB_PHASE_CHECK:
+        {
+            /*
+             * One SCAN pass completed.  Check if we need more passes.
+             * If yes, reset SCAN tracking and continue.
+             * If no, proceed to FINISH.
+             */
+
+            if (g_calib_pass_num < FOC_COGGING_CALIB_NUM_PASSES)
+            {
+                /* Reset per-bin-once and travel tracking for next SCAN pass. */
+                motor->cogging_comp_status.calib_pass_index    = 0U;
+                motor->cogging_comp_status.calib_point_index    = CALIB_PHASE_SCAN;
+                g_calib_travel_accum_rad = 0.0f;
+                g_calib_last_lut_index         = 0xFFFFU;
+                g_calib_last_reported_progress = 0U;
+                g_calib_bins_collected         = 0U;
+                g_calib_rev_count              = 0U;
+
+                /*
+                 * Re-sync angle tracking to avoid missing angle on first
+                 * step of next SCAN pass.
+                 */
+                g_calib_angle_prev_rad = sensor->mech_angle_rad.output_value;
+
+                {
+                    char buf[48];
+                    (void)snprintf(buf, sizeof(buf),
+                                  "CALIB: pass %u/%u done\r\n",
+                                  (unsigned)(g_calib_pass_num),
+                                  (unsigned)FOC_COGGING_CALIB_NUM_PASSES);
+                    FOC_Platform_WriteDebugText(buf);
+                }
+            }
+            else
+            {
+                /* All passes complete, transition to FINISH. */
+                motor->cogging_comp_status.calib_point_index = CALIB_PHASE_FINISH;
+                FOC_Platform_WriteDebugText("CALIB: all passes done, computing table\r\n");
+            }
+
+            return 1U;
+        }
+
+        /* ================================================================ */
+        case CALIB_PHASE_FINISH:
+        {
+            /* Compute differential table and load into motor. */
+            CoggingCalib_Finish(motor);
+            return 0U;
+        }
+
+        /* ================================================================ */
+        default:
+            /* IDLE, DONE or unknown state. */
+            return 0U;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+
+void FOC_CoggingCalibDumpTable(void)
+{
+    uint16_t i;
+    char line_buf[128];
+    uint16_t n;
+
+    if (g_calib_table_available == 0U)
+    {
+        FOC_Platform_WriteDebugText("--- COGGING LUT DUMP: no table available ---\r\n");
+        return;
+    }
+
+    n = g_calib_last_point_count;
+    if (n == 0U)
+    {
+        FOC_Platform_WriteDebugText("--- COGGING LUT DUMP: empty table ---\r\n");
+        return;
+    }
+
+    FOC_Platform_WriteDebugText("--- COGGING LUT DUMP (Q15) ---\r\n");
+
+    for (i = 0U; i < n; i++)
+    {
+        float iq_a = Q15ToFloat(g_calib_last_table_q15[i], g_calib_last_iq_lsb_a);
+
+        (void)snprintf(line_buf, sizeof(line_buf),
+                       "cogging.table[%u]=%d  (%.6f A)\r\n",
+                       (unsigned)i,
+                       (int)g_calib_last_table_q15[i],
+                       (double)iq_a);
+        FOC_Platform_WriteDebugText(line_buf);
+    }
+
+    FOC_Platform_WriteDebugText("--- END LUT DUMP ---\r\n");
+    (void)line_buf;
+}
+
+void FOC_CoggingCalibExportTable(void)
+{
+    uint16_t i;
+    char line_buf[128];
+
+    if (g_calib_table_available == 0U)
+    {
+        FOC_Platform_WriteDebugText("COGGING EXPORT: no calibrated table available\r\n");
+        FOC_Platform_WriteDebugText("Run cogging calibration first (Y:G) then retry.\r\n");
+        return;
+    }
+
+    FOC_Platform_WriteDebugText("--- COGGING LUT EXPORT (C code) ---\r\n");
+
+    (void)snprintf(line_buf, sizeof(line_buf),
+                   "static const int16_t cogging_table_q15[%u] = {\r\n",
+                   (unsigned)g_calib_last_point_count);
+    FOC_Platform_WriteDebugText(line_buf);
+
+    for (i = 0U; i < g_calib_last_point_count; i++)
+    {
+        if ((i % 8U) == 0U)
+        {
+            FOC_Platform_WriteDebugText("    ");
+        }
+
+        (void)snprintf(line_buf, sizeof(line_buf),
+                       "%5d",
+                       (int)g_calib_last_table_q15[i]);
+
+        if (i < (g_calib_last_point_count - 1U))
+        {
+            /* Append comma */
+            size_t len = strlen(line_buf);
+            if (len < (sizeof(line_buf) - 2U))
+            {
+                line_buf[len]     = ',';
+                line_buf[len + 1U] = '\0';
             }
         }
-    }
-#endif /* FOC_COGGING_DEBUG_DUMP_ENABLE */
 
-    return 0U; /* finished */
+        if (((i + 1U) % 8U) == 0U)
+        {
+            (void)snprintf(line_buf + strlen(line_buf),
+                           sizeof(line_buf) - strlen(line_buf),
+                           "\r\n");
+        }
+        else if (i < (g_calib_last_point_count - 1U))
+        {
+            (void)snprintf(line_buf + strlen(line_buf),
+                           sizeof(line_buf) - strlen(line_buf),
+                           " ");
+        }
+        else
+        {
+            (void)snprintf(line_buf + strlen(line_buf),
+                           sizeof(line_buf) - strlen(line_buf),
+                           "\r\n");
+        }
+
+        FOC_Platform_WriteDebugText(line_buf);
+    }
+
+    FOC_Platform_WriteDebugText("};\r\n");
+    FOC_Platform_WriteDebugText("--- END EXPORT ---\r\n");
 }
 
 #endif /* FOC_COGGING_CALIB_ENABLE */
-
-#endif /* FOC_COGGING_COMP_ENABLE */

@@ -7,6 +7,10 @@
 #include "L3_Algorithm/protocol_core.h"
 #include "LS_Config/foc_config.h"
 
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+#include "L3_Algorithm/foc_control_c24_compensation.h"
+#endif
+
 #define RUNTIME_STORE_SYSTEM_INIT 0U
 #define RUNTIME_STORE_SYSTEM_RUNNING 1U
 #define RUNTIME_STORE_SYSTEM_FAULT 2U
@@ -81,6 +85,9 @@ void RuntimeC4Store_ResetStorageDefaults(void)
     g_params.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     g_params.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
     g_params.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
+    g_params.cogging_comp_iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+    g_params.cogging_comp_speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
+    g_params.cogging_calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
 
     g_states.motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
@@ -335,6 +342,38 @@ uint8_t RuntimeC4Store_WriteParam(char subcommand, float value)
         params->control_mode = (uint8_t)value;
         break;
 
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
+        if (RuntimeC4Store_IsInRange(value,
+                                 COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MIN_A,
+                                 COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MAX_A) == 0U)
+        {
+            return 0U;
+        }
+        params->cogging_comp_iq_limit_a = value;
+        break;
+
+    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE:
+        if (RuntimeC4Store_IsInRange(value,
+                                 COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MIN_RAD_S,
+                                 COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MAX_RAD_S) == 0U)
+        {
+            return 0U;
+        }
+        params->cogging_comp_speed_gate_rad_s = value;
+        break;
+#endif
+
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
+        if (value < 0.0f)
+        {
+            return 0U;
+        }
+        params->cogging_calib_gain_k = value;
+        break;
+#endif
+
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
         if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_MODE_MIN) ||
@@ -528,6 +567,22 @@ uint8_t RuntimeC4Store_ReadParam(char subcommand, float *value_out)
         *value_out = (float)params->control_mode;
         break;
 
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
+        *value_out = params->cogging_comp_iq_limit_a;
+        break;
+
+    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE:
+        *value_out = params->cogging_comp_speed_gate_rad_s;
+        break;
+#endif
+
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
+        *value_out = params->cogging_calib_gain_k;
+        break;
+#endif
+
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
         *value_out = (float)params->current_soft_switch_mode;
@@ -631,6 +686,13 @@ void RuntimeC4Store_ReportAllParams(void)
         COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END,
 #endif
         COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE,
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT,
+        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE,
+#endif
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN,
+#endif
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
         COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE,
         COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ,
@@ -730,6 +792,9 @@ void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     snapshot->control_cfg.cogging_comp_enable = g_states.cogging_comp_enable;
 #endif
+    snapshot->control_cfg.cogging_comp_iq_limit_a = g_params.cogging_comp_iq_limit_a;
+    snapshot->control_cfg.cogging_comp_speed_gate_rad_s = g_params.cogging_comp_speed_gate_rad_s;
+    snapshot->control_cfg.cogging_calib_gain_k = g_params.cogging_calib_gain_k;
 
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     snapshot->telemetry.semantic_report_enabled = g_states.semantic_enable;

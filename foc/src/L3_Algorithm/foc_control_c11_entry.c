@@ -49,26 +49,18 @@ void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor
         return;
     }
 
-#if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE))
-
-    /*
-     * If runtime calibration is in progress, we override Iq completely
-     * and let the calib state machine manage iq_target.
-     */
-    if (FOC_CoggingCalibIsBusy(motor) != 0U)
-    {
-        (void)FOC_CoggingCalibProcess(motor);
-        return;
-    }
-
-#endif /* calibration active */
-
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    FOC_ControlApplyCoggingCompensation(motor,
-                                        sensor->mech_angle_rad.output_value,
-                                        motor->cogging_speed_ref_rad_s);
+
+    if (motor->cogging_comp_status.calib_in_progress == 0U)
+    {
+        FOC_ControlApplyCoggingCompensation(motor,
+                                            sensor->mech_angle_rad.output_value,
+                                            motor->cogging_speed_ref_rad_s);
+    }
 #endif
+
 }
+
 
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
 {

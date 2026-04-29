@@ -15,4 +15,6 @@
 .\output\foc_app.o: ..\..\..\foc\include\L2_Service/runtime_c1_entry.h
 .\output\foc_app.o: ..\..\..\foc\include\L2_Service/runtime_internal_types.h
 .\output\foc_app.o: ..\..\..\foc\include\L2_Service/motor_control_service.h
+.\output\foc_app.o: ..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h
+.\output\foc_app.o: ..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h
 .\output\foc_app.o: ..\..\..\foc\include\L42_PAL/foc_platform_api.h
