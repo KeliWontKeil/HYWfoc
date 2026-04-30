@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "LS_Config/foc_config.h"
+
 typedef struct {
     uint8_t control_mode;
     float target_angle_rad;
@@ -28,13 +30,17 @@ typedef struct {
 
     uint8_t motor_enabled;
     uint8_t current_soft_switch_enable;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     uint8_t cogging_comp_enable;
+#endif
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     float cogging_comp_iq_limit_a;
     float cogging_comp_speed_gate_rad_s;
     float cogging_calib_gain_k;
+#endif
 } control_config_snapshot_t;
 
 typedef struct {

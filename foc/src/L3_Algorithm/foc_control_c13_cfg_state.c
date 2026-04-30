@@ -42,6 +42,7 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
     motor->current_soft_switch_status.auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
     FOC_ResetSoftSwitchBlendInit(motor);
 
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_comp_status.enabled = FOC_COGGING_COMP_ENABLE;
     motor->cogging_comp_status.available = 0U;
     motor->cogging_comp_status.source = FOC_COGGING_COMP_SOURCE_NONE;
@@ -55,6 +56,7 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
     {
         motor->cogging_comp_table_q15[i] = 0;
     }
+#endif /* FOC_COGGING_COMP_ENABLE */
 }
 
 const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(const foc_motor_t *motor)
@@ -230,6 +232,7 @@ void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor)
     }
 }
 
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable)
 {
     if (motor == 0)
@@ -237,12 +240,7 @@ void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable)
         return;
     }
 
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_comp_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
-#else
-    (void)enable;
-    motor->cogging_comp_status.enabled = FOC_CFG_DISABLE;
-#endif
 }
 
 void FOC_ControlSetCoggingCompIqLimitA(foc_motor_t *motor, float value)
@@ -274,6 +272,31 @@ void FOC_ControlSetCoggingCalibGainK(foc_motor_t *motor, float value)
 
     motor->cogging_comp_status.calib_gain_k = (value < 0.0f) ? 0.0f : value;
 }
+#else
+void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable)
+{
+    (void)motor;
+    (void)enable;
+}
+
+void FOC_ControlSetCoggingCompIqLimitA(foc_motor_t *motor, float value)
+{
+    (void)motor;
+    (void)value;
+}
+
+void FOC_ControlSetCoggingCompSpeedGateRadS(foc_motor_t *motor, float value)
+{
+    (void)motor;
+    (void)value;
+}
+
+void FOC_ControlSetCoggingCalibGainK(foc_motor_t *motor, float value)
+{
+    (void)motor;
+    (void)value;
+}
+#endif /* FOC_COGGING_COMP_ENABLE */
 
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,

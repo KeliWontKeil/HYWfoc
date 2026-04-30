@@ -51,7 +51,7 @@ void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 
-    if (motor->cogging_comp_status.calib_in_progress == 0U)
+    if (FOC_CoggingCalibIsBusy(motor) == 0U)
     {
         FOC_ControlApplyCoggingCompensation(motor,
                                             sensor->mech_angle_rad.output_value,

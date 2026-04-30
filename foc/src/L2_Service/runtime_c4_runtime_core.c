@@ -4,12 +4,10 @@
 #include <string.h>
 
 #include "L2_Service/runtime_c5_output_adapter.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L3_Algorithm/protocol_core.h"
 #include "LS_Config/foc_config.h"
 
-#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-#include "L3_Algorithm/foc_control_c24_compensation.h"
-#endif
 
 #define RUNTIME_STORE_SYSTEM_INIT 0U
 #define RUNTIME_STORE_SYSTEM_RUNNING 1U
@@ -85,9 +83,11 @@ void RuntimeC4Store_ResetStorageDefaults(void)
     g_params.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     g_params.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
     g_params.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     g_params.cogging_comp_iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
     g_params.cogging_comp_speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
     g_params.cogging_calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
+#endif
 
     g_states.motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
@@ -792,9 +792,11 @@ void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     snapshot->control_cfg.cogging_comp_enable = g_states.cogging_comp_enable;
 #endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     snapshot->control_cfg.cogging_comp_iq_limit_a = g_params.cogging_comp_iq_limit_a;
     snapshot->control_cfg.cogging_comp_speed_gate_rad_s = g_params.cogging_comp_speed_gate_rad_s;
     snapshot->control_cfg.cogging_calib_gain_k = g_params.cogging_calib_gain_k;
+#endif
 
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     snapshot->telemetry.semantic_report_enabled = g_states.semantic_enable;

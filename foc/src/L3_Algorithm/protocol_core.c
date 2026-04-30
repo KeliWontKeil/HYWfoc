@@ -280,7 +280,7 @@ const char *ProtocolText_GetParamName(char subcommand)
 #endif
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
         return "control_mode";
-#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
         return "cogging_calib_gain_k";
     case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
@@ -317,7 +317,7 @@ const char *ProtocolText_GetStateName(char subcommand)
     case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
         return "current_soft_switch_enabled";
 #endif
-#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
         return "cogging_comp_enabled";
 #endif

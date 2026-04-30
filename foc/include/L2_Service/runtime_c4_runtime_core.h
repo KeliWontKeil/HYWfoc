@@ -5,6 +5,7 @@
 
 #include "L2_Service/runtime_snapshot.h"
 #include "L3_Algorithm/protocol_core_types.h"
+#include "LS_Config/foc_config.h"
 
 typedef enum {
     RUNTIME_C4_EXEC_OK = 0,
@@ -54,9 +55,11 @@ typedef struct {
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     float cogging_comp_iq_limit_a;
     float cogging_comp_speed_gate_rad_s;
     float cogging_calib_gain_k;
+#endif
 } runtime_c4_params_view_t;
 
 typedef struct {
@@ -64,7 +67,9 @@ typedef struct {
     uint8_t semantic_enable;
     uint8_t osc_enable;
     uint8_t current_soft_switch_enable;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     uint8_t cogging_comp_enable;
+#endif
 } runtime_c4_states_view_t;
 
 void RuntimeC4_Init(void);
@@ -107,5 +112,3 @@ void RuntimeC4_WriteStatusCmdInvalid(void);
 uint8_t RuntimeC4_RecoverFaultAndReinit(void);
 
 #endif /* RUNTIME_C4_RUNTIME_CORE_H */
-
-

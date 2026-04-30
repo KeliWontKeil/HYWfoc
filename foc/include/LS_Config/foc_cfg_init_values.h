@@ -1,6 +1,14 @@
 #ifndef FOC_CFG_INIT_VALUES_H
 #define FOC_CFG_INIT_VALUES_H
 
+/* ========== Mathematical constants (single source of truth) ========== */
+#define FOC_MATH_PI         3.1415926f
+#define FOC_MATH_TWO_PI     6.2831852f
+#define FOC_MATH_SQRT3      1.7320508f
+#define FOC_MATH_SQRT3_BY_2 0.8660254f
+#define FOC_MATH_PI_BY_3    1.0471975f
+#define FOC_MATH_EPSILON    1e-6f
+
 /* Platform timing base and timer source setup. */
 #define FOC_PLATFORM_BASE_CLOCK_KHZ 120000U
 
@@ -32,8 +40,8 @@
 /* Alignment/calibration voltage is derived from set_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
 #define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 7U
-#define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED//5.265f
-#define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED//FOC_DIR_NORMAL
+#define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD 3.1606f
+#define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_REVERSED
 
 /* Initialization calibration strategy defaults (coarse + fine subdivision). */
 #define FOC_CALIB_ALIGN_VOLTAGE_RATIO 0.60f 
@@ -143,25 +151,26 @@
 
 #define FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC 0.60f
 
-/* Cogging compensation defaults (optional feature).
- * FOC_COGGING_LUT_POINT_COUNT defined in foc_shared_types.h (needed for array sizing). */
-#define FOC_COGGING_LUT_IQ_LSB_A 0.005f
-#define FOC_COGGING_LUT_RAD_LSB_A 0.0002f
-#define FOC_COGGING_COMP_SPEED_GATE_RAD_S 12.0f
-#define FOC_COGGING_COMP_IQ_LIMIT_A 0.50f
+/* Cogging compensation defaults (optional feature). */
 
-#define FOC_COGGING_STATIC_TABLE_DEFINED FOC_CFG_DISABLE
+#define FOC_COGGING_STATIC_TABLE_DEFINED FOC_CFG_ENABLE
+#define FOC_COGGING_LUT_POINT_COUNT 512U
+#define FOC_COGGING_CALIB_GAIN_K      0.05f
+#define FOC_COGGING_CALIB_SPEED_RAD_S 0.8f
+#define FOC_COGGING_COMP_SPEED_GATE_RAD_S 12.0f
+
+/* Cogging calibration (user-triggered, runtime) defaults. */
+#define FOC_COGGING_CALIB_NUM_PASSES  1U
+#define FOC_COGGING_CALIB_IQ_A        0.30f
+#define FOC_COGGING_CALIB_SETTLE_REV  1U
+#define FOC_COGGING_CALIB_DTHETA_SCALE  50.0f
+
 #define FOC_COGGING_STATIC_HARMONIC_ORDER 12U
 #define FOC_COGGING_STATIC_HARMONIC_AMPLITUDE_A 0.12f
 #define FOC_COGGING_STATIC_HARMONIC_PHASE_RAD 0.0f
 
-/* Cogging calibration (user-triggered, runtime) defaults. */
-#define FOC_COGGING_CALIB_GAIN_K      0.05f
-#define FOC_COGGING_CALIB_SPEED_RAD_S 0.8f
-#define FOC_COGGING_CALIB_NUM_PASSES  1U
-#define FOC_COGGING_CALIB_IQ_A        0.30f
-#define FOC_COGGING_CALIB_SETTLE_REV  1U
-#define FOC_COGGING_CALIB_DTHETA_SCALE   50.0f
+#define FOC_COGGING_LUT_IQ_LSB_A 0.005f
+#define FOC_COGGING_COMP_IQ_LIMIT_A 0.50f
 
 /*LED initialization defaults. */
 #define FOC_LED_RUN_INDEX 1U

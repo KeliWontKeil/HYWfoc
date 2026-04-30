@@ -11,6 +11,7 @@
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
+#include "LS_Config/foc_cfg_cogging_table.h"
 
 float Math_WrapRad(float angle);
 float Math_WrapRadDelta(float angle);
@@ -179,10 +180,14 @@ void FOC_MotorInit(foc_motor_t *motor,
         motor->cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
         motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
         motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
-        motor->cogging_comp_status.calib_in_progress = 0U;
-        motor->cogging_comp_status.calib_progress_percent = 0U;
-        motor->cogging_comp_status.calib_point_index = 0U;
-        motor->cogging_comp_status.calib_pass_index = 0U;
+
+#if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
+        (void)FOC_ControlLoadCoggingCompTableQ15(motor,
+                                                  foc_cogging_default_table_q15,
+                                                  FOC_COGGING_LUT_POINT_COUNT,
+                                                  FOC_COGGING_LUT_IQ_LSB_A,
+                                                  FOC_COGGING_COMP_SOURCE_STATIC);
+#endif
 
         if (table_defined != 0U)
         {
@@ -193,7 +198,5 @@ void FOC_MotorInit(foc_motor_t *motor,
             FOC_Platform_WriteDebugText("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
         }
     }
-#else
-    FOC_ControlSetCoggingCompUnavailable(motor, FOC_COGGING_COMP_SOURCE_DISABLED);
 #endif
 }

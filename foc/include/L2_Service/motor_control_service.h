@@ -6,24 +6,6 @@
 #include "L2_Service/runtime_snapshot.h"
 #include "LS_Config/foc_shared_types.h"
 
-typedef enum {
-    MOTOR_CONTROL_SERVICE_TASK_OUTER_LOOP = 0U,
-    MOTOR_CONTROL_SERVICE_TASK_CURRENT_LOOP = 1U,
-    MOTOR_CONTROL_SERVICE_TASK_OPEN_LOOP = 2U
-} motor_control_service_task_t;
-
-typedef struct {
-    const sensor_data_t *sensor;
-    uint8_t control_mode;
-    float speed_only_rad_s;
-    float target_angle_rad;
-    float angle_position_speed_rad_s;
-    float electrical_angle;
-    float open_loop_voltage;
-    float open_loop_turn_speed;
-    float dt_sec;
-} motor_control_service_task_args_t;
-
 void MotorControlService_ResetControlConfigDefault(foc_motor_t *motor);
 
 void MotorControlService_InitMotor(foc_motor_t *motor,
@@ -45,12 +27,26 @@ void MotorControlService_ReadCurrentSensorSnapshot(sensor_data_t *snapshot);
 uint8_t MotorControlService_RequiresCurrentSample(void);
 void MotorControlService_ResetCurrentSoftSwitchState(foc_motor_t *motor);
 
-uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
-                                           foc_motor_t *motor,
-                                           foc_pid_t *current_pid,
-                                           foc_pid_t *speed_pid,
-                                           foc_pid_t *angle_hold_pid,
-                                           const motor_control_service_task_args_t *args);
+void MotorControlService_RunOuterLoopControlTask(foc_motor_t *motor,
+                                                foc_pid_t *current_pid,
+                                                foc_pid_t *speed_pid,
+                                                foc_pid_t *angle_hold_pid,
+                                                const sensor_data_t *sensor,
+                                                uint8_t control_mode,
+                                                float speed_only_rad_s,
+                                                float target_angle_rad,
+                                                float angle_position_speed_rad_s,
+                                                float dt_sec);
+
+void MotorControlService_RunCurrentLoopControlTask(foc_motor_t *motor,
+                                                    foc_pid_t *current_pid,
+                                                    const sensor_data_t *sensor,
+                                                    float electrical_angle,
+                                                    float dt_sec);
+
+void MotorControlService_RunOpenLoopControlTask(foc_motor_t *motor,
+                                                float open_loop_voltage,
+                                                float open_loop_turn_speed);
 
 void MotorControlService_InitPidControllers(foc_motor_t *motor,
                                             foc_pid_t *current_pid,

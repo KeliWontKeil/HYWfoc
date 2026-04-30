@@ -36,14 +36,13 @@ static volatile uint8_t g_fast_current_loop_enabled = 0U;
 static volatile uint8_t g_fast_current_loop_div_counter = 0U;
 static volatile float g_fast_current_loop_iq_target = 0.0f;
 static volatile float g_fast_current_loop_electrical_angle = 0.0f;
-static uint8_t g_fast_loop_control_mode_last = 0xFFU;
 
-uint8_t g_led_run_on = 0U;
-static uint16_t g_led_run_blink_counter = 0U;
 static uint16_t g_led_comm_pulse_counter = 0U;
 
 static void FOC_App_UpdateIndicators(void)
 {
+    static uint8_t s_led_run_on = 0U;
+    static uint16_t s_led_run_blink_counter = 0U;
     uint8_t led_run_on = 0U;
     uint8_t led_fault_on = 0U;
 
@@ -51,27 +50,27 @@ static void FOC_App_UpdateIndicators(void)
     {
         led_run_on = 0U;
         led_fault_on = 1U;
-        g_led_run_on = 0U;
-        g_led_run_blink_counter = 0U;
+        s_led_run_on = 0U;
+        s_led_run_blink_counter = 0U;
     }
     else if (g_StateSnapshot.runtime.system_running != 0U)
     {
-        if (g_led_run_blink_counter >= (FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS - 1U))
+        if (s_led_run_blink_counter >= (FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS - 1U))
         {
-            g_led_run_blink_counter = 0U;
-            g_led_run_on = (g_led_run_on == 0U) ? 1U : 0U;
+            s_led_run_blink_counter = 0U;
+            s_led_run_on = (s_led_run_on == 0U) ? 1U : 0U;
         }
         else
         {
-            g_led_run_blink_counter++;
+            s_led_run_blink_counter++;
         }
-        led_run_on = g_led_run_on;
+        led_run_on = s_led_run_on;
     }
     else
     {
         led_run_on = 0U;
-        g_led_run_on = 0U;
-        g_led_run_blink_counter = 0U;
+        s_led_run_on = 0U;
+        s_led_run_blink_counter = 0U;
     }
 
     FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, led_run_on);
@@ -98,26 +97,10 @@ static void FOC_App_StopFastCurrentLoop(void)
 
 static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
 {
-    motor_control_service_task_args_t task_args;
-
     FOC_App_StopFastCurrentLoop();
     MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
 
-    task_args.sensor = 0;
-    task_args.control_mode = 0U;
-    task_args.speed_only_rad_s = 0.0f;
-    task_args.target_angle_rad = 0.0f;
-    task_args.angle_position_speed_rad_s = 0.0f;
-    task_args.electrical_angle = 0.0f;
-    task_args.open_loop_voltage = 0.0f;
-    task_args.open_loop_turn_speed = 0.0f;
-    task_args.dt_sec = 0.0f;
-    (void)MotorControlService_RunControlTask(MOTOR_CONTROL_SERVICE_TASK_OPEN_LOOP,
-                                             &g_motor,
-                                             0,
-                                             0,
-                                             0,
-                                             &task_args);
+    MotorControlService_RunOpenLoopControlTask(&g_motor, 0.0f, 0.0f);
 
     if (report_skip != 0U)
     {
@@ -129,39 +112,34 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
 
 static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
 {
-    motor_control_service_task_args_t task_args;
+    static uint8_t s_last_control_mode = 0xFFU;
+    uint8_t cur_mode;
+    float dt_sec;
 
-    task_args.sensor = sensor_data;
-    task_args.control_mode = g_StateSnapshot.control_cfg.control_mode;
-    task_args.speed_only_rad_s = g_StateSnapshot.control_cfg.speed_only_rad_s;
-    task_args.target_angle_rad = g_StateSnapshot.control_cfg.target_angle_rad;
-    task_args.angle_position_speed_rad_s = g_StateSnapshot.control_cfg.angle_position_speed_rad_s;
-    task_args.electrical_angle = 0.0f;
-    task_args.open_loop_voltage = 0.0f;
-    task_args.open_loop_turn_speed = 0.0f;
-    task_args.dt_sec = FOC_CONTROL_DT_SEC;
+    cur_mode = g_StateSnapshot.control_cfg.control_mode;
 
     /* Reset current soft-switch blend state when control mode changes. */
-    if (task_args.control_mode != g_fast_loop_control_mode_last)
+    if (cur_mode != s_last_control_mode)
     {
         MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
-        g_fast_loop_control_mode_last = task_args.control_mode;
+        s_last_control_mode = cur_mode;
     }
 
-    if (MotorControlService_RunControlTask(MOTOR_CONTROL_SERVICE_TASK_OUTER_LOOP,
-                                           &g_motor,
-                                           &g_torque_current_pid,
-                                           &g_speed_pid,
-                                           &g_angle_pid,
-                                           &task_args) == 0U)
-    {
-        FOC_App_StopFastCurrentLoop();
-        return;
-    }
+    dt_sec = FOC_CONTROL_DT_SEC;
+    MotorControlService_RunOuterLoopControlTask(&g_motor,
+                                                &g_torque_current_pid,
+                                                &g_speed_pid,
+                                                &g_angle_pid,
+                                                sensor_data,
+                                                cur_mode,
+                                                g_StateSnapshot.control_cfg.speed_only_rad_s,
+                                                g_StateSnapshot.control_cfg.target_angle_rad,
+                                                g_StateSnapshot.control_cfg.angle_position_speed_rad_s,
+                                                dt_sec);
 
     /* Run calibration sample step (handles deferred start/dump/export requests when idle). */
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    (void)FOC_CoggingCalibSampleStep(&g_motor, sensor_data, task_args.dt_sec);
+    (void)FOC_CoggingCalibSampleStep(&g_motor, sensor_data, dt_sec);
 #endif
 
     FOC_ControlCompensationStep(&g_motor, sensor_data);
@@ -321,6 +299,25 @@ void FOC_App_Loop(void)
             MotorControlService_SetSensorSampleOffsetPercent(g_StateSnapshot.control_cfg.sensor_sample_offset_percent);
             Runtime_Commit();
         }
+
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+    /*
+     * Deferred cogging LUT dump/export output at service-task rate,
+     * one frame per call to avoid blocking the service loop.
+     * Protocol functions Y:D and Y:T set the request flags; the actual
+     * serial output happens here outside of control ISR context.
+     */
+    if (FOC_CoggingCalibIsDumpPending() != 0U)
+    {
+        FOC_CoggingCalibClearDumpPending();
+        FOC_CoggingCalibDumpTable(&g_motor);
+    }
+    else if (FOC_CoggingCalibIsExportPending() != 0U)
+    {
+        FOC_CoggingCalibClearExportPending();
+        FOC_CoggingCalibExportTable(&g_motor);
+    }
+#endif
     }
 }
 
@@ -329,7 +326,6 @@ static void FOC_App_OnPwmUpdateISR(void)
     uint8_t divider;
     float current_loop_dt_sec;
     const sensor_data_t *current_sensor = 0;
-    motor_control_service_task_args_t task_args;
 
     /* Keep interpolation update at each PWM update interrupt. */
     MotorControlService_RunPwmInterpolationIsr();
@@ -368,21 +364,11 @@ static void FOC_App_OnPwmUpdateISR(void)
         current_sensor = &g_fast_current_sensor_snapshot;
     }
 
-    task_args.sensor = current_sensor;
-    task_args.control_mode = 0U;
-    task_args.speed_only_rad_s = 0.0f;
-    task_args.target_angle_rad = 0.0f;
-    task_args.angle_position_speed_rad_s = 0.0f;
-    task_args.electrical_angle = g_fast_current_loop_electrical_angle;
-    task_args.open_loop_voltage = 0.0f;
-    task_args.open_loop_turn_speed = 0.0f;
-    task_args.dt_sec = current_loop_dt_sec;
-    (void)MotorControlService_RunControlTask(MOTOR_CONTROL_SERVICE_TASK_CURRENT_LOOP,
-                                             &g_motor,
-                                             &g_torque_current_pid,
-                                             0,
-                                             0,
-                                             &task_args);
+    MotorControlService_RunCurrentLoopControlTask(&g_motor,
+                                                  &g_torque_current_pid,
+                                                  current_sensor,
+                                                  g_fast_current_loop_electrical_angle,
+                                                  current_loop_dt_sec);
 }
 
 static void Service_Task_Trigger(void)
@@ -430,12 +416,7 @@ static void Motor_Control_Loop(void)
         /* Ensure PWM ISR runs open-loop (no current PID, no soft-switch). */
         g_motor.current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
         g_motor.current_soft_switch_status.enabled = 0U;
-
-        /*
-         * Run calibration step: internally drives open-loop angle + Uq,
-         * accumulates position error per LUT bin, and calls
-         * FOC_ControlApplyElectricalAngleRuntime() for SVPWM output.
-         */
+        
         FOC_CoggingCalibSampleStep(&g_motor, &g_sensor_snapshot, FOC_CONTROL_DT_SEC);
 
         /* Publish targets for the fast current loop (PWM ISR). */

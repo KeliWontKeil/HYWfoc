@@ -73,45 +73,47 @@ void MotorControlService_ResetCurrentSoftSwitchState(foc_motor_t *motor)
     FOC_ControlResetCurrentSoftSwitchState(motor);
 }
 
-uint8_t MotorControlService_RunControlTask(motor_control_service_task_t task,
-                                           foc_motor_t *motor,
-                                           foc_pid_t *current_pid,
-                                           foc_pid_t *speed_pid,
-                                           foc_pid_t *angle_hold_pid,
-                                           const motor_control_service_task_args_t *args)
+void MotorControlService_RunOuterLoopControlTask(foc_motor_t *motor,
+                                                foc_pid_t *current_pid,
+                                                foc_pid_t *speed_pid,
+                                                foc_pid_t *angle_hold_pid,
+                                                const sensor_data_t *sensor,
+                                                uint8_t control_mode,
+                                                float speed_only_rad_s,
+                                                float target_angle_rad,
+                                                float angle_position_speed_rad_s,
+                                                float dt_sec)
 {
-    switch (task)
-    {
-        case MOTOR_CONTROL_SERVICE_TASK_OUTER_LOOP:
-        {
-            FOC_ControlOuterLoopStep(motor,
-                                     current_pid,
-                                     speed_pid,
-                                     angle_hold_pid,
-                                     args->sensor,
-                                     args->control_mode,
-                                     args->speed_only_rad_s,
-                                     args->target_angle_rad,
-                                     args->angle_position_speed_rad_s,
-                                     args->dt_sec);
-            return 1U;
-        }
+    FOC_ControlOuterLoopStep(motor,
+                                current_pid,
+                                speed_pid,
+                                angle_hold_pid,
+                                sensor,
+                                control_mode,
+                                speed_only_rad_s,
+                                target_angle_rad,
+                                angle_position_speed_rad_s,
+                                dt_sec);
+}
 
-        case MOTOR_CONTROL_SERVICE_TASK_CURRENT_LOOP:
-            FOC_ControlCurrentLoopStep(motor,
-                                       current_pid,
-                                       args->sensor,
-                                       args->electrical_angle,
-                                       args->dt_sec);
-            return 1U;
+void MotorControlService_RunCurrentLoopControlTask(foc_motor_t *motor,
+                                                    foc_pid_t *current_pid,
+                                                    const sensor_data_t *sensor,
+                                                    float electrical_angle,
+                                                    float dt_sec)
+{
+    FOC_ControlCurrentLoopStep(motor,
+                                current_pid,
+                                sensor,
+                                electrical_angle,
+                                dt_sec);
+}
 
-        case MOTOR_CONTROL_SERVICE_TASK_OPEN_LOOP:
-            FOC_ControlOpenLoopStep(motor, args->open_loop_voltage, args->open_loop_turn_speed);
-            return 1U;
-
-        default:
-            return 0U;
-    }
+void MotorControlService_RunOpenLoopControlTask(foc_motor_t *motor,
+                                                float open_loop_voltage,
+                                                float open_loop_turn_speed)
+{
+    FOC_ControlOpenLoopStep(motor, open_loop_voltage, open_loop_turn_speed);
 }
 
 void MotorControlService_InitPidControllers(foc_motor_t *motor,
@@ -231,7 +233,8 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
     FOC_ControlSetCurrentSoftSwitchEnable(motor, control_cfg->current_soft_switch_enable);
     FOC_ControlResetCurrentSoftSwitchState(motor);
 
-#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlSetCoggingCompEnable(motor, control_cfg->cogging_comp_enable);
 #else
     /* Keep feature default when protocol cogging chain is trimmed out. */
@@ -239,4 +242,5 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
     FOC_ControlSetCoggingCompIqLimitA(motor, control_cfg->cogging_comp_iq_limit_a);
     FOC_ControlSetCoggingCompSpeedGateRadS(motor, control_cfg->cogging_comp_speed_gate_rad_s);
     FOC_ControlSetCoggingCalibGainK(motor, control_cfg->cogging_calib_gain_k);
+#endif /* FOC_COGGING_COMP_ENABLE */
 }

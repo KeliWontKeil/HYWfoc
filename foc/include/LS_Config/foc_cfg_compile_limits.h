@@ -105,9 +105,6 @@
 #if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_COGGING_COMP_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
-#if ((FOC_COGGING_DEBUG_DUMP_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_DEBUG_DUMP_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_COGGING_DEBUG_DUMP_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
-#endif
 #if ((FOC_INIT_CALIBRATION_ENABLE != FOC_CFG_DISABLE) && (FOC_INIT_CALIBRATION_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_INIT_CALIBRATION_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
@@ -131,9 +128,6 @@
 #endif
 #if ((FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH != FOC_CFG_ENABLE))
 #error "FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
-#endif
-#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_ENABLE))
-#error "FOC_PROTOCOL_ENABLE_COGGING_COMP must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
 #if ((FOC_COGGING_CALIB_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_COGGING_CALIB_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
@@ -173,22 +167,14 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEPENDENCY: current soft-switch feature is en
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
 #endif
 #endif
-#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE))
+#if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE))
 #if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_PROTOCOL_CONFLICT speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_PROTOCOL_ENABLE_COGGING_COMP.
+#warning FOC_CFG_HINT_PROTOCOL_CONFLICT speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_COGGING_COMP_ENABLE.
 #else
-FOC_CFG_HINT("FOC_CFG_HINT_PROTOCOL_CONFLICT: speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_PROTOCOL_ENABLE_COGGING_COMP.")
+FOC_CFG_HINT("FOC_CFG_HINT_PROTOCOL_CONFLICT: speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_COGGING_COMP_ENABLE.")
 #endif
 #endif
 
-#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
-#if defined(__CC_ARM) && !defined(__clang__)
-
-#warning FOC_CFG_HINT_FEATURE_PROTOCOL cogging compensation protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging compensation protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
-#endif
-#endif
 #if ((FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_ENABLE) && (COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
 #if defined(__CC_ARM) && !defined(__clang__)
 #warning FOC_CFG_HINT_FEATURE_DEFAULT current soft-switch default state is ENABLE but feature is disabled; runtime will force disable.
@@ -196,13 +182,11 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging compensation protocol chain
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is ENABLE but feature is disabled; runtime will force disable.")
 #endif
 #endif
-#if ((FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE) && (FOC_COGGING_DEBUG_DUMP_ENABLE == FOC_CFG_ENABLE))
-#if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_FEATURE_DEFAULT cogging debug dump is ENABLE while cogging compensation feature is disabled; dump path will be skipped.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: cogging debug dump is ENABLE while cogging compensation feature is disabled; dump path will be skipped.")
+/* Cogging calibration depends on cogging compensation feature. */
+#if ((FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
+#error "FOC_COGGING_CALIB_ENABLE requires FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE"
 #endif
-#endif
+
 
 #if (FOC_COGGING_LUT_POINT_COUNT < 8U)
 #error "FOC_COGGING_LUT_POINT_COUNT must be >= 8"

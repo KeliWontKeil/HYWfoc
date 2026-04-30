@@ -191,7 +191,8 @@ static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_com
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP)
     {
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        FOC_CoggingCalibDumpTable();
+        /* Set deferred request flag; actual serial output runs in FOC_App_Loop. */
+        FOC_CoggingCalibRequestDump();
         return RUNTIME_C4_EXEC_OK;
 #else
         RuntimeC4_WriteStatusParamInvalid();
@@ -202,7 +203,8 @@ static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_com
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT)
     {
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        FOC_CoggingCalibExportTable();
+        /* Set deferred request flag; actual serial output runs in FOC_App_Loop. */
+        FOC_CoggingCalibRequestExport();
         return RUNTIME_C4_EXEC_OK;
 #else
         RuntimeC4_WriteStatusParamInvalid();
