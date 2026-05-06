@@ -1,6 +1,8 @@
 #ifndef FOC_CFG_FEATURE_SWITCHES_H
 #define FOC_CFG_FEATURE_SWITCHES_H
 
+#include "LS_Config/foc_symbol_defs.h"
+
 /* Telemetry output feature switches. */
 #define DEBUG_STREAM_ENABLE_SEMANTIC_REPORT FOC_CFG_ENABLE
 #define DEBUG_STREAM_ENABLE_OSC_REPORT FOC_CFG_ENABLE

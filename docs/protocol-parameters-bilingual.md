@@ -163,7 +163,7 @@ Note: this table corresponds to FULL protocol profile. In trimmed builds, option
 | `Z` | current_soft_switch_auto_closed_iq_a | float | [0, 100] and >= `Y` | 0.80 | A | `aaPZ3.0b` | `aaPZb` |
 | `X` | read_all sentinel | - | read only | - | - | N/A | `aaPXb` |
 
-\*  Cogging compensation parameters share the `P:U`/`P:V` subcommand letters with speed PID tuning (`pid_speed_ki`, `pid_speed_kd`). Due to the uppercase-only parser constraint and the limited `A-Z` space, `FOC_PROTOCOL_ENABLE_COGGING_COMP` and `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` are **mutually exclusive** at compile time. If both are set to `ENABLE`, a build-time hint is emitted and only one code path takes effect (see `foc_cfg_compile_limits.h`).
+\*  Cogging compensation parameters share the `P:U`/`P:V` subcommand letters with speed PID tuning (`pid_speed_ki`, `pid_speed_kd`). Due to the uppercase-only parser constraint and the limited `A-Z` space, `FOC_PROTOCOL_ENABLE_COGGING_COMP` and `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` are **mutually exclusive** at compile time. If both are set to `ENABLE`, a build-time hint is emitted and only one code path takes effect (see `foc_compile_limits.h`).
 
 ### 4.2 Control Mode Values / 控制模式值
 

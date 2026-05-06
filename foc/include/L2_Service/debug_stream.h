@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "L2_Service/runtime_snapshot.h"
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_motor_types.h"
 #include "LS_Config/foc_config.h"
 
 /*

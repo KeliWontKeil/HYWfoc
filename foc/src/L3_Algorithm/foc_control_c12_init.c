@@ -11,7 +11,7 @@
 #include "L41_Math/math_transforms.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
-#include "LS_Config/foc_cfg_cogging_table.h"
+#include "LS_Config/foc_cogging_table.h"
 
 float Math_WrapRad(float angle);
 float Math_WrapRadDelta(float angle);

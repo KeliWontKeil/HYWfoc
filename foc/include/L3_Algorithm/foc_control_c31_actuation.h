@@ -1,7 +1,7 @@
 #ifndef FOC_CONTROL_C31_ACTUATION_H
 #define FOC_CONTROL_C31_ACTUATION_H
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_motor_types.h"
 
 float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad);
 void FOC_ControlApplyElectricalAngleRuntime(foc_motor_t *motor, float electrical_angle);

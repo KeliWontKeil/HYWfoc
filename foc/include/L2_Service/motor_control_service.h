@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 #include "L2_Service/runtime_snapshot.h"
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_math_types.h"
+#include "LS_Config/foc_motor_types.h"
 
 void MotorControlService_ResetControlConfigDefault(foc_motor_t *motor);
 

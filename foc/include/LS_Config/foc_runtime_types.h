@@ -1,5 +1,5 @@
-#ifndef RUNTIME_INTERNAL_TYPES_H
-#define RUNTIME_INTERNAL_TYPES_H
+#ifndef FOC_RUNTIME_TYPES_H
+#define FOC_RUNTIME_TYPES_H
 
 #include <stdint.h>
 
@@ -38,4 +38,4 @@ typedef enum {
     RUNTIME_FAULT_INIT_FAILED = 6U
 } runtime_fault_code_t;
 
-#endif /* RUNTIME_INTERNAL_TYPES_H */
+#endif /* FOC_RUNTIME_TYPES_H */

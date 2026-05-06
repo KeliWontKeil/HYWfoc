@@ -3,7 +3,6 @@
 
 #include <math.h>
 #include <stdint.h>
-#include "LS_Config/foc_shared_types.h"
 
 float Math_WrapRad(float angle);
 float Math_WrapRadDelta(float angle);

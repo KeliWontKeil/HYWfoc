@@ -1,5 +1,15 @@
-#ifndef FOC_CFG_COMPILE_LIMITS_H
-#define FOC_CFG_COMPILE_LIMITS_H
+#ifndef FOC_COMPILE_LIMITS_H
+#define FOC_COMPILE_LIMITS_H
+
+/*
+ * Compile-time limits & static assertions.
+ *
+ * This file depends on symbols & macros from foc_symbol_defs.h,
+ * foc_cfg_feature_switches.h, and foc_cfg_init_values.h.  The call sites
+ * (foc_config.h) MUST include those three before including this file.
+ * Direct inclusion without the prerequisites will cause "undefined
+ * identifier" compilation errors.
+ */
 
 /* Runtime parameter ranges (unit: rad / rad/s / PID gains). */
 #define FOC_PROTOCOL_DRIVER_ID_MIN 0x32U
@@ -288,4 +298,4 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 #define COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK DEBUG_STREAM_OSC_DEFAULT_PARAM_MASK
 
 
-#endif /* FOC_CFG_COMPILE_LIMITS_H */
+#endif /* FOC_COMPILE_LIMITS_H */

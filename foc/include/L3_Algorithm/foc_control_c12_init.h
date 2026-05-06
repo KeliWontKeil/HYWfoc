@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_motor_types.h"
 
 void FOC_MotorInit(foc_motor_t *motor,
                    float vbus_voltage,

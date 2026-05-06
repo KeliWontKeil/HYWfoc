@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#include "L2_Service/runtime_internal_types.h"
+#include "LS_Config/foc_protocol_types.h"
+#include "LS_Config/foc_runtime_types.h"
 #include "L2_Service/runtime_snapshot.h"
-#include "L3_Algorithm/protocol_core_types.h"
 
 void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal);
 uint8_t RuntimeC3_HandleCommand(const protocol_command_t *cmd);

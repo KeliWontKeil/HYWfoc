@@ -54,15 +54,33 @@ L3 控制链模块统一按 `foc_control_cXX_name.c/.h` 命名：
 
 **注**：C13 是从旧 C25 提升而来，因为它无 L3 内部模块依赖，仅操作结构体字段和宏配置。
 
-## Configuration macro management
+## Configuration macro & type management
 
-配置分散在四个文件中：
-1. `foc_cfg_init_values.h` — 默认值
-2. `foc_cfg_feature_switches.h` — 功能裁剪开关
-3. `foc_cfg_compile_limits.h` — 编译期约束检查
-4. `foc_cfg_symbol_defs.h` — 符号与兼容定义
+LS_Config 文件分为三大类：
 
-统一入口：`foc_config.h`，业务代码只包含此文件。
+**A. 配置宏文件（业务代码通过 `foc_config.h` 唯一入口）**
+- `foc_symbol_defs.h` — 符号与兼容定义
+- `foc_cfg_feature_switches.h` — 功能裁剪开关
+- `foc_cfg_init_values.h` — 默认值
+- `foc_compile_limits.h` — 编译期约束检查（不单独 `#include`，由 `foc_config.h` 按序包含）
+
+**B. 类型定义文件（通过 `foc_shared_types.h` 聚合或直接引用）**
+- `foc_math_types.h` — kalman_filter_t, foc_pid_t
+- `foc_motor_types.h` — motor 聚合结构体
+- `foc_scheduler_types.h` — FOC_TaskRate_t 调度枚举
+- `foc_protocol_types.h` — protocol_command_t, 解析器枚举
+- `foc_runtime_types.h` — runtime_step_signal_t, init_check / fault 码
+- `foc_snapshot_types.h` — 快照/视图结构体
+
+**C. 数据表文件**
+- `foc_cogging_table.h` — 静态齿槽补偿默认表
+
+**约束**：
+- 宏头文件之间不交叉依赖（不互相 `#include`）
+- 统一入口：`foc_config.h`（业务代码只包含此文件） + `foc_shared_types.h`（类型聚合）
+- 已无 `cfg` 前缀的非设置项文件（`foc_symbol_defs.h` 已去 `cfg`）
+- 各 `.c` 文件中枚举/结构体定义已全部收敛至 LS 层对应类型文件
+
 
 ## Coding conventions
 

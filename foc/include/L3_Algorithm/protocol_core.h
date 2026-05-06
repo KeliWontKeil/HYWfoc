@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L3_Algorithm/protocol_core_types.h"
+#include "LS_Config/foc_protocol_types.h"
 
 uint8_t ProtocolCore_ParseSignedFloat(const char *text, float *value_out);
 uint8_t ProtocolCore_ExtractFrame(const uint8_t *rx_data,

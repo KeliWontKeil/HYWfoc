@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
+#include "LS_Config/foc_runtime_types.h"
 #include "L3_Algorithm/protocol_core.h"
-#include "L2_Service/runtime_internal_types.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 

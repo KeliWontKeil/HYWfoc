@@ -1,6 +1,9 @@
 #ifndef FOC_CFG_INIT_VALUES_H
 #define FOC_CFG_INIT_VALUES_H
 
+#include "LS_Config/foc_symbol_defs.h"
+#include "LS_Config/foc_cfg_feature_switches.h"
+
 /* ========== Mathematical constants (single source of truth) ========== */
 #define FOC_MATH_PI         3.1415926f
 #define FOC_MATH_TWO_PI     6.2831852f
@@ -173,8 +176,8 @@
 #define FOC_COGGING_COMP_IQ_LIMIT_A 0.50f
 
 /*LED initialization defaults. */
-#define FOC_LED_RUN_INDEX 1U
-#define FOC_LED_COMM_INDEX 2U
+#define FOC_LED_RUN_INDEX 2U
+#define FOC_LED_COMM_INDEX 1U
 #define FOC_LED_FAULT_INDEX 3U
 #define FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS 100U
 #define FOC_LED_COMM_PULSE_TICKS 10U

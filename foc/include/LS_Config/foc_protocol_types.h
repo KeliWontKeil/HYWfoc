@@ -1,5 +1,5 @@
-#ifndef PROTOCOL_CORE_TYPES_H
-#define PROTOCOL_CORE_TYPES_H
+#ifndef FOC_PROTOCOL_TYPES_H
+#define FOC_PROTOCOL_TYPES_H
 
 #include <stdint.h>
 
@@ -26,4 +26,4 @@ typedef enum {
     PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH
 } protocol_core_frame_parse_result_t;
 
-#endif /* PROTOCOL_CORE_TYPES_H */
+#endif /* FOC_PROTOCOL_TYPES_H */

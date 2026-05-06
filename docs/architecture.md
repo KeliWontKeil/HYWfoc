@@ -39,7 +39,7 @@ FOC_VSCODE/
 
 | 层级 | 主要位置 | 职责 |
 |---|---|---|
-| `LS` 配置层 | `foc/include/LS_Config/foc_cfg_*.h` | 符号定义、功能开关、默认值、编译期约束 |
+| `LS` 配置层 | `foc/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 |
 | `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c`、`foc/src/L1_Orchestration/control_scheduler.c` | 启动流程、任务调度、控制入口 |
 | `L2` 服务与协议运行时层 | `runtime_c1_entry.c`、`runtime_c2_frame_source.c`、`runtime_c3_runtime_fsm.c`、`runtime_c4_runtime_core.c`、`runtime_c5_output_adapter.c`、`debug_stream.c`、`motor_control_service.c` | 协议帧接入、状态机、命令执行与存储、输出适配、控制服务桥接 |
 | `L3` 应用算法层 | `foc_control_c11_entry.c`、`foc_control_c12_init.c`、`foc_control_c13_cfg_state.c`、`foc_control_c21_outer_loop.c`、`foc_control_c22_current_loop.c`、`foc_control_c23_motor_param_learn.c`、`foc_control_c24_compensation.c`、`foc_control_c31_actuation.c`、`sensor.c`、`svpwm.c`、`protocol_core.c` | 控制算法（入口、初始化标定、配置状态管理、外环、电流内环、参数学习、齿槽补偿、SVPWM 执行）、采样处理、协议纯处理内核 |
@@ -89,7 +89,7 @@ FOC_VSCODE/
 
 ### 编译期约束与提示策略
 
-定义位置：`foc/include/LS_Config/foc_cfg_compile_limits.h`
+定义位置：`foc/include/LS_Config/foc_compile_limits.h`
 
 1. 开关合法性与范围约束：使用 `#error` 阻断非法配置。
 2. 跨开关冲突提示：使用编译提示（ARMCC5 下通过 `#warning` 分支）。

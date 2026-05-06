@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_cfg_init_values.h"
 
 /* 16-bit LUT: 0.001 rad precision, symmetry-aware reconstruction. */
 #define FOC_MATH_LUT_SIN_STEP_RAD 0.001f

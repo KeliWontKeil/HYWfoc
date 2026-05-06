@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_motor_types.h"
 
 uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
                                         float electrical_angle,

@@ -1,5 +1,5 @@
-#ifndef FOC_CFG_SYMBOL_DEFS_H
-#define FOC_CFG_SYMBOL_DEFS_H
+#ifndef FOC_SYMBOL_DEFS_H
+#define FOC_SYMBOL_DEFS_H
 
 /* Unified binary semantics for all enable or disable style macros. */
 #define FOC_CFG_DISABLE 0U
@@ -130,4 +130,4 @@
 #define FOC_SCHEDULER_MONITOR_DIVIDER   (FOC_SCHEDULER_TICK_HZ / FOC_SCHEDULER_MONITOR_HZ)
 #define FOC_SCHEDULER_HEARTBEAT_DIVIDER (FOC_SCHEDULER_TICK_HZ / FOC_SCHEDULER_HEARTBEAT_HZ)
 
-#endif /* FOC_CFG_SYMBOL_DEFS_H */
+#endif /* FOC_SYMBOL_DEFS_H */

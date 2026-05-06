@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_scheduler_types.h"
 #include "LS_Config/foc_config.h"
 
 typedef void (*ControlScheduler_Callback_t)(void);

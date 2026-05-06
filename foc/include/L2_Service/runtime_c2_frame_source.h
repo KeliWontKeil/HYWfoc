@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "L2_Service/runtime_internal_types.h"
+#include "LS_Config/foc_runtime_types.h"
 #include "L2_Service/runtime_snapshot.h"
 
 uint8_t RuntimeC2_ProcessOneFrame(void);

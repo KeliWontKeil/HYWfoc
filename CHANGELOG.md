@@ -5,6 +5,22 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] - 2026-05-06
+
+### Changed
+- **LS_Config 宏头文件重命名与去 `cfg` 语义**：
+  - `foc_cfg_symbol_defs.h` → `foc_symbol_defs.h`（非设置项名称去 `cfg` 前缀）
+  - `foc_cfg_compile_limits.h` → `foc_compile_limits.h`（同上）
+  - `foc_cfg_cogging_table.h` → `foc_cogging_table.h`（数据表文件去 `cfg` 前缀）
+  - 以上名称变更同步更新了所有 `#include` 引用点和文档
+- **移除死转发头文件**：
+  - `L3_Algorithm/protocol_core_types.h`（仅转发 LS_Config/foc_protocol_types.h，已无人引用）
+  - `L2_Service/runtime_internal_types.h`（仅转发 LS_Config/foc_runtime_types.h，已无人引用）
+- **宏头文件之间零交叉依赖**：
+  - `foc_config.h` 保持统一入口角色，内部按序 `#include`，各子文件不互相包含
+- **类型定义全部分类收敛至 LS_Config**：
+  - 所有枚举/结构体定义已分散至 `foc_math_types.h`、`foc_motor_types.h`、`foc_scheduler_types.h`、`foc_protocol_types.h`、`foc_runtime_types.h`、`foc_snapshot_types.h`
+
 ## [1.4.6] - 2026-04-29
 
 ### Changed

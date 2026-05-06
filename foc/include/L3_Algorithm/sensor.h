@@ -1,7 +1,7 @@
 #ifndef _SENSOR_H_
 #define _SENSOR_H_
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_motor_types.h"
 
 
 #define SENSOR_ZERO_CALIB_SAMPLES            200U

@@ -2,7 +2,7 @@
 
 ## 作用范围
 
-本目录只放“库级通用文档”：架构、接口契约、通用流程、协议定义。
+本目录只放"库级通用文档"：架构、接口契约、通用流程、协议定义。
 
 实例/板级文档必须放在各实例目录下（例如 [../examples/GD32F303_FOCExplore/](../examples/GD32F303_FOCExplore/)）。
 
@@ -14,7 +14,7 @@
 
 ## 当前基线
 
-- 版本基线：v1.4.4
+- 版本基线：v1.4.5
 - 项目命名：HYW FOC（中文名：何易位FOC）
 - 任务目标：下一目标版本见 [../NEXT_MISSION.md](../NEXT_MISSION.md)
 - 第三方许可证声明：见 [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)

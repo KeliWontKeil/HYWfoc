@@ -1,5 +1,5 @@
-#ifndef FOC_CFG_COGGING_TABLE_H
-#define FOC_CFG_COGGING_TABLE_H
+#ifndef FOC_COGGING_TABLE_H
+#define FOC_COGGING_TABLE_H
 
 /*
  * Static cogging compensation default table.
@@ -13,7 +13,8 @@
  * the result (Y:T).  Paste the exported initializer below.
  */
 
-#include "LS_Config/foc_config.h"
+#include "LS_Config/foc_cfg_feature_switches.h"
+#include "LS_Config/foc_cfg_init_values.h"
 
 #if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
 
@@ -45,4 +46,4 @@ static const int16_t foc_cogging_default_table_q15[FOC_COGGING_LUT_POINT_COUNT] 
 
 #endif /* FOC_COGGING_STATIC_TABLE_DEFINED */
 
-#endif /* FOC_CFG_COGGING_TABLE_H */
+#endif /* FOC_COGGING_TABLE_H */

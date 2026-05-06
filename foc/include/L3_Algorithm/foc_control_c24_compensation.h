@@ -1,7 +1,7 @@
 #ifndef FOC_CONTROL_C24_COMPENSATION_H
 #define FOC_CONTROL_C24_COMPENSATION_H
 
-#include "LS_Config/foc_shared_types.h"
+#include "LS_Config/foc_motor_types.h"
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 
