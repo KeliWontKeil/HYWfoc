@@ -6,8 +6,6 @@
 #include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L41_Math/math_transforms.h"
 
-#define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
-
 static void FOC_ResetPIDState(foc_pid_t *pid)
 {
     if (pid == 0)
@@ -17,11 +15,6 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
 
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
-}
-
-void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle)
-{
-    FOC_CurrentControlApplyElectricalAngleDirect(motor, electrical_angle);
 }
 
 uint8_t FOC_ControlCurrentLoopRequiresSample(void)
@@ -61,15 +54,9 @@ void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor
 
 }
 
-
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
 {
-    FOC_CurrentControlOpenLoopStep(motor, voltage, turn_speed, FOC_CONTROL_DT_DEFAULT_SEC);
-}
-
-void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
-{
-    FOC_ControlOpenLoopStep(motor, voltage, turn_speed);
+    FOC_CurrentControlOpenLoopStep(motor, voltage, turn_speed, FOC_CONTROL_DT_SEC);
 }
 
 uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,

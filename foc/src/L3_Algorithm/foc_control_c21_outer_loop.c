@@ -6,15 +6,13 @@
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 
-#define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
-
 static float g_speed_err_accum_rad = 0.0f;
 static float g_prev_mech_signed_rad = 0.0f;
 static uint8_t g_speed_state_valid = 0U;
 
 static float FOC_NormalizeDt(float dt_sec)
 {
-    return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_DEFAULT_SEC;
+    return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_SEC;
 }
 
 static float FOC_PIDRunCore(foc_pid_t *pid, float target, float measurement, float dt_sec)

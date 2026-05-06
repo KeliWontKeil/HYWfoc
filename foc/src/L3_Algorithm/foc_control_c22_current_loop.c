@@ -6,8 +6,6 @@
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 
-#define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
-
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
 static uint8_t g_current_iq_lpf_state_valid = 0U;
 static float g_current_iq_lpf_state = 0.0f;
@@ -15,7 +13,7 @@ static float g_current_iq_lpf_state = 0.0f;
 
 static float FOC_NormalizeDt(float dt_sec)
 {
-    return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_DEFAULT_SEC;
+    return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_SEC;
 }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
@@ -91,7 +89,7 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
      *
      * Compared to the previous back-calculation approach, conditional
      * integration allows the integrator to build freely during transient
-     * response — ideal for current loop where small KP + large KI is desired.
+     * response \u2014 ideal for current loop where small KP + large KI is desired.
      */
     if (((output <= pid->out_min) && (error_effective < 0.0f)) ||
         ((output >= pid->out_max) && (error_effective > 0.0f)))
@@ -251,10 +249,6 @@ static uint8_t FOC_CurrentSoftSwitchResolveActiveMode(foc_current_soft_switch_st
 
     open_threshold = Math_ClampFloat(soft_switch_status->auto_open_iq_a, 0.0f, 1e6f);
     closed_threshold = Math_ClampFloat(soft_switch_status->auto_closed_iq_a, 0.0f, 1e6f);
-    /* Allow closed_threshold < open_threshold to create a hysteresis band.
-     * When closed_threshold < open_threshold, the transition from closed-loop
-     * to open-loop occurs at a lower iq_ref than the transition from open-loop
-     * to closed-loop, providing noise immunity around the switching point. */
 
     if ((soft_switch_status->active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
         (soft_switch_status->active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED))
@@ -384,26 +378,9 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
         }
         else
         {
-            /*
-             * Fallback to open-loop resistance model when:
-             * - configured_mode == OPEN (explicit open-loop request), or
-             * - configured_mode == AUTO but soft-switch is disabled (enabled == 0).
-             *
-             * In the AUTO + disabled case, the soft-switch mechanism cannot
-             * dynamically resolve the active mode, so we conservatively fall
-             * back to open-loop to avoid running PID with noisy current
-             * samples at low target currents.
-             */
             motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
             motor->current_soft_switch_status.blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
-            /*
-             * Compute real iq_measured from ADC samples for diagnostic
-             * comparison against the open-loop resistance-model estimate.
-             * This allows verifying whether the "iq periodic wobble" originates
-             * from the current measurement chain (Clarke+Park) or from the PID
-             * algorithm itself.
-             */
             FOC_CurrentLoopComputeIqMeasured(sensor,
                                              motor->electrical_phase_angle,
                                              &motor->iq_measured);

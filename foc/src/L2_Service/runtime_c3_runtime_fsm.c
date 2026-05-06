@@ -222,11 +222,6 @@ uint8_t RuntimeC3_HandleCommand(const protocol_command_t *cmd)
 {
     runtime_c4_exec_result_t exec_result;
 
-    if (cmd == 0)
-    {
-        return 0U;
-    }
-
     RuntimeC4_SetCommState(RUNTIME_STATE_COMM_ACTIVE);
 
     if (cmd->command == COMMAND_MANAGER_CMD_SYSTEM)

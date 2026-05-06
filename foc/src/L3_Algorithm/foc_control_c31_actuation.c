@@ -8,8 +8,6 @@
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-#define FOC_CONTROL_DT_DEFAULT_SEC FOC_CONTROL_DT_SEC
-
 #if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
 static uint8_t g_svpwm_lpf_state_valid = 0U;
 static float g_svpwm_lpf_phase_a = 0.0f;

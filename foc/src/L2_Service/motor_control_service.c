@@ -234,11 +234,7 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
     FOC_ControlResetCurrentSoftSwitchState(motor);
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlSetCoggingCompEnable(motor, control_cfg->cogging_comp_enable);
-#else
-    /* Keep feature default when protocol cogging chain is trimmed out. */
-#endif
     FOC_ControlSetCoggingCompIqLimitA(motor, control_cfg->cogging_comp_iq_limit_a);
     FOC_ControlSetCoggingCompSpeedGateRadS(motor, control_cfg->cogging_comp_speed_gate_rad_s);
     FOC_ControlSetCoggingCalibGainK(motor, control_cfg->cogging_calib_gain_k);

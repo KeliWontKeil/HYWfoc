@@ -26,8 +26,4 @@ void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
 void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor);
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
 
-void FOC_OpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed);
-
-void FOC_ControlApplyElectricalAngleInitBridge(foc_motor_t *motor, float electrical_angle);
-
 #endif /* FOC_CONTROL_C11_ENTRY_H */

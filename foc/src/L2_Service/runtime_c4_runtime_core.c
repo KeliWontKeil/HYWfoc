@@ -710,11 +710,6 @@ void RuntimeC4Store_ReportAllParams(void)
     }
 }
 
-void RuntimeC4Store_OutputParam(char subcommand, float value)
-{
-    RuntimeC5_OutputParam(subcommand, value);
-}
-
 void RuntimeC4Store_ReportAllStates(void)
 {
     uint8_t state;
@@ -740,11 +735,6 @@ void RuntimeC4Store_ReportAllStates(void)
             RuntimeC5_OutputState(states[i], state);
         }
     }
-}
-
-void RuntimeC4Store_OutputState(char subcommand, uint8_t value)
-{
-    RuntimeC5_OutputState(subcommand, value);
 }
 
 void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
@@ -1007,7 +997,7 @@ static uint8_t RuntimeC4_ReportSingleParam(char subcommand)
         return 0U;
     }
 
-    RuntimeC4Store_OutputParam(subcommand, value);
+    RuntimeC5_OutputParam(subcommand, value);
     return 1U;
 }
 
@@ -1020,7 +1010,7 @@ static uint8_t RuntimeC4_ReportSingleState(char subcommand)
         return 0U;
     }
 
-    RuntimeC4Store_OutputState(subcommand, state);
+    RuntimeC5_OutputState(subcommand, state);
     return 1U;
 }
 
@@ -1046,7 +1036,7 @@ runtime_c4_exec_result_t RuntimeC4_ExecuteCommand(const protocol_command_t *cmd)
 
             if (RuntimeC4Store_ReadParam(cmd->subcommand, &value) != 0U)
             {
-                RuntimeC4Store_OutputParam(cmd->subcommand, value);
+                RuntimeC5_OutputParam(cmd->subcommand, value);
             }
             return RUNTIME_C4_EXEC_OK;
         }
@@ -1090,7 +1080,7 @@ runtime_c4_exec_result_t RuntimeC4_ExecuteCommand(const protocol_command_t *cmd)
                 return RUNTIME_C4_EXEC_PARAM_ERROR;
             }
 
-            RuntimeC4Store_OutputState(cmd->subcommand, state);
+            RuntimeC5_OutputState(cmd->subcommand, state);
             return RUNTIME_C4_EXEC_OK;
         }
 

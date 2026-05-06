@@ -162,8 +162,6 @@ uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
                                             float iq_lsb_a,
                                             uint8_t source)
 {
-    uint16_t copy_count;
-
     if ((motor == 0) || (table_q15 == 0))
     {
         return 0U;
@@ -174,10 +172,9 @@ uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
         point_count = FOC_COGGING_LUT_POINT_COUNT;
     }
 
-    copy_count = point_count;
     (void)memcpy((void *)motor->cogging_comp_table_q15,
                  (const void *)table_q15,
-                 (size_t)copy_count * sizeof(int16_t));
+                 (size_t)point_count * sizeof(int16_t));
 
     motor->cogging_comp_status.point_count = point_count;
     motor->cogging_comp_status.iq_lsb_a    = iq_lsb_a;
@@ -919,7 +916,6 @@ void FOC_CoggingCalibDumpTable(const foc_motor_t *motor)
     }
 
     FOC_Platform_WriteDebugText("--- END LUT DUMP ---\r\n");
-    (void)line_buf;
 }
 
 void FOC_CoggingCalibExportTable(const foc_motor_t *motor)
