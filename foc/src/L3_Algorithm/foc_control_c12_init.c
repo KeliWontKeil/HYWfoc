@@ -13,10 +13,6 @@
 #include "LS_Config/foc_config.h"
 #include "LS_Config/foc_cogging_table.h"
 
-float Math_WrapRad(float angle);
-float Math_WrapRadDelta(float angle);
-float Math_ClampFloat(float value, float min_val, float max_val);
-
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 {
     float calib_uq;

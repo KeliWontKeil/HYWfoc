@@ -79,29 +79,12 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
     output = pid->kp * error_effective + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
-    /*
-     * Conditional integration anti-windup (cond_int).
-     *
-     * If output is saturated and the effective error deepens the saturation
-     * direction, roll back the integration that was just added. This prevents
-     * the integrator from winding up during sustained saturation, while
-     * allowing full KI response during normal (unsaturated) operation.
-     *
-     * Compared to the previous back-calculation approach, conditional
-     * integration allows the integrator to build freely during transient
-     * response \u2014 ideal for current loop where small KP + large KI is desired.
-     */
     if (((output <= pid->out_min) && (error_effective < 0.0f)) ||
         ((output >= pid->out_max) && (error_effective > 0.0f)))
     {
         pid->integral -= error_effective * dt_sec;
     }
 
-    /*
-     * Integral clamping safety net: |integral| <= |out_max / ki|.
-     * Ensures the integral term alone cannot drive the output beyond the
-     * clamp limit, even under extreme transient or disturbance conditions.
-     */
     if (pid->ki > 1e-6f)
     {
         float i_limit = fabsf(pid->out_max) / pid->ki;

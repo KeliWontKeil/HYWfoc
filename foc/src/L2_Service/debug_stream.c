@@ -211,7 +211,6 @@ static void DebugStream_OutputOscilloscopeFrame(const sensor_data_t *sensor,
     if ((mask & DEBUG_STREAM_OSC_PARAM_VBUS_VOLTAGE) != 0U)
     {
         float vbus_voltage = 0.0f;
-        /* Try to get VBUS voltage from sensor data */
         if (sensor->vbus_valid != 0U)
         {
             vbus_voltage = sensor->vbus_voltage_filtered;

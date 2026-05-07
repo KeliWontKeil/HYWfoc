@@ -144,7 +144,7 @@
 #define FOC_CURRENT_LOOP_ERROR_DEADBAND_A 0.05f
 #define FOC_CURRENT_LOOP_INTEGRAL_SUPPRESS_LEAK 0.98f
 
-#define FOC_CURRENT_LOOP_IQ_LPF_ALPHA 0.7f  //Current-loop iq low-pass filter alpha in [0,1]. Higher alpha keeps more bandwidth.
+#define FOC_CURRENT_LOOP_IQ_LPF_ALPHA 0.7f
 
 /* Current-loop anti-noise and soft-switch defaults. */
 #define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE FOC_CFG_ENABLE

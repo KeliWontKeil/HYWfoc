@@ -2,31 +2,22 @@
 
 ## 0. 目标与边界
 
-- 当前稳定基线：`v1.4.5`
-- 下一目标版本：`v1.4.6`
+- 当前稳定基线：`v1.6.0`
+- 下一目标版本：`v1.6.1`
 
-## 1. 本阶段目标（v1.4.5 → v1.4.6）
+## 1. 本阶段目标（v1.6.0）
 
 ### 已完成
-- ✅ Predictor 位置偏差法重写齿槽标定：
-  - 旧算法双 bug：gain_k 二次应用（净增益 0.0064）+ 纯积分预期角度漂移
-  - 新算法每步锚定传感器，预测值永不漂移；Finish 阶段 Δθ × DTHETA_SCALE 直接映射，无二次增益
-- ✅ 运行时补偿路径修复：移除 gain_k 二次应用，LUT 直接存储补偿电流
-- ✅ 新增边界不连续修复（CoggingCalib_FixBoundaryDiscontinuity）
-- ✅ 新增 FOC_COGGING_CALIB_DTHETA_SCALE 宏（默认 50.0）
-- ✅ 文档同步（CHANGELOG）
-- 编译验证待完成
-
-### 待验证
-- 标定后补偿效果实际测试：烧录后运行 Y:G 触发标定，观察 iq_target 齿槽波动是否消除
-- DTHETA_SCALE 值需要根据实际齿槽量级调整（默认 50 为保守值）
+- ✅ **文档全面同步**：以实际代码为准更新所有文档，版本基线统一为 v1.6.0
+- ✅ **修复文档-代码默认值不一致**：协议参数文档中的 sensor_sample_offset_percent、PID 增益、齿槽补偿参数、软切换自动阈值等默认值与代码完全对齐
+- ✅ **修复 architecture.md**：修正 J/K/N 的参数归属描述（PID 角度调谐，非齿槽预留）；移除 `.github/DOCUMENTATION_STRUCTURE.md` 死引用
+- ✅ **增补缺失符号定义**：`foc_symbol_defs.h` 中增补 `COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ` 和 `COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ`，实现代码使用的符号完成定义
 
 ## 2. 下阶段工作
 
-### 近期（v1.5.x）
-1. 完成临时文档中的所有调整
-2. 参数标定重初始化接入协议
-3. 状态机中部分二值化的状态量可以变为状态位，即使用一个8位的uint8_t储存8中状态，评估这样修改的收益，给出修改计划。
+### 近期（v1.6.x）
+1. 参数标定重初始化接入协议
+2. 状态机中部分二值化的状态量可以变为状态位，即使用一个8位的uint8_t储存8中状态，评估这样修改的收益，给出修改计划。
 
 ### 长期任务
 

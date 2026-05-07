@@ -92,6 +92,9 @@ System subcommands:
 |---|---|
 | `R` | runtime summary |
 | `C` | fault clear + soft diag reinit |
+| `G` | start cogging calibration (only when `FOC_COGGING_CALIB_ENABLE`) |
+| `D` | dump cogging table (only when `FOC_COGGING_CALIB_ENABLE`) |
+| `T` | export cogging table as C code (only when `FOC_COGGING_CALIB_ENABLE`) |
 
 Compatibility note:
 
@@ -117,7 +120,7 @@ Optional groups:
 | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `P:G/K/N` |
 | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `P:P/U/V` |
 | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `P:M/B/E/F/T` |
-| `FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH` | `P:Q/Y/Z`, `S:C` |
+| `FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH` | `P:Q/Z/Y`, `S:C` |
 | `FOC_PROTOCOL_ENABLE_COGGING_COMP` | `P:U/V`, `S:G`, `Y:G`, `Y:D`, `Y:T` |
 
 When an optional subcommand is trimmed off, write/read on that subcommand returns parameter-invalid (`P`) after frame parse success (`O`).
@@ -137,30 +140,31 @@ Note: this table corresponds to FULL protocol profile. In trimmed builds, option
 | `A` | target_angle_rad | float | [-100, 100] | 3.14 | rad | `aaPA1.57b` | `aaPAb` |
 | `R` | angle_position_speed_rad_s | float | [0, 36] | 18.0 | rad/s | `aaPR12b` | `aaPRb` |
 | `S` | speed_only_speed_rad_s | float | [-36, 36] | 2.0 | rad/s | `aaPS-20b` | `aaPSb` |
-| `W` | sensor_sample_offset_percent | float | [0, 100] | 96.0 | % | `aaPW96b` | `aaPWb` |
+| `W` | sensor_sample_offset_percent | float | [0, 100] | 45.0 | % | `aaPW45b` | `aaPWb` |
 | `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaPL20b` | `aaPLb` |
 | `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `aaPH100b` | `aaPHb` |
-| `O` | oscilloscope_param_mask | uint | [0, 65535] | 8 (0x0008) | bitmask | `aaPO63b` | `aaPOb` |
-| `C` | pid_current_kp | float | [0, 50] | 1.2 | - | `aaPC0.2b` | `aaPCb` |
-| `I` | pid_current_ki | float | [0, 50] | 12.0 | - | `aaPI0.1b` | `aaPIb` |
-| `J` | pid_current_kd | float | [0, 10] | 0.0 | - | `aaPJ0.01b` | `aaPJb` |
+| `O` | oscilloscope_param_mask | uint | [0, 65535] | 779 (0x030B) | bitmask | `aaPO63b` | `aaPOb` |
+| `C` | pid_current_kp | float | [0, 50] | 4.0 | - | `aaPC2.0b` | `aaPCb` |
+| `I` | pid_current_ki | float | [0, 50] | 60.0 | - | `aaPI10b` | `aaPIb` |
+| `J` | pid_current_kd | float | [0, 10] | 0.00 | - | `aaPJ0.01b` | `aaPJb` |
 | `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaPG2.5b` | `aaPGb` |
 | `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaPK0.9b` | `aaPKb` |
 | `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaPN0.02b` | `aaPNb` |
-| `P` | pid_speed_kp | float | [0, 50] | 1.5 | - | `aaPP3.0b` | `aaPPb` |
+| `P` | pid_speed_kp | float | [0, 50] | 0.8 | - | `aaPP1.5b` | `aaPPb` |
 | `U` | pid_speed_ki | float | [0, 50] | 0.6 | - | `aaPU0.6b` | `aaPUb` |
-| `V` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaPV0.05b` | `aaPVb` |
-| `U`\* | cogging_comp_iq_limit_a | float | [0, 100] | 0.0 (see `FOC_COGGING_COMP_IQ_LIMIT_A`) | A | `aaPU2.0b` | `aaPUb` |
-| `V`\* | cogging_comp_speed_gate_rad_s | float | [0, 36] | 0.5 (see `FOC_COGGING_COMP_SPEED_GATE_RAD_S`) | rad/s | `aaPV0.3b` | `aaPVb` |
+| `V` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaPV0.005b` | `aaPVb` |
+| `U`\* | cogging_comp_iq_limit_a | float | [0, 10] | 0.50 (see `FOC_COGGING_COMP_IQ_LIMIT_A`) | A | `aaPU1.0b` | `aaPUb` |
+| `V`\* | cogging_comp_speed_gate_rad_s | float | [0, 36] | 12.0 (see `FOC_COGGING_COMP_SPEED_GATE_RAD_S`) | rad/s | `aaPV8.0b` | `aaPVb` |
 | `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaPM0.002b` | `aaPMb` |
-| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.2 | - | `aaPB0.3b` | `aaPBb` |
+| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.05 | - | `aaPB0.10b` | `aaPBb` |
 | `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaPE0.004b` | `aaPEb` |
 | `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `aaPF0.45b` | `aaPFb` |
 | `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `aaPT0.70b` | `aaPTb` |
 | `D` | control_mode | uint | 0 or 1 | 0 (FULL build default) | - | `aaPD0b` | `aaPDb` |
 | `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `aaPQ2b` | `aaPQb` |
-| `Y` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.25 | A | `aaPY1.5b` | `aaPYb` |
-| `Z` | current_soft_switch_auto_closed_iq_a | float | [0, 100] and >= `Y` | 0.80 | A | `aaPZ3.0b` | `aaPZb` |
+| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.20 | A | `aaPZ0.5b` | `aaPZb` |
+| `Y` | current_soft_switch_auto_closed_iq_a | float | [0, 100] and >= open | 0.50 | A | `aaPY1.0b` | `aaPYb` |
+| `k` | cogging_calib_gain_k | float | >= 0 | 0.05 | - | `aaPk0.10b` | `aaPkb` |
 | `X` | read_all sentinel | - | read only | - | - | N/A | `aaPXb` |
 
 \*  Cogging compensation parameters share the `P:U`/`P:V` subcommand letters with speed PID tuning (`pid_speed_ki`, `pid_speed_kd`). Due to the uppercase-only parser constraint and the limited `A-Z` space, `FOC_PROTOCOL_ENABLE_COGGING_COMP` and `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` are **mutually exclusive** at compile time. If both are set to `ENABLE`, a build-time hint is emitted and only one code path takes effect (see `foc_compile_limits.h`).
@@ -206,17 +210,20 @@ else
 
 ### 4.5 Oscilloscope Mask Bits / 示波参数掩码位
 
+| Bit | Hex | Field | Default enabled |
+|---|---|---|---|
+| 0 | 0x0001 | current_a | Yes |
+| 1 | 0x0002 | current_b | Yes |
+| 2 | 0x0004 | current_c | No |
+| 3 | 0x0008 | angle_filtered | Yes |
+| 4 | 0x0010 | angle_accum | No |
+| 5 | 0x0020 | execution_time_us | No |
+| 6 | 0x0040 | cogging_iq | No |
+| 7 | 0x0080 | vbus_voltage | No |
+| 8 | 0x0100 | iq_target | Yes |
+| 9 | 0x0200 | iq_measured | Yes |
 
-| Bit | Hex | Field |
-|---|---|---|
-| 0 | 0x0001 | current_a |
-| 1 | 0x0002 | current_b |
-| 2 | 0x0004 | current_c |
-| 3 | 0x0008 | angle_filtered |
-| 4 | 0x0010 | angle_accum |
-| 5 | 0x0020 | execution_time_us |
-
-Default mask is `0x0008` (angle_filtered).
+Default mask: 0x030B (current_a + current_b + angle_filtered + iq_target + iq_measured).
 
 ## 5. State Subcommands / 状态子命令
 
@@ -226,7 +233,7 @@ State channel uses command `S`, and state values are strict numeric `0` or `1`.
 |---|---|---|---|---|
 | `M` | motor_enable | 1 | `aaSM1b` | `aaSMb` |
 | `S` | semantic_report_enabled | 0 | `aaSS1b` | `aaSSb` |
-| `O` | oscilloscope_report_enabled | 1 | `aaSO1b` | `aaSOb` |
+| `O` | oscilloscope_report_enabled | 0 | `aaSO1b` | `aaSOb` |
 | `C` | current_soft_switch_enabled | 1 (macro default, effective value depends on feature/protocol switches) | `aaSC1b` | `aaSCb` |
 | `G` | cogging_comp_enabled | 0 (follows `FOC_COGGING_COMP_ENABLE`) | `aaSG1b` | `aaSGb` |
 | `X` | read_all sentinel | - | N/A | `aaSXb` |
@@ -291,16 +298,17 @@ aaPD0b      # control_mode = speed+angle
 aaPD1b      # control_mode = speed-only
 aaPS-20b    # speed-only speed reference = -20rad/s
 aaPR12b     # speed+angle mode speed limit/reference = 12rad/s
-aaPW96b     # sensor sample offset percent = 96
+aaPW45b     # sensor sample offset percent = 45
 aaPL20b     # semantic report frequency parameter example value = 20
 aaPH100b    # osc report frequency parameter example value = 100
 aaPO63b     # osc mask bits 0..5 all on
-aaPP3.0b    # speed kp
+aaPP1.5b    # speed kp
 aaPU0.6b    # speed ki
-aaPV0.05b   # speed kd
+aaPV0.005b  # speed kd
 aaPQ2b      # current_soft_switch_mode = AUTO
-aaPY1.5b    # current_soft_switch_auto_open_iq_a = 1.5A
-aaPZ3.0b    # current_soft_switch_auto_closed_iq_a = 3.0A
+aaPZ0.5b    # current_soft_switch_auto_open_iq_a = 0.5A
+aaPY1.0b    # current_soft_switch_auto_closed_iq_a = 1.0A
+aaPk0.10b   # cogging_calib_gain_k = 0.10
 ```
 
 ### 7.3 Typical state writes / 常用状态写入示例
@@ -330,6 +338,7 @@ aaPOb       # read oscilloscope_param_mask
 aaPPb       # read pid_speed_kp
 aaPMb       # read min_mech_angle_accum_delta
 aaSCb       # read current_soft_switch_enabled
+aaPkb       # read cogging_calib_gain_k
 ```
 
 ## 8. Common Error Cases / 常见错误与原因
@@ -349,7 +358,7 @@ aaSCb       # read current_soft_switch_enabled
 
 1. Open host tools bound to instance input/output channels.
 2. Send `aaPXb` and confirm a full parameter dump appears on output channel.
-3. Send one parameter write command (for example `aaPP3.0b`), verify:
+3. Send one parameter write command (for example `aaPP1.5b`), verify:
   - output channel receives `O`
   - output channel prints updated parameter line.
 4. Send one state write command (for example `aaSM1b`) and verify state output line.
@@ -364,4 +373,3 @@ Best practices:
 - Send one frame at a time (do not concatenate multiple frames in one burst).
 - Keep command/subcommand uppercase and frame delimiters lowercase (`a`, `b`).
 - Keep write values inside valid ranges.
-

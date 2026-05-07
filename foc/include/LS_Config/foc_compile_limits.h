@@ -139,6 +139,9 @@
 #if ((FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH != FOC_CFG_ENABLE))
 #error "FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
+#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_ENABLE))
+#error "FOC_PROTOCOL_ENABLE_COGGING_COMP must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
+#endif
 #if ((FOC_COGGING_CALIB_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_COGGING_CALIB_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
@@ -175,6 +178,13 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEPENDENCY: current soft-switch feature is en
 #warning FOC_CFG_HINT_FEATURE_PROTOCOL current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
 #else
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
+#endif
+#endif
+#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
+#if defined(__CC_ARM) && !defined(__clang__)
+#warning FOC_CFG_HINT_FEATURE_PROTOCOL cogging comp protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
+#else
+FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging comp protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
 #endif
 #endif
 #if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE))
@@ -297,5 +307,20 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 
 #define COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK DEBUG_STREAM_OSC_DEFAULT_PARAM_MASK
 
+/*
+ * Protocol subcommand symbol collision warnings.
+ * When both COGGING and SOFT_SWITCH protocols are enabled, the 'Y' subcommand
+ * collides between COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN and
+ * COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ.
+ * In practice these are mutually exclusive by feature switch guard.
+ */
+#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && \
+     (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE))
+#if defined(__ARMCC_VERSION)
+#warning "PROTOCOL SUBCOMMAND COLLISION: COGGING_CALIB_GAIN and SOFT_SWITCH_AUTO_CLOSED_IQ both use symbol 'Y'. These two feature groups cannot coexist."
+#else
+#pragma message "PROTOCOL SUBCOMMAND COLLISION: COGGING_CALIB_GAIN and SOFT_SWITCH_AUTO_CLOSED_IQ both use symbol 'Y'. These two feature groups cannot coexist."
+#endif
+#endif
 
 #endif /* FOC_COMPILE_LIMITS_H */

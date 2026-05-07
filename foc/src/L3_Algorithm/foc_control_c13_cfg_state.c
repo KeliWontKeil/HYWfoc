@@ -135,8 +135,6 @@ void FOC_ControlSetCurrentSoftSwitchEnable(foc_motor_t *motor, uint8_t enable)
     new_enable = FOC_CFG_DISABLE;
 #endif
 
-    /* Only reset blend state when the enable flag actually changes to avoid
-     * unnecessarily resetting the soft-switch transition on every config apply. */
     if (motor->current_soft_switch_status.enabled != new_enable)
     {
         motor->current_soft_switch_status.enabled = new_enable;

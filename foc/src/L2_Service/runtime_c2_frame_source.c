@@ -82,28 +82,6 @@ static uint16_t FrameSource_TryReadReady(uint8_t *buffer, uint16_t max_len)
     return 0U;
 }
 
-/*static uint16_t FrameSource_TryReadAny(uint8_t *buffer, uint16_t max_len)
-{
-    uint8_t source;
-    uint16_t len;
-
-    if (buffer == 0)
-    {
-        return 0U;
-    }
-
-    for (source = RUNTIME_COMM_SOURCE_1; source <= RUNTIME_COMM_SOURCE_4; source++)
-    {
-        len = FrameSource_Read(source, buffer, max_len);
-        if (len > 0U)
-        {
-            return len;
-        }
-    }
-
-    return 0U;
-}*/
-
 static uint8_t ParseAndDispatchFrame(const uint8_t *frame, uint16_t len)
 {
     const uint8_t *payload = 0;
@@ -144,11 +122,6 @@ uint8_t RuntimeC2_ProcessOneFrame(void)
     uint16_t len;
 
     len = FrameSource_TryReadReady(frame, (uint16_t)sizeof(frame));
-    
-    /*if (len == 0U)
-    {
-        len = FrameSource_TryReadAny(frame, (uint16_t)sizeof(frame));
-    }*/
 
     if (len == 0U)
     {

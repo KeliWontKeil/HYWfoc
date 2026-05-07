@@ -30,13 +30,11 @@ typedef struct {
 
     uint8_t motor_enabled;
     uint8_t current_soft_switch_enable;
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    uint8_t cogging_comp_enable;
-#endif
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    uint8_t cogging_comp_enable;
     float cogging_comp_iq_limit_a;
     float cogging_comp_speed_gate_rad_s;
     float cogging_calib_gain_k;
@@ -112,7 +110,7 @@ typedef struct {
     uint8_t current_soft_switch_mode;
     float current_soft_switch_auto_open_iq_a;
     float current_soft_switch_auto_closed_iq_a;
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     float cogging_comp_iq_limit_a;
     float cogging_comp_speed_gate_rad_s;
     float cogging_calib_gain_k;
@@ -124,7 +122,7 @@ typedef struct {
     uint8_t semantic_enable;
     uint8_t osc_enable;
     uint8_t current_soft_switch_enable;
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     uint8_t cogging_comp_enable;
 #endif
 } runtime_c4_states_view_t;

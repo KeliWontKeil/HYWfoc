@@ -246,7 +246,6 @@ static void SVPWM_CalculateDuty(float phase_a,
 
 void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent)
 {
-    /* Initialize PWM (TIMER0 as slave) */
     FOC_Platform_PWMInit((uint8_t)freq_kHz, deadtime_percent);
     FOC_Platform_PWMSetDutyCycleTripleFloat(0.0f, 0.0f, 0.0f);
     FOC_Platform_PWMStart();

@@ -130,10 +130,6 @@ void MotorControlService_InitPidControllers(foc_motor_t *motor,
         return;
     }
 
-    /* Outer-loop (speed/angle) PID output is iq_target in amperes.
-     * Use set_voltage / phase_resistance as a coarse clamp to prevent
-     * commanding an unachievable current target that would saturate the
-     * voltage-limited current loop. */
     phase_res = (fabsf(motor->phase_resistance) > 1e-6f) ? fabsf(motor->phase_resistance) : 1e-6f;
     i_max = motor->set_voltage / phase_res;
     if (i_max < 0.0f)
@@ -203,9 +199,6 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
         float phase_res;
         float i_max;
 
-        /* Outer-loop (speed/angle) PID output is iq_target in amperes.
-         * Recompute coarse clamp from latest set_voltage and phase_resistance
-         * so protocol-driven parameter updates take effect immediately. */
         phase_res = (fabsf(motor->phase_resistance) > 1e-6f) ? fabsf(motor->phase_resistance) : 1e-6f;
         i_max = motor->set_voltage / phase_res;
         if (i_max < 0.0f)

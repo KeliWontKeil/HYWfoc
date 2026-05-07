@@ -118,7 +118,6 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
 
     cur_mode = g_StateSnapshot.control_cfg.control_mode;
 
-    /* Reset current soft-switch blend state when control mode changes. */
     if (cur_mode != s_last_control_mode)
     {
         MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
@@ -137,20 +136,19 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                                                 g_StateSnapshot.control_cfg.angle_position_speed_rad_s,
                                                 dt_sec);
 
-    /* Run calibration sample step (handles deferred start/dump/export requests when idle). */
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
     (void)FOC_CoggingCalibSampleStep(&g_motor, sensor_data, dt_sec);
 #endif
 
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlCompensationStep(&g_motor, sensor_data);
+#endif
 
-    /* Current algorithm always runs in PWM ISR; task loop only publishes fast-loop targets. */
     g_fast_current_loop_iq_target = g_motor.iq_target;
     g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
     g_fast_current_loop_enabled = 1U;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
 
 void FOC_App_Init(void)
 {
@@ -171,7 +169,6 @@ void FOC_App_Init(void)
     ControlScheduler_SetCallback(FOC_TASK_RATE_SERVICE, Service_Task_Trigger);
     ControlScheduler_SetCallback(FOC_TASK_RATE_FAST_CONTROL, Motor_Control_Loop);
     ControlScheduler_SetCallback(FOC_TASK_RATE_MONITOR, Monitor_Task_Trigger);
-    /* Keep control-related IRQs disabled until FOC_App_Start() enters runtime. */
     FOC_Platform_SetControlRuntimeInterrupts(0U);
 
     FOC_Platform_CommInit();
@@ -219,12 +216,10 @@ void FOC_App_Init(void)
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_VBUS);
 #endif
 
-    /* Initialize SVPWM output and interpolation callback. */
     MotorControlService_InitPwmOutput(FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_PWM);
 
-    /* Initialize motor model and targets. */
     MotorControlService_InitMotor(&g_motor,
                                   FOC_MOTOR_INIT_VBUS_DEFAULT,
                                   FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
@@ -235,7 +230,6 @@ void FOC_App_Init(void)
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_MOTOR);
 
 
-    /* PID initialization and runtime config applying are managed by L2 service. */
     MotorControlService_InitPidControllers(&g_motor,
                                            &g_torque_current_pid,
                                            &g_speed_pid,
@@ -273,7 +267,6 @@ void FOC_App_Loop(void)
     {
         g_monitor_task_pending = 0U;
     #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
-        /* Debug stream cadence is bounded by monitor task trigger rate. */
         DebugStream_SetExecutionCycles(ControlScheduler_GetExecutionCycles());
         DebugStream_Process(&g_sensor_snapshot,
                             &g_motor,
@@ -301,12 +294,6 @@ void FOC_App_Loop(void)
         }
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    /*
-     * Deferred cogging LUT dump/export output at service-task rate,
-     * one frame per call to avoid blocking the service loop.
-     * Protocol functions Y:D and Y:T set the request flags; the actual
-     * serial output happens here outside of control ISR context.
-     */
     if (FOC_CoggingCalibIsDumpPending() != 0U)
     {
         FOC_CoggingCalibClearDumpPending();
@@ -327,7 +314,6 @@ static void FOC_App_OnPwmUpdateISR(void)
     float current_loop_dt_sec;
     const sensor_data_t *current_sensor = 0;
 
-    /* Keep interpolation update at each PWM update interrupt. */
     MotorControlService_RunPwmInterpolationIsr();
 
     if (g_fast_current_loop_enabled == 0U)
@@ -411,15 +397,11 @@ static void Motor_Control_Loop(void)
 
     if (FOC_CoggingCalibIsBusy(&g_motor) != 0U)
     {
-        /* ------ Calibration active: pure open-loop self-drive ------ */
-
-        /* Ensure PWM ISR runs open-loop (no current PID, no soft-switch). */
         g_motor.current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
         g_motor.current_soft_switch_status.enabled = 0U;
         
         FOC_CoggingCalibSampleStep(&g_motor, &g_sensor_snapshot, FOC_CONTROL_DT_SEC);
 
-        /* Publish targets for the fast current loop (PWM ISR). */
         g_fast_current_loop_iq_target = g_motor.iq_target;
         g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
         g_fast_current_loop_enabled = 1U;
