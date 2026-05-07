@@ -5,6 +5,16 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-05-07
+
+### Changed
+- **文档全面同步与版本提升**：以实际代码为准更新全部文档，开发版本提升至 v1.6.0。
+- **修复文档-代码不一致**：
+  - `docs/protocol-parameters-bilingual.md`：完整重写，修复软切换 Y/Z 子命令映射反转（代码：Y=闭环阈值, Z=开环阈值）、默认值全面对齐代码、增补缺失的 `P:k` 齿槽标定增益行、补全示波掩码位表、统一实例命令示例。
+  - `docs/architecture.md`：移除已废弃的 `FOC_COGGING_INIT_LEARN_ENABLE` 和 `FOC_COGGING_DEBUG_DUMP_ENABLE` 引用。
+  - `foc/include/LS_Config/foc_compile_limits.h`：修正碰撞警告中的子命令引用（`SOFT_SWITCH_AUTO_OPEN_IQ` → `SOFT_SWITCH_AUTO_CLOSED_IQ`），匹配实际符号 `'Y'` 的归属。
+- **版本基线统一**：`CHANGELOG.md`、`NEXT_MISSION.md`、`copilot-instructions.md`、`docs/README.md`、`README.md`、`.clinerules/hywfoc-project-rules.md` 全部对齐至 v1.6.0。
+
 ## [1.4.7] - 2026-05-06
 
 ### Changed
@@ -342,7 +352,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated API and IRQ naming toward functional semantics and reduced peripheral-oriented names at upper layers.
 
 ### Fixed
-- Resolved scheduler/platform coupling compile errors caused by header-only include removal by reassigning lifecycle boundaries instead of adding superficial include fixes.
+- Resolved scheduler/platform coupling compile errors caused by header-only include removal by assigning lifecycle boundaries instead of adding superficial include fixes.
 - Restored build consistency after refactor by aligning callback binding path with the new control-tick source API.
 
 ### Notes

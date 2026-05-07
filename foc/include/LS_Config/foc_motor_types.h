@@ -39,13 +39,7 @@ typedef struct {
     float calib_gain_k;
 } foc_cogging_comp_status_t;
 
-/*
- * Cogging calibration runtime state.
- *
- * Calibration accumulates Δθ-derived Q15 values directly into
- * motor->cogging_comp_table_q15, eliminating the need for a separate
- * per-bin accumulator array.  No file-level static variables are needed.
- */
+/* Cogging calibration runtime state */
 typedef struct {
     /* === Calibration state machine === */
     uint8_t in_progress;           /* 1 when calibration is active */
@@ -139,7 +133,7 @@ typedef struct {
     foc_cogging_calib_state_t cogging_calib_state;
 #endif
 #else
-    /* Placeholder to keep struct size stable when COMP is disabled; zero waste. */
+    /* Placeholder to keep struct size stable when COMP is disabled. */
     uint8_t _cogging_padding;
 #endif
 } foc_motor_t;

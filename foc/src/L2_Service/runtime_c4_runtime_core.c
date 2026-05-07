@@ -83,7 +83,7 @@ void RuntimeC4Store_ResetStorageDefaults(void)
     g_params.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
     g_params.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
     g_params.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     g_params.cogging_comp_iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
     g_params.cogging_comp_speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
     g_params.cogging_calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
@@ -781,8 +781,6 @@ void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->control_cfg.current_soft_switch_auto_closed_iq_a = g_params.current_soft_switch_auto_closed_iq_a;
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
     snapshot->control_cfg.cogging_comp_enable = g_states.cogging_comp_enable;
-#endif
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     snapshot->control_cfg.cogging_comp_iq_limit_a = g_params.cogging_comp_iq_limit_a;
     snapshot->control_cfg.cogging_comp_speed_gate_rad_s = g_params.cogging_comp_speed_gate_rad_s;
     snapshot->control_cfg.cogging_calib_gain_k = g_params.cogging_calib_gain_k;
@@ -972,19 +970,19 @@ void RuntimeC4_UpdateReportMode(void)
 
     if ((states->semantic_enable != 0U) && (states->osc_enable != 0U))
     {
-        runtime->report_mode = 3U;
+        runtime->report_mode = RUNTIME_STORE_REPORT_BOTH;
     }
     else if (states->semantic_enable != 0U)
     {
-        runtime->report_mode = 1U;
+        runtime->report_mode = RUNTIME_STORE_REPORT_SEMANTIC_ONLY;
     }
     else if (states->osc_enable != 0U)
     {
-        runtime->report_mode = 2U;
+        runtime->report_mode = RUNTIME_STORE_REPORT_OSC_ONLY;
     }
     else
     {
-        runtime->report_mode = 0U;
+        runtime->report_mode = RUNTIME_STORE_REPORT_OFF;
     }
 }
 
@@ -1164,29 +1162,22 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     runtime_c4_params_view_t *params = RuntimeC4Store_Params();
     runtime_c4_states_view_t *states = RuntimeC4Store_States();
 
-    /* Reset all fault-related counters and states */
     runtime->sensor_invalid_consecutive = 0U;
 #if (FOC_FEATURE_DIAG_STATS == FOC_CFG_ENABLE)
     runtime->protocol_error_count = 0U;
     runtime->param_error_count = 0U;
     runtime->control_skip_count = 0U;
 #endif
-    runtime->last_fault_code = 0U;
-    runtime->comm_state = 0U;
+    runtime->last_fault_code = RUNTIME_STORE_FAULT_NONE;
+    runtime->comm_state = RUNTIME_STORE_COMM_IDLE;
     
-    /* Reset system state to INIT to allow re-initialization */
     runtime->system_state = RUNTIME_STORE_SYSTEM_RUNNING;
     runtime->init_diag = RUNTIME_STORE_DIAG_NOT_EXECUTED;
-    
-    /* Clear initialization check masks to allow fresh accumulation */
     runtime->init_check_mask = 0U;
     runtime->init_fail_mask = 0U;
-    
-    /* Mark parameters as dirty to ensure they are reapplied */
     runtime->params_dirty = 1U;
     runtime->last_exec_ok = 1U;
 
-    /* Reset configurable parameters to defaults */
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
     params->cfg_min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
     params->cfg_angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
@@ -1204,10 +1195,8 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     states->cogging_comp_enable = (uint8_t)FOC_COGGING_COMP_ENABLE;
 #endif
 
-    /* Reset motor enable state to default */
     states->motor_enable = COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
 
-    /* Output diagnostic message for recovery */
     RuntimeC4Store_OutputDiag("INFO", "fault_recovery", "system reset completed");
 
     return 1U;

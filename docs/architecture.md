@@ -59,8 +59,6 @@ FOC_VSCODE/
 4. `C4`：参数/状态读写、运行存储、快照构建。
 5. `C5`：状态字与文本输出适配。
 
-说明：仓库中存在 `runtime_c32_command_router.[ch]` 并行实现文件，当前未纳入实例构建清单，不作为生产主链。
-
 ### L3 控制运行链（已落地）
 
 1. 初始化链：`C12` + `C23` + `C11` 初始化桥接。
@@ -75,7 +73,7 @@ FOC_VSCODE/
 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
 
 1. 电流环与软切换特性：`FOC_CURRENT_LOOP_PID_ENABLE`、`FOC_CURRENT_SOFT_SWITCH_ENABLE`
-2. 齿槽补偿特性：`FOC_COGGING_COMP_ENABLE`（补偿使能）、`FOC_COGGING_CALIB_ENABLE`（运行时手动标定使能）、`FOC_COGGING_INIT_LEARN_ENABLE`（旧版初始化自动标定，默认关闭）、`FOC_COGGING_DEBUG_DUMP_ENABLE`
+2. 齿槽补偿特性：`FOC_COGGING_COMP_ENABLE`（补偿使能）、`FOC_COGGING_CALIB_ENABLE`（运行时手动标定使能）
 3. 采样滤波特性：`FOC_SENSOR_KALMAN_*`、`FOC_SENSOR_ANGLE_LPF_ENABLE`
 
 ### 协议裁剪开关（L2/L3 协同）
@@ -85,7 +83,7 @@ FOC_VSCODE/
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
 4. 当前已接入的齿槽协议链路：状态子命令 `S:G`（`COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE`）；系统子命令 `Y:G`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB`，触发运行时标定）、`Y:D`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP`，串口输出补偿表）、`Y:T`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT`，串口输出可嵌入代码的 C 数组格式补偿表）
 
-说明：符号头中预留了齿槽参数子命令符号（`J/K/N`），当前运行时实现尚未接入对应参数读写链路。
+说明：`G/K/N` 子命令符号用于 PID 角度调谐（`pid_angle_kp/ki/kd`），非齿槽参数预留符号。
 
 ### 编译期约束与提示策略
 
@@ -123,5 +121,5 @@ PWM 更新中断源（高速路径）
 ## 维护规则
 
 1. 结构/依赖变化必须同步更新本文件。
-2. 更新本文件后，同次检查：`docs/README.md`、`.github/DOCUMENTATION_STRUCTURE.md`、`docs/development.md`。
+2. 更新本文件后，同次检查：`docs/README.md`、`docs/development.md`。
 3. 禁止新增并行结构文档作为“兼容跳转页”。

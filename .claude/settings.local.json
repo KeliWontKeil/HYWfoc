@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/project/GD32F3 project/FOC_VSCODEdocs/**)",
+      "Read(//d/project/GD32F3 project/FOC_VSCOPE/examples/GD32F303_FOCExplore/software/.eide/**)",
+      "Read(//d/project/GD32F3 project/FOC_VSCOPEdocs/**)",
+      "Read(//d/project/GD32F3 project/FOC_VSCOPE/.github/agents/**)"
+    ]
+  }
+}
