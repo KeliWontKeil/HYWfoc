@@ -92,6 +92,7 @@ System subcommands:
 |---|---|
 | `R` | runtime summary |
 | `C` | fault clear + soft diag reinit |
+| `I` | runtime motor parameter reinit (方向/极对数/零位重新标定) |
 | `G` | start cogging calibration (only when `FOC_COGGING_CALIB_ENABLE`) |
 | `D` | dump cogging table (only when `FOC_COGGING_CALIB_ENABLE`) |
 | `T` | export cogging table as C code (only when `FOC_COGGING_CALIB_ENABLE`) |
@@ -289,6 +290,7 @@ aaSMb       # read motor_enable
 aaSXb       # read all states
 aaYRb       # read runtime state summary
 aaYCb       # clear fault counters + soft diag reinit
+aaYIb       # runtime motor parameter reinit (direction/pole-pairs/zero calibration)
 ```
 
 ### 7.2 Typical parameter writes / 常用参数写入示例

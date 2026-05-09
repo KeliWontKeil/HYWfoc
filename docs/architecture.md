@@ -82,6 +82,7 @@ FOC_VSCODE/
 2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
 4. 当前已接入的齿槽协议链路：状态子命令 `S:G`（`COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE`）；系统子命令 `Y:G`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB`，触发运行时标定）、`Y:D`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP`，串口输出补偿表）、`Y:T`（`COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT`，串口输出可嵌入代码的 C 数组格式补偿表）
+5. 新增运行时重初始化系统子命令 `Y:I`（`COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT`），触发电机参数重新标定（方向/极对数/零位）
 
 说明：`G/K/N` 子命令符号用于 PID 角度调谐（`pid_angle_kp/ki/kd`），非齿槽参数预留符号。
 

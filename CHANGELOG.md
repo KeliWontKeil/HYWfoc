@@ -5,6 +5,42 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-09
+
+### Added
+- **参数标定重初始化接入协议**：新增系统子命令 `Y:I`，通过协议触发运行时电机参数重初始化，包括完整的重新标定（方向/极对数/零位）。
+  - 新增 `COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT 'I'` 符号定义。
+  - L2 运行时链新增 `reinit_pending` 状态位及其传递链：`RuntimeC4_RequestReinit()` → `RuntimeC4_ClearReinit()` → `RuntimeC3_ClearReinit()` → `RuntimeC2_ClearReinit()` → `Runtime_ClearReinit()`。
+  - `FOC_App_ReInitMotor()`：停止快速电流环、重置软切换状态，执行初始化标定，完成后清除重初始化标志。
+  - `g_reinit_in_progress` 栅保护：在重初始化过程中屏蔽 PWM ISR 和控制循环访问 `g_motor`。
+  - 新增 `FOC_App_InitMotorHardware()` 提取公共初始化逻辑。
+- **齿槽补偿边界不连续修复增强**：
+  - `COGGING_BOUNDARY_Q15_THRESHOLD` 从局部 `#define` 提升为配置宏 `FOC_COGGING_BOUNDARY_Q15_THRESHOLD`（默认值 100，原 1200）。
+  - 新增 `FOC_COGGING_BOUNDARY_BLEND_WIN`（默认 3）窗口宽度宏。
+  - 新增 Stage 2 基于窗口的边界漂移渐进校正算法，在首尾多点窗口间线性混合消除累积偏差。
+- **新增快照结构体字段**：`runtime_state_snapshot_t` 和 `runtime_c4_runtime_view_t` 增加 `reinit_pending` 字段。
+
+### Changed
+- **初始化标定功能恢复**：`FOC_INIT_CALIBRATION_ENABLE` 从 `FOC_CFG_DISABLE` 改为 `FOC_CFG_ENABLE`。
+- **齿槽标定默认值优化**：
+  - `FOC_COGGING_CALIB_GAIN_K`：0.05 → 0.03
+  - `FOC_COGGING_CALIB_SPEED_RAD_S`：0.8 → 0.6
+  - `FOC_COGGING_CALIB_NUM_PASSES`：2 → 1
+  - `FOC_COGGING_CALIB_IQ_A`：0.50 → 0.30
+- **电机初始化默认值调整**（配合重新启用标定）：
+  - `FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD`：3.1606f → `FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED`
+  - `FOC_MOTOR_INIT_DIRECTION_DEFAULT`：`FOC_DIR_REVERSED` → `FOC_DIR_UNDEFINED`
+- **齿槽查询优化**：移除冗余的 `mech_angle_rad` 角度归一化循环（调用者保证有效输入）；移除冗余的 `iq_comp` 输出钳位（已由调用者或表边界处理）。
+- **移除未使用变量**：`FOC_ControlCoggingLookupIq` 中移除 `float interp`。
+
+### Fixed
+- **齿槽补偿边界检测阈值过大**：原局部宏 `COGGING_BOUNDARY_Q15_THRESHOLD = 1200` 过大导致边界不连续检测几乎永远不触发，现降低为 100 并提升为配置宏。
+- **协议帧入口时序修复**：`FOC_App_OnPwmUpdateISR` 中 `MotorControlService_RunPwmInterpolationIsr()` 的调用顺序被移动到 `g_fast_current_loop_enabled` 检查之后，避免重初始化期间无关中断调用插值。
+- **齿槽查找表角度归一化双重执行**：移除齿槽查询函数中多余的 `mech_angle_rad` wrap 处理，消除与调用者的重复归一化。
+
+### Cleanup
+- 注释掉的 `CoggingCalib_SecondOrderDiff` 二阶差分变换代码（规划阶段实验预留）。
+
 ## [1.6.0] - 2026-05-07
 
 ### Changed
@@ -50,7 +86,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Δθ 按 θ_actual 所属 LUT bin 累积（bin 由实际位置决定）
   - **Finish 阶段改为直接映射**：`iq_comp[i] = -dtheta_avg[i] × DTHETA_SCALE`，
     Δθ → iq 直接转换，不做循环差分。存储格式为 Q15(0.005A LSB)，运行时 `gain_k`
-
     提供在线强度调节（gain_k=0 关闭，gain_k=1 按表值原样输出）。
   - 新增 `FOC_COGGING_CALIB_DTHETA_SCALE` 宏（默认 50.0），Δθ(rad)→iq(A) 映射系数。
   - 新增边界不连续修复 `CoggingCalib_FixBoundaryDiscontinuity()`：
@@ -58,7 +93,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 新增 IQR 离群值剔除（对 dtheta_avg 在 Finish 中执行），防止单次毛刺污染补偿表。
 - `FOC_ControlApplyCoggingCompensation()` 保留 `gain_k` 作为运行时强度系数（一次应用）。
 - `FOC_COGGING_CALIB_GAIN_K` 保持可调（协议命令 P:k），默认值 1.0。
-
 
 ## [1.4.5] - 2026-04-29
 

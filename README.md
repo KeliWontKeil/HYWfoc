@@ -4,18 +4,19 @@
 ### 诸位点个Star好不好，~~求求你了~求求你了~帮帮可莉吧~~
 
 - 项目名称：何易位FOC
-- English Name：How Y-axis Works FOC（强行翻译）
+- English Name：How Y-axis Works FOC（强行翻译） 
 
-- 当前项目状态：单电机有感 FOC 驱动库
-- 当前稳定基线：v1.6.0
-- 下一活跃目标版本：v1.6.1
+- 当前项目状态：单电机有感 FOC 驱动库（稳定版本）
+- 硬件已更新
+- 当前稳定基线：v1.7.0
+- 下一活跃目标版本：v2.0.0
 
 ## 何意味？（这个项目是什么）
 
 ### 何易位FOC，意为"电机转子如何改变自己的位置"
 
 HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只支持有感的单电机 FOC 可复用库。
-- FOC算法无刷电机驱动
+- 有感FOC算法无刷电机驱动
 - 集成指令控制系统和多种保护机制
 - 纯C语言实现，不依赖任何实时系统/运行环境
 - 控制算法和硬件平台解耦
@@ -46,7 +47,7 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 
 | 项目 | 当前状态 |
 |---|---|
-| 单电机有感 FOC | ✅ 可用 |
+| 单电机有感 FOC | ✅ 可用（标定重初始化已接入协议） |
 | 指令化查询/控制 | ✅ 可用 |
 | 无感 FOC | 🧪 规划中 |
 | 多电机驱动 | ❌ 不支持，以后可能也不会支持 |
@@ -67,7 +68,8 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 - SVPWM 调制输出（三相占空比）
 - 外环控制（速度 / 角度）与内环电流控制
 - 电流环开环/闭环软切换抑制小电流下噪声
-- 齿槽转矩补偿（不建议开启，有一定效果但是比起浪费的ram/rom来看不值得）(这个功能开发了好久，AI老是搞不对，结果效果也没有那么好)
+- 齿槽转矩补偿（在线标定 + 运行时补偿）
+- 参数标定重初始化（协议命令 `Y:I` 触发运行时重新标定方向/极对数/零位）
 
 电机可使用协议帧控制，当前协议帧格式：
 - `a<driver_id><cmd><subcmd><param>b`
@@ -76,41 +78,44 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 - 默认本机 driver_id：`0x61`（`'a'`）
 具体命令与参数请看 [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)。
 
-> 现阶段：有感 FOC，持续进行控制效果优化。  
-> 后续计划：无感 FOC（完成有感FOC的大功率测试和算法优化后）
+> 现阶段：有感 FOC，持续进行控制效果优化、BUG修复。  
+> 目前有感已进入稳定版本
+> 后续长期计划：无感 FOC（高频注入/观测器...）
 
 ---
 
 ## 何依偎？（库的架构和依赖关系是怎样的）
 
-### 具体代码架构描述仍有待进一步补充（等我AI额度恢复了再说这些文档吧）
+### 具体代码架构描述见 docs 目录
 
 ```text
 FOC_VSCODE/
-├── foc/                       # 核心可复用库（L1-L3 + 接口层）
+├── foc/                       # 核心可复用库（LS + L1-L3 + L41 + L42）
 │   ├── include/
-│   │   ├── interface/
-│   │   ├── algorithm/
-│   │   └── config/
-│   ├── src/
-│   │   ├── interface/
-│   │   └── algorithm/
-│   └── port/                  # 新平台适配模板(接口层)
+│   │   ├── LS_Config/         # 配置宏、类型定义、数据表
+│   │   ├── L1_Orchestration/  # 编排层头文件
+│   │   ├── L2_Service/        # 服务层头文件
+│   │   ├── L3_Algorithm/      # 算法层头文件
+│   │   ├── L41_Math/          # 数学运算头文件
+│   │   └── L42_PAL/           # 平台抽象层头文件
+│   ├── src/                   # 同名层级目录
+│   └── port/                  # 新平台适配模板
 ├── examples/                  # 平台/板级参考实例
-├── docs/                      # 库级文档（与实例文档分层）
+├── docs/                      # 库级文档
 └── .github/                   # 工作流与协作规则
 ```
 
 项目采用"核心库 + 示例工程"分层组织：
 - 核心库保持与平台完全无关，聚焦控制逻辑与接口契约。
-- 通过平台 API 及相关中断回调连接具体的外设相关驱动和实现（L4层）。
+- 通过平台 API（L42_PAL）连接具体的外设相关驱动和实现。
 - 示例工程演示了具体硬件平台的驱动适配方式和构建流程。
 
 项目代码可裁剪，裁剪对象包括：
 - 部分可选的滤波器
 - 部分用于调节参数的通信协议
 - 控制算法
-具体协议裁剪开关见 [foc/include/config/foc_cfg_feature_switches.h](foc/include/config/foc_cfg_feature_switches.h)，裁剪映射关系见协议文档的"Build-Time Protocol Trimming"小节。
+具体协议裁剪开关见 [foc/include/LS_Config/foc_cfg_feature_switches.h](foc/include/LS_Config/foc_cfg_feature_switches.h)，裁剪映射关系见协议文档的"Build-Time Protocol Trimming"小节。
+
 ---
 
 ## 何易为？（如何简单开始使用该项目）
@@ -149,12 +154,12 @@ FOC_VSCODE/
 故如果想把它移植到新芯片/新板子，核心流程如下：
 1. 在你的工程中引入 `foc/` 核心库。
 2. 参考示例在主流程中完成初始化、调度与控制循环调用。
-3. 实现平台 API，比如相关时钟、中断、PWM、采样、通信、指示灯等（这是最麻烦的一步），我在空API实现中给出了实现的提示和注意事项
+3. 实现平台 API，比如相关时钟、中断、PWM、采样、通信、指示灯等（这是最麻烦的一步），在空API实现中给出了实现的提示和注意事项
 4. 对照协议文档完成参数通道联调。
 
 建议研究一下这几个文件：
 - [foc/port/foc_platform_api_empty.c](foc/port/foc_platform_api_empty.c)：一个完全空白的API实现
-- [foc/include/interface/foc_platform_api.h](foc/include/interface/foc_platform_api.h)：所有需要实现的相关API
+- [foc/include/L42_PAL/foc_platform_api.h](foc/include/L42_PAL/foc_platform_api.h)：所有需要实现的相关API
 - [examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c](examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c)：具体API实现的一个工程实例
 
 #### 主包主包，太麻烦了怎么办？
@@ -189,9 +194,9 @@ https://github.com/KeliWontKeil/PortOSC
 ## 其他开发相关
 ### 开发计划
 
-下版本目标：
-完成有感的收尾阶段开发，v2.0.0有感完全版：
-2. 内存优化，状态机中部分二值化的状态量变为状态位，一个变量存储多个状态
+下版本目标：v2.0.0 有感完全版（可能不会继续优化了，直接进入无感阶段）：
+- 控制效果优化
+- 文档全面审计与补充
 
 极长期目标（不知道会拖到什么时候去了）：
 1. 完成无感FOC开发

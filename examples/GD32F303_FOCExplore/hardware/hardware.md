@@ -1,11 +1,11 @@
 ## Hardware Pin Map (quick reference)
 
-- **Clocks**: 32.768kHz RTC crystal, 8MHz HXTAL
+- **Clocks**:8MHz HXTAL
 
 ### ADC
-- PA6: ADC1_IN6
-- PA7: ADC1_IN7
-- PA8: ADC1_IN8
+- PA1: ADC0/1/2_IN1(ADC_POW)
+- PA6: ADC0/1_IN6
+- PA7: ADC0/1_IN7
 
 ### USART
 - PA2: USART1_TX
@@ -24,10 +24,6 @@
 - PB13: TIMER0_CH0_N
 - PB14: TIMER0_CH1_N
 - PB15: TIMER0_CH2_N
-
-### USB
-- PA12: USBDP
-- PA13: USBDM
 
 ### LEDs (GPIO out)
 - PB3: LED1

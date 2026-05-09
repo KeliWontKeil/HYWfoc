@@ -1,6 +1,6 @@
 ## Brief overview
 
-HYWfoc（何易位FOC）是一个基于 GD32F303CC 的磁场定向控制（FOC）项目，采用"核心库 + 实例工程"组织方式。核心库 `foc/` 是平台无关的，实例工程在 `examples/<instance>/` 中。当前稳定基线为 `v1.6.0`。
+HYWfoc（何易位FOC）是一个基于 GD32F303CC 的磁场定向控制（FOC）项目，采用"核心库 + 实例工程"组织方式。核心库 `foc/` 是平台无关的，实例工程在 `examples/<instance>/` 中。当前稳定基线为 `v1.7.0`。
 
 ## Project structure
 
@@ -100,7 +100,7 @@ LS_Config 文件分为三大类：
 
 ## Version control practices
 
-- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v1.6.0`）
+- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v1.7.0`）
 - 默认在 `main` 直接开发，不创建新分支
 - 每次完整修改后仅做本地 `git commit`
 - 默认不 `git push`，仅在用户明确要求时执行
@@ -130,12 +130,12 @@ LS_Config 文件分为三大类：
 - 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 - 协议裁剪开关：`FOC_PROTOCOL_ENABLE_*` 系列宏
 
-## Current mission (v1.6.0 → v1.6.1)
+## Current mission (v1.7.0 → v2.0.0)
 
 下一目标在 `NEXT_MISSION.md` 中定义，当前为：
-1. 文档全面同步（以实际代码为准）
-2. 参数标定重初始化接入协议
-3. 长期任务：无感 FOC、上位机实现
+1. 内存/性能优化（状态位合并、ROM/RAM 裁剪）
+2. 控制效果优化（PID 整定、齿槽补偿验证、软切换定型）
+3. 文档全面审计与补充
 
 ## Build constraints
 
