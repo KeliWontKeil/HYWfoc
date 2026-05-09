@@ -387,6 +387,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Resolved scheduler/platform coupling compile errors caused by header-only include removal by assigning lifecycle boundaries instead of adding superficial include fixes.
+- Resolved scheduler/platform coupling compile errors caused by header-only include removal by assigning lifecycle boundaries instead of adding superficial include fixes.
 - Restored build consistency after refactor by aligning callback binding path with the new control-tick source API.
 
 ### Notes

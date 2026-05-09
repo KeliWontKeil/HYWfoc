@@ -162,6 +162,13 @@ static uint8_t g_calib_request_export = 0U;
 #define CALIB_PHASE_CHECK    0xFFFBU
 #define CALIB_PHASE_FINISH   0xFFFAU
 #define CALIB_PHASE_DONE     0xFFF9U
+#define CALIB_PHASE_IDLE     0xFFFFU
+#define CALIB_PHASE_START    0xFFFEU
+#define CALIB_PHASE_SETTLE   0xFFFDU
+#define CALIB_PHASE_SCAN     0xFFFCU
+#define CALIB_PHASE_CHECK    0xFFFBU
+#define CALIB_PHASE_FINISH   0xFFFAU
+#define CALIB_PHASE_DONE     0xFFF9U
 
 void FOC_CoggingCalibRequestStart(void)
 {
