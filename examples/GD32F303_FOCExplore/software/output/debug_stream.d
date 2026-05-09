@@ -2,11 +2,13 @@
 .\output\debug_stream.o: ..\..\..\foc\include\L2_Service/debug_stream.h
 .\output\debug_stream.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
 .\output\debug_stream.o: ..\..\..\foc\include\L2_Service/runtime_snapshot.h
-.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_shared_types.h
-.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_config.h
-.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h
+.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_snapshot_types.h
 .\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h
+.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_symbol_defs.h
+.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_motor_types.h
+.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_config.h
 .\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_cfg_init_values.h
-.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h
+.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_compile_limits.h
+.\output\debug_stream.o: ..\..\..\foc\include\LS_Config/foc_math_types.h
 .\output\debug_stream.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdio.h
 .\output\debug_stream.o: ..\..\..\foc\include\L42_PAL/foc_platform_api.h

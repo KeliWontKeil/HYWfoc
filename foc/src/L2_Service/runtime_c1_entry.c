@@ -39,4 +39,9 @@ void Runtime_Commit(void)
     RuntimeC2_Commit();
 }
 
+void Runtime_ClearReinit(void)
+{
+    RuntimeC2_ClearReinit();
+}
+
 

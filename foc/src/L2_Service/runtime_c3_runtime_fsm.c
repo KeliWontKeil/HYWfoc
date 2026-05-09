@@ -176,6 +176,12 @@ static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_com
         return RUNTIME_C4_EXEC_COMMAND_ERROR;
     }
 
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT)
+    {
+        RuntimeC4_RequestReinit();
+        return RUNTIME_C4_EXEC_OK;
+    }
+
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB)
     {
@@ -281,4 +287,9 @@ void RuntimeC3_BuildSnapshot(runtime_snapshot_t *snapshot)
 void RuntimeC3_Commit(void)
 {
     RuntimeC4_ClearDirty();
+}
+
+void RuntimeC3_ClearReinit(void)
+{
+    RuntimeC4_ClearReinit();
 }

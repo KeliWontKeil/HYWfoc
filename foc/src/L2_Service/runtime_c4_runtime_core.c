@@ -750,6 +750,7 @@ void RuntimeC4Store_BuildSnapshot(runtime_snapshot_t *snapshot)
     snapshot->runtime.system_fault = (g_runtime.system_state == RUNTIME_STORE_SYSTEM_FAULT) ? 1U : 0U;
     snapshot->runtime.params_dirty = g_runtime.params_dirty;
     snapshot->runtime.last_exec_ok = g_runtime.last_exec_ok;
+    snapshot->runtime.reinit_pending = g_runtime.reinit_pending;
 
     snapshot->control_cfg.control_mode = g_params.control_mode;
     snapshot->control_cfg.target_angle_rad = g_params.target_angle_rad;
@@ -1202,5 +1203,14 @@ uint8_t RuntimeC4_RecoverFaultAndReinit(void)
     return 1U;
 }
 
+void RuntimeC4_RequestReinit(void)
+{
+    RuntimeC4Store_Runtime()->reinit_pending = 1U;
+}
+
+void RuntimeC4_ClearReinit(void)
+{
+    RuntimeC4Store_Runtime()->reinit_pending = 0U;
+}
 
 

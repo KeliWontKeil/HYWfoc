@@ -11,6 +11,7 @@ uint8_t Runtime_FrameRunStep(uint8_t frame_budget);
 void Runtime_UpdateSignals(const runtime_step_signal_t *signals);
 void Runtime_GetSnapshot(runtime_snapshot_t *snapshot);
 void Runtime_Commit(void);
+void Runtime_ClearReinit(void);
 
 #endif /* RUNTIME_C1_ENTRY_H */
 

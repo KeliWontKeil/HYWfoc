@@ -19,6 +19,8 @@ static void Monitor_Task_Trigger(void);
 static void FOC_App_OnPwmUpdateISR(void);
 static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data);
 static void FOC_App_StopFastCurrentLoop(void);
+static void FOC_App_ReInitMotor(void);
+static void FOC_App_InitMotorHardware(void);
 static void FOC_App_EnterSafeOutputState(uint8_t report_skip);
 
 static foc_motor_t g_motor;
@@ -37,6 +39,7 @@ static volatile uint8_t g_fast_current_loop_div_counter = 0U;
 static volatile float g_fast_current_loop_iq_target = 0.0f;
 static volatile float g_fast_current_loop_electrical_angle = 0.0f;
 
+static volatile uint8_t g_reinit_in_progress = 0U;
 static uint16_t g_led_comm_pulse_counter = 0U;
 
 static void FOC_App_UpdateIndicators(void)
@@ -93,6 +96,53 @@ static void FOC_App_StopFastCurrentLoop(void)
     g_fast_current_loop_iq_target = 0.0f;
     g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
     g_fast_current_loop_div_counter = 0U;
+}
+
+static void FOC_App_InitMotorHardware(void)
+{
+    MotorControlService_InitMotor(&g_motor,
+                                  FOC_MOTOR_INIT_VBUS_DEFAULT,
+                                  FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
+                                  FOC_MOTOR_INIT_PHASE_RES_DEFAULT,
+                                  FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
+                                  FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
+                                  FOC_MOTOR_INIT_DIRECTION_DEFAULT);
+
+    MotorControlService_InitPidControllers(&g_motor,
+                                           &g_torque_current_pid,
+                                           &g_speed_pid,
+                                           &g_angle_pid,
+                                           &g_StateSnapshot.control_cfg);
+}
+
+static void FOC_App_ReInitMotor(void)
+{
+    FOC_Platform_WriteDebugText("\r\n=== ReInitMotor started ===\r\n");
+
+    /* Disable fast current loop ISR path. */
+    FOC_App_StopFastCurrentLoop();
+    MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
+    MotorControlService_RunOpenLoopControlTask(&g_motor, 0.0f, 0.0f);
+
+    /* Gate ISR control paths to prevent touching g_motor during recalibration. */
+    g_reinit_in_progress = 1U;
+
+    FOC_App_InitMotorHardware();
+
+    /* Unblock ISR control paths. */
+    g_reinit_in_progress = 0U;
+
+    char info[120];
+    snprintf(info,
+             sizeof(info),
+             "reinit done: mech_zero=%.4f rad, dir=%d, poles=%d, vbus=%.2fV\r\n",
+             (double)g_motor.mech_angle_at_elec_zero_rad,
+             (int)g_motor.direction,
+             (int)g_motor.pole_pairs,
+             (double)g_sensor_snapshot.vbus_voltage_filtered);
+    FOC_Platform_WriteDebugText(info);
+
+    Runtime_ClearReinit();
 }
 
 static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
@@ -220,21 +270,8 @@ void FOC_App_Init(void)
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_PWM);
 
-    MotorControlService_InitMotor(&g_motor,
-                                  FOC_MOTOR_INIT_VBUS_DEFAULT,
-                                  FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
-                                  FOC_MOTOR_INIT_PHASE_RES_DEFAULT,
-                                  FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
-                                  FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
-                                  FOC_MOTOR_INIT_DIRECTION_DEFAULT);
+    FOC_App_InitMotorHardware();
     init_step.init_checks_pass_mask = (uint16_t)(init_step.init_checks_pass_mask | RUNTIME_INIT_CHECK_MOTOR);
-
-
-    MotorControlService_InitPidControllers(&g_motor,
-                                           &g_torque_current_pid,
-                                           &g_speed_pid,
-                                           &g_angle_pid,
-                                           &g_StateSnapshot.control_cfg);
 
     char startup_info[160];
     snprintf(startup_info,
@@ -278,7 +315,13 @@ void FOC_App_Loop(void)
     if (g_service_task_pending != 0U)
     {
         g_service_task_pending = 0U;
-			
+
+        if (g_StateSnapshot.runtime.reinit_pending != 0U)
+        {
+            FOC_App_ReInitMotor();
+            Runtime_GetSnapshot(&g_StateSnapshot);
+        }
+
         if (Runtime_FrameRunStep(FOC_APP_COMM_FRAMES_PER_STEP) != 0U)
             g_led_comm_pulse_counter = FOC_LED_COMM_PULSE_TICKS;
 
@@ -314,12 +357,17 @@ static void FOC_App_OnPwmUpdateISR(void)
     float current_loop_dt_sec;
     const sensor_data_t *current_sensor = 0;
 
-    MotorControlService_RunPwmInterpolationIsr();
+    if (g_reinit_in_progress != 0U)
+    {
+        return;
+    }
 
     if (g_fast_current_loop_enabled == 0U)
     {
         return;
     }
+
+    MotorControlService_RunPwmInterpolationIsr();
 
     divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
     g_fast_current_loop_div_counter++;
@@ -372,7 +420,11 @@ static void Monitor_Task_Trigger(void)
 
 static void Motor_Control_Loop(void)
 {
-		
+    if (g_reinit_in_progress != 0U)
+    {
+        return;
+    }
+
     if (g_StateSnapshot.runtime.system_fault != 0U)
     {
         FOC_App_EnterSafeOutputState(1U);

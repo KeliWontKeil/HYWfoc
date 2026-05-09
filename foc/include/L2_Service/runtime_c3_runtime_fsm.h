@@ -13,6 +13,7 @@ void RuntimeC3_Init(void);
 void RuntimeC3_ReportFrameError(void);
 void RuntimeC3_BuildSnapshot(runtime_snapshot_t *snapshot);
 void RuntimeC3_Commit(void);
+void RuntimeC3_ClearReinit(void);
 
 #endif /* RUNTIME_C3_RUNTIME_FSM_H */
 

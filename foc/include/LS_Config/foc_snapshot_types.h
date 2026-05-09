@@ -54,6 +54,7 @@ typedef struct {
     uint8_t system_fault;
     uint8_t params_dirty;
     uint8_t last_exec_ok;
+    uint8_t reinit_pending;
 } runtime_state_snapshot_t;
 
 typedef struct {
@@ -82,6 +83,7 @@ typedef struct {
     uint32_t control_skip_count;
     uint8_t params_dirty;
     uint8_t last_exec_ok;
+    uint8_t reinit_pending;
 } runtime_c4_runtime_view_t;
 
 typedef struct {

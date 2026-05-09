@@ -41,7 +41,6 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
     float frac;
     float val0;
     float val1;
-    float interp;
     float iq_comp;
     float speed_abs;
 
@@ -59,19 +58,6 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
     if ((status->available == 0U) || (status->point_count == 0U))
     {
         return 0.0f;
-    }
-
-    {
-        float norm = mech_angle_rad;
-        while (norm < 0.0f)
-        {
-            norm += FOC_MATH_TWO_PI;
-        }
-        while (norm >= FOC_MATH_TWO_PI)
-        {
-            norm -= FOC_MATH_TWO_PI;
-        }
-        mech_angle_rad = norm;
     }
 
     {
@@ -94,17 +80,7 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
 
     val0 = Q15ToFloat(table_q15[idx0], status->iq_lsb_a);
     val1 = Q15ToFloat(table_q15[idx1], status->iq_lsb_a);
-    interp = val0 + frac * (val1 - val0);
-
-    iq_comp = interp;
-    if (iq_comp > status->iq_limit_a)
-    {
-        iq_comp = status->iq_limit_a;
-    }
-    if (iq_comp < -status->iq_limit_a)
-    {
-        iq_comp = -status->iq_limit_a;
-    }
+    iq_comp = val0 + frac * (val1 - val0);
 
     return iq_comp;
 }
@@ -333,8 +309,6 @@ static uint16_t CoggingCalib_AngleToBin(float mech_angle_rad)
     return idx;
 }
 
-#define COGGING_BOUNDARY_Q15_THRESHOLD 1200
-
 static void CoggingCalib_FixBoundaryDiscontinuityQ15(int16_t table[], uint16_t n_points)
 {
     int32_t diff;
@@ -344,10 +318,11 @@ static void CoggingCalib_FixBoundaryDiscontinuityQ15(int16_t table[], uint16_t n
         return;
     }
 
+    /* Stage 1: original simple fix for the immediate boundary pair */
     diff = (int32_t)table[0] - (int32_t)table[n_points - 1U];
     if (diff < 0) diff = -diff;
 
-    if (diff > COGGING_BOUNDARY_Q15_THRESHOLD)
+    if (diff > FOC_COGGING_BOUNDARY_Q15_THRESHOLD)
     {
         int16_t replacement = (int16_t)(((int32_t)table[0] + (int32_t)table[n_points - 1U]) / 2);
         table[0]                  = replacement;
@@ -359,11 +334,70 @@ static void CoggingCalib_FixBoundaryDiscontinuityQ15(int16_t table[], uint16_t n
         diff = (int32_t)table[1] - (int32_t)table[n_points - 2U];
         if (diff < 0) diff = -diff;
 
-        if (diff > COGGING_BOUNDARY_Q15_THRESHOLD)
+        if (diff > FOC_COGGING_BOUNDARY_Q15_THRESHOLD)
         {
             int16_t replacement = (int16_t)(((int32_t)table[1] + (int32_t)table[n_points - 2U]) / 2);
             table[1]                  = replacement;
             table[n_points - 2U]      = replacement;
+        }
+    }
+
+    /* Stage 2: window-based boundary drift correction. */
+    {
+        uint16_t win = FOC_COGGING_BOUNDARY_BLEND_WIN;
+        uint16_t i = 0;
+        int32_t sum_head = 0;
+        int32_t sum_tail = 0;
+        int32_t avg_head;
+        int32_t avg_tail;
+        int32_t blend_val;
+
+        if (win >= n_points / 4U)
+        {
+            win = n_points / 4U;
+        }
+        if (win < 2U)
+        {
+            return;
+        }
+
+        for (i = 0U; i < win; i++)
+        {
+            sum_head += (int32_t)table[i];
+            sum_tail += (int32_t)table[n_points - 1U - i];
+        }
+
+        avg_head = sum_head / (int32_t)win;
+        avg_tail = sum_tail / (int32_t)win;
+
+        diff = avg_head - avg_tail;
+        if (diff < 0) diff = -diff;
+
+        if (diff > (int32_t)(FOC_COGGING_BOUNDARY_Q15_THRESHOLD / 2U))
+        {
+            blend_val = (avg_head + avg_tail) / 2;
+
+            for (i = 0U; i < win; i++)
+            {
+                /* Head side: linear from blend_val (i=0) to original (i=win-1) */
+                int32_t hv = ((int32_t)table[i] * (int32_t)i
+                            + blend_val * (int32_t)(win - 1U - i))
+                           / (int32_t)(win - 1U);
+                if (hv > 32767) hv = 32767;
+                if (hv < -32768) hv = -32768;
+                table[i] = (int16_t)hv;
+
+                /* Tail side: linear from original (i=0) to blend_val (i=win-1) */
+                {
+                    uint16_t j = n_points - win + i;
+                    int32_t tv = ((int32_t)table[j] * (int32_t)(win - 1U - i)
+                                + blend_val * (int32_t)i)
+                               / (int32_t)(win - 1U);
+                    if (tv > 32767) tv = 32767;
+                    if (tv < -32768) tv = -32768;
+                    table[j] = (int16_t)tv;
+                }
+            }
         }
     }
 }
@@ -401,6 +435,43 @@ static void CoggingCalib_RemoveOutliersQ15(int16_t table[], uint16_t n)
         }
     }
 }
+
+/*static void CoggingCalib_SecondOrderDiff(int16_t table[], uint16_t n)
+{
+    int16_t *orig;
+
+    if ((table == 0) || (n < 3U))
+    {
+        return;
+    }
+
+    orig = table; 
+
+    {
+        int16_t orig_i_minus1;
+        int16_t orig_i;
+        int16_t orig_i_plus1;
+        int32_t diff2;
+        uint16_t i;
+
+        orig_i_minus1 = orig[n - 1U];
+
+        for (i = 0U; i < n; i++)
+        {
+            orig_i       = orig[i];
+            orig_i_plus1 = orig[(i + 1U < n) ? (i + 1U) : 0U];
+
+            diff2 = -( (int32_t)orig_i_minus1 - ((int32_t)orig_i * 2) + (int32_t)orig_i_plus1) ;
+
+            if (diff2 > 32767)   diff2 = 32767;
+            if (diff2 < -32768)  diff2 = -32768;
+
+            table[i] = (int16_t)diff2;
+
+            orig_i_minus1 = orig_i;
+        }
+    }
+}*/
 
 static void CoggingCalib_Finish(foc_motor_t *motor)
 {
@@ -441,6 +512,13 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
 
     CoggingCalib_RemoveOutliersQ15(table, FOC_COGGING_LUT_POINT_COUNT);
     CoggingCalib_FixBoundaryDiscontinuityQ15(table, FOC_COGGING_LUT_POINT_COUNT);
+
+    /*
+     * Second-order central difference: transform position-deviation
+     * data to acceleration (Iq-ripple) domain.
+     * The ÷(Δθ)² scaling is absorbed by DTHETA_SCALE × calib_gain_k.
+     */
+    //CoggingCalib_SecondOrderDiff(table, FOC_COGGING_LUT_POINT_COUNT);
 
     /* Flip sign for reversed direction */
     if (motor->direction == FOC_DIR_REVERSED)

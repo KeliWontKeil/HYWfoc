@@ -3,10 +3,9 @@
 .\output\svpwm.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
 .\output\svpwm.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\math.h
 .\output\svpwm.o: ..\..\..\foc\include\L41_Math/foc_math_lut.h
-.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_shared_types.h
+.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_cfg_init_values.h
+.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_symbol_defs.h
+.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h
 .\output\svpwm.o: ..\..\..\foc\include\L42_PAL/foc_platform_api.h
 .\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_config.h
-.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h
-.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h
-.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_cfg_init_values.h
-.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h
+.\output\svpwm.o: ..\..\..\foc\include\LS_Config/foc_compile_limits.h

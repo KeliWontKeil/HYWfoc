@@ -46,5 +46,7 @@ void RuntimeC4_WriteStatusParamInvalid(void);
 void RuntimeC4_WriteStatusCmdInvalid(void);
 
 uint8_t RuntimeC4_RecoverFaultAndReinit(void);
+void RuntimeC4_RequestReinit(void);
+void RuntimeC4_ClearReinit(void);
 
 #endif /* RUNTIME_C4_RUNTIME_CORE_H */

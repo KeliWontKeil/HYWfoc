@@ -150,3 +150,8 @@ void RuntimeC2_Commit(void)
 {
     RuntimeC3_Commit();
 }
+
+void RuntimeC2_ClearReinit(void)
+{
+    RuntimeC3_ClearReinit();
+}

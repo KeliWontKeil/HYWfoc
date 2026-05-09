@@ -12,6 +12,7 @@ void RuntimeC2_Init(void);
 void RuntimeC2_UpdateSignals(const runtime_step_signal_t *signal);
 void RuntimeC2_BuildSnapshot(runtime_snapshot_t *snapshot);
 void RuntimeC2_Commit(void);
+void RuntimeC2_ClearReinit(void);
 
 #endif /* RUNTIME_C2_FRAME_SOURCE_H */
 

@@ -2,11 +2,10 @@
 .\output\foc_platform_api.o: ..\..\..\foc\include\L42_PAL/foc_platform_api.h
 .\output\foc_platform_api.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
 .\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_config.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_shared_types.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_symbol_defs.h
 .\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h
 .\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_cfg_init_values.h
-.\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_compile_limits.h
 .\output\foc_platform_api.o: .\Application\Include\systick.h
 .\output\foc_platform_api.o: .\Firmware\CMSIS\GD\GD32F30x\Include\gd32f30x.h
 .\output\foc_platform_api.o: .\Firmware\CMSIS\core_cm4.h

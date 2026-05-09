@@ -2,12 +2,11 @@ Dependencies for Project 'Project', Target 'GD32F30X_CL': (DO NOT MODIFY !)
 F (.\Application\Source\foc_platform_api.c)(0x69EB5CC0)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_platform_api.o --omf_browse .\output\foc_platform_api.crf --depend .\output\foc_platform_api.d)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 I (.\Application\Include\systick.h)(0x69B41672)
 I (.\Firmware\CMSIS\GD\GD32F30x\Include\gd32f30x.h)(0x6986B554)
 I (.\Firmware\CMSIS\core_cm4.h)(0x697AD2EC)
@@ -998,7 +997,7 @@ I (.\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_usart.h)(0x6982FFDC)
 I (.\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_misc.h)(0x6982FFDC)
 I (.\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h)(0x6982FFDC)
 I (.\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h)(0x6982FFDC)
-F (.\Firmware\CMSIS\GD\GD32F30x\Source\ARM\startup_gd32f30x_hd.s)(0x69EC3429)(--cpu Cortex-M4.fp -g --apcs=interwork -I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include--pd "__UVISION_VERSION SETA 528" --pd "_RTE_ SETA 1" --pd "GD32F30X_HD SETA 1"--list .\list\startup_gd32f30x_hd.lst --xref -o .\output\startup_gd32f30x_hd.o --depend .\output\startup_gd32f30x_hd.d)
+F (.\Firmware\CMSIS\GD\GD32F30x\Source\ARM\startup_gd32f30x_hd.s)(0x69FDC47B)(--cpu Cortex-M4.fp -g --apcs=interwork -I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include--pd "__UVISION_VERSION SETA 528" --pd "_RTE_ SETA 1" --pd "GD32F30X_HD SETA 1"--list .\list\startup_gd32f30x_hd.lst --xref -o .\output\startup_gd32f30x_hd.o --depend .\output\startup_gd32f30x_hd.d)
 F (.\Utilities\TIMER2\timer2.c)(0x69EA2B09)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\timer2.o --omf_browse .\output\timer2.crf --depend .\output\timer2.d)
 I (Utilities\TIMER2\timer2.h)(0x69C352F8)
 I (.\Firmware\CMSIS\GD\GD32F30x\Include\gd32f30x.h)(0x6986B554)
@@ -1355,277 +1354,301 @@ I (.\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_enet.h)(0x6982FFDC)
 I (.\Firmware\GD32F30x_standard_peripheral\Include\gd32f30x_exmc.h)(0x6982FFDC)
 I (.\Application\Include\interrupt_priority.h)(0x69EC384C)
 F (..\..\..\foc\src\L41_Math\math_transforms.c)(0x69EC43BB)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\math_transforms.o --omf_browse .\output\math_transforms.crf --depend .\output\math_transforms.d)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69DF99AA)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c11_entry.c)(0x69F07519)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c11_entry.o --omf_browse .\output\foc_control_c11_entry.crf --depend .\output\foc_control_c11_entry.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h)(0x69EB0E33)
+I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69FB0C92)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c11_entry.c)(0x69FDEEF6)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c11_entry.o --omf_browse .\output\foc_control_c11_entry.crf --depend .\output\foc_control_c11_entry.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h)(0x69FB1754)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c21_outer_loop.h)(0x69E2368F)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c22_current_loop.h)(0x69E2368F)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69F181C6)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c21_outer_loop.h)(0x69FB0C58)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c22_current_loop.h)(0x69FB0C4E)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69FDEEF6)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c12_init.c)(0x69EF5E02)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c12_init.o --omf_browse .\output\foc_control_c12_init.crf --depend .\output\foc_control_c12_init.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c12_init.h)(0x69E1DF8B)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c12_init.c)(0x69FC0BF2)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c12_init.o --omf_browse .\output\foc_control_c12_init.crf --depend .\output\foc_control_c12_init.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c12_init.h)(0x69FB0C62)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c22_current_loop.h)(0x69E2368F)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c23_motor_param_learn.h)(0x69EB16C6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69F181C6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c13_cfg_state.h)(0x69F180EC)
-I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69DF99AA)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c22_current_loop.h)(0x69FB0C4E)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c23_motor_param_learn.h)(0x69FB0C6C)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69FDEEF6)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c13_cfg_state.h)(0x69FB0C49)
+I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69FB0C92)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c21_outer_loop.c)(0x69E3277A)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c21_outer_loop.o --omf_browse .\output\foc_control_c21_outer_loop.crf --depend .\output\foc_control_c21_outer_loop.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c21_outer_loop.h)(0x69E2368F)
+I (..\..\..\foc\include\LS_Config/foc_cogging_table.h)(0x69FAEA8F)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c21_outer_loop.c)(0x69FB16EA)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c21_outer_loop.o --omf_browse .\output\foc_control_c21_outer_loop.crf --depend .\output\foc_control_c21_outer_loop.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c21_outer_loop.h)(0x69FB0C58)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69E30425)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c22_current_loop.c)(0x69F0ABED)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c22_current_loop.o --omf_browse .\output\foc_control_c22_current_loop.crf --depend .\output\foc_control_c22_current_loop.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c22_current_loop.h)(0x69E2368F)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69FB0C5D)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c22_current_loop.c)(0x69FC0780)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c22_current_loop.o --omf_browse .\output\foc_control_c22_current_loop.crf --depend .\output\foc_control_c22_current_loop.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c22_current_loop.h)(0x69FB0C4E)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69E30425)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69FB0C5D)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 F (..\..\..\foc\src\L3_Algorithm\foc_control_c23_motor_param_learn.c)(0x69E30478)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c23_motor_param_learn.o --omf_browse .\output\foc_control_c23_motor_param_learn.crf --depend .\output\foc_control_c23_motor_param_learn.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c23_motor_param_learn.h)(0x69EB16C6)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c23_motor_param_learn.h)(0x69FB0C6C)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69E30425)
-I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69DF99AA)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69FB0C5D)
+I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69FB0C92)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c24_compensation.c)(0x69F1FC40)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c24_compensation.o --omf_browse .\output\foc_control_c24_compensation.crf --depend .\output\foc_control_c24_compensation.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69F181C6)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c24_compensation.c)(0x69FEDC28)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c24_compensation.o --omf_browse .\output\foc_control_c24_compensation.crf --depend .\output\foc_control_c24_compensation.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\string.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69E30425)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c13_cfg_state.c)(0x69F18145)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c13_cfg_state.o --omf_browse .\output\foc_control_c13_cfg_state.crf --depend .\output\foc_control_c13_cfg_state.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c13_cfg_state.h)(0x69F180EC)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69FB0C5D)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c13_cfg_state.c)(0x69FC0BED)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c13_cfg_state.o --omf_browse .\output\foc_control_c13_cfg_state.crf --depend .\output\foc_control_c13_cfg_state.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c13_cfg_state.h)(0x69FB0C49)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\foc_control_c31_actuation.c)(0x69EB8046)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c31_actuation.o --omf_browse .\output\foc_control_c31_actuation.crf --depend .\output\foc_control_c31_actuation.d)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69E30425)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+F (..\..\..\foc\src\L3_Algorithm\foc_control_c31_actuation.c)(0x69FB15FE)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_control_c31_actuation.o --omf_browse .\output\foc_control_c31_actuation.crf --depend .\output\foc_control_c31_actuation.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c31_actuation.h)(0x69FB0C5D)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
 I (..\..\..\foc\include\L3_Algorithm/svpwm.h)(0x69E1CC4D)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
-I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69DF99AA)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
+I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69FB0C92)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\protocol_core.c)(0x69F18419)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\protocol_core.o --omf_browse .\output\protocol_core.crf --depend .\output\protocol_core.d)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69EA2B09)
+F (..\..\..\foc\src\L3_Algorithm\protocol_core.c)(0x69FC346F)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\protocol_core.o --omf_browse .\output\protocol_core.crf --depend .\output\protocol_core.d)
+I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69FB02FE)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core_types.h)(0x69E0E998)
+I (..\..\..\foc\include\LS_Config/foc_protocol_types.h)(0x69FAE938)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\string.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\sensor.c)(0x69EEFC4B)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\sensor.o --omf_browse .\output\sensor.crf --depend .\output\sensor.d)
-I (..\..\..\foc\include\L3_Algorithm/sensor.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+F (..\..\..\foc\src\L3_Algorithm\sensor.c)(0x69FC0C14)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\sensor.o --omf_browse .\output\sensor.crf --depend .\output\sensor.d)
+I (..\..\..\foc\include\L3_Algorithm/sensor.h)(0x69FB0C67)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69DF99AA)
+I (..\..\..\foc\include\L41_Math/math_transforms.h)(0x69FB0FBD)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L3_Algorithm\svpwm.c)(0x69E1CC4D)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\svpwm.o --omf_browse .\output\svpwm.crf --depend .\output\svpwm.d)
+F (..\..\..\foc\src\L3_Algorithm\svpwm.c)(0x69FC08BD)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\svpwm.o --omf_browse .\output\svpwm.crf --depend .\output\svpwm.d)
 I (..\..\..\foc\include\L3_Algorithm/svpwm.h)(0x69E1CC4D)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\L41_Math/foc_math_lut.h)(0x69FB0C92)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L2_Service\debug_stream.c)(0x69EC3139)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\debug_stream.o --omf_browse .\output\debug_stream.crf --depend .\output\debug_stream.d)
-I (..\..\..\foc\include\L2_Service/debug_stream.h)(0x69E339CA)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+F (..\..\..\foc\src\L2_Service\debug_stream.c)(0x69FC06C9)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\debug_stream.o --omf_browse .\output\debug_stream.crf --depend .\output\debug_stream.d)
+I (..\..\..\foc\include\L2_Service/debug_stream.h)(0x69FB0C97)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-F (..\..\..\foc\src\L2_Service\motor_control_service.c)(0x69F18118)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\motor_control_service.o --omf_browse .\output\motor_control_service.crf --depend .\output\motor_control_service.d)
-I (..\..\..\foc\include\L2_Service/motor_control_service.h)(0x69EA2B09)
+F (..\..\..\foc\src\L2_Service\motor_control_service.c)(0x69FC05EA)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\motor_control_service.o --omf_browse .\output\motor_control_service.crf --depend .\output\motor_control_service.d)
+I (..\..\..\foc\include\L2_Service/motor_control_service.h)(0x69FB0C9C)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\math.h)(0x5CEB79D6)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h)(0x69EB0E33)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c12_init.h)(0x69E1DF8B)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c13_cfg_state.h)(0x69F180EC)
-I (..\..\..\foc\include\L3_Algorithm/sensor.h)(0x69EA2B09)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h)(0x69FB1754)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c12_init.h)(0x69FB0C62)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c13_cfg_state.h)(0x69FB0C49)
+I (..\..\..\foc\include\L3_Algorithm/sensor.h)(0x69FB0C67)
 I (..\..\..\foc\include\L3_Algorithm/svpwm.h)(0x69E1CC4D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L2_Service\runtime_c1_entry.c)(0x69EA2B09)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c1_entry.o --omf_browse .\output\runtime_c1_entry.crf --depend .\output\runtime_c1_entry.d)
-I (..\..\..\foc\include\L2_Service/runtime_c1_entry.h)(0x69EA2B09)
+F (..\..\..\foc\src\L2_Service\runtime_c1_entry.c)(0x69FEA46D)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c1_entry.o --omf_browse .\output\runtime_c1_entry.crf --depend .\output\runtime_c1_entry.d)
+I (..\..\..\foc\include\L2_Service/runtime_c1_entry.h)(0x69FEA469)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\L2_Service/runtime_internal_types.h)(0x69EA2B09)
-I (..\..\..\foc\include\L2_Service/runtime_c2_frame_source.h)(0x69EA2B09)
-F (..\..\..\foc\src\L2_Service\runtime_c2_frame_source.c)(0x69EA2B09)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c2_frame_source.o --omf_browse .\output\runtime_c2_frame_source.crf --depend .\output\runtime_c2_frame_source.d)
-I (..\..\..\foc\include\L2_Service/runtime_c2_frame_source.h)(0x69EA2B09)
+I (..\..\..\foc\include\LS_Config/foc_runtime_types.h)(0x69FAE976)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\L2_Service/runtime_c2_frame_source.h)(0x69FEA493)
+F (..\..\..\foc\src\L2_Service\runtime_c2_frame_source.c)(0x69FEA497)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c2_frame_source.o --omf_browse .\output\runtime_c2_frame_source.crf --depend .\output\runtime_c2_frame_source.d)
+I (..\..\..\foc\include\L2_Service/runtime_c2_frame_source.h)(0x69FEA493)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_internal_types.h)(0x69EA2B09)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\L2_Service/runtime_c3_runtime_fsm.h)(0x69EA2B09)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core_types.h)(0x69E0E998)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69EA2B09)
+I (..\..\..\foc\include\LS_Config/foc_runtime_types.h)(0x69FAE976)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\L2_Service/runtime_c3_runtime_fsm.h)(0x69FEA489)
+I (..\..\..\foc\include\LS_Config/foc_protocol_types.h)(0x69FAE938)
+I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69FB02FE)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L2_Service\runtime_c3_runtime_fsm.c)(0x69F05297)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c3_runtime_fsm.o --omf_browse .\output\runtime_c3_runtime_fsm.crf --depend .\output\runtime_c3_runtime_fsm.d)
-I (..\..\..\foc\include\L2_Service/runtime_c3_runtime_fsm.h)(0x69EA2B09)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+F (..\..\..\foc\src\L2_Service\runtime_c3_runtime_fsm.c)(0x69FEA48E)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c3_runtime_fsm.o --omf_browse .\output\runtime_c3_runtime_fsm.crf --depend .\output\runtime_c3_runtime_fsm.d)
+I (..\..\..\foc\include\L2_Service/runtime_c3_runtime_fsm.h)(0x69FEA489)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_internal_types.h)(0x69EA2B09)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core_types.h)(0x69E0E998)
+I (..\..\..\foc\include\LS_Config/foc_protocol_types.h)(0x69FAE938)
+I (..\..\..\foc\include\LS_Config/foc_runtime_types.h)(0x69FAE976)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_c4_runtime_core.h)(0x69F180A4)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69F181C6)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-F (..\..\..\foc\src\L2_Service\runtime_c4_runtime_core.c)(0x69F180DF)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c4_runtime_core.o --omf_browse .\output\runtime_c4_runtime_core.crf --depend .\output\runtime_c4_runtime_core.d)
-I (..\..\..\foc\include\L2_Service/runtime_c4_runtime_core.h)(0x69F180A4)
+I (..\..\..\foc\include\L2_Service/runtime_c4_runtime_core.h)(0x69FEA37A)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+F (..\..\..\foc\src\L2_Service\runtime_c4_runtime_core.c)(0x69FEA384)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c4_runtime_core.o --omf_browse .\output\runtime_c4_runtime_core.crf --depend .\output\runtime_c4_runtime_core.d)
+I (..\..\..\foc\include\L2_Service/runtime_c4_runtime_core.h)(0x69FEA37A)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core_types.h)(0x69E0E998)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_protocol_types.h)(0x69FAE938)
+I (..\..\..\foc\include\LS_Config/foc_runtime_types.h)(0x69FAE976)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\string.h)(0x5CEB79E2)
 I (..\..\..\foc\include\L2_Service/runtime_c5_output_adapter.h)(0x69E78C42)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69F181C6)
-F (..\..\..\foc\src\L2_Service\runtime_c5_output_adapter.c)(0x69EB4D5B)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c5_output_adapter.o --omf_browse .\output\runtime_c5_output_adapter.crf --depend .\output\runtime_c5_output_adapter.d)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69FB02FE)
+F (..\..\..\foc\src\L2_Service\runtime_c5_output_adapter.c)(0x69FB0303)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\runtime_c5_output_adapter.o --omf_browse .\output\runtime_c5_output_adapter.crf --depend .\output\runtime_c5_output_adapter.d)
 I (..\..\..\foc\include\L2_Service/runtime_c5_output_adapter.h)(0x69E78C42)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69EA2B09)
-I (..\..\..\foc\include\L3_Algorithm/protocol_core_types.h)(0x69E0E998)
-I (..\..\..\foc\include\L2_Service/runtime_internal_types.h)(0x69EA2B09)
+I (..\..\..\foc\include\LS_Config/foc_runtime_types.h)(0x69FAE976)
+I (..\..\..\foc\include\L3_Algorithm/protocol_core.h)(0x69FB02FE)
+I (..\..\..\foc\include\LS_Config/foc_protocol_types.h)(0x69FAE938)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 F (..\..\..\foc\src\L1_Orchestration\control_scheduler.c)(0x69E2F500)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\control_scheduler.o --omf_browse .\output\control_scheduler.crf --depend .\output\control_scheduler.d)
-I (..\..\..\foc\include\L1_Orchestration/control_scheduler.h)(0x69DF99AA)
+I (..\..\..\foc\include\L1_Orchestration/control_scheduler.h)(0x69FB0CA1)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stddef.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
+I (..\..\..\foc\include\LS_Config/foc_scheduler_types.h)(0x69F33B12)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
-F (..\..\..\foc\src\L1_Orchestration\foc_app.c)(0x69F0BB45)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_app.o --omf_browse .\output\foc_app.crf --depend .\output\foc_app.d)
+F (..\..\..\foc\src\L1_Orchestration\foc_app.c)(0x69FEB478)(--c99 -c --cpu Cortex-M4.fp -g -O0 --apcs=interwork --split_sections -I .\Firmware\CMSIS -I .\Firmware\CMSIS\GD\GD32F30x\Include -I .\Firmware\GD32F30x_standard_peripheral\Include -I .\Utilities -I .\Application\Include -I .\Utilities\LED -I .\Utilities\PWM -I .\Utilities\TIMER1 -I .\Utilities\TIMER2 -I .\Utilities\USART -I .\Utilities\AS5600 -I .\Utilities\I2C -I .\Utilities\ADC -I .\Utilities\TIMER3 -I ..\..\..\foc\include -I ..\..\..\foc\include\L1_Orchestration -I ..\..\..\foc\include\L2_Service -I ..\..\..\foc\include\L3_Algorithm -I ..\..\..\foc\include\L41_Math -I ..\..\..\foc\include\L42_PAL -I ..\..\..\foc\include\LS_Config-I.\RTE\_GD32F30X_CL-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include-IC:\Users\MSI-NB\AppData\Local\Arm\Packs\GigaDevice\GD32F30x_DFP\2.2.1\Device\Include-D__UVISION_VERSION="528" -D_RTE_ -DGD32F30X_HD -DUSE_STDPERIPH_DRIVER -DGD32F30X_HD-o .\output\foc_app.o --omf_browse .\output\foc_app.crf --depend .\output\foc_app.d)
 I (..\..\..\foc\include\L1_Orchestration/foc_app.h)(0x69E9ACC8)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdio.h)(0x5CEB79E2)
-I (..\..\..\foc\include\L1_Orchestration/control_scheduler.h)(0x69DF99AA)
+I (..\..\..\foc\include\L1_Orchestration/control_scheduler.h)(0x69FB0CA1)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stddef.h)(0x5CEB79E2)
 I (D:\Keil_v5_ARM\ARM\ARMCC\include\stdint.h)(0x5CEB79E2)
-I (..\..\..\foc\include\LS_Config/foc_shared_types.h)(0x69F0C36D)
-I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69DF99AA)
-I (..\..\..\foc\include\LS_Config/foc_cfg_symbol_defs.h)(0x69F0C3F7)
-I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69EF70EB)
-I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69F1FC2A)
-I (..\..\..\foc\include\LS_Config/foc_cfg_compile_limits.h)(0x69F0C584)
-I (..\..\..\foc\include\L2_Service/debug_stream.h)(0x69E339CA)
-I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69F18095)
-I (..\..\..\foc\include\L2_Service/runtime_c1_entry.h)(0x69EA2B09)
-I (..\..\..\foc\include\L2_Service/runtime_internal_types.h)(0x69EA2B09)
-I (..\..\..\foc\include\L2_Service/motor_control_service.h)(0x69EA2B09)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h)(0x69EB0E33)
-I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69F181C6)
+I (..\..\..\foc\include\LS_Config/foc_scheduler_types.h)(0x69F33B12)
+I (..\..\..\foc\include\LS_Config/foc_config.h)(0x69FB10DD)
+I (..\..\..\foc\include\LS_Config/foc_symbol_defs.h)(0x69FEA33C)
+I (..\..\..\foc\include\LS_Config/foc_cfg_feature_switches.h)(0x69FEAC07)
+I (..\..\..\foc\include\LS_Config/foc_cfg_init_values.h)(0x69FED9AE)
+I (..\..\..\foc\include\LS_Config/foc_compile_limits.h)(0x69FC4635)
+I (..\..\..\foc\include\L2_Service/debug_stream.h)(0x69FB0C97)
+I (..\..\..\foc\include\L2_Service/runtime_snapshot.h)(0x69FAEAE2)
+I (..\..\..\foc\include\LS_Config/foc_snapshot_types.h)(0x69FEA355)
+I (..\..\..\foc\include\LS_Config/foc_motor_types.h)(0x69FDEEF6)
+I (..\..\..\foc\include\LS_Config/foc_math_types.h)(0x69F33D17)
+I (..\..\..\foc\include\L2_Service/runtime_c1_entry.h)(0x69FEA469)
+I (..\..\..\foc\include\LS_Config/foc_runtime_types.h)(0x69FAE976)
+I (..\..\..\foc\include\L2_Service/motor_control_service.h)(0x69FB0C9C)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c11_entry.h)(0x69FB1754)
+I (..\..\..\foc\include\L3_Algorithm/foc_control_c24_compensation.h)(0x69FDEEF6)
 I (..\..\..\foc\include\L42_PAL/foc_platform_api.h)(0x69EA2B09)
