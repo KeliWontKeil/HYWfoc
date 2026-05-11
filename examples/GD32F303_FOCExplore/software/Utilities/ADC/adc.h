@@ -66,8 +66,8 @@
 #define ADC_VREF              3.3f    /* Reference voltage (V) */
 #define ADC_MAX_VALUE         4095.0f /* 12-bit ADC max value */
 #define ADC_ZERO_CURRENT_VOLTAGE (ADC_VREF / 2.0f) /* Voltage at zero current */
-#define CURRENT_RANGE 5.0f /* ±5A current range corresponding to 0 to VREF/2 deviation */
-#define CURRENT_SCALE_FACTOR  (CURRENT_RANGE / (ADC_VREF / 2.0f)) /* 5A range, ±VREF/2 */
+#define CURRENT_RANGE 20.0f /* ±20A current range corresponding to 0 to VREF/2 deviation */
+#define CURRENT_SCALE_FACTOR  (CURRENT_RANGE / (ADC_VREF / 2.0f)) /*±VREF/2 */
 
 /* Data structures */
 typedef struct {

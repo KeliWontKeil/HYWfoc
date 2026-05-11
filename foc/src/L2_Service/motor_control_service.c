@@ -5,6 +5,7 @@
 #include "L3_Algorithm/foc_control_c11_entry.h"
 #include "L3_Algorithm/foc_control_c12_init.h"
 #include "L3_Algorithm/foc_control_c13_cfg_state.h"
+#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L3_Algorithm/sensor.h"
 #include "L3_Algorithm/svpwm.h"
 #include "LS_Config/foc_config.h"
@@ -114,6 +115,11 @@ void MotorControlService_RunOpenLoopControlTask(foc_motor_t *motor,
                                                 float open_loop_turn_speed)
 {
     FOC_ControlOpenLoopStep(motor, open_loop_voltage, open_loop_turn_speed);
+}
+
+void MotorControlService_ForceStopPwm(void)
+{
+    SVPWM_ApplyDirectDuty(0U, 0.0f, 0.0f, 0.0f);
 }
 
 void MotorControlService_InitPidControllers(foc_motor_t *motor,
@@ -233,3 +239,60 @@ void MotorControlService_ApplyConfigSnapshot(foc_motor_t *motor,
     FOC_ControlSetCoggingCalibGainK(motor, control_cfg->cogging_calib_gain_k);
 #endif /* FOC_COGGING_COMP_ENABLE */
 }
+
+/* ---- Compensation / cogging calibration wrappers ---- */
+
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+
+void MotorControlService_RunCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor)
+{
+    FOC_ControlCompensationStep(motor, sensor);
+}
+
+uint8_t MotorControlService_CoggingCalibSampleStep(foc_motor_t *motor,
+                                                   const sensor_data_t *sensor,
+                                                   float dt_sec)
+{
+    return FOC_CoggingCalibSampleStep(motor, sensor, dt_sec);
+}
+
+uint8_t MotorControlService_CoggingCalibIsBusy(const foc_motor_t *motor)
+{
+    return FOC_CoggingCalibIsBusy(motor);
+}
+
+#endif /* FOC_COGGING_COMP_ENABLE */
+
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+
+uint8_t MotorControlService_CoggingCalibIsDumpPending(void)
+{
+    return FOC_CoggingCalibIsDumpPending();
+}
+
+uint8_t MotorControlService_CoggingCalibIsExportPending(void)
+{
+    return FOC_CoggingCalibIsExportPending();
+}
+
+void MotorControlService_CoggingCalibClearDumpPending(void)
+{
+    FOC_CoggingCalibClearDumpPending();
+}
+
+void MotorControlService_CoggingCalibClearExportPending(void)
+{
+    FOC_CoggingCalibClearExportPending();
+}
+
+void MotorControlService_CoggingCalibDumpTable(const foc_motor_t *motor)
+{
+    FOC_CoggingCalibDumpTable(motor);
+}
+
+void MotorControlService_CoggingCalibExportTable(const foc_motor_t *motor)
+{
+    FOC_CoggingCalibExportTable(motor);
+}
+
+#endif /* FOC_COGGING_CALIB_ENABLE */

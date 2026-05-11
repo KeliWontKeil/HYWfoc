@@ -23,22 +23,22 @@
 #define FOC_SCHEDULER_HEARTBEAT_HZ 1U
 
 /*PWM initialization defaults.*/
-#define FOC_PWM_FREQ_KHZ                24U
+#define FOC_PWM_FREQ_KHZ                12U
 #define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
-#define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 2U
+#define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
 
-/* Fast current-loop execute every N PWM update interrupts. */
-#define FOC_CURRENT_LOOP_ISR_FREQ    12U
-#define FOC_CURRENT_LOOP_ISR_DIVIDER (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_FREQ)
-/* ADC averaging windows: slow loop for observability, fast loop for current ISR latency. */
-#define FOC_SENSOR_ADC_AVG_COUNT_SLOW   24U
-#define FOC_SENSOR_ADC_AVG_COUNT_FAST   (FOC_SENSOR_ADC_AVG_COUNT_SLOW / FOC_CURRENT_LOOP_ISR_DIVIDER)
+/* Fast current-loop: execute every N-th PWM ISR. */
+#define FOC_CURRENT_LOOP_ISR_DIVIDER   2U
+#define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
+/* ADC averaging windows: slow covers 1 control-cycle window, fast covers inter-ISR interval. */
+#define FOC_SENSOR_ADC_AVG_COUNT_SLOW  FOC_PWM_FREQ_KHZ
+#define FOC_SENSOR_ADC_AVG_COUNT_FAST  FOC_CURRENT_LOOP_ISR_DIVIDER
 #define FOC_CONTROL_DT_SEC              (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
 
 /* Motor initialization parameters. */
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
-#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 11.4f
-#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
+#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 1.6f//11.4f
+#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 1.0f//13.2f
 
 /* Alignment/calibration voltage is derived from set_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
@@ -47,7 +47,7 @@
 #define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED//FOC_DIR_REVERSED
 
 /* Initialization calibration strategy defaults (coarse + fine subdivision). */
-#define FOC_CALIB_ALIGN_VOLTAGE_RATIO 0.60f 
+#define FOC_CALIB_ALIGN_VOLTAGE_RATIO 0.40f 
 #define FOC_CALIB_SETTLE_MS 4U
 #define FOC_CALIB_MIN_MECH_STEP_RAD 0.0015f
 #define FOC_CALIB_ZERO_LOCK_SETTLE_MS 120U
@@ -114,7 +114,7 @@
 
 /* Safety threshold defaults. */
 #define FOC_DIAG_SENSOR_FAULT_THRESHOLD 1U
-#define FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT 8.0f
+#define FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT 6.0f
 
 /* Control loop defaults and limits. */
 #define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (FOC_MATH_TWO_PI * 4.0f)
@@ -148,7 +148,7 @@
 
 /* Current-loop anti-noise and soft-switch defaults. */
 #define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE FOC_CFG_ENABLE
-#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE FOC_CURRENT_SOFT_SWITCH_MODE_AUTO
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE FOC_CURRENT_SOFT_SWITCH_MODE_OPEN
 #define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A 0.20f
 #define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A 0.50f
 

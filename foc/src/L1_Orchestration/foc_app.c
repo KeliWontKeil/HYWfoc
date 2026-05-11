@@ -6,8 +6,6 @@
 #include "L2_Service/debug_stream.h"
 #include "L2_Service/runtime_c1_entry.h"
 #include "L2_Service/motor_control_service.h"
-#include "L3_Algorithm/foc_control_c11_entry.h"
-#include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -123,6 +121,7 @@ static void FOC_App_ReInitMotor(void)
     FOC_App_StopFastCurrentLoop();
     MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
     MotorControlService_RunOpenLoopControlTask(&g_motor, 0.0f, 0.0f);
+    MotorControlService_ForceStopPwm();
 
     /* Gate ISR control paths to prevent touching g_motor during recalibration. */
     g_reinit_in_progress = 1U;
@@ -151,6 +150,7 @@ static void FOC_App_EnterSafeOutputState(uint8_t report_skip)
     MotorControlService_ResetCurrentSoftSwitchState(&g_motor);
 
     MotorControlService_RunOpenLoopControlTask(&g_motor, 0.0f, 0.0f);
+    MotorControlService_ForceStopPwm();
 
     if (report_skip != 0U)
     {
@@ -187,11 +187,11 @@ static void FOC_App_RunControlAlgorithm(const sensor_data_t *sensor_data)
                                                 dt_sec);
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    (void)FOC_CoggingCalibSampleStep(&g_motor, sensor_data, dt_sec);
+    (void)MotorControlService_CoggingCalibSampleStep(&g_motor, sensor_data, dt_sec);
 #endif
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    FOC_ControlCompensationStep(&g_motor, sensor_data);
+    MotorControlService_RunCompensationStep(&g_motor, sensor_data);
 #endif
 
     g_fast_current_loop_iq_target = g_motor.iq_target;
@@ -337,15 +337,15 @@ void FOC_App_Loop(void)
         }
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    if (FOC_CoggingCalibIsDumpPending() != 0U)
+    if (MotorControlService_CoggingCalibIsDumpPending() != 0U)
     {
-        FOC_CoggingCalibClearDumpPending();
-        FOC_CoggingCalibDumpTable(&g_motor);
+        MotorControlService_CoggingCalibClearDumpPending();
+        MotorControlService_CoggingCalibDumpTable(&g_motor);
     }
-    else if (FOC_CoggingCalibIsExportPending() != 0U)
+    else if (MotorControlService_CoggingCalibIsExportPending() != 0U)
     {
-        FOC_CoggingCalibClearExportPending();
-        FOC_CoggingCalibExportTable(&g_motor);
+        MotorControlService_CoggingCalibClearExportPending();
+        MotorControlService_CoggingCalibExportTable(&g_motor);
     }
 #endif
     }
@@ -447,18 +447,20 @@ static void Motor_Control_Loop(void)
         return;
     }
 
-    if (FOC_CoggingCalibIsBusy(&g_motor) != 0U)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    if (MotorControlService_CoggingCalibIsBusy(&g_motor) != 0U)
     {
         g_motor.current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
         g_motor.current_soft_switch_status.enabled = 0U;
-        
-        FOC_CoggingCalibSampleStep(&g_motor, &g_sensor_snapshot, FOC_CONTROL_DT_SEC);
+
+        MotorControlService_CoggingCalibSampleStep(&g_motor, &g_sensor_snapshot, FOC_CONTROL_DT_SEC);
 
         g_fast_current_loop_iq_target = g_motor.iq_target;
         g_fast_current_loop_electrical_angle = g_motor.electrical_phase_angle;
         g_fast_current_loop_enabled = 1U;
     }
     else
+#endif
     {
         FOC_App_RunControlAlgorithm(&g_sensor_snapshot);
     }

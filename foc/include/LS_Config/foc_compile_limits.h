@@ -259,20 +259,14 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 #if (FOC_PWM_FREQ_KHZ == 0U)
 #error "FOC_PWM_FREQ_KHZ must be non-zero"
 #endif
-#if (FOC_CURRENT_LOOP_ISR_FREQ == 0U)
-#error "FOC_CURRENT_LOOP_ISR_FREQ must be non-zero"
-#endif
-#if (FOC_PWM_FREQ_KHZ % FOC_CURRENT_LOOP_ISR_FREQ) != 0U
-#error "FOC_PWM_FREQ_KHZ must be divisible by FOC_CURRENT_LOOP_ISR_FREQ"
-#endif
 #if (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U)
 #error "FOC_CURRENT_LOOP_ISR_DIVIDER must be >= 1"
 #endif
-#if (FOC_SENSOR_ADC_AVG_COUNT_SLOW == 0U)
-#error "FOC_SENSOR_ADC_AVG_COUNT_SLOW must be non-zero"
+#if (FOC_PWM_FREQ_KHZ % FOC_CURRENT_LOOP_ISR_DIVIDER) != 0U
+#error "FOC_PWM_FREQ_KHZ must be divisible by FOC_CURRENT_LOOP_ISR_DIVIDER"
 #endif
-#if (FOC_SENSOR_ADC_AVG_COUNT_FAST == 0U)
-#error "FOC_SENSOR_ADC_AVG_COUNT_FAST must be non-zero"
+#if (FOC_CURRENT_LOOP_ISR_FREQ == 0U)
+#error "FOC_CURRENT_LOOP_ISR_FREQ must be non-zero (derived; check PWM freq and ISR divider)"
 #endif
 
 #if ((FOC_PROTOCOL_LOCAL_DRIVER_ID_DEFAULT != FOC_PROTOCOL_DRIVER_ID_BROADCAST) && \
