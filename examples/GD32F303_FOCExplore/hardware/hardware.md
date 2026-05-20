@@ -26,6 +26,6 @@
 - PB15: TIMER0_CH2_N
 
 ### LEDs (GPIO out)
-- PB3: LED1
-- PB4: LED2
-- PB5: LED3
+- PB0: LED1
+- PB1: LED2
+- PB2: LED3

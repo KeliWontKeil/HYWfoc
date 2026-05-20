@@ -46,6 +46,10 @@
 #define FOC_ISR_VIS_ADC_DMA_GPIO_PORT GPIOC
 #define FOC_ISR_VIS_ADC_DMA_GPIO_PIN GPIO_PIN_13
 
+#define ADC2_VBUS_DIVIDER_RATIO 0.1935f
+#define ADC2_VBUS_CONVERSION_K  (1.0f / ADC2_VBUS_DIVIDER_RATIO)
+#define ADC2_VBUS_EOC_TIMEOUT_LOOPS 10000U
+
 /* ADC configuration */
 #define ADC_SAMPLE_TIME       ADC_SAMPLETIME_55POINT5  /* Maximum resolution */
 #define ADC_RESOLUTION        ADC_RESOLUTION_12B       /* 12-bit resolution */
@@ -66,7 +70,7 @@
 #define ADC_VREF              3.3f    /* Reference voltage (V) */
 #define ADC_MAX_VALUE         4095.0f /* 12-bit ADC max value */
 #define ADC_ZERO_CURRENT_VOLTAGE (ADC_VREF / 2.0f) /* Voltage at zero current */
-#define CURRENT_RANGE 20.0f /* ±20A current range corresponding to 0 to VREF/2 deviation */
+#define CURRENT_RANGE 16.5f /* ±16.5A current range corresponding to 0 to VREF/2 deviation */
 #define CURRENT_SCALE_FACTOR  (CURRENT_RANGE / (ADC_VREF / 2.0f)) /*±VREF/2 */
 
 /* Data structures */

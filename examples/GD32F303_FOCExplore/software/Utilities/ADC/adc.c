@@ -614,9 +614,6 @@ void ADC_IRQHandler_Internal(void)
  * VBUS voltage divider ratio: VBUS = Vadc / 0.1935
  * (derived from: Vadc = VBUS * (R2 / (R1 + R2)), where R1+R2 divider gives ~0.1935)
  */
-#define ADC2_VBUS_DIVIDER_RATIO 0.1935f
-#define ADC2_VBUS_CONVERSION_K  (1.0f / ADC2_VBUS_DIVIDER_RATIO)
-#define ADC2_VBUS_EOC_TIMEOUT_LOOPS 10000U
 
 static uint8_t g_adc2_initialized = 0U;
 

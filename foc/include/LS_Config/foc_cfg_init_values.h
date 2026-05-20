@@ -23,7 +23,7 @@
 #define FOC_SCHEDULER_HEARTBEAT_HZ 1U
 
 /*PWM initialization defaults.*/
-#define FOC_PWM_FREQ_KHZ                12U
+#define FOC_PWM_FREQ_KHZ                24U
 #define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
 #define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
 
