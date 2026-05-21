@@ -10,7 +10,6 @@
 /* Private variables */
 static uint32_t adc_buffer[ADC_BUFFER_SIZE]; /* DMA buffer: each word packs ADC0(low16) + ADC1(high16) */
 static volatile uint8_t adc_initialized = 0;
-static volatile uint8_t dma_complete = 0;
 static float zero_offset_a = 0.0f;  /* Zero current calibration offset for phase A */
 static float zero_offset_b = 0.0f;  /* Zero current calibration offset for phase B */
 
@@ -18,16 +17,6 @@ static float zero_offset_b = 0.0f;  /* Zero current calibration offset for phase
 static void ADC_GPIO_Config(void);
 static void ADC_DMA_Config(void);
 static void ADC_Config(void);
-static uint32_t ADC_GetLatestSampleIndex(void);
-
-static uint32_t ADC_GetLatestSampleIndex(void)
-{
-    uint32_t total_samples = ADC_BUFFER_SIZE;
-    uint32_t remaining_samples = dma_transfer_number_get(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
-    uint32_t write_index = (total_samples - remaining_samples) % total_samples;
-
-    return (write_index + total_samples - 1U) % total_samples;
-}
 
 /*!
     \brief      Initialize ADC for current sampling
@@ -75,9 +64,6 @@ void ADC_Init(void)
     adc_calibration_enable(ADC0_PERIPH);
     adc_calibration_enable(ADC1_PERIPH);
     
-    /* Clear DMA complete flag */
-    dma_complete = 0;
-    
     /* Mark as initialized */
     adc_initialized = 1;
 }
@@ -114,108 +100,6 @@ void ADC_Start(void)
     /* Enable external trigger for both ADCs */
     adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
     adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, ENABLE);
-    
-    /* Reset DMA complete flag */
-    dma_complete = 0;
-}
-
-/*!
-    \brief      Stop ADC sampling
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void ADC_Stop(void)
-{
-    if (!adc_initialized) 
-    {
-        return;
-    }
-    
-    /* Disable external trigger for both ADCs */
-    adc_external_trigger_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, DISABLE);
-    adc_external_trigger_config(ADC1_PERIPH, ADC_ROUTINE_CHANNEL, DISABLE);
-    
-    /* Disable ADC DMA */
-    adc_dma_mode_disable(ADC0_PERIPH);
-    
-    /* Disable DMA channel */
-    dma_channel_disable(ADC_DMA_PERIPH, ADC_DMA_CHANNEL);
-}
-
-/*!
-    \brief      Get a single sample from ADC buffer
-    \param[in]  sample: pointer to sample structure
-    \param[out] none
-    \retval     ADC status
-*/
-adc_status_t ADC_GetAllSamples(adc_sample_t *sample)
-{
-    uint32_t latest_index;
-    uint32_t packed;
-
-    if (sample == NULL)
-    {
-        return ADC_STATUS_ERROR;
-    }
-
-    latest_index = ADC_GetLatestSampleIndex();
-    packed = adc_buffer[latest_index];
-    
-    /* ADC dual routine parallel mode: ADC0 in low16, ADC1 in high16. */
-    sample->phase_a_raw = (uint16_t)(packed & 0xFFFFU);
-    sample->phase_b_raw = (uint16_t)((packed >> 16U) & 0xFFFFU);
-    
-    /* Convert to voltage */
-    sample->phase_a_voltage = ADC_RawToVoltage(sample->phase_a_raw);
-    sample->phase_b_voltage = ADC_RawToVoltage(sample->phase_b_raw);
-    
-    /* Convert to current with zero offset calibration */
-    sample->phase_a_current = ADC_VoltageToCurrent(sample->phase_a_voltage) - zero_offset_a;
-    sample->phase_b_current = ADC_VoltageToCurrent(sample->phase_b_voltage) - zero_offset_b;
-    
-    return ADC_STATUS_OK;
-}
-
-adc_status_t ADC_GetSample(float *sample, adc_sampletype_t type)
-{
-    uint32_t latest_index;
-    uint32_t packed;
-    uint16_t raw_a;
-    uint16_t raw_b;
-
-    if (sample == NULL)
-    {
-        return ADC_STATUS_ERROR;
-    }
-
-    latest_index = ADC_GetLatestSampleIndex();
-    packed = adc_buffer[latest_index];
-    raw_a = (uint16_t)(packed & 0xFFFFU);
-    raw_b = (uint16_t)((packed >> 16U) & 0xFFFFU);
-    
-    switch (type) 
-    {
-        case RAW:
-            /* Get raw ADC values */
-            sample[0] = (float)raw_a;
-            sample[1] = (float)raw_b;
-            break;
-        case VOLTAGE:
-            /* Convert to voltage */
-            sample[0] = ADC_RawToVoltage(raw_a);
-            sample[1] = ADC_RawToVoltage(raw_b);
-            break;
-        case CURRENT:
-             /* Convert to current with zero offset calibration */
-            sample[0] = ADC_VoltageToCurrent(ADC_RawToVoltage(raw_a)) - zero_offset_a;
-            sample[1] = ADC_VoltageToCurrent(ADC_RawToVoltage(raw_b)) - zero_offset_b;
-            break;
-        default:
-            return ADC_STATUS_ERROR;
-    }
-    
-    return ADC_STATUS_OK;
 }
 
 adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t count)
@@ -260,8 +144,8 @@ adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t
                 sum_b += ADC_RawToVoltage(raw_b);
                 break;
             case CURRENT:
-                sum_a += ADC_VoltageToCurrent(ADC_RawToVoltage(raw_a)) - zero_offset_a;
-                sum_b += ADC_VoltageToCurrent(ADC_RawToVoltage(raw_b)) - zero_offset_b;
+                sum_a += (ADC_VoltageToCurrent(ADC_RawToVoltage(raw_a)) - zero_offset_a) * CURRENT_DIR_A;
+                sum_b += (ADC_VoltageToCurrent(ADC_RawToVoltage(raw_b)) - zero_offset_b) * CURRENT_DIR_B;
                 break;
             default:
                 return ADC_STATUS_ERROR;
@@ -270,99 +154,6 @@ adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t
 
     sample[0] = sum_a / (float)count;
     sample[1] = sum_b / (float)count;
-    return ADC_STATUS_OK;
-}
-
-/*!
-    \brief      Get multiple latest samples from ADC buffer
-    \param[in]  samples: pointer to samples array
-    \param[in]  count: number of samples to get
-    \param[out] none
-    \retval     ADC status
-*/
-adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count)
-{
-    uint32_t total_samples = ADC_BUFFER_SIZE;
-    uint32_t latest_sample_index;
-    uint32_t start_index;
-    uint16_t i;
-
-    if ((samples == NULL) || (count == 0U))
-    {
-        return ADC_STATUS_ERROR;
-    }
-    if (count > ADC_BUFFER_SIZE)
-    {
-        count = ADC_BUFFER_SIZE;
-    }
-    
-    latest_sample_index = ADC_GetLatestSampleIndex();
-    start_index = (latest_sample_index + total_samples - (uint32_t)(count - 1U)) % total_samples;
-    
-    /* Extract samples */
-    for (i = 0; i < count; i++) 
-    {
-        uint32_t buffer_index = (start_index + i) % total_samples;
-        uint32_t packed = adc_buffer[buffer_index];
-        
-        samples[i].phase_a_raw = (uint16_t)(packed & 0xFFFFU);
-        samples[i].phase_b_raw = (uint16_t)((packed >> 16U) & 0xFFFFU);
-        
-        samples[i].phase_a_voltage = ADC_RawToVoltage(samples[i].phase_a_raw);
-        samples[i].phase_b_voltage = ADC_RawToVoltage(samples[i].phase_b_raw);
-        
-        samples[i].phase_a_current = ADC_VoltageToCurrent(samples[i].phase_a_voltage) - zero_offset_a;
-        samples[i].phase_b_current = ADC_VoltageToCurrent(samples[i].phase_b_voltage) - zero_offset_b;
-    }
-    
-    return ADC_STATUS_OK;
-}
-
-adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t count)
-{
-    uint32_t total_samples = ADC_BUFFER_SIZE;
-    uint32_t latest_sample_index;
-    uint32_t start_index;
-    uint32_t packed;
-    uint16_t raw_a;
-    uint16_t raw_b;
-
-    if ((sample == NULL) || (count == 0U))
-    {
-        return ADC_STATUS_ERROR;
-    }
-    if (count > ADC_BUFFER_SIZE)
-    {
-        count = ADC_BUFFER_SIZE;
-    }
-    
-    latest_sample_index = ADC_GetLatestSampleIndex();
-    start_index = (latest_sample_index + total_samples - (uint32_t)(count - 1U)) % total_samples;
-    packed = adc_buffer[start_index];
-    raw_a = (uint16_t)(packed & 0xFFFFU);
-    raw_b = (uint16_t)((packed >> 16U) & 0xFFFFU);
-
-    switch (type) 
-    {
-        case RAW:
-            /* Get raw ADC values */
-            sample[0] = (float)raw_a;
-            sample[1] = (float)raw_b;
-            break;
-        case VOLTAGE:
-            /* Convert to voltage */
-            sample[0] = ADC_RawToVoltage(raw_a);
-            sample[1] = ADC_RawToVoltage(raw_b);
-            break;
-        case CURRENT:
-         /* Convert to current with zero offset calibration */
-            sample[0] = ADC_VoltageToCurrent(ADC_RawToVoltage(raw_a)) - zero_offset_a;
-            sample[1] = ADC_VoltageToCurrent(ADC_RawToVoltage(raw_b)) - zero_offset_b;
-             break;
-        default:
-             return ADC_STATUS_ERROR;
-    }
-    
     return ADC_STATUS_OK;
 }
 
@@ -420,47 +211,6 @@ float ADC_VoltageToCurrent(float voltage)
 {
     /* Current sensor: 0A = VREF/2, ±20A range */
     return (voltage - ADC_ZERO_CURRENT_VOLTAGE) * CURRENT_SCALE_FACTOR;
-}
-
-/*!
-    \brief      Convert raw ADC value directly to current
-    \param[in]  raw_value: raw ADC value (0-4095)
-    \param[out] none
-    \retval     current in amperes
-*/
-float ADC_RawToCurrent(uint16_t raw_value)
-{
-    float voltage = ADC_RawToVoltage(raw_value);
-    return ADC_VoltageToCurrent(voltage);
-}
-
-/*!
-    \brief      Check if DMA transfer is complete
-    \param[in]  none
-    \param[out] none
-    \retval     DMA status
-*/
-adc_status_t ADC_DMA_IsComplete(void)
-{
-    if (dma_flag_get(ADC_DMA_PERIPH, ADC_DMA_CHANNEL, DMA_FLAG_FTF)) 
-    {
-        dma_complete = 1;
-        return ADC_STATUS_OK;
-    }
-    return ADC_STATUS_DMA_ERROR;
-}
-
-/*!
-    \brief      Set ADC trigger frequency
-    \param[in]  frequency_hz: trigger frequency in Hz
-    \param[out] none
-    \retval     none
-*/
-void ADC_SetTriggerFrequency(uint32_t frequency_hz)
-{
-    /* Note: Trigger frequency is controlled by TIMER3 CH3 compare event.
-       This function should be coordinated with PWM and TIMER2/TIMER3 sync setup. */
-    (void)frequency_hz; /* Parameter not used in current implementation */
 }
 
 /*!
@@ -588,7 +338,6 @@ void ADC_DMA_IRQHandler_Internal(void)
     if (dma_interrupt_flag_get(DMA0, DMA_CH0, DMA_INT_FLAG_FTF)) 
     {
         dma_interrupt_flag_clear(DMA0, DMA_CH0, DMA_INT_FLAG_FTF);
-        dma_complete = 1;
 #if (FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE == 1U)
         if (gpio_output_bit_get(FOC_ISR_VIS_ADC_DMA_GPIO_PORT, FOC_ISR_VIS_ADC_DMA_GPIO_PIN) != RESET)
         {

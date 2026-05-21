@@ -43,10 +43,8 @@ static float FOC_CurrentSoftSwitchUpdateBlend(float current_blend,
 static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measurement, float dt_sec)
 {
     float error;
-    float error_effective;
     float derivative;
     float output;
-    float integral_leak;
 
     if (pid == 0)
     {
@@ -56,42 +54,29 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
     dt_sec = FOC_NormalizeDt(dt_sec);
 
     error = target - measurement;
-    if (fabsf(error) <= FOC_CURRENT_LOOP_ERROR_DEADBAND_A)
-    {
-        error_effective = 0.0f;
-    }
-    else
-    {
-        error_effective = error;
-    }
 
-    integral_leak = Math_ClampFloat(FOC_CURRENT_LOOP_INTEGRAL_SUPPRESS_LEAK, 0.0f, 1.0f);
-    if (error_effective == 0.0f)
-    {
-        pid->integral *= integral_leak;
-    }
-    else
-    {
-        pid->integral += error_effective * dt_sec;
-    }
+    /* 标准积分累加，无死区抑制、无漏积分器 */
+    pid->integral += error * dt_sec;
 
-    derivative = (error_effective - pid->prev_error) / dt_sec;
-    output = pid->kp * error_effective + pid->ki * pid->integral + pid->kd * derivative;
+    /* 导数直接基于实际误差 */
+    derivative = (error - pid->prev_error) / dt_sec;
+    pid->prev_error = error;
+
+    output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
-    if (((output <= pid->out_min) && (error_effective < 0.0f)) ||
-        ((output >= pid->out_max) && (error_effective > 0.0f)))
-    {
-        pid->integral -= error_effective * dt_sec;
-    }
-
+    /* Back-calculation 抗饱和 */
     if (pid->ki > 1e-6f)
     {
-        float i_limit = fabsf(pid->out_max) / pid->ki;
-        pid->integral = Math_ClampFloat(pid->integral, -i_limit, i_limit);
+        float i_min = (pid->out_min - pid->kp * error - pid->kd * derivative) / pid->ki;
+        float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;
+        pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
+    }
+    else
+    {
+        pid->integral = 0.0f;
     }
 
-    pid->prev_error = error_effective;
     return output;
 }
 #endif
@@ -198,9 +183,11 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
 {
     float iq_measured;
     float uq_cmd;
+    float local_angle;
 
+    local_angle = motor->electrical_phase_angle;
     FOC_CurrentLoopComputeIqMeasured(sensor,
-                                     motor->electrical_phase_angle,
+                                     local_angle,
                                      &iq_measured);
 
     uq_cmd = FOC_CurrentLoopPIDRun(current_pid, motor->iq_target, iq_measured, dt_sec);
@@ -317,6 +304,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
                             float dt_sec)
 {
     uint8_t *blend_initialized;
+    float    local_angle;
 
     if (motor == 0)
     {
@@ -325,7 +313,8 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
 
     blend_initialized = &motor->current_soft_switch_blend_initialized;
 
-    motor->electrical_phase_angle = Math_WrapRad(electrical_angle);
+    local_angle = Math_WrapRad(electrical_angle);
+    motor->electrical_phase_angle = local_angle;
     dt_sec = FOC_NormalizeDt(dt_sec);
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
@@ -365,7 +354,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             motor->current_soft_switch_status.blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
             FOC_CurrentLoopComputeIqMeasured(sensor,
-                                             motor->electrical_phase_angle,
+                                             local_angle,
                                              &motor->iq_measured);
         }
     }
@@ -376,7 +365,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
 #endif
 
-    FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
+    FOC_ControlApplyElectricalAngleRuntime(motor, local_angle);
 }
 
 void FOC_CurrentControlApplyElectricalAngleDirect(foc_motor_t *motor, float electrical_angle)

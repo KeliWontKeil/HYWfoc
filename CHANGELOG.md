@@ -5,6 +5,12 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-05-21
+
+### Fixed
+- **电流环 PID 死区+漏积分器组合导致积分振荡**：`FOC_CurrentLoopPIDRun()` 中原有死区抑制（`FOC_CURRENT_LOOP_ERROR_DEADBAND_A = 0.05A`）与漏积分器（`FOC_CURRENT_LOOP_INTEGRAL_SUPPRESS_LEAK = 0.99`）组合形成正反馈循环——误差进入 deadband 后积分指数衰减导致输出下降、误差重新增大、积分再次累加，如此反复振荡且电流无法稳定跟踪目标值。修复方案：删除死区抑制逻辑和漏积分器，改为标准积分累加 + back-calculation 抗饱和（与外环 PID 策略一致）。
+- **移除废弃宏**：`FOC_CURRENT_LOOP_ERROR_DEADBAND_A`、`FOC_CURRENT_LOOP_INTEGRAL_SUPPRESS_LEAK` 已无代码引用，从 `foc_cfg_init_values.h` 中删除。
+
 ## [1.7.0] - 2026-05-09
 
 ### Added

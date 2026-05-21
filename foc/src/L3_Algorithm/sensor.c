@@ -12,12 +12,8 @@ static uint8_t g_sensor_angle_lpf_state_valid = 0U;
 static float g_sensor_angle_lpf_state = 0.0f;
 #endif
 
-#define FOC_DC_DRIFT_TRACK_ALPHA 5e-5f
-static float g_dc_drift_a = 0.0f;
-static float g_dc_drift_b = 0.0f;
-static uint8_t g_dc_drift_initialized = 0U;
-
 static void Sensor_ReadADC(uint8_t use_fast_window);
+
 static void Sensor_ReadEncoder(void);
 static void Kalman_Init(kalman_filter_t* filter,
                         float measurement_error,
@@ -182,22 +178,8 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
         sensor_data.current_a.output_value = sensor_data.current_a.filtered_value - sensor_data.current_a.zero_offset;
         sensor_data.current_b.output_value = sensor_data.current_b.filtered_value - sensor_data.current_b.zero_offset;
 
-        if (g_dc_drift_initialized == 0U)
-        {
-            g_dc_drift_a = sensor_data.current_a.output_value;
-            g_dc_drift_b = sensor_data.current_b.output_value;
-            g_dc_drift_initialized = 1U;
-        }
-        else
-        {
-            g_dc_drift_a += FOC_DC_DRIFT_TRACK_ALPHA * (sensor_data.current_a.output_value - g_dc_drift_a);
-            g_dc_drift_b += FOC_DC_DRIFT_TRACK_ALPHA * (sensor_data.current_b.output_value - g_dc_drift_b);
-        }
-
-        sensor_data.current_a.output_value -= g_dc_drift_a;
-        sensor_data.current_b.output_value -= g_dc_drift_b;
-
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
+
 
         sensor_data.adc_valid = 1;
     }

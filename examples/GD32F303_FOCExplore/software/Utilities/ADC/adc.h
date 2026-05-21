@@ -25,6 +25,9 @@
 /* ADC channel definitions */
 #define ADC_CHANNEL_PA6       ADC_CHANNEL_6     /* Phase A current */
 #define ADC_CHANNEL_PA7       ADC_CHANNEL_7     /* Phase B current */
+#define CURRENT_DIR_A         -1.0f             /* Phase A current direction multiplier */
+#define CURRENT_DIR_B         -1.0f             /* Phase B current direction multiplier */
+
 #define ADC_CHANNEL_PA1       ADC_CHANNEL_1     /* VBUS voltage (ADC2) */
 
 /* ADC GPIO definitions */
@@ -99,20 +102,12 @@ typedef enum {
 /* Function prototypes */
 void ADC_Init(void);
 void ADC_Start(void);
-void ADC_Stop(void);
-adc_status_t ADC_GetSample(float *sample, adc_sampletype_t type);
 adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t count);
-adc_status_t ADC_GetAllSamples(adc_sample_t *sample);
-adc_status_t ADC_GetLatestSample(float *sample, adc_sampletype_t type, uint16_t count);
-adc_status_t ADC_GetAllLatestSamples(adc_sample_t *samples, uint16_t count);
 adc_status_t ADC_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b, uint16_t avg_count);
 uint8_t ADC_ReadPhaseCurrentABOk(float *phase_current_a, float *phase_current_b, uint16_t avg_count);
 
 float ADC_RawToVoltage(uint16_t raw_value);
 float ADC_VoltageToCurrent(float voltage);
-float ADC_RawToCurrent(uint16_t raw_value);
-adc_status_t ADC_DMA_IsComplete(void);
-void ADC_SetTriggerFrequency(uint32_t frequency_hz);
 
 /* DMA interrupt handler (called from ISR) */
 void ADC_DMA_IRQHandler_Internal(void);
