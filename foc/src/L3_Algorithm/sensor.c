@@ -180,7 +180,6 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
 
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
 
-
         sensor_data.adc_valid = 1;
     }
     else

@@ -5,23 +5,7 @@
 
 ---
 
-## v1.7.0 已完成
-
-- [x] **参数标定重初始化接入协议**
-  - 新增系统子命令 `Y:I` 触发运行时重初始化
-  - 完整的 reinit_pending 传递链（L2 各层同步添加 ClearReinit 接口）
-  - `FOC_App_ReInitMotor()` + `g_reinit_in_progress` ISR/控制路径栅保护
-  - 提取 `FOC_App_InitMotorHardware()` 公共初始化路径
-- [x] **齿槽补偿边界不连续修复增强**
-  - `COGGING_BOUNDARY_Q15_THRESHOLD` 从局部宏提升为配置宏（100，原1200）
-  - 新增 `FOC_COGGING_BOUNDARY_BLEND_WIN` 窗口宽度配置（默认3）
-  - Stage 2 窗口边界漂移渐进校正算法
-- [x] **初始化标定功能恢复**（`FOC_INIT_CALIBRATION_ENABLE` → ENABLE）
-- [x] **齿槽标定默认值优化**（gain_k 0.05→0.03, speed 0.8→0.6, iq 0.50→0.30, passes 2→1）
-- [x] **电机初始化默认值调整**（标定启用后方向/零位改为 UNDEFINED）
-- [x] **齿槽查询优化**（移除冗余角度归一化和输出钳位）
-- [x] **协议帧入口时序修复**（`RunPwmInterpolationIsr` 移入 `fast_current_loop_enabled` 检查之后）
-- [x] **快照结构体新增** `reinit_pending` 字段
+## v1.7.4
 
 ---
 

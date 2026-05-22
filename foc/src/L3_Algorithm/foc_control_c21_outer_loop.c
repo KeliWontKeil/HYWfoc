@@ -35,7 +35,9 @@ static float FOC_PIDRunCore(foc_pid_t *pid, float target, float measurement, flo
     output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
-    if (pid->ki > 1e-6f)
+    /* Back-calculation 抗饱和：仅在输出真正饱和时执行 */
+    if ((pid->ki > 1e-6f) &&
+        ((output <= pid->out_min + 1e-6f) || (output >= pid->out_max - 1e-6f)))
     {
         float i_min = (pid->out_min - pid->kp * error - pid->kd * derivative) / pid->ki;
         float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;

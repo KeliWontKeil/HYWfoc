@@ -5,6 +5,12 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2-1.7.4] - 2026-05-22
+
+### Fixed
+- **电流环问题修复**：修复电流环积分需错误限幅导致的振荡问题，提高了纯电流闭环下的控制效果
+- **删除采样漂移抑制**：采样漂移抑制反而会引入误差，直接移除该功能，实测无影响
+
 ## [1.7.1] - 2026-05-21
 
 ### Fixed

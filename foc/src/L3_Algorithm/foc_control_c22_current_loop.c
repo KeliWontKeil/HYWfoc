@@ -55,7 +55,7 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
 
     error = target - measurement;
 
-    /* 标准积分累加，无死区抑制、无漏积分器 */
+    /* 标准积分累加 */
     pid->integral += error * dt_sec;
 
     /* 导数直接基于实际误差 */
@@ -65,12 +65,12 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
     output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
-    /* Back-calculation 抗饱和 */
+    /* 独立积分抗饱和：限制积分累积量不超过输出量程，
+       避免 Kp*error 单独已饱和时 back-calculation 强行削零积分导致的阶梯现象 */
     if (pid->ki > 1e-6f)
     {
-        float i_min = (pid->out_min - pid->kp * error - pid->kd * derivative) / pid->ki;
-        float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;
-        pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
+        float i_limit = (pid->out_max - pid->out_min) / pid->ki;
+        pid->integral = Math_ClampFloat(pid->integral, -i_limit, i_limit);
     }
     else
     {
