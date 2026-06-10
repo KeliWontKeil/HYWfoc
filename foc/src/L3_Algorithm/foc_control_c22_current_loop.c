@@ -144,22 +144,36 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_motor_t *motor,
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
 static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
                                              float electrical_angle,
-                                             float *iq_out)
+                                             float *iq_out,
+                                             foc_motor_t *motor)
 {
+    float ia_comp;
+    float ib_comp;
+    float ic_comp;
     float i_alpha;
     float i_beta;
     float id_measured;
 
-    if ((sensor == 0) || (iq_out == 0))
+    if ((sensor == 0) || (iq_out == 0) || (motor == 0))
     {
         return;
     }
 
-    Math_ClarkeTransform(sensor->current_a.output_value,
-                         sensor->current_b.output_value,
-                         sensor->current_c.output_value,
-                         &i_alpha,
-                         &i_beta);
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+    if (motor->ecycle_offset_valid != 0U)
+    {
+        ia_comp = sensor->current_a.output_value - motor->ecycle_offset_dyn_a;
+        ib_comp = sensor->current_b.output_value - motor->ecycle_offset_dyn_b;
+    }
+    else
+#endif
+    {
+        ia_comp = sensor->current_a.output_value;
+        ib_comp = sensor->current_b.output_value;
+    }
+    ic_comp = -(ia_comp + ib_comp);
+
+    Math_ClarkeTransform(ia_comp, ib_comp, ic_comp, &i_alpha, &i_beta);
 
     Math_ParkTransform(i_alpha,
                        i_beta,
@@ -188,7 +202,8 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
     local_angle = motor->electrical_phase_angle;
     FOC_CurrentLoopComputeIqMeasured(sensor,
                                      local_angle,
-                                     &iq_measured);
+                                     &iq_measured,
+                                     motor);
 
     uq_cmd = FOC_CurrentLoopPIDRun(current_pid, motor->iq_target, iq_measured, dt_sec);
 
@@ -317,6 +332,56 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     motor->electrical_phase_angle = local_angle;
     dt_sec = FOC_NormalizeDt(dt_sec);
 
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+    if ((sensor != 0) && (sensor->encoder_valid != 0U))
+    {
+        float mech_now = sensor->mech_angle_rad.output_value;
+        float raw_delta;
+        float delta_mech;
+
+        raw_delta = mech_now - motor->ecycle_prev_mech_angle;
+        if (raw_delta > FOC_MATH_PI)
+        {
+            raw_delta -= FOC_MATH_TWO_PI;
+        }
+        else if (raw_delta < -FOC_MATH_PI)
+        {
+            raw_delta += FOC_MATH_TWO_PI;
+        }
+        delta_mech = (raw_delta >= 0.0f) ? raw_delta : (-raw_delta);
+
+        motor->ecycle_accu_mech_delta += delta_mech;
+
+        if (motor->ecycle_accu_mech_delta * (float)motor->pole_pairs >= FOC_MATH_TWO_PI)
+        {
+            float avg_a;
+            float avg_b;
+            float alpha;
+
+            if (motor->ecycle_sample_count > 0U)
+            {
+                avg_a = motor->ecycle_accum_a / (float)motor->ecycle_sample_count;
+                avg_b = motor->ecycle_accum_b / (float)motor->ecycle_sample_count;
+
+                alpha = Math_ClampFloat(FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA, 0.0f, 1.0f);
+                motor->ecycle_offset_dyn_a += alpha * (avg_a - motor->ecycle_offset_dyn_a);
+                motor->ecycle_offset_dyn_b += alpha * (avg_b - motor->ecycle_offset_dyn_b);
+                motor->ecycle_offset_valid = 1U;
+            }
+
+            motor->ecycle_accum_a = 0.0f;
+            motor->ecycle_accum_b = 0.0f;
+            motor->ecycle_sample_count = 0U;
+            motor->ecycle_accu_mech_delta = 0.0f;
+        }
+
+        motor->ecycle_accum_a += sensor->current_a.filtered_value;
+        motor->ecycle_accum_b += sensor->current_b.filtered_value;
+        motor->ecycle_sample_count++;
+        motor->ecycle_prev_mech_angle = mech_now;
+    }
+#endif
+
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
     if ((sensor == 0) || (current_pid == 0))
     {
@@ -355,7 +420,8 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
             FOC_CurrentLoopComputeIqMeasured(sensor,
                                              local_angle,
-                                             &motor->iq_measured);
+                                             &motor->iq_measured,
+                                             motor);
         }
     }
 #else

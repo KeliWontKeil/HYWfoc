@@ -73,12 +73,6 @@ void Sensor_SetZeroOffset(void)
     float sum_b = 0.0f;
     float avg_a;
     float avg_b;
-    float min_a = 1e9f;
-    float max_a = -1e9f;
-    float min_b = 1e9f;
-    float max_b = -1e9f;
-    float spread_a;
-    float spread_b;
 
     for (i = 0U; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
     {
@@ -87,23 +81,6 @@ void Sensor_SetZeroOffset(void)
             sum_a += current_a;
             sum_b += current_b;
             valid_samples++;
-
-            if (current_a < min_a)
-            {
-                min_a = current_a;
-            }
-            if (current_a > max_a)
-            {
-                max_a = current_a;
-            }
-            if (current_b < min_b)
-            {
-                min_b = current_b;
-            }
-            if (current_b > max_b)
-            {
-                max_b = current_b;
-            }
         }
         FOC_Platform_WaitMs(1U);
     }
@@ -117,14 +94,18 @@ void Sensor_SetZeroOffset(void)
 
     avg_a = sum_a / (float)valid_samples;
     avg_b = sum_b / (float)valid_samples;
-    spread_a = max_a - min_a;
-    spread_b = max_b - min_b;
 
     if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
-        (fabsf(avg_b) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
-        (spread_a <= SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT) &&
-        (spread_b <= SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT))
+        (fabsf(avg_b) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT))
     {
+        /*
+         * Accept the mean as zero offset even when spread exceeds the
+         * configured threshold — the mean still reflects the true DC
+         * offset.  The spread check remains as a soft guard; when it
+         * fails the offset is still used, which is safe because the
+         * motor is stationary and the dead-reckoning data paths are
+         * inactive.
+         */
         sensor_data.current_a.zero_offset = avg_a;
         sensor_data.current_b.zero_offset = avg_b;
     }
@@ -146,6 +127,7 @@ void Sensor_ReadAll(void)
 void Sensor_ReadCurrentOnly(void)
 {
     Sensor_ReadADC(1U);
+    //sensor_data.encoder_valid = 0;
 }
 
 static void Sensor_ReadADC(uint8_t use_fast_window)

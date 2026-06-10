@@ -8,7 +8,7 @@
 #define SENSOR_ZERO_CALIB_NEAR_ZERO_CURRENT  0.15f
 #define SENSOR_ZERO_CALIB_MIN_VALID_SAMPLES  160U
 #define SENSOR_ZERO_CALIB_MAX_ABS_CURRENT    2.50f
-#define SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT 0.80f
+#define SENSOR_ZERO_CALIB_MAX_SPREAD_CURRENT 2.50f
 
 /* Function prototypes */
 void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent);

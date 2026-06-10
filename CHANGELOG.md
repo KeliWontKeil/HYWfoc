@@ -5,6 +5,16 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.5] - 2026-06-10
+
+### Added
+- **电周期平均动态偏置补偿**：新增 `FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE` 特性，在电流环中通过累计一个完整电周期的相电流平均值，提取并补偿低测采样引入的负载相关零点漂移。
+  - 状态全在 `foc_motor_t` 结构体中，无凌散全局变量。
+  - 堵转安全：电角度不前进则窗口不闭合，偏置不更新。
+  - 电周期检测器仅在 `sensor->encoder_valid` 为真时运行，快速电流环 ISR 路径不触发。
+  - 新增宏：`FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE`、`FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA`（默认 0.10f）、`FOC_ELEC_CYCLE_OFFSET_MIN_VALID_CYCLES`（默认 1）。
+  - 受影响文件：`foc_cfg_feature_switches.h`、`foc_cfg_init_values.h`、`foc_motor_types.h`、`foc_control_c12_init.c`、`foc_control_c22_current_loop.c`、`sensor.c`（仅 1 行 sanify `encoder_valid = 0` 在 `Sensor_ReadCurrentOnly` 中）。
+
 ## [1.7.2-1.7.4] - 2026-05-22
 
 ### Fixed

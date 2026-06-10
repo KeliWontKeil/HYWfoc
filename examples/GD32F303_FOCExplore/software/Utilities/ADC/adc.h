@@ -67,14 +67,22 @@
 /* Buffer configuration */
 #define ADC_BUFFER_SIZE       4     /* DMA buffer size (samples per channel) */
 #define ADC_CHANNEL_COUNT     2       /* Number of channels: PA6 and PA7 */
-#define ADC_AVG_DEFAULT_COUNT 4      /* 24kHz sampling / 1kHz control loop */
+#define ADC_AVG_DEFAULT_COUNT 2      /* 24kHz sampling / 2 divide current loop */
 
 /* Current calculation constants */
-#define ADC_VREF              3.3f    /* Reference voltage (V) */
-#define ADC_MAX_VALUE         4095.0f /* 12-bit ADC max value */
-#define ADC_ZERO_CURRENT_VOLTAGE (ADC_VREF / 2.0f) /* Voltage at zero current */
-#define CURRENT_RANGE 16.5f /* ±16.5A current range corresponding to 0 to VREF/2 deviation */
-#define CURRENT_SCALE_FACTOR  (CURRENT_RANGE / (ADC_VREF / 2.0f)) /*±VREF/2 */
+#define ADC_VREF              3.28f    /* Reference voltage (V) */
+#define ADC_15_MAX_VALUE         32760.0f /* 15-bit ADC max value (12-bit * 8x oversampling) */
+#define ADC_12_MAX_VALUE           4095.0f /* 12-bit ADC max value */
+
+/* Phase A current sensor parameters */
+#define ADC_ZERO_CURRENT_VOLTAGE_A 1.64f  /* Voltage at zero current, phase A */
+#define CURRENT_RANGE_A            3.3f               /* ±3.3A current range, phase A */
+#define CURRENT_SCALE_FACTOR_A     (CURRENT_RANGE_A / (ADC_VREF / 2.0f))
+
+/* Phase B current sensor parameters */
+#define ADC_ZERO_CURRENT_VOLTAGE_B 1.64f  /* Voltage at zero current, phase B */
+#define CURRENT_RANGE_B            3.3f               /* ±3.3A current range, phase B */
+#define CURRENT_SCALE_FACTOR_B     (CURRENT_RANGE_B / (ADC_VREF / 2.0f))
 
 /* Data structures */
 typedef struct {
@@ -106,8 +114,9 @@ adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t
 adc_status_t ADC_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b, uint16_t avg_count);
 uint8_t ADC_ReadPhaseCurrentABOk(float *phase_current_a, float *phase_current_b, uint16_t avg_count);
 
-float ADC_RawToVoltage(uint16_t raw_value);
-float ADC_VoltageToCurrent(float voltage);
+float ADC_CurrentRawToVoltage(uint16_t raw_value);
+float ADC_VoltageToCurrentPhaseA(float voltage);
+float ADC_VoltageToCurrentPhaseB(float voltage);
 
 /* DMA interrupt handler (called from ISR) */
 void ADC_DMA_IRQHandler_Internal(void);

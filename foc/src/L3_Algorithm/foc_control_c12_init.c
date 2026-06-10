@@ -195,4 +195,15 @@ void FOC_MotorInit(foc_motor_t *motor,
         }
     }
 #endif
+
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+    motor->ecycle_offset_dyn_a = 0.0f;
+    motor->ecycle_offset_dyn_b = 0.0f;
+    motor->ecycle_prev_mech_angle = 0.0f;
+    motor->ecycle_accu_mech_delta = 0.0f;
+    motor->ecycle_sample_count = 0U;
+    motor->ecycle_accum_a = 0.0f;
+    motor->ecycle_accum_b = 0.0f;
+    motor->ecycle_offset_valid = 0U;
+#endif
 }

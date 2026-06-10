@@ -10,8 +10,7 @@
 /* Private variables */
 static uint32_t adc_buffer[ADC_BUFFER_SIZE]; /* DMA buffer: each word packs ADC0(low16) + ADC1(high16) */
 static volatile uint8_t adc_initialized = 0;
-static float zero_offset_a = 0.0f;  /* Zero current calibration offset for phase A */
-static float zero_offset_b = 0.0f;  /* Zero current calibration offset for phase B */
+/* Zero-offset correction is at L3 (sensor) via kalman_filter_t.zero_offset. */
 
 /* Private function prototypes */
 static void ADC_GPIO_Config(void);
@@ -45,7 +44,7 @@ void ADC_Init(void)
 #endif
 
     /* Prefill DMA buffer to mid-scale so early reads are stable before full DMA history is collected. */
-    mid_raw = (uint32_t)(ADC_MAX_VALUE / 2.0f);
+    mid_raw = (uint32_t)(ADC_15_MAX_VALUE / 2.0f);
     packed_mid = (mid_raw & 0xFFFFU) | ((mid_raw & 0xFFFFU) << 16U);
 
     for (i = 0; i < ADC_BUFFER_SIZE; i++)
@@ -140,12 +139,12 @@ adc_status_t ADC_GetAverageSample(float *sample, adc_sampletype_t type, uint16_t
                 sum_b += (float)raw_b;
                 break;
             case VOLTAGE:
-                sum_a += ADC_RawToVoltage(raw_a);
-                sum_b += ADC_RawToVoltage(raw_b);
+                sum_a += ADC_CurrentRawToVoltage(raw_a);
+                sum_b += ADC_CurrentRawToVoltage(raw_b);
                 break;
             case CURRENT:
-                sum_a += (ADC_VoltageToCurrent(ADC_RawToVoltage(raw_a)) - zero_offset_a) * CURRENT_DIR_A;
-                sum_b += (ADC_VoltageToCurrent(ADC_RawToVoltage(raw_b)) - zero_offset_b) * CURRENT_DIR_B;
+                sum_a += ADC_VoltageToCurrentPhaseA(ADC_CurrentRawToVoltage(raw_a)) * CURRENT_DIR_A;
+                sum_b += ADC_VoltageToCurrentPhaseB(ADC_CurrentRawToVoltage(raw_b)) * CURRENT_DIR_B;
                 break;
             default:
                 return ADC_STATUS_ERROR;
@@ -191,26 +190,36 @@ uint8_t ADC_ReadPhaseCurrentABOk(float *phase_current_a, float *phase_current_b,
 }
 
 /*!
-    \brief      Convert raw ADC value to voltage
-    \param[in]  raw_value: raw ADC value (0-4095)
+    \brief      Convert raw ADC value to voltage (current sampling, 15-bit)
+    \param[in]  raw_value: raw ADC value (0-32760 for 15-bit oversampled)
     \param[out] none
     \retval     voltage in volts
 */
-float ADC_RawToVoltage(uint16_t raw_value)
+float ADC_CurrentRawToVoltage(uint16_t raw_value)
 {
-    return (float)raw_value * ADC_VREF / ADC_MAX_VALUE;
+    return (float)raw_value * ADC_VREF / ADC_15_MAX_VALUE;
 }
 
 /*!
-    \brief      Convert voltage to current
+    \brief      Convert voltage to current for phase A
     \param[in]  voltage: voltage in volts
     \param[out] none
     \retval     current in amperes
 */
-float ADC_VoltageToCurrent(float voltage)
+float ADC_VoltageToCurrentPhaseA(float voltage)
 {
-    /* Current sensor: 0A = VREF/2, ±20A range */
-    return (voltage - ADC_ZERO_CURRENT_VOLTAGE) * CURRENT_SCALE_FACTOR;
+    return (voltage - ADC_ZERO_CURRENT_VOLTAGE_A) * CURRENT_SCALE_FACTOR_A;
+}
+
+/*!
+    \brief      Convert voltage to current for phase B
+    \param[in]  voltage: voltage in volts
+    \param[out] none
+    \retval     current in amperes
+*/
+float ADC_VoltageToCurrentPhaseB(float voltage)
+{
+    return (voltage - ADC_ZERO_CURRENT_VOLTAGE_B) * CURRENT_SCALE_FACTOR_B;
 }
 
 /*!
@@ -301,6 +310,15 @@ static void ADC_Config(void)
     /* ADC resolution: 12-bit for both */
     adc_resolution_config(ADC0_PERIPH, ADC_RESOLUTION);
     adc_resolution_config(ADC1_PERIPH, ADC_RESOLUTION);
+    
+    /* ADC oversampling: 8x oversampling, no shift, all conversions consecutively.
+       8 accumulated 12-bit samples yield 15-bit effective range (0~32760). */
+    adc_oversample_mode_config(ADC0_PERIPH, ADC_OVERSAMPLING_ALL_CONVERT,
+                               ADC_OVERSAMPLING_SHIFT_NONE, ADC_OVERSAMPLING_RATIO_MUL8);
+    adc_oversample_mode_config(ADC1_PERIPH, ADC_OVERSAMPLING_ALL_CONVERT,
+                               ADC_OVERSAMPLING_SHIFT_NONE, ADC_OVERSAMPLING_RATIO_MUL8);
+    adc_oversample_mode_enable(ADC0_PERIPH);
+    adc_oversample_mode_enable(ADC1_PERIPH);
     
     /* Configure regular channel sequence for ADC0 */
     adc_routine_channel_config(ADC0_PERIPH, 0, ADC_CHANNEL_PA6, ADC_SAMPLE_TIME);
@@ -430,7 +448,7 @@ uint8_t ADC2_ReadVbus(float *vbus_v)
     adc_flag_clear(ADC2_PERIPH, ADC_FLAG_EOC);
 
     raw_value = (uint16_t)adc_routine_data_read(ADC2_PERIPH);
-    vbus = ((float)raw_value / ADC_MAX_VALUE) * ADC_VREF * ADC2_VBUS_CONVERSION_K;
+    vbus = ((float)raw_value / ADC_12_MAX_VALUE) * ADC_VREF * ADC2_VBUS_CONVERSION_K;
 
     if (vbus < 0.0f)
     {
@@ -440,5 +458,3 @@ uint8_t ADC2_ReadVbus(float *vbus_v)
     *vbus_v = vbus;
     return 1U;
 }
-
-
