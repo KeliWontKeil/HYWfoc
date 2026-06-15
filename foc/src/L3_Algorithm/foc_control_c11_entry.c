@@ -6,6 +6,7 @@
 #include "L3_Algorithm/foc_control_c24_compensation.h"
 #include "L41_Math/math_transforms.h"
 
+/* C11入口：复位PID状态（积分+前次误差归零） */
 static void FOC_ResetPIDState(foc_pid_t *pid)
 {
     if (pid == 0)
@@ -17,11 +18,13 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
     pid->prev_error = 0.0f;
 }
 
+/* C11入口：查询电流环是否需要采样 */
 uint8_t FOC_ControlCurrentLoopRequiresSample(void)
 {
     return FOC_ControlRequiresCurrentSample();
 }
 
+/* C11入口：执行电流环控制步进 */
 void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
                                 foc_pid_t *current_pid,
                                 const sensor_data_t *sensor,
@@ -35,6 +38,7 @@ void FOC_ControlCurrentLoopStep(foc_motor_t *motor,
                            dt_sec);
 }
 
+/* C11入口：执行补偿（齿槽补偿）步进 */
 void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor)
 {
     if ((motor == 0) || (sensor == 0))
@@ -54,11 +58,13 @@ void FOC_ControlCompensationStep(foc_motor_t *motor, const sensor_data_t *sensor
 
 }
 
+/* C11入口：执行开环控制步进 */
 void FOC_ControlOpenLoopStep(foc_motor_t *motor, float voltage, float turn_speed)
 {
     FOC_CurrentControlOpenLoopStep(motor, voltage, turn_speed, FOC_CONTROL_DT_SEC);
 }
 
+/* C11入口：执行外环控制步进（速度/角度模式选择 + PID计算） */
 uint8_t FOC_ControlOuterLoopStep(foc_motor_t *motor,
                                  foc_pid_t *current_pid,
                                  foc_pid_t *speed_pid,

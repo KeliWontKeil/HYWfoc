@@ -27,6 +27,7 @@
                                        (1U << 6) | \
                                        (1U << 7))
 
+/* 最终确定初始化自检结果：检查所有必需项是否通过 */
 static void RuntimeC3_FinalizeInitDiagnostics(void)
 {
     uint16_t init_check_mask = RuntimeC4_GetInitCheckMask();
@@ -80,6 +81,7 @@ static void RuntimeC3_FinalizeInitDiagnostics(void)
 #endif
 }
 
+/* C3层：更新步进信号（传感器状态/自检/欠压等） */
 void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal)
 {
     if (signal == 0)
@@ -113,6 +115,7 @@ void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal)
                 RuntimeC4_SetLastFaultCode((uint8_t)RUNTIME_FAULT_SENSOR_ENCODER_INVALID);
             }
 
+            /* 连续无效超过阈值则触发系统故障 */
             if (RuntimeC4_GetSensorInvalidConsecutive() >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
             {
                 if (RuntimeC4_GetSystemState() != RUNTIME_STATE_SYSTEM_FAULT)
@@ -128,6 +131,7 @@ void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal)
                 }
             }
         }
+/* 欠压保护检测 */
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
 
         if(signal->undervoltage_vbus < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
@@ -151,6 +155,7 @@ void RuntimeC3_UpdateSignals(const runtime_step_signal_t *signal)
     }
 }
 
+/* 处理系统命令（Y通道）：运行时摘要、故障恢复、重初始化、齿槽标定等 */
 static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_command_t *cmd)
 {
     if (cmd->has_param != 0U)
@@ -222,6 +227,7 @@ static runtime_c4_exec_result_t RuntimeC3_HandleSystemCommand(const protocol_com
     return RUNTIME_C4_EXEC_PARAM_ERROR;
 }
 
+/* C3层：处理协议命令（参数P/状态S/系统Y），返回执行成功标志 */
 uint8_t RuntimeC3_HandleCommand(const protocol_command_t *cmd)
 {
     runtime_c4_exec_result_t exec_result;
@@ -266,12 +272,14 @@ uint8_t RuntimeC3_HandleCommand(const protocol_command_t *cmd)
     return RuntimeC4_GetLastExecOk();
 }
 
+/* C3层初始化 */
 void RuntimeC3_Init(void)
 {
     RuntimeC4_Init();
     RuntimeC4_UpdateReportMode();
 }
 
+/* C3层：报告帧解析错误（由C2调用） */
 void RuntimeC3_ReportFrameError(void)
 {
     RuntimeC4_IncrementProtocolErrorCount();
@@ -279,16 +287,19 @@ void RuntimeC3_ReportFrameError(void)
     RuntimeC4_WriteStatusFrameError();
 }
 
+/* C3层：构建快照（委托给C4） */
 void RuntimeC3_BuildSnapshot(runtime_snapshot_t *snapshot)
 {
     RuntimeC4_BuildSnapshot(snapshot);
 }
 
+/* C3层：提交（清除dirty） */
 void RuntimeC3_Commit(void)
 {
     RuntimeC4_ClearDirty();
 }
 
+/* C3层：清除重初始化 */
 void RuntimeC3_ClearReinit(void)
 {
     RuntimeC4_ClearReinit();

@@ -30,6 +30,7 @@ static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement);
 static float Sensor_UpdateAngleLpf(float measurement);
 #endif
 
+/* 传感器初始化：配置PWM频率、卡尔曼滤波器参数、零点校准 */
 void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent)
 {
     FOC_Platform_SensorInputInit(pwm_freq_kHz);
@@ -63,6 +64,7 @@ void Sensor_Init(uint8_t pwm_freq_kHz,float adc_sample_offset_percent)
 
 }
 
+/* 设置电流零点偏移：对静止状态下的ADC采样取平均值作为偏移量 */
 void Sensor_SetZeroOffset(void)
 {
     uint16_t i;
@@ -145,6 +147,7 @@ void Sensor_SetZeroOffset(void)
 
 }
 
+/* 读取所有传感器数据（ADC+编码器+VBUS） */
 void Sensor_ReadAll(void)
 {
     Sensor_ReadADC(0U);
@@ -152,12 +155,14 @@ void Sensor_ReadAll(void)
     Sensor_ReadVBUS();
 }
 
+/* 仅读取电流传感器（用于快速电流环ISR路径） */
 void Sensor_ReadCurrentOnly(void)
 {
     Sensor_ReadADC(1U);
     //sensor_data.encoder_valid = 0;
 }
 
+/* 读取ADC电流采样，使用快速窗口或普通窗口 */
 static void Sensor_ReadADC(uint8_t use_fast_window)
 {
     float current_a = 0.0f;
@@ -203,9 +208,9 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
 #endif
 #endif
 
-        /* Apply static zero-offset correction.
-         * For two-phase sampling, phase C is reconstructed as -(Ia+Ib).
-         * For three-phase sampling, each phase is sampled directly. */
+        /* 应用静态零点偏移修正。
+         * 两相采样时，C相由 -(Ia+Ib) 重构；
+         * 三相采样时，各相直接读取。 */
 #if (FOC_SENSOR_PHASE_COUNT == 2U)
         sensor_data.current_a.output_value = sensor_data.current_a.filtered_value - sensor_data.current_a.zero_offset;
         sensor_data.current_b.output_value = sensor_data.current_b.filtered_value - sensor_data.current_b.zero_offset;
@@ -224,6 +229,7 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
     }
 }
 
+/* 读取编码器机械角度，应用卡尔曼滤波和低通滤波 */
 static void Sensor_ReadEncoder(void)
 {
     float angle_rad;
@@ -253,6 +259,7 @@ static void Sensor_ReadEncoder(void)
     }
 }
 
+/* 读取VBUS电压，一阶低通滤波 */
 void Sensor_ReadVBUS(void)
 {
     float vbus_raw;
@@ -273,16 +280,19 @@ void Sensor_ReadVBUS(void)
     }
 }
 
+/* 拷贝传感器数据到外部缓冲区（用于快照） */
 void Sensor_CopyData(sensor_data_t *out_data)
 {
     *out_data = sensor_data;
 }
 
+/* 设置ADC采样时间偏移百分比 */
 void Sensor_ADCSampleTimeOffset(float percent)
 {
     FOC_Platform_SetSensorSampleOffsetPercent(percent);
 }
 
+/* 卡尔曼滤波器初始化 */
 static void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimate_error, float process_noise, float initial_value)
 {
     filter->raw_value = initial_value;
@@ -295,6 +305,7 @@ static void Kalman_Init(kalman_filter_t* filter, float measurement_error, float 
     filter->output_value = initial_value;
 }
 
+/* 卡尔曼滤波器更新（标准一维卡尔曼） */
 #if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
 static void Kalman_Update(kalman_filter_t* filter, float measurement)
 {
@@ -320,6 +331,7 @@ static void Kalman_Update(kalman_filter_t* filter, float measurement)
 }
 #endif
 
+/* 卡尔曼滤波器更新（角度版本，处理0/2pi缠绕） */
 #if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
 static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
 {
@@ -334,7 +346,7 @@ static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
         return;
     }
 
-    /* Select nearest equivalent angle to avoid 0/2pi wrap discontinuity */
+    /* 选择最近等效角度，避免0/2pi缠绕不连续 */
     err_direct = fabsf(measurement - filter->filtered_value);
     err_plus_turn = fabsf((measurement + FOC_MATH_TWO_PI) - filter->filtered_value);
     err_minus_turn = fabsf((measurement - FOC_MATH_TWO_PI) - filter->filtered_value);
@@ -371,6 +383,7 @@ static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
 }
 #endif
 
+/* 角度一阶低通滤波 */
 #if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
 static float Sensor_UpdateAngleLpf(float measurement)
 {
@@ -395,6 +408,7 @@ static float Sensor_UpdateAngleLpf(float measurement)
 }
 #endif
 
+/* 获取滤波后VBUS电压 */
 float Sensor_GetVBUSVoltage(void)
 {
     return sensor_data.vbus_voltage_filtered;

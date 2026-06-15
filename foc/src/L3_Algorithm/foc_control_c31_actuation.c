@@ -8,12 +8,14 @@
 #include "L42_PAL/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
+/* SVPWM前置低通滤波状态 */
 #if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
 static uint8_t g_svpwm_lpf_state_valid = 0U;
 static float g_svpwm_lpf_phase_a = 0.0f;
 static float g_svpwm_lpf_phase_b = 0.0f;
 static float g_svpwm_lpf_phase_c = 0.0f;
 
+/* 对SVPWM输入三相电压进行一阶低通滤波 */
 static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
 {
     if ((phase_a == 0) || (phase_b == 0) || (phase_c == 0))
@@ -45,6 +47,7 @@ static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
 }
 #endif
 
+/* 核心：将电机dq电压+电角度转换为三相PWM占空比输出 */
 static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
                                                 float electrical_angle,
                                                 uint8_t direct_output)
@@ -64,6 +67,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     ud_applied = motor->ud;
     uq_applied = motor->uq;
 
+    /* SVPWM过调制限制：dq矢量幅度超过电压限制时等比缩放 */
     if ((dq_magnitude > voltage_limit) && (dq_magnitude > 1e-6f))
     {
         float scale = voltage_limit / dq_magnitude;
@@ -72,12 +76,14 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
         dq_magnitude = voltage_limit;
     }
 
+    /* 逆Park变换：dq -> alpha-beta */
     Math_InverseParkTransform(ud_applied,
                               uq_applied,
                               electrical_angle,
                               &motor->alpha,
                               &motor->beta);
 
+    /* 逆Clarke变换：alpha-beta -> 三相电压 */
     Math_InverseClarkeTransform(motor->alpha,
                                 motor->beta,
                                 &motor->phase_a,
@@ -94,6 +100,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
 
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
 
+    /* 零矢量钳位：电压命令过低时直接输出50%占空比（中点）以降低开关损耗 */
 #if (FOC_ZERO_VECTOR_CLAMP_ENABLE == FOC_CFG_ENABLE)
     if (voltage_command < FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V)
     {
@@ -120,6 +127,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     }
 #endif
 
+    /* 正常SVPWM输出 */
     if (direct_output != 0U)
     {
         SVPWM_UpdateDirect(motor->phase_a,
@@ -146,6 +154,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     }
 }
 
+/* C31：将机械角度转换为电角度（基于极对数和机械零点） */
 float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad)
 {
     float elec_period_rad;
@@ -172,6 +181,7 @@ float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angl
     return Math_WrapRad(motor->direction * mech_delta_mod * (float)motor->pole_pairs);
 }
 
+/* C31：采样锁定的机械角度（用于电机零点标定） */
 uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
                                         float electrical_angle,
                                         uint16_t settle_ms,
@@ -190,6 +200,7 @@ uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
     FOC_Platform_WaitMs(settle_ms);
 
+    /* 在锁定状态下多次采样，通过sin/cos矢量平均抑制噪声 */
     for (i = 0U; i < sample_count; i++)
     {
         float sample_rad;
@@ -213,11 +224,13 @@ uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     return 1U;
 }
 
+/* C31：运行时应用电角度（使用插值SVPWM输出） */
 void FOC_ControlApplyElectricalAngleRuntime(foc_motor_t *motor, float electrical_angle)
 {
     FOC_ControlApplyElectricalAngleCore(motor, electrical_angle, 0U);
 }
 
+/* C31：直接应用电角度（直接写入占空比，不插值） */
 void FOC_ControlApplyElectricalAngleDirect(foc_motor_t *motor, float electrical_angle)
 {
     FOC_ControlApplyElectricalAngleCore(motor, electrical_angle, 1U);

@@ -143,6 +143,7 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_motor_t *motor,
 
 #if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
 
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
 /* Aggregate accumulated samples and update drift offsets for two-phase sampling.
  * Called when one electrical cycle has elapsed. Does NOT include per-frame
  * sample accumulation — that is done by the caller each control cycle. */
@@ -174,7 +175,7 @@ static void FOC_EcycleUpdateTwoPhase(foc_motor_t *motor,
     motor->ecycle_accu_mech_delta = 0.0f;
 }
 
-#if (FOC_SENSOR_PHASE_COUNT == 3U)
+#elif (FOC_SENSOR_PHASE_COUNT == 3U)
 /* Aggregate accumulated samples and update drift offsets for three-phase sampling. */
 static void FOC_EcycleUpdateThreePhase(foc_motor_t *motor,
                                        const sensor_data_t *sensor)

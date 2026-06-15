@@ -5,6 +5,17 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.6] - 2026-06-15
+
+### Changed
+- **全库注释中文化**：将所有代码逻辑注释（除API文件、配置头以外）翻译为中文，便于国内开发团队（?）理解和维护。
+  - L1/L2/L3各层级源文件的英文注释全部替换为中文。
+  - API空实现模板(`foc_platform_api_empty.c`)的注释升级为中英双语，细化每个函数参数说明、值范围、实现指南。
+  - 涉及文件：`foc_app.c`、`runtime_c1_entry.c`、`runtime_c2_frame_source.c`、`runtime_c3_runtime_fsm.c`、`runtime_c5_output_adapter.c`、`debug_stream.c`、`foc_control_c11_entry.c`、`sensor.c`、`foc_control_c31_actuation.c`、`foc_platform_api_empty.c` 等。
+
+### Added
+- **API移植文档完善**：`foc_platform_api_empty.c` 中添加了详细的参数范围、实现注意事项和中断优先级建议。
+
 ## [1.7.5] - 2026-06-10
 
 ### Added

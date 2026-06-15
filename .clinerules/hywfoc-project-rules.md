@@ -1,6 +1,6 @@
 ## Brief overview
 
-HYWfoc（何易位FOC）是一个基于 GD32F303CC 的磁场定向控制（FOC）项目，采用"核心库 + 实例工程"组织方式。核心库 `foc/` 是平台无关的，实例工程在 `examples/<instance>/` 中。当前稳定基线为 `v1.7.5`。
+HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核心库 + 实例工程"组织方式。核心库 `foc/` 是平台无关的，实例工程在 `examples/<instance>/` 中。主要实例工程基于 GD32F303CC 。
 
 ## Project structure
 
@@ -130,19 +130,15 @@ LS_Config 文件分为三大类：
 - 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 - 协议裁剪开关：`FOC_PROTOCOL_ENABLE_*` 系列宏
 
-## Current mission (v1.7.5 → v2.0.0)
+## Current mission
 
-下一目标在 `NEXT_MISSION.md` 中定义，当前为：
-1. 内存/性能优化（状态位合并、ROM/RAM 裁剪）
-2. 控制效果优化（PID 整定、齿槽补偿验证、软切换定型）
-3. 文档全面审计与补充
-4. 电周期平均动态偏置补偿（v1.7.5 已完成）
+如果有，下一目标在 `NEXT_MISSION.md` 中定义，否则根据用户prompt开发。
 
 ## Build constraints
 
 - 编译后端：ARM Compiler 5 (AC5)
 - 目标：0 error，不新增 warning
-- ROM ≤ 256KB，RAM ≤ 96KB
+- 主要实例中ROM ≤ 256KB，RAM ≤ 96KB，实际应考虑不同平台的可移植性，建议ROM ≤ 64KB，RAM ≤ 16KB
 - 实例构建入口：`examples/<instance>/software/` 下的 EIDE 工程
 - 根工作区 `Project.code-workspace` 仅用于管理与文档治理
 
@@ -182,6 +178,7 @@ set DOTNET_ROLL_FORWARD=Major
 - `get_errors` 可能残留过期诊断，最终以真实编译/链接结果为准
 - 不要写过多注释，非必要不写，或者一般一句话即可（如果特意要求，再写详细注释）
 - 如果你认为prompt有什么地方说不通，请不要使用自认为的答案然后继续修改，而是停下向我确认。
+- 修改代码后请勿提交git，除非要求。未经审核的关于代码的git提交是不可容忍的。
 
 ### 项目规则/架构约束
 - 本处用于记载项目的架构约束/编码规范，或是调试过程中形成的经验型约束
