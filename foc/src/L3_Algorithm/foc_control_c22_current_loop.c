@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "L3_Algorithm/foc_control_c31_actuation.h"
+#include "L3_Algorithm/sensor.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 
@@ -159,19 +160,19 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
         return;
     }
 
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-    if (motor->ecycle_offset_valid != 0U)
-    {
-        ia_comp = sensor->current_a.output_value - motor->ecycle_offset_dyn_a;
-        ib_comp = sensor->current_b.output_value - motor->ecycle_offset_dyn_b;
-    }
-    else
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
+    Sensor_CompensateTwoPhaseZeroOffset(sensor->current_a.output_value,
+                                        sensor->current_b.output_value,
+                                        motor->ecycle_offset_dyn_a,
+                                        motor->ecycle_offset_dyn_b,
+                                        motor->ecycle_offset_valid,
+                                        &ia_comp, &ib_comp, &ic_comp);
+#else
+    Sensor_CompensateThreePhaseZeroOffset(sensor->current_a.output_value,
+                                          sensor->current_b.output_value,
+                                          sensor->current_c.output_value,
+                                          &ia_comp, &ib_comp, &ic_comp);
 #endif
-    {
-        ia_comp = sensor->current_a.output_value;
-        ib_comp = sensor->current_b.output_value;
-    }
-    ic_comp = -(ia_comp + ib_comp);
 
     Math_ClarkeTransform(ia_comp, ib_comp, ic_comp, &i_alpha, &i_beta);
 

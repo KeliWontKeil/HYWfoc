@@ -76,6 +76,12 @@
 #endif
 
 /* Unified enable or disable compile-time checks. */
+
+/* Phase count must be 2 (two-phase + reconstruct) or 3 (three-phase direct). */
+#if (FOC_SENSOR_PHASE_COUNT != 2U) && (FOC_SENSOR_PHASE_COUNT != 3U)
+#error "FOC_SENSOR_PHASE_COUNT must be 2 (two-phase + reconstruct) or 3 (three-phase direct)"
+#endif
+
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT != FOC_CFG_DISABLE) && (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT != FOC_CFG_ENABLE))
 #error "DEBUG_STREAM_ENABLE_SEMANTIC_REPORT must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif

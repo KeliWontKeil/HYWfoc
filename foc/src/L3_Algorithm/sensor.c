@@ -69,19 +69,38 @@ void Sensor_SetZeroOffset(void)
     uint16_t valid_samples = 0U;
     float current_a = 0.0f;
     float current_b = 0.0f;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    float current_c = 0.0f;
+#endif
     float sum_a = 0.0f;
     float sum_b = 0.0f;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    float sum_c = 0.0f;
+#endif
     float avg_a;
     float avg_b;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    float avg_c;
+#endif
 
     for (i = 0U; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
     {
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
         if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
         {
             sum_a += current_a;
             sum_b += current_b;
             valid_samples++;
         }
+#else
+        if (FOC_Platform_ReadPhaseCurrentABC(&current_a, &current_b, &current_c) != 0U)
+        {
+            sum_a += current_a;
+            sum_b += current_b;
+            sum_c += current_c;
+            valid_samples++;
+        }
+#endif
         FOC_Platform_WaitMs(1U);
     }
 
@@ -89,23 +108,21 @@ void Sensor_SetZeroOffset(void)
     {
         sensor_data.current_a.zero_offset = 0.0f;
         sensor_data.current_b.zero_offset = 0.0f;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+        sensor_data.current_c.zero_offset = 0.0f;
+#endif
         return;
     }
 
     avg_a = sum_a / (float)valid_samples;
     avg_b = sum_b / (float)valid_samples;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    avg_c = sum_c / (float)valid_samples;
+#endif
 
     if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
         (fabsf(avg_b) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT))
     {
-        /*
-         * Accept the mean as zero offset even when spread exceeds the
-         * configured threshold — the mean still reflects the true DC
-         * offset.  The spread check remains as a soft guard; when it
-         * fails the offset is still used, which is safe because the
-         * motor is stationary and the dead-reckoning data paths are
-         * inactive.
-         */
         sensor_data.current_a.zero_offset = avg_a;
         sensor_data.current_b.zero_offset = avg_b;
     }
@@ -114,6 +131,17 @@ void Sensor_SetZeroOffset(void)
         sensor_data.current_a.zero_offset = 0.0f;
         sensor_data.current_b.zero_offset = 0.0f;
     }
+
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    if (fabsf(avg_c) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
+    {
+        sensor_data.current_c.zero_offset = avg_c;
+    }
+    else
+    {
+        sensor_data.current_c.zero_offset = 0.0f;
+    }
+#endif
 
 }
 
@@ -134,15 +162,26 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
 {
     float current_a = 0.0f;
     float current_b = 0.0f;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    float current_c = 0.0f;
+#endif
     uint8_t read_ok;
 
     if (use_fast_window != 0U)
     {
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
         read_ok = FOC_Platform_ReadPhaseCurrentABFast(&current_a, &current_b);
+#else
+        read_ok = FOC_Platform_ReadPhaseCurrentABCFast(&current_a, &current_b, &current_c);
+#endif
     }
     else
     {
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
         read_ok = FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b);
+#else
+        read_ok = FOC_Platform_ReadPhaseCurrentABC(&current_a, &current_b, &current_c);
+#endif
     }
 
     if (read_ok != 0U)
@@ -150,17 +189,32 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
 #if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
         Kalman_Update(&sensor_data.current_a, current_a);
         Kalman_Update(&sensor_data.current_b, current_b);
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+        Kalman_Update(&sensor_data.current_c, current_c);
+#endif
 #else
         sensor_data.current_a.raw_value = current_a;
         sensor_data.current_a.filtered_value = current_a;
         sensor_data.current_b.raw_value = current_b;
         sensor_data.current_b.filtered_value = current_b;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+        sensor_data.current_c.raw_value = current_c;
+        sensor_data.current_c.filtered_value = current_c;
+#endif
 #endif
 
+        /* Apply static zero-offset correction.
+         * For two-phase sampling, phase C is reconstructed as -(Ia+Ib).
+         * For three-phase sampling, each phase is sampled directly. */
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
         sensor_data.current_a.output_value = sensor_data.current_a.filtered_value - sensor_data.current_a.zero_offset;
         sensor_data.current_b.output_value = sensor_data.current_b.filtered_value - sensor_data.current_b.zero_offset;
-
         sensor_data.current_c.output_value = -(sensor_data.current_a.output_value + sensor_data.current_b.output_value);
+#else
+        sensor_data.current_a.output_value = sensor_data.current_a.filtered_value - sensor_data.current_a.zero_offset;
+        sensor_data.current_b.output_value = sensor_data.current_b.filtered_value - sensor_data.current_b.zero_offset;
+        sensor_data.current_c.output_value = sensor_data.current_c.filtered_value - sensor_data.current_c.zero_offset;
+#endif
 
         sensor_data.adc_valid = 1;
     }
@@ -227,6 +281,49 @@ void Sensor_CopyData(sensor_data_t *out_data)
 void Sensor_ADCSampleTimeOffset(float percent)
 {
     FOC_Platform_SetSensorSampleOffsetPercent(percent);
+}
+
+void Sensor_CompensateTwoPhaseZeroOffset(float ia_raw, float ib_raw,
+                                         float ecycle_off_a, float ecycle_off_b,
+                                         uint8_t ecycle_valid,
+                                         float *ia_out, float *ib_out,
+                                         float *ic_out)
+{
+    if ((ia_out == 0) || (ib_out == 0) || (ic_out == 0))
+    {
+        return;
+    }
+
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+    if (ecycle_valid != 0U)
+    {
+        *ia_out = ia_raw - ecycle_off_a;
+        *ib_out = ib_raw - ecycle_off_b;
+    }
+    else
+#endif
+    {
+        *ia_out = ia_raw;
+        *ib_out = ib_raw;
+    }
+
+    *ic_out = -(*ia_out + *ib_out);
+}
+
+void Sensor_CompensateThreePhaseZeroOffset(float ia_raw, float ib_raw, float ic_raw,
+                                           float *ia_out, float *ib_out,
+                                           float *ic_out)
+{
+    if ((ia_out == 0) || (ib_out == 0) || (ic_out == 0))
+    {
+        return;
+    }
+
+    /* Reserved for future three-phase compensation strategy.
+     * Currently pass-through: no compensation applied. */
+    *ia_out = ia_raw;
+    *ib_out = ib_raw;
+    *ic_out = ic_raw;
 }
 
 static void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimate_error, float process_noise, float initial_value)

@@ -89,6 +89,12 @@ uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_cur
 /** @brief Read phase-A and phase-B currents for fast current-loop path. */
 uint8_t FOC_Platform_ReadPhaseCurrentABFast(float *phase_current_a, float *phase_current_b);
 
+/** @brief Read phase-A, phase-B and phase-C currents (three-phase sampling). */
+uint8_t FOC_Platform_ReadPhaseCurrentABC(float *phase_current_a, float *phase_current_b, float *phase_current_c);
+
+/** @brief Read phase-A, phase-B and phase-C currents for fast current-loop path. */
+uint8_t FOC_Platform_ReadPhaseCurrentABCFast(float *phase_current_a, float *phase_current_b, float *phase_current_c);
+
 /** @brief Read mechanical angle in radians. */
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad);
 
