@@ -21,20 +21,4 @@ void Sensor_ReadVBUS(void);
 float Sensor_GetVBUSVoltage(void);
 uint8_t Sensor_IsVBUSValid(void);
 
-/* Two-phase zero-offset compensation (only applicable to two-phase sampling).
- * For two-phase systems, phase C is reconstructed as -(Ia+Ib) after compensation.
- * Parameters include electrical-cycle dynamic offsets for runtime drift correction. */
-void Sensor_CompensateTwoPhaseZeroOffset(float ia_raw, float ib_raw,
-                                         float ecycle_off_a, float ecycle_off_b,
-                                         uint8_t ecycle_valid,
-                                         float *ia_out, float *ib_out,
-                                         float *ic_out);
-
-/* Three-phase zero-offset compensation (placeholder).
- * Reserved for future use. Currently a no-op because the compensation
- * strategy for three-phase sampling is not yet determined. */
-void Sensor_CompensateThreePhaseZeroOffset(float ia_raw, float ib_raw, float ic_raw,
-                                           float *ia_out, float *ib_out,
-                                           float *ic_out);
-
 #endif /* _SENSOR_H_ */

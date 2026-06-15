@@ -3,7 +3,6 @@
 #include <math.h>
 
 #include "L3_Algorithm/foc_control_c31_actuation.h"
-#include "L3_Algorithm/sensor.h"
 #include "L41_Math/math_transforms.h"
 #include "LS_Config/foc_config.h"
 
@@ -142,6 +141,77 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_motor_t *motor,
     motor->iq_measured = iq_estimated;
 }
 
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+
+/* Aggregate accumulated samples and update drift offsets for two-phase sampling.
+ * Called when one electrical cycle has elapsed. Does NOT include per-frame
+ * sample accumulation — that is done by the caller each control cycle. */
+static void FOC_EcycleUpdateTwoPhase(foc_motor_t *motor,
+                                     const sensor_data_t *sensor)
+{
+    float avg_a;
+    float avg_b;
+    float alpha;
+    uint16_t count;
+
+    (void)sensor;
+    count = motor->ecycle_sample_count;
+
+    if (count > 0U)
+    {
+        avg_a = motor->ecycle_accum_a / (float)count;
+        avg_b = motor->ecycle_accum_b / (float)count;
+
+        alpha = Math_ClampFloat(FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA, 0.0f, 1.0f);
+        motor->ecycle_offset_dyn_a += alpha * (avg_a - motor->ecycle_offset_dyn_a);
+        motor->ecycle_offset_dyn_b += alpha * (avg_b - motor->ecycle_offset_dyn_b);
+        motor->ecycle_offset_valid = 1U;
+    }
+
+    motor->ecycle_accum_a = 0.0f;
+    motor->ecycle_accum_b = 0.0f;
+    motor->ecycle_sample_count = 0U;
+    motor->ecycle_accu_mech_delta = 0.0f;
+}
+
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+/* Aggregate accumulated samples and update drift offsets for three-phase sampling. */
+static void FOC_EcycleUpdateThreePhase(foc_motor_t *motor,
+                                       const sensor_data_t *sensor)
+{
+    float avg_a;
+    float avg_b;
+    float avg_c;
+    float alpha;
+    uint16_t count;
+
+    (void)sensor;
+    count = motor->ecycle_sample_count;
+
+    if (count > 0U)
+    {
+        avg_a = motor->ecycle_accum_a / (float)count;
+        avg_b = motor->ecycle_accum_b / (float)count;
+        avg_c = motor->ecycle_accum_c / (float)count;
+
+        alpha = Math_ClampFloat(FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA, 0.0f, 1.0f);
+        motor->ecycle_offset_dyn_a += alpha * (avg_a - motor->ecycle_offset_dyn_a);
+        motor->ecycle_offset_dyn_b += alpha * (avg_b - motor->ecycle_offset_dyn_b);
+        motor->ecycle_offset_dyn_c += alpha * (avg_c - motor->ecycle_offset_dyn_c);
+        motor->ecycle_offset_valid = 1U;
+    }
+
+    motor->ecycle_accum_a = 0.0f;
+    motor->ecycle_accum_b = 0.0f;
+    motor->ecycle_accum_c = 0.0f;
+    motor->ecycle_sample_count = 0U;
+    motor->ecycle_accu_mech_delta = 0.0f;
+}
+
+#endif /* FOC_SENSOR_PHASE_COUNT == 3U */
+
+#endif /* FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE */
+
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
 static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
                                              float electrical_angle,
@@ -160,18 +230,40 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
         return;
     }
 
+    /* Apply electrical-cycle dynamic drift offset before Clarke/Park. */
 #if (FOC_SENSOR_PHASE_COUNT == 2U)
-    Sensor_CompensateTwoPhaseZeroOffset(sensor->current_a.output_value,
-                                        sensor->current_b.output_value,
-                                        motor->ecycle_offset_dyn_a,
-                                        motor->ecycle_offset_dyn_b,
-                                        motor->ecycle_offset_valid,
-                                        &ia_comp, &ib_comp, &ic_comp);
+    {
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+        if (motor->ecycle_offset_valid != 0U)
+        {
+            ia_comp = sensor->current_a.output_value - motor->ecycle_offset_dyn_a;
+            ib_comp = sensor->current_b.output_value - motor->ecycle_offset_dyn_b;
+        }
+        else
+#endif
+        {
+            ia_comp = sensor->current_a.output_value;
+            ib_comp = sensor->current_b.output_value;
+        }
+        ic_comp = -(ia_comp + ib_comp);
+    }
 #else
-    Sensor_CompensateThreePhaseZeroOffset(sensor->current_a.output_value,
-                                          sensor->current_b.output_value,
-                                          sensor->current_c.output_value,
-                                          &ia_comp, &ib_comp, &ic_comp);
+    {
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+        if (motor->ecycle_offset_valid != 0U)
+        {
+            ia_comp = sensor->current_a.output_value - motor->ecycle_offset_dyn_a;
+            ib_comp = sensor->current_b.output_value - motor->ecycle_offset_dyn_b;
+            ic_comp = sensor->current_c.output_value - motor->ecycle_offset_dyn_c;
+        }
+        else
+#endif
+        {
+            ia_comp = sensor->current_a.output_value;
+            ib_comp = sensor->current_b.output_value;
+            ic_comp = sensor->current_c.output_value;
+        }
+    }
 #endif
 
     Math_ClarkeTransform(ia_comp, ib_comp, ic_comp, &i_alpha, &i_beta);
@@ -355,30 +447,23 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
 
         if (motor->ecycle_accu_mech_delta * (float)motor->pole_pairs >= FOC_MATH_TWO_PI)
         {
-            float avg_a;
-            float avg_b;
-            float alpha;
-
-            if (motor->ecycle_sample_count > 0U)
-            {
-                avg_a = motor->ecycle_accum_a / (float)motor->ecycle_sample_count;
-                avg_b = motor->ecycle_accum_b / (float)motor->ecycle_sample_count;
-
-                alpha = Math_ClampFloat(FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA, 0.0f, 1.0f);
-                motor->ecycle_offset_dyn_a += alpha * (avg_a - motor->ecycle_offset_dyn_a);
-                motor->ecycle_offset_dyn_b += alpha * (avg_b - motor->ecycle_offset_dyn_b);
-                motor->ecycle_offset_valid = 1U;
-            }
-
-            motor->ecycle_accum_a = 0.0f;
-            motor->ecycle_accum_b = 0.0f;
-            motor->ecycle_sample_count = 0U;
-            motor->ecycle_accu_mech_delta = 0.0f;
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
+            FOC_EcycleUpdateTwoPhase(motor, sensor);
+#else
+            FOC_EcycleUpdateThreePhase(motor, sensor);
+#endif
         }
 
+#if (FOC_SENSOR_PHASE_COUNT == 2U)
         motor->ecycle_accum_a += sensor->current_a.filtered_value;
         motor->ecycle_accum_b += sensor->current_b.filtered_value;
         motor->ecycle_sample_count++;
+#else
+        motor->ecycle_accum_a += sensor->current_a.filtered_value;
+        motor->ecycle_accum_b += sensor->current_b.filtered_value;
+        motor->ecycle_accum_c += sensor->current_c.filtered_value;
+        motor->ecycle_sample_count++;
+#endif
         motor->ecycle_prev_mech_angle = mech_now;
     }
 #endif

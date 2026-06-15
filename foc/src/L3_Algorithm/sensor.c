@@ -283,49 +283,6 @@ void Sensor_ADCSampleTimeOffset(float percent)
     FOC_Platform_SetSensorSampleOffsetPercent(percent);
 }
 
-void Sensor_CompensateTwoPhaseZeroOffset(float ia_raw, float ib_raw,
-                                         float ecycle_off_a, float ecycle_off_b,
-                                         uint8_t ecycle_valid,
-                                         float *ia_out, float *ib_out,
-                                         float *ic_out)
-{
-    if ((ia_out == 0) || (ib_out == 0) || (ic_out == 0))
-    {
-        return;
-    }
-
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-    if (ecycle_valid != 0U)
-    {
-        *ia_out = ia_raw - ecycle_off_a;
-        *ib_out = ib_raw - ecycle_off_b;
-    }
-    else
-#endif
-    {
-        *ia_out = ia_raw;
-        *ib_out = ib_raw;
-    }
-
-    *ic_out = -(*ia_out + *ib_out);
-}
-
-void Sensor_CompensateThreePhaseZeroOffset(float ia_raw, float ib_raw, float ic_raw,
-                                           float *ia_out, float *ib_out,
-                                           float *ic_out)
-{
-    if ((ia_out == 0) || (ib_out == 0) || (ic_out == 0))
-    {
-        return;
-    }
-
-    /* Reserved for future three-phase compensation strategy.
-     * Currently pass-through: no compensation applied. */
-    *ia_out = ia_raw;
-    *ib_out = ib_raw;
-    *ic_out = ic_raw;
-}
-
 static void Kalman_Init(kalman_filter_t* filter, float measurement_error, float estimate_error, float process_noise, float initial_value)
 {
     filter->raw_value = initial_value;

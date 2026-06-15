@@ -130,11 +130,17 @@ typedef struct {
 #if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
     float    ecycle_offset_dyn_a;
     float    ecycle_offset_dyn_b;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    float    ecycle_offset_dyn_c;
+#endif
     float    ecycle_prev_mech_angle;
     float    ecycle_accu_mech_delta;
     uint16_t ecycle_sample_count;
     float    ecycle_accum_a;
     float    ecycle_accum_b;
+#if (FOC_SENSOR_PHASE_COUNT == 3U)
+    float    ecycle_accum_c;
+#endif
     uint8_t  ecycle_offset_valid;
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
