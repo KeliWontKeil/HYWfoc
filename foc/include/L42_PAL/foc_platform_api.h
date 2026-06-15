@@ -83,17 +83,12 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz);
 /** @brief Set sensor sampling trigger offset percent in the control period. */
 void FOC_Platform_SetSensorSampleOffsetPercent(float percent);
 
-/** @brief Read phase-A and phase-B currents. */
-uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b);
+/** @brief Read phase currents. When phase_current_c is NULL, only A/B are read (two-phase).
+ *  When non-NULL, all three phases are read. Returns non-zero on success. */
+uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c);
 
-/** @brief Read phase-A and phase-B currents for fast current-loop path. */
-uint8_t FOC_Platform_ReadPhaseCurrentABFast(float *phase_current_a, float *phase_current_b);
-
-/** @brief Read phase-A, phase-B and phase-C currents (three-phase sampling). */
-uint8_t FOC_Platform_ReadPhaseCurrentABC(float *phase_current_a, float *phase_current_b, float *phase_current_c);
-
-/** @brief Read phase-A, phase-B and phase-C currents for fast current-loop path. */
-uint8_t FOC_Platform_ReadPhaseCurrentABCFast(float *phase_current_a, float *phase_current_b, float *phase_current_c);
+/** @brief Read phase currents for fast current-loop path (same NULL convention). */
+uint8_t FOC_Platform_ReadPhaseCurrentFast(float *phase_current_a, float *phase_current_b, float *phase_current_c);
 
 /** @brief Read mechanical angle in radians. */
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad);

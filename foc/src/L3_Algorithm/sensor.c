@@ -86,14 +86,14 @@ void Sensor_SetZeroOffset(void)
     for (i = 0U; i < SENSOR_ZERO_CALIB_SAMPLES; i++)
     {
 #if (FOC_SENSOR_PHASE_COUNT == 2U)
-        if (FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b) != 0U)
+        if (FOC_Platform_ReadPhaseCurrent(&current_a, &current_b, 0) != 0U)
         {
             sum_a += current_a;
             sum_b += current_b;
             valid_samples++;
         }
 #else
-        if (FOC_Platform_ReadPhaseCurrentABC(&current_a, &current_b, &current_c) != 0U)
+        if (FOC_Platform_ReadPhaseCurrent(&current_a, &current_b, &current_c) != 0U)
         {
             sum_a += current_a;
             sum_b += current_b;
@@ -170,17 +170,17 @@ static void Sensor_ReadADC(uint8_t use_fast_window)
     if (use_fast_window != 0U)
     {
 #if (FOC_SENSOR_PHASE_COUNT == 2U)
-        read_ok = FOC_Platform_ReadPhaseCurrentABFast(&current_a, &current_b);
+        read_ok = FOC_Platform_ReadPhaseCurrentFast(&current_a, &current_b, 0);
 #else
-        read_ok = FOC_Platform_ReadPhaseCurrentABCFast(&current_a, &current_b, &current_c);
+        read_ok = FOC_Platform_ReadPhaseCurrentFast(&current_a, &current_b, &current_c);
 #endif
     }
     else
     {
 #if (FOC_SENSOR_PHASE_COUNT == 2U)
-        read_ok = FOC_Platform_ReadPhaseCurrentAB(&current_a, &current_b);
+        read_ok = FOC_Platform_ReadPhaseCurrent(&current_a, &current_b, 0);
 #else
-        read_ok = FOC_Platform_ReadPhaseCurrentABC(&current_a, &current_b, &current_c);
+        read_ok = FOC_Platform_ReadPhaseCurrent(&current_a, &current_b, &current_c);
 #endif
     }
 

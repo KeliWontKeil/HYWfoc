@@ -179,33 +179,8 @@ static void FOC_EcycleUpdateTwoPhase(foc_motor_t *motor,
 static void FOC_EcycleUpdateThreePhase(foc_motor_t *motor,
                                        const sensor_data_t *sensor)
 {
-    float avg_a;
-    float avg_b;
-    float avg_c;
-    float alpha;
-    uint16_t count;
-
-    (void)sensor;
-    count = motor->ecycle_sample_count;
-
-    if (count > 0U)
-    {
-        avg_a = motor->ecycle_accum_a / (float)count;
-        avg_b = motor->ecycle_accum_b / (float)count;
-        avg_c = motor->ecycle_accum_c / (float)count;
-
-        alpha = Math_ClampFloat(FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA, 0.0f, 1.0f);
-        motor->ecycle_offset_dyn_a += alpha * (avg_a - motor->ecycle_offset_dyn_a);
-        motor->ecycle_offset_dyn_b += alpha * (avg_b - motor->ecycle_offset_dyn_b);
-        motor->ecycle_offset_dyn_c += alpha * (avg_c - motor->ecycle_offset_dyn_c);
-        motor->ecycle_offset_valid = 1U;
-    }
-
-    motor->ecycle_accum_a = 0.0f;
-    motor->ecycle_accum_b = 0.0f;
-    motor->ecycle_accum_c = 0.0f;
-    motor->ecycle_sample_count = 0U;
-    motor->ecycle_accu_mech_delta = 0.0f;
+    //reserve for future implementation if needed; currently the same as two-phase since all three phases are sampled directly
+    return;
 }
 
 #endif /* FOC_SENSOR_PHASE_COUNT == 3U */

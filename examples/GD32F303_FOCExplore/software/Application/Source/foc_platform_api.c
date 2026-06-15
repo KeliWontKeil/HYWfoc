@@ -130,18 +130,28 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
     ADC_Start();
 }
 
-uint8_t FOC_Platform_ReadPhaseCurrentAB(float *phase_current_a, float *phase_current_b)
+uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
-    return ADC_ReadPhaseCurrentABOk(phase_current_a,
-                                    phase_current_b,
-                                    (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_SLOW);
+    if (phase_current_c == 0)
+    {
+        /* Two-phase: read A/B only (current hardware supports this path). */
+        return ADC_ReadPhaseCurrentABOk(phase_current_a,
+                                        phase_current_b,
+                                        (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_SLOW);
+    }
+    /* Three-phase not supported on this hardware. */
+    return 0U;
 }
 
-uint8_t FOC_Platform_ReadPhaseCurrentABFast(float *phase_current_a, float *phase_current_b)
+uint8_t FOC_Platform_ReadPhaseCurrentFast(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
-    return ADC_ReadPhaseCurrentABOk(phase_current_a,
-                                    phase_current_b,
-                                    (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_FAST);
+    if (phase_current_c == 0)
+    {
+        return ADC_ReadPhaseCurrentABOk(phase_current_a,
+                                        phase_current_b,
+                                        (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_FAST);
+    }
+    return 0U;
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
