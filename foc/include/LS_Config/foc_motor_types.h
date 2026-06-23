@@ -6,6 +6,80 @@
 #include "LS_Config/foc_config.h"
 #include "LS_Config/foc_math_types.h"
 
+/* ========== 故障码枚举（per-motor） ========== */
+typedef enum {
+    FOC_FAULT_NONE = 0U,
+    FOC_FAULT_SENSOR_ADC_INVALID = 1U,
+    FOC_FAULT_SENSOR_ENCODER_INVALID = 2U,
+    FOC_FAULT_UNDERVOLTAGE = 3U,
+    FOC_FAULT_PROTOCOL_FRAME = 4U,
+    FOC_FAULT_PARAM_INVALID = 5U,
+    FOC_FAULT_INIT_FAILED = 6U
+} foc_fault_code_t;
+
+/* ========== 运行时状态（per-motor） ========== */
+typedef struct {
+    uint8_t system_running;              /* 1=正常运行 */
+    uint8_t system_fault;                /* 1=故障状态 */
+    uint8_t reinit_pending;              /* 1=重初始化请求 */
+    uint8_t last_fault_code;             /* foc_fault_code_t */
+    uint8_t cfg_dirty;                   /* 1=配置已变更，需要L1应用 */
+    uint8_t motor_enabled;               /* 1=电机使能 */
+    uint8_t control_mode;                /* 控制模式 */
+    uint8_t pending_system_action;       /* 待处理系统命令，L1消费 */
+    uint16_t init_check_mask;            /* 已执行初始化检查掩码 */
+    uint16_t init_fail_mask;             /* 失败初始化检查掩码 */
+    uint16_t sensor_invalid_consecutive; /* 连续无效传感器计数 */
+    uint32_t protocol_error_count;
+    uint32_t param_error_count;
+    uint32_t control_skip_count;
+} foc_motor_state_t;
+
+/* ========== 控制配置参数 ========== */
+typedef struct {
+    float target_angle_rad;
+    float angle_position_speed_rad_s;
+    float speed_only_rad_s;
+    float sensor_sample_offset_percent;
+    uint8_t control_mode;
+
+    /* PID 参数 */
+    float pid_current_kp;
+    float pid_current_ki;
+    float pid_current_kd;
+    float pid_angle_kp;
+    float pid_angle_ki;
+    float pid_angle_kd;
+    float pid_speed_kp;
+    float pid_speed_ki;
+    float pid_speed_kd;
+
+    /* Fine-tuning 参数 */
+    float min_mech_angle_accum_delta_rad;
+    float angle_hold_integral_limit;
+    float angle_hold_pid_deadband_rad;
+    float speed_angle_transition_start_rad;
+    float speed_angle_transition_end_rad;
+
+    /* 电流软切换 */
+    uint8_t current_soft_switch_enable;
+    uint8_t current_soft_switch_mode;
+    float current_soft_switch_auto_open_iq_a;
+    float current_soft_switch_auto_closed_iq_a;
+
+    /* 齿槽补偿 */
+    uint8_t cogging_comp_enable;
+    float cogging_comp_iq_limit_a;
+    float cogging_comp_speed_gate_rad_s;
+    float cogging_calib_gain_k;
+} foc_motor_cfg_t;
+
+/* ========== 系统动作枚举（pending_system_action） ========== */
+#define FOC_SYSACTION_NONE           0U
+#define FOC_SYSACTION_COGGING_START  1U
+#define FOC_SYSACTION_COGGING_DUMP   2U
+#define FOC_SYSACTION_COGGING_EXPORT 3U
+
 /* ========== Runtime control configuration ========== */
 typedef struct {
     float min_mech_angle_accum_delta_rad;
@@ -64,6 +138,11 @@ typedef struct {
     /* === Saved soft-switch state (restored on calibration finish) === */
     uint8_t saved_softswitch_enabled;
     uint8_t saved_softswitch_mode;
+
+    /* === Calibration request flags (set by L1, consumed by SampleStep) === */
+    uint8_t request_start;
+    uint8_t request_dump;
+    uint8_t request_export;
 } foc_cogging_calib_state_t;
 
 /* ========== Sensor data snapshot ========== */
@@ -87,6 +166,15 @@ typedef enum {
 
 /* ========== Motor aggregate state ========== */
 typedef struct {
+    /* === 运行时状态 === */
+    foc_motor_state_t state;
+    /* === 控制配置 === */
+    foc_motor_cfg_t cfg;
+    /* === PID 控制器对象 === */
+    foc_pid_t torque_current_pid;
+    foc_pid_t speed_pid;
+    foc_pid_t angle_pid;
+
     /* Motor physical parameters and calibration outputs. */
     float phase_resistance;
     uint8_t pole_pairs;

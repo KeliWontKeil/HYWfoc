@@ -5,6 +5,38 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-22
+
+### Changed
+- **运行时管线彻底删除**：消除冗余的 C1→C2→C3→C4→C5 运行时管线，删除 `foc_runtime_entry.c/.h`、`foc_runtime_protocol.c/.h`、`foc_runtime_fsm.c/.h`、`foc_runtime_store.c/.h`、`foc_runtime_output.c/.h`。原功能分散到新的 Protocol 块和 L1 编排。
+- **运行时状态并入 motor 结构体**：`foc_motor_t` 大幅扩展，新增嵌套结构体 `.state`（运行时状态，含故障/init_check/cfg_dirty 等）、`.cfg`（控制配置参数），所有运行时数据变为 per-motor。
+- **PID 对象移入 motor**：`g_torque_current_pid`、`g_speed_pid`、`g_angle_pid` 从独立全局变量变为 `motor.torque_current_pid` / `motor.speed_pid` / `motor.angle_pid`。
+- **快照机制取消**：删除 `runtime_snapshot_t`、`runtime_state_snapshot_t`、`control_config_snapshot_t` 等类型，L1 直接读取 `motor.state` / `motor.cfg` 字段。
+- **Protocol 块扩展**：新建 `foc_protocol_handler.c/.h`，统一帧读取（多源轮询）+ 协议解析 + 命令执行 + 参数存储（直接写 motor 字段）。`foc_runtime_output.c/.h` 改名移入为 `foc_protocol_output.c/.h`。
+- **Control 块接口简化**：`FOC_ControlOuterLoopStep(motor, pid_cur, pid_spd, pid_angle, sensor, mode, ...)` → `FOC_Control_Run(motor, sensor, dt)`。新增 `FOC_Control_ApplyConfig(motor)` 统一配置应用。
+- **L1 编排重写**：`foc_app.c` 删除全部 snapshot/Runtime 引用，直接操作 `g_motor.state/cfg`。协议调用改为 `FOC_Protocol_Process(&g_motor, budget)`。
+- **类型系统精简**：`foc_snapshot_types.h` 只保留 `telemetry_policy_snapshot_t`。`foc_runtime_types.h` 删除废弃的 `runtime_fault_code_t`（改用 `foc_fault_code_t`）。删除 `foc_runtime_snapshot.h` 间接头文件。新增 `foc_motor_state_t`、`foc_motor_cfg_t`、`foc_fault_code_t`。
+
+### Added
+- `foc_motor_types.h`：新增 `foc_motor_state_t`（运行时状态）、`foc_motor_cfg_t`（控制配置）、`foc_fault_code_t`（故障码枚举）、`FOC_SYSACTION_*`（系统动作枚举）。
+- `foc_ctrl_entry.h`：新增 `FOC_Control_Run`（统一外环入口）、`FOC_Control_CurrentLoop`（电流环）、`FOC_Control_ApplyConfig`（配置应用）、`FOC_Control_Init`（控制初始化）。
+- `foc_protocol_handler.h`：新增 `FOC_Protocol_Process(motor, budget)`、`FOC_Protocol_Init()`、`FOC_Protocol_Commit(motor)`、`FOC_Protocol_GetTelemetry()`。
+
+### Removed
+- `foc_runtime_entry.c/.h`
+- `foc_runtime_protocol.c/.h`
+- `foc_runtime_fsm.c/.h`
+- `foc_runtime_store.c/.h`
+- `foc_runtime_output.c/.h`（改名移入 Protocol）
+- `foc_runtime_snapshot.h`（间接头文件）
+- `runtime_state_snapshot_t`、`control_config_snapshot_t`、`runtime_snapshot_t`
+- `runtime_c4_runtime_view_t`、`runtime_c4_params_view_t`、`runtime_c4_states_view_t`
+- `RUNTIME_FAULT_*`（改用 `FOC_FAULT_*`）
+- `RUNTIME_SYSACTION_*`（改用 `FOC_SYSACTION_*`）
+
+### Fixed
+- 修复上电进入故障模式 bug：`foc_app.c` 中 init_check_mask 在 `FOC_MotorInit()` 清零 state 后设置，确保 init 检查通过。
+
 ## [1.7.6] - 2026-06-15
 
 ### Changed

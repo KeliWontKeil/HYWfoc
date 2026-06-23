@@ -28,14 +28,7 @@ typedef enum {
     RUNTIME_INIT_CHECK_VBUS = (1U << 7)
 } runtime_init_check_t;
 
-typedef enum {
-    RUNTIME_FAULT_NONE = 0U,
-    RUNTIME_FAULT_SENSOR_ADC_INVALID = 1U,
-    RUNTIME_FAULT_SENSOR_ENCODER_INVALID = 2U,
-    RUNTIME_FAULT_UNDERVOLTAGE = 3U,
-    RUNTIME_FAULT_PROTOCOL_FRAME = 4U,
-    RUNTIME_FAULT_PARAM_INVALID = 5U,
-    RUNTIME_FAULT_INIT_FAILED = 6U
-} runtime_fault_code_t;
+/* 故障码已迁移至 foc_motor_types.h: foc_fault_code_t */
+/* RUNTIME_FAULT_* 已废弃，使用 FOC_FAULT_* */
 
 #endif /* FOC_RUNTIME_TYPES_H */

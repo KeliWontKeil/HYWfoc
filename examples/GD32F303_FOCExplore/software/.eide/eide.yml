@@ -14,27 +14,7 @@ virtualFolder:
         - path: Application/Source/main.c
         - path: Application/Source/systick.c
         - path: Application/Source/foc_platform_api.c
-        - path: ../../../foc/src/L1_Orchestration/control_scheduler.c
-        - path: ../../../foc/src/L3_Algorithm/sensor.c
-        - path: ../../../foc/src/L3_Algorithm/svpwm.c
-        - path: ../../../foc/src/L41_Math/math_transforms.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c11_entry.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c12_init.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c21_outer_loop.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c22_current_loop.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c23_motor_param_learn.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c24_compensation.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c31_actuation.c
-        - path: ../../../foc/src/L3_Algorithm/protocol_core.c
         - path: ../../../foc/src/L1_Orchestration/foc_app.c
-        - path: ../../../foc/src/L2_Service/debug_stream.c
-        - path: ../../../foc/src/L2_Service/motor_control_service.c
-        - path: ../../../foc/src/L2_Service/runtime_c1_entry.c
-        - path: ../../../foc/src/L2_Service/runtime_c2_frame_source.c
-        - path: ../../../foc/src/L2_Service/runtime_c3_runtime_fsm.c
-        - path: ../../../foc/src/L2_Service/runtime_c4_runtime_core.c
-        - path: ../../../foc/src/L2_Service/runtime_c5_output_adapter.c
-        - path: ../../../foc/src/L3_Algorithm/foc_control_c13_cfg_state.c
       folders: []
     - name: CMSIS
       files:
@@ -87,6 +67,25 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
+    - name: FOC_CORE
+      files:
+        - path: ../../../foc/src/L3/foc_math_transforms.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_actuation.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_cfg.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_compensation.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_current_loop.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_entry.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_init.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_outer_loop.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_param_learn.c
+        - path: ../../../foc/src/L2/Control/foc_sensor.c
+        - path: ../../../foc/src/L2/Control/foc_svpwm.c
+        - path: ../../../foc/src/L2/Protocol/foc_protocol_parser.c
+        - path: ../../../foc/src/L2/Runtime/foc_debug_stream.c
+        - path: ../../../foc/src/L2/Runtime/foc_task_scheduler.c
+        - path: ../../../foc/src/L2/Protocol/foc_protocol_handler.c
+        - path: ../../../foc/src/L2/Protocol/foc_protocol_output.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -131,6 +130,7 @@ targets:
       - <virtual_root>/Application/runtime_c32_command_dispatch.c
       - <virtual_root>/Application/runtime_c33_command_store.c
       - <virtual_root>/Application/runtime_c34_command_diag.c
+      - <virtual_root>/FOC_CORE/foc_runtime_entry.c
     settings:
       debugger: cortex-debug
     toolchain: AC5

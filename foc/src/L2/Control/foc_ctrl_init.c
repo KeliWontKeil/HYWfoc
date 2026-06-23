@@ -1,0 +1,254 @@
+#include "L2/Control/foc_ctrl_init.h"
+
+#include <stdio.h>
+#include <math.h>
+
+#include "L2/Control/foc_ctrl_current_loop.h"
+#include "L2/Control/foc_ctrl_param_learn.h"
+#include "L2/Control/foc_ctrl_compensation.h"
+#include "L2/Control/foc_ctrl_cfg.h"
+#include "L3/foc_math_lut.h"
+#include "L3/foc_math_transforms.h"
+#include "L3/foc_platform_api.h"
+#include "LS_Config/foc_config.h"
+#include "LS_Config/foc_cogging_table.h"
+
+void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
+{
+    float calib_uq;
+    float backup_ud;
+    float backup_uq;
+    int8_t direction_est;
+    uint8_t pole_pairs_est;
+    float mech_zero_rad_est;
+    uint8_t need_zero;
+    uint8_t need_direction;
+    uint8_t need_pole_pairs;
+
+    if (motor == 0)
+    {
+        return;
+    }
+
+    need_zero = (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) ? 1U : 0U;
+    need_direction = (motor->direction == FOC_DIR_UNDEFINED) ? 1U : 0U;
+    need_pole_pairs = (motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ? 1U : 0U;
+
+    if ((need_zero == 0U) && (need_direction == 0U) && (need_pole_pairs == 0U))
+    {
+        return;
+    }
+
+    backup_ud = motor->ud;
+    backup_uq = motor->uq;
+
+    calib_uq = motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
+    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->set_voltage);
+
+    motor->uq = 0.0f;
+    motor->ud = calib_uq;
+
+    if (need_zero != 0U)
+    {
+        if (FOC_SampleLockedMechanicalAngle(motor,
+                                            0.0f,
+                                            FOC_CALIB_ZERO_LOCK_SETTLE_MS,
+                                            FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT,
+                                            &mech_zero_rad_est) != 0U)
+        {
+            motor->mech_angle_at_elec_zero_rad = mech_zero_rad_est;
+            motor->mech_angle_accum_rad = mech_zero_rad_est;
+            motor->mech_angle_prev_rad = mech_zero_rad_est;
+            motor->mech_angle_prev_valid = 1U;
+        }
+        else
+        {
+            motor->mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
+            motor->mech_angle_accum_rad = 0.0f;
+            motor->mech_angle_prev_rad = 0.0f;
+            motor->mech_angle_prev_valid = 0U;
+            FOC_Platform_WriteDebugText("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
+        }
+    }
+    else
+    {
+        FOC_CurrentControlApplyElectricalAngleDirect(motor, 0.0f);
+        FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
+    }
+
+    if ((need_direction != 0U) || (need_pole_pairs != 0U))
+    {
+        if (FOC_EstimateDirectionAndPolePairs(motor, &direction_est, &pole_pairs_est) != 0U)
+        {
+            if (need_direction != 0U)
+            {
+                motor->direction = direction_est;
+            }
+            if (need_pole_pairs != 0U)
+            {
+                motor->pole_pairs = pole_pairs_est;
+            }
+        }
+        else
+        {
+            if (need_direction != 0U)
+            {
+                motor->direction = FOC_DIR_UNDEFINED;
+            }
+            if (need_pole_pairs != 0U)
+            {
+                motor->pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
+            }
+            FOC_Platform_WriteDebugText("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
+        }
+    }
+
+    motor->ud = backup_ud;
+    motor->uq = backup_uq;
+    FOC_CurrentControlApplyElectricalAngleDirect(motor, 0.0f);
+}
+
+void FOC_MotorInit(foc_motor_t *motor,
+                   float vbus_voltage,
+                   float set_voltage,
+                   float phase_resistance,
+                   uint8_t pole_pairs,
+                   float mech_angle_at_elec_zero_rad,
+                   int8_t direction)
+{
+    if (motor == 0)
+    {
+        return;
+    }
+
+    if (vbus_voltage < 0.0f)
+    {
+        vbus_voltage = 0.0f;
+    }
+    set_voltage = Math_ClampFloat(set_voltage, 0.0f, vbus_voltage);
+
+    motor->electrical_phase_angle = 0.0f;
+    motor->ud = 0.0f;
+    motor->uq = 0.0f;
+    motor->set_voltage = set_voltage;
+    motor->vbus_voltage = vbus_voltage;
+    motor->iq_target = 0.0f;
+
+    motor->iq_measured = 0.0f;
+    motor->cogging_speed_ref_rad_s = 0.0f;
+    motor->mech_angle_accum_rad = 0.0f;
+    motor->mech_angle_prev_rad = 0.0f;
+    motor->mech_angle_prev_valid = 0U;
+    motor->phase_resistance = phase_resistance;
+    motor->pole_pairs = pole_pairs;
+    motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_angle_accum_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_angle_prev_rad = mech_angle_at_elec_zero_rad;
+    motor->mech_angle_prev_valid = 1U;
+    motor->direction = direction;
+
+    motor->alpha = 0.0f;
+    motor->beta = 0.0f;
+    motor->phase_a = 0.0f;
+    motor->phase_b = 0.0f;
+    motor->phase_c = 0.0f;
+    motor->duty_a = 0.0f;
+    motor->duty_b = 0.0f;
+    motor->duty_c = 0.0f;
+    motor->sector = 0U;
+
+    /* 初始化运行时状态（per-motor） */
+    motor->state.system_running = 0U;
+    motor->state.system_fault = 0U;
+    motor->state.reinit_pending = 0U;
+    motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
+    motor->state.cfg_dirty = 0U;
+    motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
+    motor->state.control_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CONTROL_MODE;
+    motor->state.pending_system_action = FOC_SYSACTION_NONE;
+    motor->state.init_check_mask = 0U;
+    motor->state.init_fail_mask = 0U;
+    motor->state.sensor_invalid_consecutive = 0U;
+    motor->state.protocol_error_count = 0U;
+    motor->state.param_error_count = 0U;
+    motor->state.control_skip_count = 0U;
+
+    /* 初始化控制配置默认值 */
+    motor->cfg.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
+    motor->cfg.angle_position_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
+    motor->cfg.speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
+    motor->cfg.sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
+    motor->cfg.pid_current_kp = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP;
+    motor->cfg.pid_current_ki = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI;
+    motor->cfg.pid_current_kd = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD;
+    motor->cfg.pid_angle_kp = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP;
+    motor->cfg.pid_angle_ki = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KI;
+    motor->cfg.pid_angle_kd = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KD;
+    motor->cfg.pid_speed_kp = COMMAND_MANAGER_DEFAULT_PID_SPEED_KP;
+    motor->cfg.pid_speed_ki = COMMAND_MANAGER_DEFAULT_PID_SPEED_KI;
+    motor->cfg.pid_speed_kd = COMMAND_MANAGER_DEFAULT_PID_SPEED_KD;
+    motor->cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
+    motor->cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
+    motor->cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
+    motor->cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
+    motor->cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+    motor->cfg.current_soft_switch_enable = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
+    motor->cfg.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
+    motor->cfg.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
+    motor->cfg.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
+    motor->cfg.cogging_comp_enable = (uint8_t)FOC_COGGING_COMP_ENABLE;
+    motor->cfg.cogging_comp_iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+    motor->cfg.cogging_comp_speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
+    motor->cfg.cogging_calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
+
+    FOC_ControlConfigResetDefault(motor);
+    FOC_Control_Init(motor);
+
+#if (FOC_INIT_CALIBRATION_ENABLE == FOC_CFG_ENABLE)
+    FOC_CalibrateElectricalAngleAndDirection(motor);
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    {
+        uint8_t table_defined = FOC_CFG_DISABLE;
+
+#if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
+        table_defined = FOC_CFG_ENABLE;
+#endif
+        motor->cogging_comp_status.available = table_defined;
+        motor->cogging_comp_status.enabled = table_defined;
+        motor->cogging_comp_status.source = table_defined ? FOC_COGGING_COMP_SOURCE_STATIC : FOC_COGGING_COMP_SOURCE_NONE;
+        motor->cogging_comp_status.point_count = FOC_COGGING_LUT_POINT_COUNT;
+        motor->cogging_comp_status.iq_lsb_a = FOC_COGGING_LUT_IQ_LSB_A;
+        motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
+        motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+
+#if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
+        (void)FOC_ControlLoadCoggingCompTableQ15(motor,
+                                                  foc_cogging_default_table_q15,
+                                                  FOC_COGGING_LUT_POINT_COUNT,
+                                                  FOC_COGGING_LUT_IQ_LSB_A,
+                                                  FOC_COGGING_COMP_SOURCE_STATIC);
+#endif
+
+        if (table_defined != 0U)
+        {
+            FOC_Platform_WriteDebugText("init.cogging: static table defined, compensation ready\r\n");
+        }
+        else
+        {
+            FOC_Platform_WriteDebugText("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
+        }
+    }
+#endif
+
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+    motor->ecycle_offset_dyn_a = 0.0f;
+    motor->ecycle_offset_dyn_b = 0.0f;
+    motor->ecycle_prev_mech_angle = 0.0f;
+    motor->ecycle_accu_mech_delta = 0.0f;
+    motor->ecycle_sample_count = 0U;
+    motor->ecycle_accum_a = 0.0f;
+    motor->ecycle_accum_b = 0.0f;
+    motor->ecycle_offset_valid = 0U;
+#endif
+}
