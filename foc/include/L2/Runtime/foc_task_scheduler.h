@@ -6,24 +6,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "LS_Config/foc_scheduler_types.h"
+#include "L1_Orchestration/foc_system_types.h"
+#include "L2/Runtime/foc_scheduler_types.h"
 #include "LS_Config/foc_config.h"
 
-typedef void (*ControlScheduler_Callback_t)(void);
+void ControlScheduler_Init(control_scheduler_t *sched);
+void ControlScheduler_RunTick(control_scheduler_t *sched);
+void ControlScheduler_EnableDWT(control_scheduler_t *sched);
+uint32_t ControlScheduler_GetExecutionCycles(const control_scheduler_t *sched);
+uint16_t ControlScheduler_GetTickCounter(const control_scheduler_t *sched);
+void ControlScheduler_ResetTickCounter(control_scheduler_t *sched);
 
-void ControlScheduler_Init(void);
-void ControlScheduler_RunTick(void);
-void ControlScheduler_EnableDWT(void);
-uint32_t ControlScheduler_GetExecutionCycles(void);
-uint16_t ControlScheduler_GetTickCounter(void);
-/*
- * Unused-interface audit tag: RESERVED_TEST_HOOK.
- * Reserved for deterministic test/re-sync scenarios.
- */
-void ControlScheduler_ResetTickCounter(void);
-
-void ControlScheduler_SetCallback(FOC_TaskRate_t rate, ControlScheduler_Callback_t callback);
-void ControlScheduler_ClearCallback(FOC_TaskRate_t rate);
-void ControlScheduler_ClearAllCallbacks(void);
+void ControlScheduler_SetCallback(control_scheduler_t *sched, FOC_TaskRate_t rate, void (*callback)(void));
+void ControlScheduler_ClearCallback(control_scheduler_t *sched, FOC_TaskRate_t rate);
+void ControlScheduler_ClearAllCallbacks(control_scheduler_t *sched);
 
 #endif /* CONTROL_SCHEDULER_H */

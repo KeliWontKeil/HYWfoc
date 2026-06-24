@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#include "LS_Config/foc_math_types.h"
-#include "LS_Config/foc_motor_types.h"
+#include "L3/foc_math_types.h"
+#include "L2/foc_ctrl_types.h"
 
 void FOC_ControlRebaseMechanicalAngleAccum(foc_motor_t *motor, float mech_angle_rad);
 void FOC_ControlResetSpeedLoopState(foc_motor_t *motor);

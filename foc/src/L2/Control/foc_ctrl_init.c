@@ -154,10 +154,10 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->phase_a = 0.0f;
     motor->phase_b = 0.0f;
     motor->phase_c = 0.0f;
-    motor->duty_a = 0.0f;
-    motor->duty_b = 0.0f;
-    motor->duty_c = 0.0f;
-    motor->sector = 0U;
+    motor->svpwm.output.duty_a = 0.0f;
+    motor->svpwm.output.duty_b = 0.0f;
+    motor->svpwm.output.duty_c = 0.0f;
+    motor->svpwm.output.sector = 0U;
 
     /* 初始化运行时状态（per-motor） */
     motor->state.system_running = 0U;
@@ -176,33 +176,35 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->state.control_skip_count = 0U;
     motor->state.current_loop_ready = 0U;
 
-    /* 初始化控制配置默认值 */
-    motor->cfg.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
-    motor->cfg.angle_position_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
-    motor->cfg.speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
-    motor->cfg.sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
-    motor->cfg.pid_current_kp = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP;
-    motor->cfg.pid_current_ki = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI;
-    motor->cfg.pid_current_kd = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD;
-    motor->cfg.pid_angle_kp = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP;
-    motor->cfg.pid_angle_ki = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KI;
-    motor->cfg.pid_angle_kd = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KD;
-    motor->cfg.pid_speed_kp = COMMAND_MANAGER_DEFAULT_PID_SPEED_KP;
-    motor->cfg.pid_speed_ki = COMMAND_MANAGER_DEFAULT_PID_SPEED_KI;
-    motor->cfg.pid_speed_kd = COMMAND_MANAGER_DEFAULT_PID_SPEED_KD;
-    motor->cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
-    motor->cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
-    motor->cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
-    motor->cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
-    motor->cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
-    motor->cfg.current_soft_switch_enable = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
-    motor->cfg.current_soft_switch_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
-    motor->cfg.current_soft_switch_auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
-    motor->cfg.current_soft_switch_auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
-    motor->cfg.cogging_comp_enable = (uint8_t)FOC_COGGING_COMP_ENABLE;
-    motor->cfg.cogging_comp_iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
-    motor->cfg.cogging_comp_speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
-    motor->cfg.cogging_calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
+    /* 初始化控制配置默认值（直接写顶层字段） */
+    motor->target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
+    motor->angle_position_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
+    motor->speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
+    motor->sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
+    motor->torque_current_pid.kp = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP;
+    motor->torque_current_pid.ki = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI;
+    motor->torque_current_pid.kd = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD;
+    motor->angle_pid.kp = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP;
+    motor->angle_pid.ki = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KI;
+    motor->angle_pid.kd = COMMAND_MANAGER_DEFAULT_PID_ANGLE_KD;
+    motor->speed_pid.kp = COMMAND_MANAGER_DEFAULT_PID_SPEED_KP;
+    motor->speed_pid.ki = COMMAND_MANAGER_DEFAULT_PID_SPEED_KI;
+    motor->speed_pid.kd = COMMAND_MANAGER_DEFAULT_PID_SPEED_KD;
+    motor->min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
+    motor->angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
+    motor->angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
+    motor->speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
+    motor->speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+    motor->current_soft_switch_status.enabled = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
+    motor->current_soft_switch_status.configured_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
+    motor->current_soft_switch_status.auto_open_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A;
+    motor->current_soft_switch_status.auto_closed_iq_a = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    motor->cogging_comp_status.enabled = (uint8_t)FOC_COGGING_COMP_ENABLE;
+    motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
+    motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
+    motor->cogging_comp_status.calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
+#endif
 
     FOC_ControlConfigResetDefault(motor);
     /* 新 per-motor 状态字段初始化 */

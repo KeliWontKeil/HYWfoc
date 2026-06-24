@@ -1,7 +1,7 @@
 #ifndef FOC_SERVICE_HANDLER_H
 #define FOC_SERVICE_HANDLER_H
 
-#include "LS_Config/foc_motor_types.h"
+#include "L2/foc_ctrl_types.h"
 
 /*
  * L1 service handler: orchestrates initialisation, re-initialisation,

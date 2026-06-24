@@ -13,36 +13,32 @@ static void DebugStream_AppendOscParam(char *buffer, uint16_t buffer_len, uint16
 static uint16_t DebugStream_ComputePeriodTicks(uint16_t report_freq_hz);
 static uint8_t DebugStream_IsOscInputValid(const sensor_data_t *sensor, const foc_motor_t *motor);
 
-static uint16_t g_semantic_report_counter = 0U;
-static uint16_t g_osc_report_counter = 0U;
-static uint16_t g_semantic_last_freq_hz = 0U;
-static uint16_t g_osc_last_freq_hz = 0U;
-static uint16_t g_semantic_period_ticks = 1U;
-static uint16_t g_osc_period_ticks = 1U;
-static uint32_t g_last_exec_cycles = 0U;
-
-void DebugStream_Init(void)
+void DebugStream_Init(debug_stream_state_t *ds)
 {
-    g_semantic_report_counter = 0U;
-    g_osc_report_counter = 0U;
-    g_semantic_last_freq_hz = 0U;
-    g_osc_last_freq_hz = 0U;
-    g_semantic_period_ticks = 1U;
-    g_osc_period_ticks = 1U;
-    g_last_exec_cycles = 0U;
+    if (ds == 0) return;
+    ds->semantic_report_counter = 0U;
+    ds->osc_report_counter = 0U;
+    ds->semantic_last_freq_hz = 0U;
+    ds->osc_last_freq_hz = 0U;
+    ds->semantic_period_ticks = 1U;
+    ds->osc_period_ticks = 1U;
+    ds->last_exec_cycles = 0U;
 }
 
-void DebugStream_SetExecutionCycles(uint32_t exec_cycles)
+void DebugStream_SetExecutionCycles(debug_stream_state_t *ds, uint32_t exec_cycles)
 {
-    g_last_exec_cycles = exec_cycles;
+    if (ds == 0) return;
+    ds->last_exec_cycles = exec_cycles;
 }
 
-void DebugStream_Process(const sensor_data_t *sensor,
+void DebugStream_Process(debug_stream_state_t *ds,
+                         const sensor_data_t *sensor,
                          const foc_motor_t *motor,
                          const telemetry_policy_snapshot_t *telemetry)
 {
-    const uint32_t exec_cycles = g_last_exec_cycles;
+    const uint32_t exec_cycles = (ds != 0) ? ds->last_exec_cycles : 0U;
 
+    if (ds == 0) return;
     if ((motor != 0) && (motor->state.system_fault != 0U))
     {
         return;
@@ -53,16 +49,16 @@ void DebugStream_Process(const sensor_data_t *sensor,
     {
         uint16_t semantic_freq_hz = telemetry->semantic_report_freq_hz;
 
-        if (semantic_freq_hz != g_semantic_last_freq_hz)
+        if (semantic_freq_hz != ds->semantic_last_freq_hz)
         {
-            g_semantic_last_freq_hz = semantic_freq_hz;
-            g_semantic_period_ticks = DebugStream_ComputePeriodTicks(semantic_freq_hz);
+            ds->semantic_last_freq_hz = semantic_freq_hz;
+            ds->semantic_period_ticks = DebugStream_ComputePeriodTicks(semantic_freq_hz);
         }
 
-        g_semantic_report_counter++;
-        if (g_semantic_report_counter >= g_semantic_period_ticks)
+        ds->semantic_report_counter++;
+        if (ds->semantic_report_counter >= ds->semantic_period_ticks)
         {
-            g_semantic_report_counter = 0U;
+            ds->semantic_report_counter = 0U;
             DebugStream_OutputSemanticTelemetry(sensor, exec_cycles);
         }
     }
@@ -76,16 +72,16 @@ void DebugStream_Process(const sensor_data_t *sensor,
         if (DebugStream_IsOscInputValid(sensor, motor) != 0U)
         {
             osc_freq_hz = telemetry->osc_report_freq_hz;
-            if (osc_freq_hz != g_osc_last_freq_hz)
+            if (osc_freq_hz != ds->osc_last_freq_hz)
             {
-                g_osc_last_freq_hz = osc_freq_hz;
-                g_osc_period_ticks = DebugStream_ComputePeriodTicks(osc_freq_hz);
+                ds->osc_last_freq_hz = osc_freq_hz;
+                ds->osc_period_ticks = DebugStream_ComputePeriodTicks(osc_freq_hz);
             }
 
-            g_osc_report_counter++;
-            if (g_osc_report_counter >= g_osc_period_ticks)
+            ds->osc_report_counter++;
+            if (ds->osc_report_counter >= ds->osc_period_ticks)
             {
-                g_osc_report_counter = 0U;
+                ds->osc_report_counter = 0U;
                 DebugStream_OutputOscilloscopeFrame(sensor,
                                                     motor,
                                                     exec_cycles,

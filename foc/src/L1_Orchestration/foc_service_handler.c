@@ -43,7 +43,7 @@ void FOC_Service_ReInitMotor(foc_motor_t *motor)
     FOC_ControlExecutor_Stop(motor);
     FOC_CurrentControlOpenLoopStep(motor, 0.0f, 0.0f,
                                    FOC_CONTROL_DT_SEC);
-    SVPWM_ApplyDirectDuty(0U, 0.0f, 0.0f, 0.0f);
+    SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
 
     /* 设置重初始化标志（ISR 检测到后会提前退出） */
     motor->state.reinit_pending = 1U;
@@ -168,7 +168,7 @@ uint8_t FOC_Service_Process(foc_motor_t *motor)
     if (motor->state.cfg_dirty != 0U)
     {
         FOC_Control_ApplyConfig(motor);
-        Sensor_ADCSampleTimeOffset(motor->cfg.sensor_sample_offset_percent);
+        Sensor_ADCSampleTimeOffset(motor->sensor_sample_offset_percent);
         FOC_Protocol_Commit(motor);
     }
 

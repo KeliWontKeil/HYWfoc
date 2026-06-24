@@ -3,7 +3,7 @@
 #define FOC_SENSOR_H
 
 
-#include "LS_Config/foc_motor_types.h"
+#include "L2/foc_ctrl_types.h"
 #include "LS_Config/foc_config.h"
 
 

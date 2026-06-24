@@ -3,7 +3,7 @@
 #define FOC_CTRL_COMPENSATION_H
 
 
-#include "LS_Config/foc_motor_types.h"
+#include "L2/foc_ctrl_types.h"
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 

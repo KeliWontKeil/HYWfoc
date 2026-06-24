@@ -42,6 +42,7 @@
     ],
     "sourceList": [
         "../../../foc/src/L1_Orchestration/foc_app.c",
+        "../../../foc/src/L1_Orchestration/foc_output_mgr.c",
         "../../../foc/src/L1_Orchestration/foc_service_handler.c",
         "../../../foc/src/L2/Control/foc_ctrl_actuation.c",
         "../../../foc/src/L2/Control/foc_ctrl_cfg.c",

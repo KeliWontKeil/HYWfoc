@@ -1,10 +1,18 @@
-#ifndef FOC_MOTOR_TYPES_H
-#define FOC_MOTOR_TYPES_H
+#ifndef FOC_CTRL_TYPES_H
+#define FOC_CTRL_TYPES_H
 
 #include <stdint.h>
 
 #include "LS_Config/foc_config.h"
-#include "LS_Config/foc_math_types.h"
+#include "L3/foc_math_types.h"
+
+/* SVPWM output snapshot type. */
+typedef struct {
+    uint8_t sector;
+    float duty_a;
+    float duty_b;
+    float duty_c;
+} svpwm_output_t;
 
 /* ========== 故障码枚举（per-motor） ========== */
 typedef enum {
@@ -19,76 +27,28 @@ typedef enum {
 
 /* ========== 运行时状态（per-motor） ========== */
 typedef struct {
-    uint8_t system_running;              /* 1=正常运行 */
-    uint8_t system_fault;                /* 1=故障状态 */
-    uint8_t reinit_pending;              /* 1=重初始化请求 */
-    uint8_t last_fault_code;             /* foc_fault_code_t */
-    uint8_t cfg_dirty;                   /* 1=配置已变更，需要L1应用 */
-    uint8_t motor_enabled;               /* 1=电机使能 */
-    uint8_t control_mode;                /* 控制模式 */
-    uint8_t pending_system_action;       /* 待处理系统命令，L1消费 */
-    uint8_t current_loop_ready;          /* 1=ISR电流环已被控制周期允许执行 */
-    uint16_t init_check_mask;            /* 已执行初始化检查掩码 */
-    uint16_t init_fail_mask;             /* 失败初始化检查掩码 */
-    uint16_t sensor_invalid_consecutive; /* 连续无效传感器计数 */
+    uint8_t system_running;
+    uint8_t system_fault;
+    uint8_t reinit_pending;
+    uint8_t last_fault_code;
+    uint8_t cfg_dirty;
+    uint8_t motor_enabled;
+    uint8_t control_mode;
+    uint8_t pending_system_action;
+    uint8_t current_loop_ready;
+    uint16_t init_check_mask;
+    uint16_t init_fail_mask;
+    uint16_t sensor_invalid_consecutive;
     uint32_t protocol_error_count;
     uint32_t param_error_count;
     uint32_t control_skip_count;
 } foc_motor_state_t;
-
-/* ========== 控制配置参数 ========== */
-typedef struct {
-    float target_angle_rad;
-    float angle_position_speed_rad_s;
-    float speed_only_rad_s;
-    float sensor_sample_offset_percent;
-    uint8_t control_mode;
-
-    /* PID 参数 */
-    float pid_current_kp;
-    float pid_current_ki;
-    float pid_current_kd;
-    float pid_angle_kp;
-    float pid_angle_ki;
-    float pid_angle_kd;
-    float pid_speed_kp;
-    float pid_speed_ki;
-    float pid_speed_kd;
-
-    /* Fine-tuning 参数 */
-    float min_mech_angle_accum_delta_rad;
-    float angle_hold_integral_limit;
-    float angle_hold_pid_deadband_rad;
-    float speed_angle_transition_start_rad;
-    float speed_angle_transition_end_rad;
-
-    /* 电流软切换 */
-    uint8_t current_soft_switch_enable;
-    uint8_t current_soft_switch_mode;
-    float current_soft_switch_auto_open_iq_a;
-    float current_soft_switch_auto_closed_iq_a;
-
-    /* 齿槽补偿 */
-    uint8_t cogging_comp_enable;
-    float cogging_comp_iq_limit_a;
-    float cogging_comp_speed_gate_rad_s;
-    float cogging_calib_gain_k;
-} foc_motor_cfg_t;
 
 /* ========== 系统动作枚举（pending_system_action） ========== */
 #define FOC_SYSACTION_NONE           0U
 #define FOC_SYSACTION_COGGING_START  1U
 #define FOC_SYSACTION_COGGING_DUMP   2U
 #define FOC_SYSACTION_COGGING_EXPORT 3U
-
-/* ========== Runtime control configuration ========== */
-typedef struct {
-    float min_mech_angle_accum_delta_rad;
-    float angle_hold_integral_limit;
-    float angle_hold_pid_deadband_rad;
-    float speed_angle_transition_start_rad;
-    float speed_angle_transition_end_rad;
-} foc_control_runtime_config_t;
 
 /* ========== Current soft-switch status ========== */
 typedef struct {
@@ -109,42 +69,45 @@ typedef struct {
     float iq_lsb_a;
     float speed_gate_rad_s;
     float iq_limit_a;
-
-    /* Runtime calibration gain K (Δθ→iq conversion factor). */
     float calib_gain_k;
 } foc_cogging_comp_status_t;
 
 /* Cogging calibration runtime state */
 typedef struct {
-    /* === Calibration state machine === */
-    uint8_t in_progress;           /* 1 when calibration is active */
-    uint8_t progress_percent;      /* 0–100 progress indicator */
-    uint16_t point_index;          /* CALIB_PHASE_* or scan-phase index */
-
-    /* Running-average pass count.  Replaces per-bin float[512] and int16_t[512]. */
+    uint8_t in_progress;
+    uint8_t progress_percent;
+    uint16_t point_index;
     uint8_t completed_pass_count;
-
-    /* === Predicted angle state (pure integrator, never re-seeded) === */
     float pred_mech_angle;
     float travel_accum_rad;
     float angle_prev_rad;
-
-    /* === Per-pass tracking === */
     uint16_t last_lut_index;
     uint16_t bins_collected;
     uint8_t pass_num;
     uint8_t rev_count;
     uint8_t last_reported_progress;
-
-    /* === Saved soft-switch state (restored on calibration finish) === */
     uint8_t saved_softswitch_enabled;
     uint8_t saved_softswitch_mode;
-
-    /* === Calibration request flags (set by L1, consumed by SampleStep) === */
     uint8_t request_start;
     uint8_t request_dump;
     uint8_t request_export;
 } foc_cogging_calib_state_t;
+
+/* ========== SVPWM 插值引擎状态 ========== */
+typedef struct {
+    svpwm_output_t output;
+    float duty_a_current;
+    float duty_b_current;
+    float duty_c_current;
+    float duty_a_target;
+    float duty_b_target;
+    float duty_c_target;
+    float duty_a_step;
+    float duty_b_step;
+    float duty_c_step;
+    uint16_t interp_steps_total;
+    uint16_t interp_step_index;
+} svpwm_interp_state_t;
 
 /* ========== Sensor data snapshot ========== */
 typedef struct {
@@ -166,11 +129,15 @@ typedef enum {
 } foc_torque_mode_t;
 
 /* ========== Motor aggregate state ========== */
+/*
+ * foc_motor_cfg_t 和 foc_control_runtime_config_t 已消除。
+ * 所有配置字段直接作为 foc_motor_t 顶层字段，协议 WriteParam
+ * 直接写目标字段，cfg_dirty 仅标记副作用需求。
+ */
 typedef struct {
     /* === 运行时状态 === */
     foc_motor_state_t state;
-    /* === 控制配置 === */
-    foc_motor_cfg_t cfg;
+
     /* === PID 控制器对象 === */
     foc_pid_t torque_current_pid;
     foc_pid_t speed_pid;
@@ -200,19 +167,33 @@ typedef struct {
     uint8_t mech_angle_prev_valid;
     int32_t mech_turn_count;
 
-    /* Alpha-beta, three-phase voltages, and SVPWM outputs. */
+    /* Alpha-beta, three-phase voltages. */
     float alpha;
     float beta;
     float phase_a;
     float phase_b;
     float phase_c;
-    float duty_a;
-    float duty_b;
-    float duty_c;
-    uint8_t sector;
 
-    /* Control runtime context migrated from shared C25 singletons. */
-    foc_control_runtime_config_t control_runtime_cfg;
+    /* SVPWM 插值引擎状态 */
+    svpwm_interp_state_t svpwm;
+
+    /* ====== 配置字段（原 cfg + runtime_cfg，直接写入 ====== */
+
+    /* 控制目标参数 */
+    float target_angle_rad;
+    float angle_position_speed_rad_s;
+    float speed_only_rad_s;
+    float sensor_sample_offset_percent;
+
+    /* Fine-tuning 参数 */
+    float min_mech_angle_accum_delta_rad;
+    float angle_hold_integral_limit;
+    float angle_hold_pid_deadband_rad;
+    float speed_angle_transition_start_rad;
+    float speed_angle_transition_end_rad;
+
+    /* ====== 运行时状态（子结构体） ====== */
+
     foc_current_soft_switch_status_t current_soft_switch_status;
     uint8_t current_soft_switch_blend_initialized;
 
@@ -239,75 +220,43 @@ typedef struct {
     foc_cogging_calib_state_t cogging_calib_state;
 #endif
 #else
-    /* Placeholder to keep struct size stable when COMP is disabled. */
     uint8_t _cogging_padding;
 #endif
 
-    /*
-     * ================================================================
-     * Sensor snapshots (per-motor)
-     *
-     *   sensor      - control-loop path: all sensors (current slow + angle + VBUS)
-     *   sensor_fast - PWM ISR path:      current only (fast window)
-     *
-     * Each is written directly by Sensor_ReadAll / Sensor_ReadCurrentFast
-     * into the motor's own buffer, eliminating intermediate static globals.
-     * ================================================================
-     */
+    /* Sensor snapshots */
     sensor_data_t sensor;
     sensor_data_t sensor_fast;
 
-    /*
-     * Zero offsets from Sensor_SetZeroOffset calibration.
-     * Applied per-read in Sensor_ReadCurrentSlow/Fast.
-     */
+    /* Zero offsets */
     float sensor_zero_offset_a;
     float sensor_zero_offset_b;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
     float sensor_zero_offset_c;
 #endif
 
-    /*
-     * Angle LPF state (per-motor).
-     */
 #if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
     uint8_t  sensor_angle_lpf_valid;
     float    sensor_angle_lpf_state;
 #endif
 
-    /* ISR fast-current-loop state (per-motor). */
     uint8_t  fast_current_div_counter;
 
-    /* IQ LPF state (per-motor). */
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
     uint8_t  iq_lpf_state_valid;
     float    iq_lpf_state;
 #endif
 
-    /* Soft-switch previous active mode for OPEN→CLOSED PID reset. */
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     uint8_t  prev_softswitch_active_mode;
 #endif
 
-    /*
-     * ================================================================
-     * 搬迁的 per-motor 状态（原 static 全局变量）
-     * ================================================================
-     */
-
-    /* 控制模式切换追踪（原 foc_ctrl_entry.c static） */
+    /* 搬迁的 per-motor 状态 */
     uint8_t prev_control_mode;
     uint8_t prev_control_mode_valid;
-
-    /* 控制模式检测（原 foc_ctrl_fast.c static） */
     uint8_t prev_control_mode_check;
-
-    /* 速度外环状态（原 foc_ctrl_outer_loop.c static） */
     float   speed_err_accum_rad;
     float   prev_mech_signed_rad;
     uint8_t speed_state_valid;
-
-    /* SVPWM 前置 LPF 状态（原 foc_ctrl_actuation.c static） */
     uint8_t svpwm_lpf_state_valid;
     float   svpwm_lpf_phase_a;
     float   svpwm_lpf_phase_b;
@@ -315,4 +264,4 @@ typedef struct {
 
 } foc_motor_t;
 
-#endif /* FOC_MOTOR_TYPES_H */
+#endif /* FOC_CTRL_TYPES_H */

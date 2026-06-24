@@ -100,24 +100,26 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
 #if (FOC_ZERO_VECTOR_CLAMP_ENABLE == FOC_CFG_ENABLE)
     if (voltage_command < FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V)
     {
-        motor->sector = 0U;
-        motor->duty_a = 0.5f;
-        motor->duty_b = 0.5f;
-        motor->duty_c = 0.5f;
+        motor->svpwm.output.sector = 0U;
+        motor->svpwm.output.duty_a = 0.5f;
+        motor->svpwm.output.duty_b = 0.5f;
+        motor->svpwm.output.duty_c = 0.5f;
 
         if (direct_output != 0U)
         {
-            SVPWM_ApplyDirectDuty(motor->sector,
-                                  motor->duty_a,
-                                  motor->duty_b,
-                                  motor->duty_c);
+            SVPWM_ApplyDirectDuty(motor,
+                                  motor->svpwm.output.sector,
+                                  motor->svpwm.output.duty_a,
+                                  motor->svpwm.output.duty_b,
+                                  motor->svpwm.output.duty_c);
         }
         else
         {
-            SVPWM_SetRuntimeDutyTarget(motor->sector,
-                                       motor->duty_a,
-                                       motor->duty_b,
-                                       motor->duty_c);
+            SVPWM_SetRuntimeDutyTarget(motor,
+                                       motor->svpwm.output.sector,
+                                       motor->svpwm.output.duty_a,
+                                       motor->svpwm.output.duty_b,
+                                       motor->svpwm.output.duty_c);
         }
         return;
     }
@@ -126,27 +128,21 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     /* 正常SVPWM输出 */
     if (direct_output != 0U)
     {
-        SVPWM_UpdateDirect(motor->phase_a,
+        SVPWM_UpdateDirect(motor,
+                           motor->phase_a,
                            motor->phase_b,
                            motor->phase_c,
                            voltage_command,
-                           motor->vbus_voltage,
-                           &motor->sector,
-                           &motor->duty_a,
-                           &motor->duty_b,
-                           &motor->duty_c);
+                           motor->vbus_voltage);
     }
     else
     {
-        SVPWM_UpdateRuntime(motor->phase_a,
+        SVPWM_UpdateRuntime(motor,
+                            motor->phase_a,
                             motor->phase_b,
                             motor->phase_c,
                             voltage_command,
-                            motor->vbus_voltage,
-                            &motor->sector,
-                            &motor->duty_a,
-                            &motor->duty_b,
-                            &motor->duty_c);
+                            motor->vbus_voltage);
     }
 }
 

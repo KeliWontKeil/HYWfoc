@@ -3,7 +3,7 @@
 #define FOC_CTRL_ACTUATION_H
 
 
-#include "LS_Config/foc_motor_types.h"
+#include "L2/foc_ctrl_types.h"
 
 float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad);
 void FOC_ControlApplyElectricalAngleRuntime(foc_motor_t *motor, float electrical_angle);

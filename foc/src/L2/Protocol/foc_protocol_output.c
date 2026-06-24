@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-#include "LS_Config/foc_runtime_types.h"
-#include "LS_Config/foc_motor_types.h"
+#include "L2/Runtime/foc_runtime_types.h"
+#include "L2/foc_ctrl_types.h"
 #include "L2/Protocol/foc_protocol_parser.h"
 #include "L3/foc_platform_api.h"
 #include "LS_Config/foc_config.h"

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "LS_Config/foc_motor_types.h"
+#include "L2/foc_ctrl_types.h"
 
 /*
  * Control executor: runs the ISR fast-current path and the control-cycle

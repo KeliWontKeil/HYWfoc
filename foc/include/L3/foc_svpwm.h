@@ -5,45 +5,36 @@
 
 #include <stdint.h>
 
-typedef struct {
-    uint8_t sector;
-    float duty_a;
-    float duty_b;
-    float duty_c;
-} svpwm_output_t;
+#include "L2/foc_ctrl_types.h"
 
-void SVPWM_Init(uint16_t freq_kHz,uint8_t deadtime_percent);
-void SVPWM_UpdateRuntime(float phase_a,
+/*
+ * SVPWM API — all functions require a foc_motor_t pointer for per-motor
+ * interpolation state, eliminating static globals.
+ */
+void SVPWM_Init(foc_motor_t *motor, uint16_t freq_kHz, uint8_t deadtime_percent);
+void SVPWM_UpdateRuntime(foc_motor_t *motor,
+                         float phase_a,
                          float phase_b,
                          float phase_c,
                          float voltage_command,
-                         float vbus_voltage,
-                         uint8_t *sector,
-                         float *duty_a,
-                         float *duty_b,
-                         float *duty_c);
-void SVPWM_UpdateDirect(float phase_a,
+                         float vbus_voltage);
+void SVPWM_UpdateDirect(foc_motor_t *motor,
+                        float phase_a,
                         float phase_b,
                         float phase_c,
                         float voltage_command,
-                        float vbus_voltage,
-                        uint8_t *sector,
-                        float *duty_a,
-                        float *duty_b,
-                        float *duty_c);
-void SVPWM_SetRuntimeDutyTarget(uint8_t sector,
+                        float vbus_voltage);
+void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
+                                uint8_t sector,
                                 float duty_a,
                                 float duty_b,
                                 float duty_c);
-void SVPWM_ApplyDirectDuty(uint8_t sector,
+void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
+                           uint8_t sector,
                            float duty_a,
                            float duty_b,
                            float duty_c);
-void SVPWM_InterpolationISR(void);
-/*
- * Unused-interface audit tag: RESERVED_OBSERVABILITY.
- * Keep this API for optional runtime observability/debug hooks.
- */
-const svpwm_output_t* SVPWM_GetOutput(void);
+void SVPWM_InterpolationISR(foc_motor_t *motor);
+const svpwm_output_t* SVPWM_GetOutput(const foc_motor_t *motor);
 
 #endif /* FOC_SVPWM_H */

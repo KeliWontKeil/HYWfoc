@@ -35,7 +35,7 @@ void FOC_ControlExecutor_Stop(foc_motor_t *motor)
     if (motor == 0) return;
     FOC_CurrentControlOpenLoopStep(motor, 0.0f, 0.0f,
                                    FOC_CONTROL_DT_SEC);
-    SVPWM_ApplyDirectDuty(0U, 0.0f, 0.0f, 0.0f);
+    SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
 }
 
 void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
@@ -49,7 +49,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     if (motor->state.motor_enabled == 0U) return;
     if (motor->state.current_loop_ready == 0U) return;
 
-    SVPWM_InterpolationISR();
+    SVPWM_InterpolationISR(motor);
 
     divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
     motor->fast_current_div_counter++;
@@ -94,7 +94,7 @@ static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip)
 {
     FOC_CurrentControlOpenLoopStep(motor, 0.0f, 0.0f,
                                    FOC_CONTROL_DT_SEC);
-    SVPWM_ApplyDirectDuty(0U, 0.0f, 0.0f, 0.0f);
+    SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
 
     if (report_skip != 0U)
     {
@@ -234,7 +234,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
 
     if ((motor == 0) || (sensor == 0)) return;
 
-    cur_mode = motor->cfg.control_mode;
+    cur_mode = motor->state.control_mode;
 
     /* 控制模式切换时重置 PID 状态 */
     if (motor->prev_control_mode_valid == 0U)
@@ -266,7 +266,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
 
     FOC_SpeedOuterLoopStep(motor,
                            &motor->speed_pid,
-                           motor->cfg.speed_only_rad_s,
+                           motor->speed_only_rad_s,
                            sensor,
                            dt_sec);
 
@@ -275,8 +275,8 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
     FOC_SpeedAngleOuterLoopStep(motor,
                                 &motor->speed_pid,
                                 &motor->angle_pid,
-                                motor->cfg.target_angle_rad,
-                                motor->cfg.angle_position_speed_rad_s,
+                                motor->target_angle_rad,
+                                motor->angle_position_speed_rad_s,
                                 sensor,
                                 dt_sec);
 
@@ -286,7 +286,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
     {
         FOC_SpeedOuterLoopStep(motor,
                                &motor->speed_pid,
-                               motor->cfg.speed_only_rad_s,
+                               motor->speed_only_rad_s,
                                sensor,
                                dt_sec);
     }
@@ -295,8 +295,8 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
         FOC_SpeedAngleOuterLoopStep(motor,
                                     &motor->speed_pid,
                                     &motor->angle_pid,
-                                    motor->cfg.target_angle_rad,
-                                    motor->cfg.angle_position_speed_rad_s,
+                                    motor->target_angle_rad,
+                                    motor->angle_position_speed_rad_s,
                                     sensor,
                                     dt_sec);
     }
