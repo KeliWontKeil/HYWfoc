@@ -6,10 +6,6 @@
 #include "L3/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
-static float g_speed_err_accum_rad = 0.0f;
-static float g_prev_mech_signed_rad = 0.0f;
-static uint8_t g_speed_state_valid = 0U;
-
 static float FOC_NormalizeDt(float dt_sec)
 {
     return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_SEC;
@@ -107,11 +103,11 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
     pid->prev_error = 0.0f;
 }
 
-static void FOC_ResetSpeedState(void)
+static void FOC_ResetSpeedState(foc_motor_t *motor)
 {
-    g_speed_err_accum_rad = 0.0f;
-    g_prev_mech_signed_rad = 0.0f;
-    g_speed_state_valid = 0U;
+    motor->speed_err_accum_rad = 0.0f;
+    motor->prev_mech_signed_rad = 0.0f;
+    motor->speed_state_valid = 0U;
 }
 
 static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_angle_rad)
@@ -158,25 +154,25 @@ static float FOC_UpdateSpeedAngleError(foc_motor_t *motor,
 
     mech_signed_rad = motor->direction * mech_angle_rad;
 
-    if (g_speed_state_valid == 0U)
+    if (motor->speed_state_valid == 0U)
     {
-        g_prev_mech_signed_rad = mech_signed_rad;
-        g_speed_err_accum_rad = 0.0f;
-        g_speed_state_valid = 1U;
+        motor->prev_mech_signed_rad = mech_signed_rad;
+        motor->speed_err_accum_rad = 0.0f;
+        motor->speed_state_valid = 1U;
         return 0.0f;
     }
 
-    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - g_prev_mech_signed_rad);
-    g_prev_mech_signed_rad = mech_signed_rad;
+    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - motor->prev_mech_signed_rad);
+    motor->prev_mech_signed_rad = mech_signed_rad;
 
     speed_cmd_delta_rad = speed_ref_rad_s * dt_sec;
-    g_speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
+    motor->speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
 
-    g_speed_err_accum_rad = Math_ClampFloat(g_speed_err_accum_rad,
+    motor->speed_err_accum_rad = Math_ClampFloat(motor->speed_err_accum_rad,
                                             -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
                                             FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
 
-    return g_speed_err_accum_rad;
+    return motor->speed_err_accum_rad;
 }
 
 void FOC_ControlRebaseMechanicalAngleAccum(foc_motor_t *motor, float mech_angle_rad)
@@ -191,9 +187,10 @@ void FOC_ControlRebaseMechanicalAngleAccum(foc_motor_t *motor, float mech_angle_
     motor->mech_angle_prev_valid = 1U;
 }
 
-void FOC_ControlResetSpeedLoopState(void)
+void FOC_ControlResetSpeedLoopState(foc_motor_t *motor)
 {
-    FOC_ResetSpeedState();
+    if (motor == 0) return;
+    FOC_ResetSpeedState(motor);
 }
 
 void FOC_SpeedOuterLoopStep(foc_motor_t *motor,
@@ -286,7 +283,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
     if (speed_blend < 1e-4f)
     {
         FOC_ResetPIDState(speed_pid);
-        FOC_ResetSpeedState();
+        FOC_ResetSpeedState(motor);
         torque_ref_speed = 0.0f;
     }
     else

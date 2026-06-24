@@ -9,7 +9,6 @@
 #include "LS_Config/foc_motor_types.h"
 
 void FOC_CurrentControlStep(foc_motor_t *motor,
-                            foc_pid_t *current_pid,
                             const sensor_data_t *sensor,
                             float electrical_angle,
                             float dt_sec);
@@ -23,4 +22,4 @@ void FOC_CurrentControlApplyElectricalAngleDirect(foc_motor_t *motor, float elec
 
 uint8_t FOC_ControlRequiresCurrentSample(void);
 
-#endif /* FOC_CONTROL_C22_CURRENT_LOOP_H */
+#endif /* FOC_CTRL_CURRENT_LOOP_H */

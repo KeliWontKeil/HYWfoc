@@ -30,24 +30,31 @@
 /* Fast current-loop: execute every N-th PWM ISR. */
 #define FOC_CURRENT_LOOP_ISR_DIVIDER   2U
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
-/* ADC averaging windows: slow covers 1 control-cycle window, fast covers inter-ISR interval. */
-#define FOC_SENSOR_ADC_AVG_COUNT_SLOW  FOC_PWM_FREQ_KHZ
+/*
+ * ADC averaging windows:
+ *   SLOW  = number of PWM periods in one control cycle = (PWM freq) / (control freq)
+ *   FAST  = number of PWM periods in one current-loop ISR cycle = divider
+ *
+ * These values are passed as avg_count to ADC_ReadPhaseCurrentABOk().
+ * The L5 DMA buffer (ADC_BUFFER_SIZE) must be >= SLOW to avoid silent clamp.
+ */
+#define FOC_SENSOR_ADC_AVG_COUNT_SLOW  ((FOC_PWM_FREQ_KHZ * 1000U) / FOC_SCHEDULER_CONTROL_HZ)
 #define FOC_SENSOR_ADC_AVG_COUNT_FAST  FOC_CURRENT_LOOP_ISR_DIVIDER
 #define FOC_CONTROL_DT_SEC              (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
 
 /* Motor initialization parameters. */
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
-#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 11.4f//1.6f
-#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f//1.0f
+#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 11.4f
+#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
 
 /* Alignment/calibration voltage is derived from set_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
 #define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 7U
-#define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED//3.1606f
-#define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED//FOC_DIR_REVERSED
+#define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED
+#define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED
 
 /* Initialization calibration strategy defaults (coarse + fine subdivision). */
-#define FOC_CALIB_ALIGN_VOLTAGE_RATIO 0.40f 
+#define FOC_CALIB_ALIGN_VOLTAGE_RATIO 0.40f
 #define FOC_CALIB_SETTLE_MS 4U
 #define FOC_CALIB_MIN_MECH_STEP_RAD 0.0015f
 #define FOC_CALIB_ZERO_LOCK_SETTLE_MS 120U
@@ -82,7 +89,7 @@
 #define COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ 100U
 
 /* Telemetry default parameter visibility switches and derived mask. */
-#define FOC_PROTOCOL_LOCAL_DRIVER_ID_DEFAULT 0x61U //'a'
+#define FOC_PROTOCOL_LOCAL_DRIVER_ID_DEFAULT 0x61U
 #define DEBUG_STREAM_OSC_HEAD_BYTE 0x61U
 #define DEBUG_STREAM_OSC_TAIL_BYTE 0x62U
 #define DEBUG_STREAM_OSC_DEFAULT_SHOW_CURRENT_A FOC_CFG_ENABLE
@@ -127,7 +134,6 @@
 
 /* Control loop defaults and limits. */
 #define FOC_SPEED_ERR_ACCUM_LIMIT_RAD (FOC_MATH_TWO_PI * 4.0f)
-/* Unused-macro audit tag: RESERVED_OR_LEGACY_CANDIDATE (pending classification). */
 #define FOC_SPEED_MECH_REBASE_RAD 2048.0f
 #define FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD 0.001f
 #define FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT 0.03f

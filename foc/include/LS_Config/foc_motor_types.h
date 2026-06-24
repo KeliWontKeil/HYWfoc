@@ -27,6 +27,7 @@ typedef struct {
     uint8_t motor_enabled;               /* 1=电机使能 */
     uint8_t control_mode;                /* 控制模式 */
     uint8_t pending_system_action;       /* 待处理系统命令，L1消费 */
+    uint8_t current_loop_ready;          /* 1=ISR电流环已被控制周期允许执行 */
     uint16_t init_check_mask;            /* 已执行初始化检查掩码 */
     uint16_t init_fail_mask;             /* 失败初始化检查掩码 */
     uint16_t sensor_invalid_consecutive; /* 连续无效传感器计数 */
@@ -218,7 +219,7 @@ typedef struct {
 #if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
     float    ecycle_offset_dyn_a;
     float    ecycle_offset_dyn_b;
-#if (FOC_SENSOR_PHASE_COUNT == 3U)
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
     float    ecycle_offset_dyn_c;
 #endif
     float    ecycle_prev_mech_angle;
@@ -226,7 +227,7 @@ typedef struct {
     uint16_t ecycle_sample_count;
     float    ecycle_accum_a;
     float    ecycle_accum_b;
-#if (FOC_SENSOR_PHASE_COUNT == 3U)
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
     float    ecycle_accum_c;
 #endif
     uint8_t  ecycle_offset_valid;
@@ -241,6 +242,77 @@ typedef struct {
     /* Placeholder to keep struct size stable when COMP is disabled. */
     uint8_t _cogging_padding;
 #endif
+
+    /*
+     * ================================================================
+     * Sensor snapshots (per-motor)
+     *
+     *   sensor      - control-loop path: all sensors (current slow + angle + VBUS)
+     *   sensor_fast - PWM ISR path:      current only (fast window)
+     *
+     * Each is written directly by Sensor_ReadAll / Sensor_ReadCurrentFast
+     * into the motor's own buffer, eliminating intermediate static globals.
+     * ================================================================
+     */
+    sensor_data_t sensor;
+    sensor_data_t sensor_fast;
+
+    /*
+     * Zero offsets from Sensor_SetZeroOffset calibration.
+     * Applied per-read in Sensor_ReadCurrentSlow/Fast.
+     */
+    float sensor_zero_offset_a;
+    float sensor_zero_offset_b;
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
+    float sensor_zero_offset_c;
+#endif
+
+    /*
+     * Angle LPF state (per-motor).
+     */
+#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
+    uint8_t  sensor_angle_lpf_valid;
+    float    sensor_angle_lpf_state;
+#endif
+
+    /* ISR fast-current-loop state (per-motor). */
+    uint8_t  fast_current_div_counter;
+
+    /* IQ LPF state (per-motor). */
+#if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
+    uint8_t  iq_lpf_state_valid;
+    float    iq_lpf_state;
+#endif
+
+    /* Soft-switch previous active mode for OPEN→CLOSED PID reset. */
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    uint8_t  prev_softswitch_active_mode;
+#endif
+
+    /*
+     * ================================================================
+     * 搬迁的 per-motor 状态（原 static 全局变量）
+     * ================================================================
+     */
+
+    /* 控制模式切换追踪（原 foc_ctrl_entry.c static） */
+    uint8_t prev_control_mode;
+    uint8_t prev_control_mode_valid;
+
+    /* 控制模式检测（原 foc_ctrl_fast.c static） */
+    uint8_t prev_control_mode_check;
+
+    /* 速度外环状态（原 foc_ctrl_outer_loop.c static） */
+    float   speed_err_accum_rad;
+    float   prev_mech_signed_rad;
+    uint8_t speed_state_valid;
+
+    /* SVPWM 前置 LPF 状态（原 foc_ctrl_actuation.c static） */
+    uint8_t svpwm_lpf_state_valid;
+    float   svpwm_lpf_phase_a;
+    float   svpwm_lpf_phase_b;
+    float   svpwm_lpf_phase_c;
+
 } foc_motor_t;
 
 #endif /* FOC_MOTOR_TYPES_H */

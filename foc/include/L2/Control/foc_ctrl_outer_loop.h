@@ -7,7 +7,7 @@
 #include "LS_Config/foc_motor_types.h"
 
 void FOC_ControlRebaseMechanicalAngleAccum(foc_motor_t *motor, float mech_angle_rad);
-void FOC_ControlResetSpeedLoopState(void);
+void FOC_ControlResetSpeedLoopState(foc_motor_t *motor);
 
 void FOC_SpeedOuterLoopStep(foc_motor_t *motor,
                             foc_pid_t *speed_pid,

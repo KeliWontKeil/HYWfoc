@@ -12,6 +12,8 @@
 #include "L3/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 #include "LS_Config/foc_cogging_table.h"
+#include "L2/Control/foc_ctrl_cfg.h"
+#include "L2/Control/foc_ctrl_executor.h"
 
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 {
@@ -172,6 +174,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->state.protocol_error_count = 0U;
     motor->state.param_error_count = 0U;
     motor->state.control_skip_count = 0U;
+    motor->state.current_loop_ready = 0U;
 
     /* 初始化控制配置默认值 */
     motor->cfg.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
@@ -202,7 +205,19 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->cfg.cogging_calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
 
     FOC_ControlConfigResetDefault(motor);
-    FOC_Control_Init(motor);
+    /* 新 per-motor 状态字段初始化 */
+    motor->prev_control_mode = 0U;
+    motor->prev_control_mode_valid = 0U;
+    motor->prev_control_mode_check = 0xFFU;
+    motor->speed_err_accum_rad = 0.0f;
+    motor->prev_mech_signed_rad = 0.0f;
+    motor->speed_state_valid = 0U;
+    motor->svpwm_lpf_state_valid = 0U;
+    motor->svpwm_lpf_phase_a = 0.0f;
+    motor->svpwm_lpf_phase_b = 0.0f;
+    motor->svpwm_lpf_phase_c = 0.0f;
+
+    FOC_ControlExecutor_Init(motor);
 
 #if (FOC_INIT_CALIBRATION_ENABLE == FOC_CFG_ENABLE)
     FOC_CalibrateElectricalAngleAndDirection(motor);

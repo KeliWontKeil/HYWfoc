@@ -28,7 +28,4 @@ typedef enum {
     RUNTIME_INIT_CHECK_VBUS = (1U << 7)
 } runtime_init_check_t;
 
-/* 故障码已迁移至 foc_motor_types.h: foc_fault_code_t */
-/* RUNTIME_FAULT_* 已废弃，使用 FOC_FAULT_* */
-
 #endif /* FOC_RUNTIME_TYPES_H */

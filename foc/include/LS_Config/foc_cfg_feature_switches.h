@@ -14,8 +14,15 @@
 /* Safety feature switches. */
 #define FOC_FEATURE_UNDERVOLTAGE_PROTECTION FOC_CFG_ENABLE
 
-/* Sensing feature switches. */
-#define FOC_SENSOR_PHASE_COUNT 2U   /* 2 = two-phase + reconstruct, 3 = three-phase direct */
+/*
+ * Current sensing feature switch.
+ *   FOC_CURRENT_SENSE_NONE (0)  - no current sensor; iq_measured = iq_target
+ *   2U                         - two-phase sampling + C-phase reconstruction
+ *   3U                         - three-phase direct sampling
+ */
+#define FOC_CURRENT_SENSE_PHASES 2U
+
+/* Sensing feature switches (angle / VBUS). */
 #define FOC_SENSOR_KALMAN_CURRENT_ENABLE FOC_CFG_DISABLE
 #define FOC_SENSOR_KALMAN_ANGLE_ENABLE FOC_CFG_DISABLE
 #define FOC_SENSOR_ANGLE_LPF_ENABLE FOC_CFG_ENABLE

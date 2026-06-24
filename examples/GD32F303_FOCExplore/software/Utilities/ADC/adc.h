@@ -64,10 +64,15 @@
 #define ADC_DMA_CHANNEL       DMA_CH0
 #define ADC_DMA_RCU           RCU_DMA0
 
-/* Buffer configuration */
-#define ADC_BUFFER_SIZE       4     /* DMA buffer size (samples per channel) */
+/*
+ * DMA circular buffer size (number of samples per channel).
+ *
+ * Must be >= FOC_SENSOR_ADC_AVG_COUNT_SLOW (typically 24 = PWM_FREQ_KHZ * 1000 / CONTROL_HZ)
+ * to avoid silent clamp in ADC_GetAverageSample().  64 provides ample margin for
+ * higher PWM frequencies or slower control rates.
+ */
+#define ADC_BUFFER_SIZE       64U
 #define ADC_CHANNEL_COUNT     2       /* Number of channels: PA6 and PA7 */
-#define ADC_AVG_DEFAULT_COUNT 2      /* 24kHz sampling / 2 divide current loop */
 
 /* Current calculation constants */
 #define ADC_VREF              3.28f    /* Reference voltage (V) */
@@ -127,5 +132,3 @@ uint8_t ADC2_ReadVbus(float *vbus_v);
 
 
 #endif /* _ADC_H_ */
-
-

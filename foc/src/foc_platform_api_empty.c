@@ -209,8 +209,8 @@ void FOC_Platform_SetSensorSampleOffsetPercent(float percent) { (void)percent; }
  * @param phase_current_b  [out] B相电流[A]
  * @param phase_current_c  [out] C相电流[A]（两相采样时传入NULL）
  * @return 1=读取成功, 0=读取失败
- * @note  两相采样时(FOC_SENSOR_PHASE_COUNT=2)，传入NULL给phase_current_c，
- *        C相会由算法内部重构为 -(Ia+Ib)。三相采样时(FOC_SENSOR_PHASE_COUNT=3)，
+ * @note  两相采样时(FOC_CURRENT_SENSE_PHASES=2)，传入NULL给phase_current_c，
+ *        C相会由算法内部重构为 -(Ia+Ib)。三相采样时(FOC_CURRENT_SENSE_PHASES=3)，
  *        必须提供三个有效指针。
  *        返回值范围取决于采样电阻和运放增益，通常为 ±几安培。
  */
@@ -222,8 +222,9 @@ uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_curre
  * @param phase_current_b  [out] B相电流[A]
  * @param phase_current_c  [out] C相电流[A]（两相采样时传入NULL）
  * @return 1=读取成功, 0=读取失败
- * @note  与ReadPhaseCurrent的区别在于使用更短的采样窗口(如约1μs)，
- *        以减ADC采样对PWM更新时序的影响。此函数在PWM ISR中调用。
+ * @note  与ReadPhaseCurrent的区别在于使用更短的采样平均窗口，
+ *        以匹配电流环ISR的执行间隔而非控制执行间隔。
+ *        此函数在PWM ISR中调用。
  *        参数意义和返回格式与ReadPhaseCurrent完全相同。
  */
 uint8_t FOC_Platform_ReadPhaseCurrentFast(float *phase_current_a, float *phase_current_b, float *phase_current_c) { (void)phase_current_a; (void)phase_current_b; (void)phase_current_c; return 0U; }

@@ -74,17 +74,18 @@ virtualFolder:
         - path: ../../../foc/src/L2/Control/foc_ctrl_cfg.c
         - path: ../../../foc/src/L2/Control/foc_ctrl_compensation.c
         - path: ../../../foc/src/L2/Control/foc_ctrl_current_loop.c
-        - path: ../../../foc/src/L2/Control/foc_ctrl_entry.c
         - path: ../../../foc/src/L2/Control/foc_ctrl_init.c
         - path: ../../../foc/src/L2/Control/foc_ctrl_outer_loop.c
         - path: ../../../foc/src/L2/Control/foc_ctrl_param_learn.c
-        - path: ../../../foc/src/L2/Control/foc_sensor.c
-        - path: ../../../foc/src/L2/Control/foc_svpwm.c
         - path: ../../../foc/src/L2/Protocol/foc_protocol_parser.c
         - path: ../../../foc/src/L2/Runtime/foc_debug_stream.c
         - path: ../../../foc/src/L2/Runtime/foc_task_scheduler.c
         - path: ../../../foc/src/L2/Protocol/foc_protocol_handler.c
         - path: ../../../foc/src/L2/Protocol/foc_protocol_output.c
+        - path: ../../../foc/src/L1_Orchestration/foc_service_handler.c
+        - path: ../../../foc/src/L2/Control/foc_ctrl_executor.c
+        - path: ../../../foc/src/L3/foc_sensor.c
+        - path: ../../../foc/src/L3/foc_svpwm.c
       folders: []
 dependenceList: []
 outDir: build

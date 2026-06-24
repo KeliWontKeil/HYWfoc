@@ -90,10 +90,10 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 #if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MIN_PERCENT, COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MAX_PERCENT) == 0U) return 0U;
         cfg->sensor_sample_offset_percent = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     /* 遥测参数（与齿槽补偿/软切换共用子命令字节，根据特性使能互斥） */
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
@@ -115,127 +115,127 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U) return 0U;
         cfg->pid_current_kp = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U) return 0U;
         cfg->pid_current_ki = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U) return 0U;
         cfg->pid_current_kd = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U) return 0U;
         cfg->pid_angle_kp = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MAX) == 0U) return 0U;
         cfg->pid_angle_ki = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MAX) == 0U) return 0U;
         cfg->pid_angle_kd = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP:
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U) return 0U;
         cfg->pid_speed_kp = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI:
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KI_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KI_MAX) == 0U) return 0U;
         cfg->pid_speed_ki = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD:
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KD_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KD_MAX) == 0U) return 0U;
         cfg->pid_speed_kd = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
         cfg->min_mech_angle_accum_delta_rad = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
         cfg->angle_hold_integral_limit = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
         cfg->angle_hold_pid_deadband_rad = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
         cfg->speed_angle_transition_start_rad = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
         cfg->speed_angle_transition_end_rad = value;
+        break;
 #else
         return 0U;
 #endif
-        break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
         if ((value < COMMAND_MANAGER_PARAM_CONTROL_MODE_MIN) || (value > COMMAND_MANAGER_PARAM_CONTROL_MODE_MAX)) return 0U;
@@ -435,33 +435,33 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         g_telemetry.semantic_report_enabled = normalized;
+        break;
 #else
         return 0U;
 #endif
-        break;
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         g_telemetry.osc_report_enabled = normalized;
+        break;
 #else
         return 0U;
 #endif
-        break;
     case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
         motor->cfg.current_soft_switch_enable = normalized;
         motor->state.cfg_dirty = 1U;
+        break;
 #else
         return 0U;
 #endif
-        break;
     case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
         motor->cfg.cogging_comp_enable = normalized;
         motor->state.cfg_dirty = 1U;
+        break;
 #else
         return 0U;
 #endif
-        break;
     default:
         return 0U;
     }
@@ -478,31 +478,31 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         *state_out = g_telemetry.semantic_report_enabled;
+        break;
 #else
         return 0U;
 #endif
-        break;
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         *state_out = g_telemetry.osc_report_enabled;
+        break;
 #else
         return 0U;
 #endif
-        break;
     case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
         *state_out = motor->cfg.current_soft_switch_enable;
+        break;
 #else
         return 0U;
 #endif
-        break;
     case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
         *state_out = motor->cfg.cogging_comp_enable;
+        break;
 #else
         return 0U;
 #endif
-        break;
     default:
         return 0U;
     }

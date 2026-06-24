@@ -130,6 +130,17 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
     ADC_Start();
 }
 
+/*
+ * Read phase currents.
+ *
+ * The avg_count parameter is passed through ADC_BUFFER_SIZE to the DMA
+ * circular buffer.  The caller selects the averaging window:
+ *
+ *   - Control-loop  path: passes FOC_SENSOR_ADC_AVG_COUNT_SLOW (typically 24)
+ *   - Current-loop ISR path: passes FOC_SENSOR_ADC_AVG_COUNT_FAST (typically 2)
+ *
+ * Both paths converge on this single API entry point.
+ */
 uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
     if (phase_current_c == 0)
@@ -143,7 +154,20 @@ uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_curre
     return 0U;
 }
 
-uint8_t FOC_Platform_ReadPhaseCurrentFast(float *phase_current_a, float *phase_current_b, float *phase_current_c)
+/*
+ * Legacy fast-read entry point.
+ *
+ * Kept for builds that still reference it (empty implementation templates),
+ * but no longer called by the library.  New code should use
+ * FOC_Platform_ReadPhaseCurrent with avg_count = FOC_SENSOR_ADC_AVG_COUNT_FAST
+ * if the current-loop ISR path needs a shorter window.
+ *
+ * Note: the library now uses FOC_Platform_ReadPhaseCurrent uniformly;
+ * the fast path is expressed at the sensor layer (Sensor_ReadCurrentFast)
+ * via the same API.  This stub remains only for external portability
+ * and will be removed in a future cleanup.
+ */
+__attribute__((weak)) uint8_t FOC_Platform_ReadPhaseCurrentFast(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
     if (phase_current_c == 0)
     {

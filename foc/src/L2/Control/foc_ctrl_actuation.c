@@ -2,52 +2,49 @@
 
 #include <math.h>
 
-#include "L2/Control/foc_svpwm.h"
+#include "L3/foc_svpwm.h"
 #include "L3/foc_math_transforms.h"
 #include "L3/foc_math_lut.h"
 #include "L3/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-/* SVPWM鍓嶇疆浣庨€氭护娉㈢姸鎬?*/
+/* SVPWM 前置低通滤波（per-motor 状态）*/
 #if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
-static uint8_t g_svpwm_lpf_state_valid = 0U;
-static float g_svpwm_lpf_phase_a = 0.0f;
-static float g_svpwm_lpf_phase_b = 0.0f;
-static float g_svpwm_lpf_phase_c = 0.0f;
-
-/* 瀵筍VPWM杈撳叆涓夌浉鐢靛帇杩涜涓€闃朵綆閫氭护娉?*/
-static void FOC_ApplySvpwmPreLpf(float *phase_a, float *phase_b, float *phase_c)
+static void FOC_ApplySvpwmPreLpf(foc_motor_t *motor,
+                                 float *phase_a,
+                                 float *phase_b,
+                                 float *phase_c)
 {
     if ((phase_a == 0) || (phase_b == 0) || (phase_c == 0))
     {
         return;
     }
 
-    if (g_svpwm_lpf_state_valid == 0U)
+    if (motor->svpwm_lpf_state_valid == 0U)
     {
-        g_svpwm_lpf_phase_a = *phase_a;
-        g_svpwm_lpf_phase_b = *phase_b;
-        g_svpwm_lpf_phase_c = *phase_c;
-        g_svpwm_lpf_state_valid = 1U;
+        motor->svpwm_lpf_phase_a = *phase_a;
+        motor->svpwm_lpf_phase_b = *phase_b;
+        motor->svpwm_lpf_phase_c = *phase_c;
+        motor->svpwm_lpf_state_valid = 1U;
         return;
     }
 
     *phase_a = Math_FirstOrderLpf(*phase_a,
-                                  &g_svpwm_lpf_phase_a,
+                                  &motor->svpwm_lpf_phase_a,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &g_svpwm_lpf_state_valid);
+                                  &motor->svpwm_lpf_state_valid);
     *phase_b = Math_FirstOrderLpf(*phase_b,
-                                  &g_svpwm_lpf_phase_b,
+                                  &motor->svpwm_lpf_phase_b,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &g_svpwm_lpf_state_valid);
+                                  &motor->svpwm_lpf_state_valid);
     *phase_c = Math_FirstOrderLpf(*phase_c,
-                                  &g_svpwm_lpf_phase_c,
+                                  &motor->svpwm_lpf_phase_c,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &g_svpwm_lpf_state_valid);
+                                  &motor->svpwm_lpf_state_valid);
 }
 #endif
 
-/* 鏍稿績锛氬皢鐢垫満dq鐢靛帇+鐢佃搴﹁浆鎹负涓夌浉PWM鍗犵┖姣旇緭鍑?*/
+/* 核心：将电机dq电压+电角度转换为三相PWM占空比输出 */
 static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
                                                 float electrical_angle,
                                                 uint8_t direct_output)
@@ -67,7 +64,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     ud_applied = motor->ud;
     uq_applied = motor->uq;
 
-    /* SVPWM杩囪皟鍒堕檺鍒讹細dq鐭㈤噺骞呭害瓒呰繃鐢靛帇闄愬埗鏃剁瓑姣旂缉鏀?*/
+    /* SVPWM过调制限制：dq矢量幅度超过电压限制时等比缩放 */
     if ((dq_magnitude > voltage_limit) && (dq_magnitude > 1e-6f))
     {
         float scale = voltage_limit / dq_magnitude;
@@ -76,31 +73,30 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
         dq_magnitude = voltage_limit;
     }
 
-    /* 閫哖ark鍙樻崲锛歞q -> alpha-beta */
+    /* 逆Park变换：dq -> alpha-beta */
     Math_InverseParkTransform(ud_applied,
                               uq_applied,
                               electrical_angle,
                               &motor->alpha,
                               &motor->beta);
 
-    /* 閫咰larke鍙樻崲锛歛lpha-beta -> 涓夌浉鐢靛帇 */
+    /* 逆Clarke变换：alpha-beta -> 三相电压 */
     Math_InverseClarkeTransform(motor->alpha,
                                 motor->beta,
                                 &motor->phase_a,
                                 &motor->phase_b,
                                 &motor->phase_c);
-                                
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
 
-    FOC_ApplySvpwmPreLpf(&motor->phase_a,
+#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
+    FOC_ApplySvpwmPreLpf(motor,
+                         &motor->phase_a,
                          &motor->phase_b,
                          &motor->phase_c);
-
 #endif
 
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
 
-    /* 闆剁煝閲忛挸浣嶏細鐢靛帇鍛戒护杩囦綆鏃剁洿鎺ヨ緭鍑?0%鍗犵┖姣旓紙涓偣锛変互闄嶄綆寮€鍏虫崯鑰?*/
+    /* 零矢量钳位：电压命令过低时直接输出50%占空比（中点）以降低开关损耗 */
 #if (FOC_ZERO_VECTOR_CLAMP_ENABLE == FOC_CFG_ENABLE)
     if (voltage_command < FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V)
     {
@@ -127,7 +123,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     }
 #endif
 
-    /* 姝ｅ父SVPWM杈撳嚭 */
+    /* 正常SVPWM输出 */
     if (direct_output != 0U)
     {
         SVPWM_UpdateDirect(motor->phase_a,
@@ -154,7 +150,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     }
 }
 
-/* C31锛氬皢鏈烘瑙掑害杞崲涓虹數瑙掑害锛堝熀浜庢瀬瀵规暟鍜屾満姊伴浂鐐癸級 */
+/* C31：将机械角度转换为电角度（基于极对数和机械零点） */
 float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad)
 {
     float elec_period_rad;
@@ -181,7 +177,7 @@ float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angl
     return Math_WrapRad(motor->direction * mech_delta_mod * (float)motor->pole_pairs);
 }
 
-/* C31锛氶噰鏍烽攣瀹氱殑鏈烘瑙掑害锛堢敤浜庣數鏈洪浂鐐规爣瀹氾級 */
+/* C31：采样锁定的机械角度（用于电机零点标定） */
 uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
                                         float electrical_angle,
                                         uint16_t settle_ms,
@@ -200,7 +196,7 @@ uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
     FOC_Platform_WaitMs(settle_ms);
 
-    /* 鍦ㄩ攣瀹氱姸鎬佷笅澶氭閲囨牱锛岄€氳繃sin/cos鐭㈤噺骞冲潎鎶戝埗鍣０ */
+    /* 在锁定状态下多次采样，通过sin/cos矢量平均抑制噪声 */
     for (i = 0U; i < sample_count; i++)
     {
         float sample_rad;
@@ -224,13 +220,13 @@ uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     return 1U;
 }
 
-/* C31锛氳繍琛屾椂搴旂敤鐢佃搴︼紙浣跨敤鎻掑€糞VPWM杈撳嚭锛?*/
+/* C31：运行时应用电角度（使用插值SVPWM输出）*/
 void FOC_ControlApplyElectricalAngleRuntime(foc_motor_t *motor, float electrical_angle)
 {
     FOC_ControlApplyElectricalAngleCore(motor, electrical_angle, 0U);
 }
 
-/* C31锛氱洿鎺ュ簲鐢ㄧ數瑙掑害锛堢洿鎺ュ啓鍏ュ崰绌烘瘮锛屼笉鎻掑€硷級 */
+/* C31：直接应用电角度（直接写入占空比，不插值） */
 void FOC_ControlApplyElectricalAngleDirect(foc_motor_t *motor, float electrical_angle)
 {
     FOC_ControlApplyElectricalAngleCore(motor, electrical_angle, 1U);

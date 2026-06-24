@@ -1,5 +1,5 @@
 .\output\foc_platform_api.o: Application\Source\foc_platform_api.c
-.\output\foc_platform_api.o: ..\..\..\foc\include\L42_PAL/foc_platform_api.h
+.\output\foc_platform_api.o: ..\..\..\foc\include\L3/foc_platform_api.h
 .\output\foc_platform_api.o: D:\Keil_v5_ARM\ARM\ARMCC\Bin\..\include\stdint.h
 .\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_config.h
 .\output\foc_platform_api.o: ..\..\..\foc\include\LS_Config/foc_symbol_defs.h

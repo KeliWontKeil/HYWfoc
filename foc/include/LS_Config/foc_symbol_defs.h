@@ -5,6 +5,9 @@
 #define FOC_CFG_DISABLE 0U
 #define FOC_CFG_ENABLE 1U
 
+/* Current sense phase count: 0 = no current sensor, 2 = two-phase, 3 = three-phase. */
+#define FOC_CURRENT_SENSE_NONE 0U
+
 /* Control mode options. */
 #define COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE 0U
 #define COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY 1U

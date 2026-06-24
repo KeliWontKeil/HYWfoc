@@ -10,7 +10,7 @@
 2. 架构事实必须可映射到真实文件。
 3. 代码与文档冲突时，以代码为准并同次修正文档。
 
-## 仓库结构（当前 v1.9.0）
+## 仓库结构（当前 v1.8.1）
 
 ```text
 FOC_VSCODE/
@@ -19,10 +19,10 @@ FOC_VSCODE/
 │   │   ├── LS_Config/       ← 符号定义、功能开关、类型定义、数据表
 │   │   ├── L1_Orchestration/← 应用编排（精简）
 │   │   ├── L2/
-│   │   │   ├── Control/     ← 控制算法+sensor+SVPWM
+│   │   │   ├── Control/     ← 控制算法（8 模块）
 │   │   │   ├── Protocol/    ← 协议帧接入、解析、命令执行、输出适配
 │   │   │   └── Runtime/     ← 调度器、调试流（独立工具）
-│   │   └── L3/              ← 基础服务（Math+PAL合并）
+│   │   └── L3/              ← 基础服务：Math + PAL + sensor + SVPWM
 │   └── src/
 │       ├── L1_Orchestration/
 │       └── L2/
@@ -41,35 +41,36 @@ FOC_VSCODE/
 | 层级 | 主要位置 | 职责 |
 |---|---|---|
 | `LS` 配置层 | `foc/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 |
-| `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c` | 启动流程、实例化 `foc_motor_t`、协调L2各块、指示器 |
-| `L2/Control` | `foc_ctrl_*.c`、`foc_sensor.c`、`foc_svpwm.c` | 控制算法（入口/初始化/外环/电流环/参数学习/补偿/SVPWM/传感器采样） |
+| `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c` + `foc_service_handler.c` | 启动流程、实例化 `foc_motor_t`、服务任务编排（协议/配置同步/系统命令/重初始化）、指示器 |
+| `L2/Control` | `foc_ctrl_*.c` 共 8 模块 | 控制算法（执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出） |
 | `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | 协议帧接入（多源帧读取）、帧解析、命令执行（参数/状态读写）、输出适配 |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_debug_stream.c` | 调度器、调试流（独立工具，无运行时管线） |
-| `L3` 基础服务层 | `foc/include/L3/`、`foc/src/L3/` | 数学变换、LUT、平台抽象API（`math_`/`pal_`前缀区分） |
+| `L3` 基础服务层 | `foc/include/L3/`、`foc/src/L3/` | 数学变换、LUT、平台抽象API、**传感器采样（sensor）、SVPWM调制（svpwm）** |
 | `L5` 板级驱动层 | `examples/.../software/Utilities/*`、`Firmware/*` | 外设驱动与芯片库实现 |
 
-**关键变化（v1.9.0 重构）：**
-- 删除 C1→C2→C3→C4→C5 运行时管线（`foc_runtime_entry` / `foc_runtime_protocol` / `foc_runtime_fsm` / `foc_runtime_store` / `foc_runtime_output`）
-- 运行时状态和控制配置并入 `foc_motor_t`，取消快照（`runtime_snapshot_t`）传递机制
-- PID 对象（`torque_current_pid`、`speed_pid`、`angle_pid`）移入 `foc_motor_t`
-- Protocol 块扩展为全功能协议处理：帧读取 + 解析 + 命令执行 + 输出适配，直接操作 `motor` 字段
-- 新增 `foc_protocol_handler.c/.h` — 协议主入口
-- 新增 `foc_protocol_output.c/.h` — 输出适配（从 Runtime 改名移入）
-- `foc_snapshot_types.h` 精简为仅保留 `telemetry_policy_snapshot_t`
+**关键变化（v1.8.1 阶段性调整）：**
+- 删除 `foc_ctrl_entry.c/h`（入口点文件）和 `foc_ctrl_fast.c/h`
+- 新增 `foc_ctrl_executor.c/h` — 控制执行器，合并 ISR 路径与外环调度
+- `foc_svpwm.c/h`、`foc_sensor.c/h` 从 L2/Control 移入 L3 基础服务层
+- 静态全局变量（速度外环状态、SVPWM 前置 LPF 状态、控制模式追踪等）移入 `foc_motor_t` 结构体
+- `FOC_Control_Init` 函数删除，职责整合入 `FOC_ControlConfigResetDefault`
+- `FOC_Control_ApplyConfig` 从入口文件移入 `foc_ctrl_cfg.c`
 
 ## 数据流设计
 
 L1 (foc_app.c) 实例化一个核心数据结构：
 
 ```text
-foc_motor_t g_motor;           ← 电机控制数据结构（包含控制参数/状态/PID/运行时状态）
+foc_motor_t g_motor;           ← 电机控制数据结构（包含控制参数/状态/PID/运行时状态
+                                 /per-motor 外环状态）
 
 数据流：
   协议块：FOC_Protocol_Process(&g_motor)  → 读帧、修改 g_motor.state / g_motor.cfg
-  控制块：FOC_Control_Run(&g_motor, &sensor, dt)  → 读 g_motor.cfg 做算法，写 g_motor
+  控制块：FOC_ControlExecutor_RunOuterLoop(&g_motor, &sensor, dt)
+                                  → 读 g_motor.cfg 做算法，写 g_motor
   L1 编排：
     检测 g_motor.state.cfg_dirty  → 调用 FOC_Control_ApplyConfig(&g_motor)
-    检测 g_motor.state.reinit_pending  → 调用 FOC_App_ReInitMotor()
+    检测 g_motor.state.reinit_pending  → 调用 FOC_Service_ReInitMotor()
     检测 g_motor.state.pending_system_action → 转发到控制块
 ```
 
@@ -87,10 +88,11 @@ foc_motor_t g_motor;           ← 电机控制数据结构（包含控制参数
 
 ### 控制运行链
 
-1. 初始化链：`FOC_MotorInit` → `FOC_Control_Init` → `FOC_ControlConfigResetDefault` → `FOC_Control_ApplyConfig`
-2. 运行外环：`FOC_Control_Run(motor, sensor, dt)` — 内部调度速度/角度外环 + 齿槽补偿
-3. 运行内环：`FOC_Control_CurrentLoop(motor, sensor, angle, dt)` — 电流环与SVPWM执行（PWM ISR中调用）
-4. 配置应用：`FOC_Control_ApplyConfig(motor)` — 从 motor->cfg 读取PID参数和fine-tuning设置
+1. **初始化链**：`FOC_MotorInit` → `FOC_ControlConfigResetDefault` → `FOC_ControlExecutor_Init` → `FOC_Control_ApplyConfig`
+2. **运行外环**：`FOC_ControlExecutor_RunOuterLoop(motor, sensor, dt)` — 内部调度速度/角度外环 + 齿槽补偿
+3. **运行内环（PWM ISR）**：`FOC_ControlExecutor_RunISR(motor)` — 采样 → e-cycle 漂移抑制 → 电流环 → SVPWM 执行
+4. **控制循环**：`FOC_ControlExecutor_RunCycle(motor, dt)` — 传感器读取 → 故障检查 → 外环控制
+5. **配置应用**：`FOC_Control_ApplyConfig(motor)` — 从 motor->cfg 读取PID参数和fine-tuning设置
 
 ### 调度
 

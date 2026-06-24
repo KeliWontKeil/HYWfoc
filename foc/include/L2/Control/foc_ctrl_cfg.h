@@ -7,6 +7,7 @@
 #include "LS_Config/foc_motor_types.h"
 
 void FOC_ControlConfigResetDefault(foc_motor_t *motor);
+void FOC_Control_ApplyConfig(foc_motor_t *motor);
 const foc_control_runtime_config_t *FOC_ControlGetRuntimeConfig(const foc_motor_t *motor);
 void FOC_ControlSetMinMechAngleAccumDeltaRad(foc_motor_t *motor, float value);
 void FOC_ControlSetAngleHoldIntegralLimit(foc_motor_t *motor, float value);
