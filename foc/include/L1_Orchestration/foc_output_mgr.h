@@ -18,10 +18,12 @@
 #endif
 
 void FOC_OutputMgr_Init(foc_system_t *sys);
-void FOC_OutputMgr_WriteDirect(foc_system_t *sys, const char *text);
-void FOC_OutputMgr_WriteQueue(foc_system_t *sys, const char *text);
-void FOC_OutputMgr_WriteStatus(foc_system_t *sys, uint8_t status);
 void FOC_OutputMgr_FlushQueue(foc_system_t *sys);
 uint8_t FOC_OutputMgr_GetOverflowCount(const foc_system_t *sys);
+
+/* 无句柄版本（供 L2 调用，内部通过全局队列指针访问） */
+void FOC_OutputMgr_WriteDirect(const char *text);
+void FOC_OutputMgr_WriteQueue(const char *text);
+void FOC_OutputMgr_WriteStatus(uint8_t status);
 
 #endif /* FOC_OUTPUT_MGR_H */
