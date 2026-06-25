@@ -1,4 +1,4 @@
----
+﻿---
 description: "FOC 算法评审代理：定位控制现象、评估算法正确性、核查实时性与控制周期假设。"
 tools: [read, edit, search, execute]
 user-invocable: true
@@ -16,8 +16,8 @@ user-invocable: true
 
 ## 工作范围
 
-1. `foc/src/L3_Algorithm/*.c`
-2. `foc/include/LS_Config/foc_cfg_*.h`
+1. `foc_core/src/L3_Algorithm/*.c`
+2. `foc_core/include/LS_Config/foc_cfg_*.h`
 3. 与控制链路相关的 `foc_app.c` 与平台 API 调用点
 
 ## 强制规则

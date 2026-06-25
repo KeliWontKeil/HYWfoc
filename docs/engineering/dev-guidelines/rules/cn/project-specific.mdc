@@ -1,4 +1,4 @@
----
+﻿---
 description: GD32F303CC FOC电机控制项目特定规则
 globs: **/*.[ch]
 alwaysApply: false
@@ -53,7 +53,7 @@ void Function(void) {
 - 规则文件（`docs/engineering/dev-guidelines/rules/*`）用于指导 AI 和协作开发
 
 ## 可编辑范围
-- ✅ `foc/src`、`foc/include`
+- ✅ `foc_core/src`、`foc_core/include`
 - ✅ `examples/GD32F303_FOCExplore/software/Application/**`
 - ✅ `examples/GD32F303_FOCExplore/software/Utilities/**`
 - ✅ 文档：`docs/`, `NEXT_MISSION.md`, `CHANGELOG.md`

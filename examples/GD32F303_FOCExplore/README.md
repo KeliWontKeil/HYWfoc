@@ -1,4 +1,4 @@
-# GD32F303_FOCExplore 示例工程
+﻿# GD32F303_FOCExplore 示例工程
 
 本目录是 HYWfoc（何易位FOC）的 GD32F303 平台参考实例，面向“拿到工程后如何构建、烧录、验证”的用户文档入口。
 
@@ -66,5 +66,5 @@
 ## 7. 设计边界（重要）
 
 - 板级驱动与厂商固件保持在本实例 `software/` 内。
-- 核心控制库统一来源于仓库根目录 `foc/`（单一事实来源）。
+- 核心控制库统一来源于仓库根目录 `foc_core/`（单一事实来源）。
 - 板级平台 API 适配应集中在 `software/Application/Source/foc_platform_api.c`。

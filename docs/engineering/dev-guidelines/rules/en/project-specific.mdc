@@ -1,4 +1,4 @@
----
+﻿---
 description: Project-specific rules for GD32F303CC FOC motor control
 globs: **/*.[ch]
 alwaysApply: false
@@ -55,7 +55,7 @@ void Function(void) {
 - Rules in `docs/engineering/dev-guidelines/rules/*` guide AI and collaboration
 
 ## Editable Scope
-- ✅ `foc/src`, `foc/include`
+- ✅ `foc_core/src`, `foc_core/include`
 - ✅ `examples/GD32F303_FOCExplore/software/Application/**`
 - ✅ `examples/GD32F303_FOCExplore/software/Utilities/**`
 - ✅ Docs: `docs/`, `NEXT_MISSION.md`, `CHANGELOG.md`

@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -30,7 +30,7 @@ Build logs: `build/GD32F30X_CL/unify_builder.log` or stdout of unify_builder.exe
 
 ## Architecture Overview
 
-Project uses a **"core library + board instance"** organization. The core library `foc/` is platform-independent; the board instance lives in `examples/GD32F303_FOCExplore/`.
+Project uses a **"core library + board instance"** organization. The core library `foc_core/` is platform-independent; the board instance lives in `examples/GD32F303_FOCExplore/`.
 
 ### Layer architecture (strict unidirectional)
 ```
@@ -39,18 +39,18 @@ LS → L1 → L2 → L3 → L5
 
 | Layer | Location | Responsibility |
 |---|---|---|
-| `LS` | `foc/include/LS_Config/` | Symbol definitions, feature switches, init values, compile constraints, types |
-| `L1` | `foc/src/L1_Orchestration/foc_app.c` + `foc_service_handler.c` | Startup, service task, reinit, output manager, indicators |
-| `L2/Control` | `foc/src/L2/Control/foc_ctrl_*.c` (8 modules) | Control algorithms: executor, config, init, outer loop, current loop, param learn, compensation, actuation |
-| `L2/Protocol` | `foc/src/L2/Protocol/foc_protocol_*.c` | Frame parsing, command execution (P/S/Y channels), output adaptation |
-| `L2/Runtime` | `foc/src/L2/Runtime/foc_task_scheduler.c`, `foc_debug_stream.c` | Scheduler, debug stream (independent tools) |
-| `L3` | `foc/include/L3/`, `foc/src/L3/` | Math transforms, LUT, platform API (PAL), sensor, SVPWM |
+| `LS` | `foc_core/include/LS_Config/` | Symbol definitions, feature switches, init values, compile constraints, types |
+| `L1` | `foc_core/src/L1_Orchestration/foc_app.c` + `foc_service_handler.c` | Startup, service task, reinit, output manager, indicators |
+| `L2/Control` | `foc_core/src/L2_Core/Control/foc_ctrl_*.c` (8 modules) | Control algorithms: executor, config, init, outer loop, current loop, param learn, compensation, actuation |
+| `L2/Protocol` | `foc_core/src/L2_Core/Protocol/foc_protocol_*.c` | Frame parsing, command execution (P/S/Y channels), output adaptation |
+| `L2/Runtime` | `foc_core/src/L2_Core/Runtime/foc_task_scheduler.c`, `foc_debug_stream.c` | Scheduler, debug stream (independent tools) |
+| `L3` | `foc_core/include/L3_Hal/`, `foc_core/src/L3_Hal/` | Math transforms, LUT, platform API (PAL), sensor, SVPWM |
 | `L5` | `examples/.../Utilities/` | Peripheral drivers and chip library |
 
 ### Key constraints
 - `L1/L2/L3` access hardware **only** through `L3/foc_platform_api.h`
 - Public headers must never expose `gd32f30x_*` device headers
-- `L5` must not reverse-depend on `foc/src/*`
+- `L5` must not reverse-depend on `foc_core/src/*`
 - Configuration constants must converge in `foc_cfg_*.h` — no scattered defaults in `.c` files
 
 ### L2 Control module naming
@@ -123,10 +123,10 @@ See `NEXT_MISSION.md` for current milestone plan.
 
 | File | Purpose |
 |---|---|
-| `foc/include/L3/foc_platform_api.h` | Platform adaptation API (must implement for new boards) |
-| `foc/src/L3/foc_platform_api_empty.c` does not exist; see `examples/.../foc_platform_api.c` | Empty reference implementation for porting |
-| `foc/include/LS_Config/foc_cfg_feature_switches.h` | All feature/trim switches |
-| `foc/include/LS_Config/foc_cfg_init_values.h` | Default init values |
-| `foc/include/LS_Config/foc_compile_limits.h` | Compile-time static assertions |
+| `foc_core/include/L3_Hal/foc_platform_api.h` | Platform adaptation API (must implement for new boards) |
+| `foc_core/src/L3_Hal/foc_platform_api_empty.c` does not exist; see `examples/.../foc_platform_api.c` | Empty reference implementation for porting |
+| `foc_core/include/LS_Config/foc_cfg_feature_switches.h` | All feature/trim switches |
+| `foc_core/include/LS_Config/foc_cfg_init_values.h` | Default init values |
+| `foc_core/include/LS_Config/foc_compile_limits.h` | Compile-time static assertions |
 | `docs/architecture.md` | Single source of truth for architecture |
 | `NEXT_MISSION.md` | Current and upcoming work items |

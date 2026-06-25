@@ -1,4 +1,4 @@
-# 架构与结构总览（唯一结构说明）
+﻿# 架构与结构总览（唯一结构说明）
 
 ## 文档定位
 
@@ -6,7 +6,7 @@
 
 约束：
 
-1. 不写死具体控制频率，频率以 `foc/include/LS_Config/foc_cfg_*.h` 为准。
+1. 不写死具体控制频率，频率以 `foc_core/include/LS_Config/foc_cfg_*.h` 为准。
 2. 架构事实必须可映射到真实文件。
 3. 代码与文档冲突时，以代码为准并同次修正文档。
 
@@ -14,7 +14,7 @@
 
 ```text
 FOC_VSCODE/
-├── foc/                         ← 平台无关可复用控制库
+├── foc_core/                         ← 平台无关可复用控制库
 │   ├── include/
 │   │   ├── LS_Config/           ← 符号定义、功能开关、默认值、编译期约束、类型定义、数据表
 │   │   ├── L1_Orchestration/    ← 应用编排（主循环、输出管理器、service handler）
@@ -42,19 +42,19 @@ FOC_VSCODE/
 
 | 层级 | 主要位置 | 职责 | 实例化职责 |
 |---|---|---|---|
-| `LS` 配置层 | `foc/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
-| `L1` 编排层 | `foc/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（RX/TX FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
-| `L2/Control` | `foc_ctrl_*.c`（8 模块） | 控制算法：执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出。纯算法，不涉及 I/O | 不持实例，操作传入的 `foc_motor_t` 指针 |
+| `LS` 配置层 | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
+| `L1` 编排层 | `foc_core/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（RX/TX FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
+| `L2/Control` | `foc_ctrl_*.c`（10 模块） | 控制算法：执行器/配置/初始化/外环/电流环/参数学习/补偿/**齿槽标定**/**非阻塞重初始**/执行输出。齿槽标定和重初始化以非阻塞状态机形式由 L1 控制任务路由调用。 | 不持实例，操作传入的 `foc_motor_t` 指针 |
 | `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **单帧处理**：解析一帧 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（遥测策略配置） |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（逐行生成，不写队列） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
-| `L3` 基础服务层 | `foc/src/L3/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM | 无实例（纯函数或操作 motor 中的字段） |
+| `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM | 无实例（纯函数或操作 motor 中的字段） |
 | `L4` 板级驱动层 | `examples/.../software/Utilities/`、`Firmware/` | 外设驱动与芯片库实现 | 芯片固有实例 |
 
 ### 分层约束
 
 1. L2 各块访问硬件只能通过 L3 平台 API（`foc_pal.h`）。
 2. 公共头文件不得暴露 `gd32f30x_*` 设备头。
-3. L4 不得反向依赖 `foc/src/*` 业务逻辑。
+3. L4 不得反向依赖 `foc_core/src/*` 业务逻辑。
 4. 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值。
 5. L2 各块间禁止跨块直接调用，数据通过 `foc_motor_t` 由 L1 统一协调。
 6. **L2 任何模块不得包含 `L1_Orchestration/` 头文件**。
@@ -155,17 +155,34 @@ L2/Control 按 `foc_ctrl_XX_name.c` 命名，模块划分：
        → FOC_ControlExecutor_Init → FOC_Control_ApplyConfig
 
 控制循环（ControlTrigger ISR）：
-  FOC_ControlExecutor_RunCycle()
-    → 传感器读取 → 故障检查 → 外环控制 → 内环
+  L1 编排 —— Sensor_ReadEncoder（按 FOC_SENSOR_ANGLE_FAST_ENABLE 条件）
+           → Sensor_ReadVBUS
+           → Sensor_SyncCurrentSnapshot（将 ISR 电流值同步到 motor->sensor）
+           → 安全检查 → FOC_ControlExecutor_RunCycle()
+             → 故障检查 → 外环控制（速度/角度 PID）
 
-PWM ISR（高速路径）：
+PWM ISR（高速路径，电流采样唯一入口）：
   FOC_ControlExecutor_RunISR()
-    → 采样（ADC）→ 漂移抑制 → 电流环 → SVPWM 执行
+    → Sensor_ReadCurrent（ADC 读取 → motor->sensor_fast，独占总线）
+    → Sensor_ReadEncoder（仅 FOC_SENSOR_ANGLE_FAST_ENABLE 使能时）
+    → Sensor_AccumulateEcycle（参考角度按宏条件使用 fast snapshot 或 volatile 桥接）
+    → FOC_CurrentControlStep → Clarke/Park → PID → motor->iq_measured
+    → SVPWM 执行
 
 配置应用：
   FOC_Control_ApplyConfig(motor)
     → 从 motor 结构体读取 PID 参数和 fine-tuning 设置
 ```
+
+### 采样路径规则
+
+1. **电流采样独占性**：ADC 电流读取全部归 PWM ISR 独占（`Sensor_ReadCurrent`），控制 ISR 不再直接读 ADC。
+2. **编码器角度路径选择**：由 `FOC_SENSOR_ANGLE_FAST_ENABLE` 宏联动：
+   - `DISABLE`（慢速编码器，如 I2C AS5600）：在 Control ISR 中读取（`Sensor_ReadEncoder`），通过 `motor->ecycle_ref_angle_rad` volatile 桥接供 PWM ISR 中的 e-cycle 累积使用。
+   - `ENABLE`（快速编码器，如霍尔/QEI）：在 PWM ISR 中同步读取。
+3. **控制 ISR 电流数据来源**：通过 `Sensor_SyncCurrentSnapshot` 从 `motor->sensor_fast` 复制到 `motor->sensor`，直接复制不作滤波处理。
+4. **e-cycle 漂移抑制**：角度参考源与编码器路径一致——快速路径使用 fast snapshot 角度，慢速路径使用 volatile 桥接字段。
+5. **L3 平台 API**：统一为单一 `FOC_Platform_ReadPhaseCurrent`，无 `Fast/Slow` 双入口。
 
 ## 调度模型
 
@@ -184,7 +201,7 @@ PWM ISR（高速路径）：
 
 ### 算法特性开关（LS）
 
-定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
+定义位置：`foc_core/include/LS_Config/foc_cfg_feature_switches.h`
 
 1. 电流环与软切换特性
 2. 齿槽补偿特性（补偿使能 + 运行时手动标定使能）
@@ -192,14 +209,14 @@ PWM ISR（高速路径）：
 
 ### 协议裁剪开关
 
-1. 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
+1. 定义位置：`foc_core/include/LS_Config/foc_cfg_feature_switches.h`
 2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
 4. **协议裁剪宏仅控制协议命令可见性与参数读写通道，不得用于保护控制算法的逻辑分支**
 
 ### 编译期约束
 
-定义位置：`foc/include/LS_Config/foc_compile_limits.h`
+定义位置：`foc_core/include/LS_Config/foc_compile_limits.h`
 
 1. 开关合法性与范围约束：`#error` 阻断非法配置
 2. 跨开关冲突提示：编译警告

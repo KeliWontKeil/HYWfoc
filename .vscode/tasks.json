@@ -26,19 +26,19 @@
 		{
 			"label": "check-foc-source-paths",
 			"type": "shell",
-			"command": "Set-Location \"examples/GD32F303_FOCExplore/software\"; \"foc_app_path=\" + (Resolve-Path \"../../../foc/src/L1_Orchestration/foc_app.c\" -ErrorAction SilentlyContinue); \"foc_app_exists=\" + (Test-Path \"../../../foc/src/L1_Orchestration/foc_app.c\"); \"cm_path=\" + (Resolve-Path \"../../../foc/src/L2_Service/command_manager.c\" -ErrorAction SilentlyContinue); \"cm_exists=\" + (Test-Path \"../../../foc/src/L2_Service/command_manager.c\")",
+			"command": "Set-Location \"examples/GD32F303_FOCExplore/software\"; \"foc_app_path=\" + (Resolve-Path \"../../../foc_core/src/L1_Orchestration/foc_app.c\" -ErrorAction SilentlyContinue); \"foc_app_exists=\" + (Test-Path \"../../../foc_core/src/L1_Orchestration/foc_app.c\"); \"cm_path=\" + (Resolve-Path \"../../../foc_core/src/L2_Core/command_manager.c\" -ErrorAction SilentlyContinue); \"cm_exists=\" + (Test-Path \"../../../foc_core/src/L2_Core/command_manager.c\")",
 			"isBackground": false
 		},
 		{
 			"label": "check-foc-source-paths-2",
 			"type": "shell",
-			"command": "Set-Location \"examples/GD32F303_FOCExplore/software\"; Write-Output (\"foc_app_path=\" + (Resolve-Path \"../../../foc/src/L1_Orchestration/foc_app.c\" -ErrorAction SilentlyContinue)); Write-Output (\"foc_app_exists=\" + (Test-Path \"../../../foc/src/L1_Orchestration/foc_app.c\")); Write-Output (\"cm_path=\" + (Resolve-Path \"../../../foc/src/L2_Service/command_manager.c\" -ErrorAction SilentlyContinue)); Write-Output (\"cm_exists=\" + (Test-Path \"../../../foc/src/L2_Service/command_manager.c\"))",
+			"command": "Set-Location \"examples/GD32F303_FOCExplore/software\"; Write-Output (\"foc_app_path=\" + (Resolve-Path \"../../../foc_core/src/L1_Orchestration/foc_app.c\" -ErrorAction SilentlyContinue)); Write-Output (\"foc_app_exists=\" + (Test-Path \"../../../foc_core/src/L1_Orchestration/foc_app.c\")); Write-Output (\"cm_path=\" + (Resolve-Path \"../../../foc_core/src/L2_Core/command_manager.c\" -ErrorAction SilentlyContinue)); Write-Output (\"cm_exists=\" + (Test-Path \"../../../foc_core/src/L2_Core/command_manager.c\"))",
 			"isBackground": false
 		},
 		{
 			"label": "check-foc-source-paths-3",
 			"type": "shell",
-			"command": "Set-Location \"examples/GD32F303_FOCExplore/software\"; ('foc_app_exists=' + (Test-Path '../../../foc/src/L1_Orchestration/foc_app.c')) | Out-Host; ('cm_exists=' + (Test-Path '../../../foc/src/L2_Service/command_manager.c')) | Out-Host",
+			"command": "Set-Location \"examples/GD32F303_FOCExplore/software\"; ('foc_app_exists=' + (Test-Path '../../../foc_core/src/L1_Orchestration/foc_app.c')) | Out-Host; ('cm_exists=' + (Test-Path '../../../foc_core/src/L2_Core/command_manager.c')) | Out-Host",
 			"isBackground": false
 		},
 		{
@@ -50,13 +50,13 @@
 		{
 			"label": "phase-d-changed-files",
 			"type": "shell",
-			"command": "Set-Location .; git diff --name-only -- docs/architecture.md docs/development.md examples/GD32F303_FOCExplore/software/.eide/eide.yml examples/GD32F303_FOCExplore/software/build/GD32F30X_CL/builder.params examples/GD32F303_FOCExplore/software/Application/Include/main.h foc/port/foc_platform_api_empty.c foc/include foc/src",
+			"command": "Set-Location .; git diff --name-only -- docs/architecture.md docs/development.md examples/GD32F303_FOCExplore/software/.eide/eide.yml examples/GD32F303_FOCExplore/software/build/GD32F30X_CL/builder.params examples/GD32F303_FOCExplore/software/Application/Include/main.h foc_core/src/foc_platform_api_empty.c foc_core/include foc_core/src",
 			"isBackground": false
 		},
 		{
 			"label": "phase-d-changed-files-to-file",
 			"type": "shell",
-			"command": "Set-Location .; git diff --name-only -- docs/architecture.md docs/development.md examples/GD32F303_FOCExplore/software/.eide/eide.yml examples/GD32F303_FOCExplore/software/build/GD32F30X_CL/builder.params examples/GD32F303_FOCExplore/software/Application/Include/main.h foc/port/foc_platform_api_empty.c foc/include foc/src | Set-Content phase_d_changed_files.txt",
+			"command": "Set-Location .; git diff --name-only -- docs/architecture.md docs/development.md examples/GD32F303_FOCExplore/software/.eide/eide.yml examples/GD32F303_FOCExplore/software/build/GD32F30X_CL/builder.params examples/GD32F303_FOCExplore/software/Application/Include/main.h foc_core/src/foc_platform_api_empty.c foc_core/include foc_core/src | Set-Content phase_d_changed_files.txt",
 			"isBackground": false
 		},
 		{
@@ -68,13 +68,13 @@
 		{
 			"label": "phase-d-old-dir-check",
 			"type": "shell",
-			"command": "('foc/include/config=' + (Test-Path 'foc/include/config')) | Out-Host; ('foc/include/core=' + (Test-Path 'foc/include/core')) | Out-Host; ('foc/include/service=' + (Test-Path 'foc/include/service')) | Out-Host; ('foc/include/algorithm=' + (Test-Path 'foc/include/algorithm')) | Out-Host; ('foc/include/math=' + (Test-Path 'foc/include/math')) | Out-Host; ('foc/include/interface=' + (Test-Path 'foc/include/interface')) | Out-Host; ('foc/src/core=' + (Test-Path 'foc/src/core')) | Out-Host; ('foc/src/service=' + (Test-Path 'foc/src/service')) | Out-Host; ('foc/src/algorithm=' + (Test-Path 'foc/src/algorithm')) | Out-Host; ('foc/src/math=' + (Test-Path 'foc/src/math')) | Out-Host; ('foc/src/interface=' + (Test-Path 'foc/src/interface')) | Out-Host",
+			"command": "('foc_core/include/config=' + (Test-Path 'foc_core/include/config')) | Out-Host; ('foc_core/include/core=' + (Test-Path 'foc_core/include/core')) | Out-Host; ('foc_core/include/service=' + (Test-Path 'foc_core/include/service')) | Out-Host; ('foc_core/include/algorithm=' + (Test-Path 'foc_core/include/algorithm')) | Out-Host; ('foc_core/include/math=' + (Test-Path 'foc_core/include/math')) | Out-Host; ('foc_core/include/interface=' + (Test-Path 'foc_core/include/interface')) | Out-Host; ('foc_core/src/core=' + (Test-Path 'foc_core/src/core')) | Out-Host; ('foc_core/src/service=' + (Test-Path 'foc_core/src/service')) | Out-Host; ('foc_core/src/algorithm=' + (Test-Path 'foc_core/src/algorithm')) | Out-Host; ('foc_core/src/math=' + (Test-Path 'foc_core/src/math')) | Out-Host; ('foc_core/src/interface=' + (Test-Path 'foc_core/src/interface')) | Out-Host",
 			"isBackground": false
 		},
 		{
 			"label": "agent-commit-l3-phase1",
 			"type": "shell",
-			"command": "git add \"examples/GD32F303_FOCExplore/software/.eide/eide.yml\" \"foc/include/L3_Algorithm/foc_control_types.h\" \"foc/include/L3_Algorithm/foc_control_c02_cfg_state.h\" \"foc/include/L3_Algorithm/foc_control_compensation.h\" \"foc/include/L3_Algorithm/foc_control_internal.h\" \"foc/src/L3_Algorithm/foc_control_c03_outer_loop.c\" \"foc/src/L3_Algorithm/foc_control_init.c\" \"foc/include/L3_Algorithm/foc_control.h\" \"foc/src/L3_Algorithm/foc_control.c\"; git commit -m \"refactor: remove L3 legacy control shell and old umbrella header\"; git show --name-status --oneline -n 1",
+			"command": "git add \"examples/GD32F303_FOCExplore/software/.eide/eide.yml\" \"foc_core/include/L3_Hal/foc_control_types.h\" \"foc_core/include/L3_Hal/foc_control_c02_cfg_state.h\" \"foc_core/include/L3_Hal/foc_control_compensation.h\" \"foc_core/include/L3_Hal/foc_control_internal.h\" \"foc_core/src/L3_Hal/foc_control_c03_outer_loop.c\" \"foc_core/src/L3_Hal/foc_control_init.c\" \"foc_core/include/L3_Hal/foc_control.h\" \"foc_core/src/L3_Hal/foc_control.c\"; git commit -m \"refactor: remove L3 legacy control shell and old umbrella header\"; git show --name-status --oneline -n 1",
 			"isBackground": false
 		},
 		{

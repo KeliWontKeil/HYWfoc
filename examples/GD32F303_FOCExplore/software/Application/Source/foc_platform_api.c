@@ -1,4 +1,4 @@
-#include "L3/foc_platform_api.h"
+#include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
 #include "systick.h"
@@ -131,50 +131,19 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 }
 
 /*
- * Read phase currents.
- *
- * The avg_count parameter is passed through ADC_BUFFER_SIZE to the DMA
- * circular buffer.  The caller selects the averaging window:
- *
- *   - Control-loop  path: passes FOC_SENSOR_ADC_AVG_COUNT_SLOW (typically 24)
- *   - Current-loop ISR path: passes FOC_SENSOR_ADC_AVG_COUNT_FAST (typically 2)
- *
- * Both paths converge on this single API entry point.
+ * Read phase currents from ADC.
+ * Returns the latest single-cycle sample (硬件过采样已由DMA 8x完成).
  */
 uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
     if (phase_current_c == 0)
     {
-        /* Two-phase: read A/B only (current hardware supports this path). */
+        /* Two-phase: read A/B only. avg_count=1 means latest single sample. */
         return ADC_ReadPhaseCurrentABOk(phase_current_a,
                                         phase_current_b,
-                                        (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_SLOW);
+                                        1U);
     }
     /* Three-phase not supported on this hardware. */
-    return 0U;
-}
-
-/*
- * Legacy fast-read entry point.
- *
- * Kept for builds that still reference it (empty implementation templates),
- * but no longer called by the library.  New code should use
- * FOC_Platform_ReadPhaseCurrent with avg_count = FOC_SENSOR_ADC_AVG_COUNT_FAST
- * if the current-loop ISR path needs a shorter window.
- *
- * Note: the library now uses FOC_Platform_ReadPhaseCurrent uniformly;
- * the fast path is expressed at the sensor layer (Sensor_ReadCurrentFast)
- * via the same API.  This stub remains only for external portability
- * and will be removed in a future cleanup.
- */
-__attribute__((weak)) uint8_t FOC_Platform_ReadPhaseCurrentFast(float *phase_current_a, float *phase_current_b, float *phase_current_c)
-{
-    if (phase_current_c == 0)
-    {
-        return ADC_ReadPhaseCurrentABOk(phase_current_a,
-                                        phase_current_b,
-                                        (uint16_t)FOC_SENSOR_ADC_AVG_COUNT_FAST);
-    }
     return 0U;
 }
 

@@ -1,4 +1,4 @@
-# Agent 协同说明
+﻿# Agent 协同说明
 
 本文件定义仓库内各 Agent 的职责与调用时机。
 
@@ -20,10 +20,10 @@
 
 重点文件：
 
-1. `foc/src/L3_Algorithm/foc_control*.c`
-2. `foc/src/L3_Algorithm/svpwm.c`
-3. `foc/src/L1_Orchestration/foc_app.c`
-4. `foc/include/LS_Config/foc_cfg_*.h`
+1. `foc_core/src/L3_Algorithm/foc_control*.c`
+2. `foc_core/src/L3_Algorithm/svpwm.c`
+3. `foc_core/src/L1_Orchestration/foc_app.c`
+4. `foc_core/include/LS_Config/foc_cfg_*.h`
 
 ### `architecture-review`
 
@@ -31,8 +31,8 @@
 
 重点文件：
 
-1. `foc/include/**/*.h`
-2. `foc/include/L42_PAL/foc_platform_api.h`
+1. `foc_core/include/**/*.h`
+2. `foc_core/include/L42_PAL/foc_platform_api.h`
 3. `examples/**/Application/Source/foc_platform_api.c`
 4. `examples/**/Utilities/**`
 

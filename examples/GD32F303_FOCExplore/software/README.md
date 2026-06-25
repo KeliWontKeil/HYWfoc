@@ -1,4 +1,4 @@
-# GD32F303_FOCExplore Software Instance
+﻿# GD32F303_FOCExplore Software Instance
 
 This folder is intended to be opened directly by IDE tools.
 
@@ -10,8 +10,8 @@ This folder is intended to be opened directly by IDE tools.
 - `.eide/`, `.pack/`, `.cmsis/`, `build/`: instance-local build metadata and outputs.
 
 ## Build Dependency
-- Core library sources are referenced from external path: `../../../foc/src` (L1/L2/L3/L41).
-- Core headers are referenced from external path: `../../../foc/include` (LS/L1/L2/L3/L41/L42).
+- Core library sources are referenced from external path: `../../../foc_core/src` (L1/L2/L3/L41).
+- Core headers are referenced from external path: `../../../foc_core/include` (LS/L1/L2/L3/L41/L42).
 
 ## Notes
 - Keep this instance self-contained for board support files.

@@ -1,9 +1,37 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to the HYWfoc (何易位FOC) project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.9.0] - 2026-06-25
+
+### Changed
+- **控制任务阶段路由重构**：`FOC_App_ControlTrigger` 由直接调用 `RunCycle` 改为 `control_phase` 状态机路由。新增 NORMAL/COGGING_CALIB/REINIT 三个阶段，公共安全检查（传感器、欠压）上提到 L1。
+- **齿槽标定提为独立控制阶段**：从 `foc_ctrl_executor.c` 的 `RunCycle` 中迁出，独立为 `foc_ctrl_cogging_calib.c/.h`（L2/Control）。不再嵌入 `RunCycle`，由 L1 通过 `control_phase` 路由调用。
+- **重初始化非阻塞化**：将阻塞式 `FOC_Service_ReInitMotor` 改为非阻塞状态机 `foc_ctrl_reinit.c/.h`（L2/Control）。D 轴对齐流程与上电阻塞标定一致（`ud=calib_uq, uq=0`），通过控制周期计数替代 `FOC_Platform_WaitMs`。
+- **协议 Y 通道精简**：`Y:G`/`Y:W`/`Y:E`/`Y:R` 命令改为直接调用模块 API，不再经过 `pending_system_action` 中转。
+- **PWM ISR 中 SVPWM 插值独立于控制阶段**：`SVPWM_InterpolationISR` 移至 `RunISR` 最前，任何阶段（含标定/重初始化）均执行，确保开环驱动目标值生效。
+
+### Added
+- `foc_ctrl_cogging_calib.c/.h` — 齿槽标定独立模块，由 `FOC_CoggingCalib_RunStep()` 状态机驱动。
+- `foc_ctrl_reinit.c/.h` — 非阻塞重初始化状态机，由 `FOC_ReInit_RunStep()` 驱动。
+- `foc_control_phase_t` 枚举（`FOC_CONTROL_PHASE_NORMAL/COGGING_CALIB/REINIT`）— 控制阶段路由选择。
+- `foc_reinit_state_t` 结构体 — 非阻塞重初始化状态（每电机实例）。
+
+### Removed
+- `pending_system_action` 字段（`foc_motor_state_t`）— 被 `control_phase` 替代。
+- `reinit_pending` 字段（`foc_motor_state_t`）— 被 `control_phase == REINIT` 替代。
+- `FOC_SYSACTION_*` 宏 — 不再使用。
+- `FOC_Service_ReInitMotor()` — 阻塞式重初始化已替换为非阻塞状态机。
+- cogging calibration 代码从 `foc_ctrl_compensation.c` 移出（约 700 行）。
+- `RunCycle` 中的 cogging 分支和重复安全检查。
+
+### Documentation
+- `docs/architecture.md`：L2/Control 模块数 8→10，新增 cogging_calib/reinit 描述。
+- `docs/development.md`：模块命名列表更新。
+- `docs/README.md`、`copilot-instructions.md`：版本基线 v1.8.2→v1.9.0。
 
 ## [1.8.2] - 2026-06-25
 
@@ -144,7 +172,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **修复文档-代码不一致**：
   - `docs/protocol-parameters-bilingual.md`：完整重写，修复软切换 Y/Z 子命令映射反转（代码：Y=闭环阈值, Z=开环阈值）、默认值全面对齐代码、增补缺失的 `P:k` 齿槽标定增益行、补全示波掩码位表、统一实例命令示例。
   - `docs/architecture.md`：移除已废弃的 `FOC_COGGING_INIT_LEARN_ENABLE` 和 `FOC_COGGING_DEBUG_DUMP_ENABLE` 引用。
-  - `foc/include/LS_Config/foc_compile_limits.h`：修正碰撞警告中的子命令引用（`SOFT_SWITCH_AUTO_OPEN_IQ` → `SOFT_SWITCH_AUTO_CLOSED_IQ`），匹配实际符号 `'Y'` 的归属。
+  - `foc_core/include/LS_Config/foc_compile_limits.h`：修正碰撞警告中的子命令引用（`SOFT_SWITCH_AUTO_OPEN_IQ` → `SOFT_SWITCH_AUTO_CLOSED_IQ`），匹配实际符号 `'Y'` 的归属。
 - **版本基线统一**：`CHANGELOG.md`、`NEXT_MISSION.md`、`copilot-instructions.md`、`docs/README.md`、`README.md`、`.clinerules/hywfoc-project-rules.md` 全部对齐至 v1.6.0。
 
 ## [1.4.7] - 2026-05-06

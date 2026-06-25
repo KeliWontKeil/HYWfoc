@@ -1,4 +1,4 @@
-# Protocol Parameters and Test Guide / 协议参数与测试指南
+﻿# Protocol Parameters and Test Guide / 协议参数与测试指南
 
 本文件面向上位机调试和联调测试，描述当前固件实际实现的协议规则。
 This document is user-facing and follows the current firmware implementation.
@@ -103,7 +103,7 @@ Compatibility note:
 
 ### 3.1 Build-Time Protocol Trimming / 编译期协议裁剪
 
-Protocol availability is split into a fixed minimal set and optional groups controlled by compile macros in `foc/include/LS_Config/foc_cfg_feature_switches.h`.
+Protocol availability is split into a fixed minimal set and optional groups controlled by compile macros in `foc_core/include/LS_Config/foc_cfg_feature_switches.h`.
 
 Minimal set (always enabled, non-trimmable):
 

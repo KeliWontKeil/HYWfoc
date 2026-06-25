@@ -1,4 +1,4 @@
-# Codex Workspace Guide
+﻿# Codex Workspace Guide
 
 This file is the minimal entry point for Codex work in this repository. It does
 not replace the project documents; it points to the current sources of truth and
@@ -17,7 +17,7 @@ the affected document in the same change.
 
 ## Project Shape
 
-- `foc/` is the platform-independent FOC library.
+- `foc_core/` is the platform-independent FOC library.
 - `examples/GD32F303_FOCExplore/` is the current board instance.
 - The root workspace is for repository management and documentation.
 - The instance workspace under `examples/GD32F303_FOCExplore/software/` is the

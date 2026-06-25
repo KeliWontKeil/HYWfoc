@@ -1,10 +1,10 @@
-# 开发流程指南
+﻿# 开发流程指南
 
 ## 适用范围
 
 本文件定义仓库级开发、验证与文档同步规则，适用于：
 
-1. 可复用库：`foc/`
+1. 可复用库：`foc_core/`
 2. 工作流文档：`docs/`、`.github/`
 
 实例专属构建与烧录细节请看：`examples/<instance>/DEVELOPMENT.md`。
@@ -26,12 +26,13 @@
 
 1. 遵循分层约束：`LS → L1 → L2 → L3 → L5`（L2 下分 Control/Protocol/Runtime，各块间不直接调用）。
 2. 默认在 `main` 分支工作，除非用户明确要求新分支。
-3. 所有可配置参数先进入 `foc/include/LS_Config/foc_cfg_*.h`，再在 `.c` 中使用。
+3. 所有可配置参数先进入 `foc_core/include/LS_Config/foc_cfg_*.h`，再在 `.c` 中使用。
 4. 运行时主循环由 L1 编排，三个任务段顺序无关，无固定管线链：
    - Monitor 段：调试流生成器逐行输出 → 入 TX 队列
    - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列、配置脏检查）
    - TX 消费段：TX 队列出队 → 平台发送
-5. L2/Control 模块命名：`foc_ctrl_executor/cfg/init/outer_loop/current_loop/param_learn/compensation/actuation`。
+5. L2/Control 模块命名：`foc_ctrl_executor/cfg/init/outer_loop/current_loop/param_learn/compensation/cogging_calib/reinit/actuation`。
+   齿槽标定（cogging_calib）和重初始化（reinit）以非阻塞状态机形式由 L1 控制任务通过 control_phase 路由调用，不嵌入 RunCycle。
 6. L2/Runtime 新增工具模块（如队列）需同步更新 `builder.params`。
 7. L2 层不持有任何队列实例，队列存储由 L1 在 `foc_runtime_ctx_t` 中分配。
 
