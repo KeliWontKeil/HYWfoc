@@ -2,7 +2,7 @@
 
 ## 文档定位
 
-本文件是仓库结构、分层、依赖方向和控制链路的唯一事实源（SSOT）。
+本文件是仓库结构、分层、依赖方向和数据流的唯一事实源（SSOT）。
 
 约束：
 
@@ -10,19 +10,19 @@
 2. 架构事实必须可映射到真实文件。
 3. 代码与文档冲突时，以代码为准并同次修正文档。
 
-## 仓库结构（当前 v1.8.1）
+## 仓库结构
 
 ```text
 FOC_VSCODE/
-├── foc/
+├── foc/                         ← 平台无关可复用控制库
 │   ├── include/
-│   │   ├── LS_Config/       ← 符号定义、功能开关、类型定义、数据表
-│   │   ├── L1_Orchestration/← 应用编排（精简）
+│   │   ├── LS_Config/           ← 符号定义、功能开关、默认值、编译期约束、类型定义、数据表
+│   │   ├── L1_Orchestration/    ← 应用编排（主循环、输出管理器、service handler）
 │   │   ├── L2/
-│   │   │   ├── Control/     ← 控制算法（8 模块）
-│   │   │   ├── Protocol/    ← 协议帧接入、解析、命令执行、输出适配
-│   │   │   └── Runtime/     ← 调度器、调试流（独立工具）
-│   │   └── L3/              ← 基础服务：Math + PAL + sensor + SVPWM
+│   │   │   ├── Control/         ← 控制算法（8 模块）
+│   │   │   ├── Protocol/        ← 协议帧解析、命令执行、输出适配
+│   │   │   └── Runtime/         ← 调度器、环形队列、调试流生成器
+│   │   └── L3/                  ← 数学变换、平台抽象API、传感器采样、SVPWM
 │   └── src/
 │       ├── L1_Orchestration/
 │       └── L2/
@@ -36,123 +36,174 @@ FOC_VSCODE/
 └── .github/
 ```
 
-## 分层模型（代码与职责）
+## 分层模型
 
-| 层级 | 主要位置 | 职责 |
-|---|---|---|
-| `LS` 配置层 | `foc/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 |
-| `L1` 运行编排层 | `foc/src/L1_Orchestration/foc_app.c` + `foc_service_handler.c` | 启动流程、实例化 `foc_motor_t`、服务任务编排（协议/配置同步/系统命令/重初始化）、指示器 |
-| `L2/Control` | `foc_ctrl_*.c` 共 8 模块 | 控制算法（执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出） |
-| `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | 协议帧接入（多源帧读取）、帧解析、命令执行（参数/状态读写）、输出适配 |
-| `L2/Runtime` | `foc_task_scheduler.c`、`foc_debug_stream.c` | 调度器、调试流（独立工具，无运行时管线） |
-| `L3` 基础服务层 | `foc/include/L3/`、`foc/src/L3/` | 数学变换、LUT、平台抽象API、**传感器采样（sensor）、SVPWM调制（svpwm）** |
-| `L5` 板级驱动层 | `examples/.../software/Utilities/*`、`Firmware/*` | 外设驱动与芯片库实现 |
+层级方向严格单向：`LS → L1 → L2 → L3 → L4`
 
-**关键变化（v1.8.1 阶段性调整）：**
-- 删除 `foc_ctrl_entry.c/h`（入口点文件）和 `foc_ctrl_fast.c/h`
-- 新增 `foc_ctrl_executor.c/h` — 控制执行器，合并 ISR 路径与外环调度
-- `foc_svpwm.c/h`、`foc_sensor.c/h` 从 L2/Control 移入 L3 基础服务层
-- 静态全局变量（速度外环状态、SVPWM 前置 LPF 状态、控制模式追踪等）移入 `foc_motor_t` 结构体
-- `FOC_Control_Init` 函数删除，职责整合入 `FOC_ControlConfigResetDefault`
-- `FOC_Control_ApplyConfig` 从入口文件移入 `foc_ctrl_cfg.c`
+| 层级 | 主要位置 | 职责 | 实例化职责 |
+|---|---|---|---|
+| `LS` 配置层 | `foc/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
+| `L1` 编排层 | `foc/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（RX/TX FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
+| `L2/Control` | `foc_ctrl_*.c`（8 模块） | 控制算法：执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出。纯算法，不涉及 I/O | 不持实例，操作传入的 `foc_motor_t` 指针 |
+| `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **单帧处理**：解析一帧 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（遥测策略配置） |
+| `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（逐行生成，不写队列） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
+| `L3` 基础服务层 | `foc/src/L3/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM | 无实例（纯函数或操作 motor 中的字段） |
+| `L4` 板级驱动层 | `examples/.../software/Utilities/`、`Firmware/` | 外设驱动与芯片库实现 | 芯片固有实例 |
+
+### 分层约束
+
+1. L2 各块访问硬件只能通过 L3 平台 API（`foc_pal.h`）。
+2. 公共头文件不得暴露 `gd32f30x_*` 设备头。
+3. L4 不得反向依赖 `foc/src/*` 业务逻辑。
+4. 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值。
+5. L2 各块间禁止跨块直接调用，数据通过 `foc_motor_t` 由 L1 统一协调。
+6. **L2 任何模块不得包含 `L1_Orchestration/` 头文件**。
+7. **L2 任何模块不得持有队列实例**——队列存储由 L1 在 `foc_runtime_ctx_t` 中分配，L2 通过指针参数操作。
+8. L1 编排负责检测 dirty 标志、转发系统命令、管理初始化流程。
+9. **L1 不直接调用 Sensor_* / SVPWM_* 等 L3 硬件初始化方法**——硬件初始化统一通过 L2 的 `FOC_ControlPlatform_InitHardware()` 收口。平台管理类（`FOC_Platform_*`、回调注册）和输出封装（`FOC_OutputMgr_*`）仍由 L1 直调 L3。
+
+## 核心数据结构
+
+系统以两个顶层结构体为数据中枢：
+
+- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、运行时状态、各外环状态等。L1 实例化，L2 各块通过指针读/写。
+- **`foc_system_t`**（定义于 `foc_system_types.h`）— 系统级数据结构，包含：
+  - `cfg`：系统配置（遥测策略、报告模式，不随 reinit 重置）
+  - `runtime`：运行时状态（调度器、调试流、RX/TX 队列缓冲区、指示器状态）
 
 ## 数据流设计
 
-L1 (foc_app.c) 实例化一个核心数据结构：
+### 总体架构
 
-```text
-foc_motor_t g_motor;           ← 电机控制数据结构（包含控制参数/状态/PID/运行时状态
-                                 /per-motor 外环状态）
-
-数据流：
-  协议块：FOC_Protocol_Process(&g_motor)  → 读帧、修改 g_motor.state / g_motor.cfg
-  控制块：FOC_ControlExecutor_RunOuterLoop(&g_motor, &sensor, dt)
-                                  → 读 g_motor.cfg 做算法，写 g_motor
-  L1 编排：
-    检测 g_motor.state.cfg_dirty  → 调用 FOC_Control_ApplyConfig(&g_motor)
-    检测 g_motor.state.reinit_pending  → 调用 FOC_Service_ReInitMotor()
-    检测 g_motor.state.pending_system_action → 转发到控制块
+```
+┌───────────────── ISR 上下文 ─────────────────┐
+│  调度器回调触发 Service/Monitor/Control 任务    │
+│  Service ISR: 读平台帧 → 入 RX 队列            │
+│  Control ISR: 控制循环（传感器→算法→输出）      │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌────────────── 主循环上下文 ───────────────────┐
+│  FOC_App_Loop():                              │
+│    1. Monitor 块: 调试流生成器 → TX 队列       │
+│    2. Service 块: RX 队列 → 协议处理 → 编排    │
+│    3. TX 队列出队 → 平台发送                    │
+└──────────────────────────────────────────────┘
 ```
 
-块间严禁直接函数调用，所有数据传递通过 `foc_motor_t` 结构体由 L1 统一协调。
+### 协议数据流（输入 → 处理 → 输出）
 
-## 当前主链路
+```
+平台 UART ISR
+  │
+  ▼ （Service 触发回调中）
+读帧（FOC_Platform_CommSource*_ReadFrame）
+  │
+  ▼
+FIFO_Enqueue(rx_fifo)       ← L2/Runtime 队列方法，操作 L1 的队列实例
+  │
+  ▼ （主循环 Service 段）
+FIFO_Dequeue(rx_fifo)        ← L2/Runtime 队列方法
+  │
+  ▼
+FOC_Protocol_ProcessSingle() ← L2/Protocol 单帧处理
+  │   解析帧 → 修改 motor 字段 → 返回结果结构体
+  │
+  ├── [comm_active]  → 更新 LED 指示器
+  ├── [needs_summary] → L1 生成系统摘要文本 → FIFO_Enqueue(tx_fifo)
+  ├── [needs_status]  → 状态码已在协议内部直写（快路径）
+  └── [param_changed] → L1 稍后检测 cfg_dirty → ApplyConfig
+```
 
-### 协议处理链（Service Task 中执行）
+### 双输出路径
 
-协议处理：`FOC_Protocol_Process(motor, budget)`
-1. 轮询多通讯源读取帧（FrameSource_TryReadReady）
-2. 帧提取 + 协议解析（ProtocolCore_ExtractFrame + ProtocolCore_ParseFrame）
-3. 命令派发：P通道（参数读写）/ S通道（状态读写）/ Y通道（系统命令）
-4. 所有命令直接读写 `motor->cfg` 和 `motor->state`，设置 `cfg_dirty` 标志
+| 路径 | 机制 | 用途 | 执行位置 |
+|------|------|------|---------|
+| **快路径**（直写） | 直接调用 L3 平台 API（`FOC_Platform_Write*`） | 状态码、参数行、错误回报等短数据 | ISR 或协议处理函数内部 |
+| **慢路径**（队列） | FIFO_Enqueue(tx_fifo) → 主循环 FIFO_Dequeue → 平台发送 | 系统摘要、语义遥测、示波器帧等多行数据 | 入队在主循环各任务中，出队由 L1 统一消费 |
+
+**快路径的特点**：短小、可打断队列输出、不在乎阻塞（因为很短）。
+**慢路径的特点**：大数据量、需要缓冲、通过队列解耦生产者与消费者。
+
+### 数据流核心规则
+
+1. **L2 层只调方法，不持实例**。队列方法定义在 L2/Runtime，但实例在 L1 的 `foc_runtime_ctx_t` 中。
+2. **L2 层不碰队列操作**。协议处理只返回结果结构体，调试流只生成文本行，入队/出队由 L1 编排。
+3. **L1 是唯一编排者**。ISR 读帧→入队、主循环出队→处理→入 TX 队列、TX 出队→发送，全由 L1 控制。
+
+## 控制算法链
+
+### 控制模块结构
+
+L2/Control 按 `foc_ctrl_XX_name.c` 命名，模块划分：
+
+| 编号 | 模块 | 职责 |
+|------|------|------|
+| C11 | `foc_ctrl_executor` | 算法入口：外环/内环/开环/补偿入口，ISR 路径与外环调度 |
+| C12 | `foc_ctrl_init` | 初始化与标定 |
+| C13 | `foc_ctrl_cfg` | 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter） |
+| C21 | `foc_ctrl_outer_loop` | 速度/位置外环 |
+| C22 | `foc_ctrl_current_loop` | 电流内环 |
+| C23 | `foc_ctrl_param_learn` | 电机参数学习 |
+| C24 | `foc_ctrl_compensation` | 齿槽补偿 + 标定 |
+| C31 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
 
 ### 控制运行链
 
-1. **初始化链**：`FOC_MotorInit` → `FOC_ControlConfigResetDefault` → `FOC_ControlExecutor_Init` → `FOC_Control_ApplyConfig`
-2. **运行外环**：`FOC_ControlExecutor_RunOuterLoop(motor, sensor, dt)` — 内部调度速度/角度外环 + 齿槽补偿
-3. **运行内环（PWM ISR）**：`FOC_ControlExecutor_RunISR(motor)` — 采样 → e-cycle 漂移抑制 → 电流环 → SVPWM 执行
-4. **控制循环**：`FOC_ControlExecutor_RunCycle(motor, dt)` — 传感器读取 → 故障检查 → 外环控制
-5. **配置应用**：`FOC_Control_ApplyConfig(motor)` — 从 motor->cfg 读取PID参数和fine-tuning设置
+```
+初始化链：FOC_MotorInit → FOC_ControlConfigResetDefault
+       → FOC_ControlExecutor_Init → FOC_Control_ApplyConfig
 
-### 调度
+控制循环（ControlTrigger ISR）：
+  FOC_ControlExecutor_RunCycle()
+    → 传感器读取 → 故障检查 → 外环控制 → 内环
 
-调度器位于 `L2/Runtime/foc_task_scheduler`，管理任务速率：
-- 服务任务（中速）：指示灯、协议帧处理、参数同步
-- 控制主循环（快速）：传感器读取、外环控制
-- 监测任务（低速）：调试流报告
+PWM ISR（高速路径）：
+  FOC_ControlExecutor_RunISR()
+    → 采样（ADC）→ 漂移抑制 → 电流环 → SVPWM 执行
 
-## 宏裁剪口径（与代码一致）
+配置应用：
+  FOC_Control_ApplyConfig(motor)
+    → 从 motor 结构体读取 PID 参数和 fine-tuning 设置
+```
+
+## 调度模型
+
+调度器位于 `L2/Runtime/foc_task_scheduler`，管理三种任务速率：
+
+- **服务任务（中速）**：ISR 中读帧入 RX 队列 + 更新指示器，主循环中出队解析、参数同步
+- **控制主循环（快速）**：传感器读取、外环控制
+- **监测任务（低速）**：调试流生成（语义报告、示波器帧）
+
+控制节拍源与 PWM 更新中断源分离：
+- 控制节拍源驱动调度器回调
+- PWM 更新中断源驱动高速电流环路径
+- 采样触发与 PWM 对齐
+
+## 宏裁剪口径
 
 ### 算法特性开关（LS）
 
 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
 
-1. 电流环与软切换特性：`FOC_CURRENT_LOOP_PID_ENABLE`、`FOC_CURRENT_SOFT_SWITCH_ENABLE`
-2. 齿槽补偿特性：`FOC_COGGING_COMP_ENABLE`（补偿使能）、`FOC_COGGING_CALIB_ENABLE`（运行时手动标定使能）
-3. 采样滤波特性：`FOC_SENSOR_KALMAN_*`、`FOC_SENSOR_ANGLE_LPF_ENABLE`、`FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE`
+1. 电流环与软切换特性
+2. 齿槽补偿特性（补偿使能 + 运行时手动标定使能）
+3. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
 
 ### 协议裁剪开关
 
 1. 定义位置：`foc/include/LS_Config/foc_cfg_feature_switches.h`
 2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
-4. `FOC_PROTOCOL_ENABLE_*` 系列宏仅控制协议命令的可见性与参数读写通道，不得用于保护控制算法中的逻辑分支。
+4. **协议裁剪宏仅控制协议命令可见性与参数读写通道，不得用于保护控制算法的逻辑分支**
 
-### 编译期约束与提示策略
+### 编译期约束
 
 定义位置：`foc/include/LS_Config/foc_compile_limits.h`
 
-1. 开关合法性与范围约束：使用 `#error` 阻断非法配置。
-2. 跨开关冲突提示：使用编译提示（ARMCC5 下通过 `#warning` 分支）。
-3. 典型硬约束：调度分频整除、PWM/ISR 频率整除、初始化标定关闭时默认方向/极对必须定义。
-
-## 依赖方向约束（强制）
-
-1. `L2` 各块访问硬件只能通过 `L3` 平台 API（`foc_pal.h`）。
-2. 公共头文件不得暴露 `gd32f30x_*`。
-3. `L5` 不得反向依赖 `foc/src/*` 业务逻辑。
-4. 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值。
-5. L2 各块间禁止跨块直接调用，数据通过 `foc_motor_t` 结构体由 L1 统一协调。
-6. Protocol 块只修改 `motor` 结构体字段，不调用任何控制算法函数。
-7. Control 块只读取 `motor` 结构体做控制算法，不调用任何协议/IO 函数。
-8. L1 编排负责检测 dirty 标志、转发系统命令、管理初始化流程。
-
-## 控制时序（抽象）
-
-```text
-控制节拍源
-├── 调度器回调（服务任务、监测任务、控制主循环）
-└── 控制主循环入口
-
-PWM 更新中断源（高速路径）
-├── SVPWM 插值
-└── （可选）电流环快路径
-
-采样触发源
-└── 与 PWM 对齐的电流/角度采样
-```
-
-具体定时器映射与引脚归属由实例文档维护。
+1. 开关合法性与范围约束：`#error` 阻断非法配置
+2. 跨开关冲突提示：编译警告
+3. 典型硬约束：调度分频整除、PWM/ISR 频率整除、初始化标定关闭时默认方向/极对必须定义
 
 ## 维护规则
 

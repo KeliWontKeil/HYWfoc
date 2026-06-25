@@ -20,27 +20,27 @@ static void FOC_ApplySvpwmPreLpf(foc_motor_t *motor,
         return;
     }
 
-    if (motor->svpwm_lpf_state_valid == 0U)
+    if (motor->svpwm_lpf.valid == 0U)
     {
-        motor->svpwm_lpf_phase_a = *phase_a;
-        motor->svpwm_lpf_phase_b = *phase_b;
-        motor->svpwm_lpf_phase_c = *phase_c;
-        motor->svpwm_lpf_state_valid = 1U;
+        motor->svpwm_lpf.phase_a = *phase_a;
+        motor->svpwm_lpf.phase_b = *phase_b;
+        motor->svpwm_lpf.phase_c = *phase_c;
+        motor->svpwm_lpf.valid = 1U;
         return;
     }
 
     *phase_a = Math_FirstOrderLpf(*phase_a,
-                                  &motor->svpwm_lpf_phase_a,
+                                  &motor->svpwm_lpf.phase_a,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf_state_valid);
+                                  &motor->svpwm_lpf.valid);
     *phase_b = Math_FirstOrderLpf(*phase_b,
-                                  &motor->svpwm_lpf_phase_b,
+                                  &motor->svpwm_lpf.phase_b,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf_state_valid);
+                                  &motor->svpwm_lpf.valid);
     *phase_c = Math_FirstOrderLpf(*phase_c,
-                                  &motor->svpwm_lpf_phase_c,
+                                  &motor->svpwm_lpf.phase_c,
                                   FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf_state_valid);
+                                  &motor->svpwm_lpf.valid);
 }
 #endif
 
@@ -77,21 +77,21 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     Math_InverseParkTransform(ud_applied,
                               uq_applied,
                               electrical_angle,
-                              &motor->alpha,
-                              &motor->beta);
+                              &motor->alpha_beta.alpha,
+                              &motor->alpha_beta.beta);
 
     /* 逆Clarke变换：alpha-beta -> 三相电压 */
-    Math_InverseClarkeTransform(motor->alpha,
-                                motor->beta,
-                                &motor->phase_a,
-                                &motor->phase_b,
-                                &motor->phase_c);
+    Math_InverseClarkeTransform(motor->alpha_beta.alpha,
+                                motor->alpha_beta.beta,
+                                &motor->alpha_beta.phase_a,
+                                &motor->alpha_beta.phase_b,
+                                &motor->alpha_beta.phase_c);
 
 #if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
     FOC_ApplySvpwmPreLpf(motor,
-                         &motor->phase_a,
-                         &motor->phase_b,
-                         &motor->phase_c);
+                         &motor->alpha_beta.phase_a,
+                         &motor->alpha_beta.phase_b,
+                         &motor->alpha_beta.phase_c);
 #endif
 
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
@@ -129,18 +129,18 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     if (direct_output != 0U)
     {
         SVPWM_UpdateDirect(motor,
-                           motor->phase_a,
-                           motor->phase_b,
-                           motor->phase_c,
+                           motor->alpha_beta.phase_a,
+                           motor->alpha_beta.phase_b,
+                           motor->alpha_beta.phase_c,
                            voltage_command,
                            motor->vbus_voltage);
     }
     else
     {
         SVPWM_UpdateRuntime(motor,
-                            motor->phase_a,
-                            motor->phase_b,
-                            motor->phase_c,
+                            motor->alpha_beta.phase_a,
+                            motor->alpha_beta.phase_b,
+                            motor->alpha_beta.phase_c,
                             voltage_command,
                             motor->vbus_voltage);
     }

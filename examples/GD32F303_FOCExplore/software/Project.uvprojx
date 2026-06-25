@@ -613,6 +613,11 @@
               <FilePath>..\..\..\foc\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
+              <FileName>foc_output_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_service_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</FilePath>
@@ -638,14 +643,9 @@
               <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_current_loop.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_entry.c</FileName>
+              <FileName>foc_ctrl_executor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_entry.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_fast.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_fast.c</FilePath>
+              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</FilePath>
             </File>
             <File>
               <FileName>foc_ctrl_init.c</FileName>
@@ -663,16 +663,6 @@
               <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_param_learn.c</FilePath>
             </File>
             <File>
-              <FileName>foc_sensor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_sensor.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_svpwm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_svpwm.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_protocol_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</FilePath>
@@ -688,9 +678,29 @@
               <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</FilePath>
             </File>
             <File>
+              <FileName>foc_debug_stream.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_task_scheduler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L3\foc_math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L3\foc_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L3\foc_svpwm.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1306,6 +1316,11 @@
               <FilePath>..\..\..\foc\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
+              <FileName>foc_output_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_service_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</FilePath>
@@ -1331,14 +1346,9 @@
               <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_current_loop.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_entry.c</FileName>
+              <FileName>foc_ctrl_executor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_entry.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_fast.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_fast.c</FilePath>
+              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</FilePath>
             </File>
             <File>
               <FileName>foc_ctrl_init.c</FileName>
@@ -1356,16 +1366,6 @@
               <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_param_learn.c</FilePath>
             </File>
             <File>
-              <FileName>foc_sensor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_sensor.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_svpwm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_svpwm.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_protocol_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</FilePath>
@@ -1381,9 +1381,29 @@
               <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</FilePath>
             </File>
             <File>
+              <FileName>foc_debug_stream.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_task_scheduler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L3\foc_math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L3\foc_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L3\foc_svpwm.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1999,6 +2019,11 @@
               <FilePath>..\..\..\foc\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
+              <FileName>foc_output_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_service_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</FilePath>
@@ -2024,14 +2049,9 @@
               <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_current_loop.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_entry.c</FileName>
+              <FileName>foc_ctrl_executor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_entry.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_fast.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_fast.c</FilePath>
+              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</FilePath>
             </File>
             <File>
               <FileName>foc_ctrl_init.c</FileName>
@@ -2049,16 +2069,6 @@
               <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_param_learn.c</FilePath>
             </File>
             <File>
-              <FileName>foc_sensor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_sensor.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_svpwm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_svpwm.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_protocol_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</FilePath>
@@ -2074,9 +2084,29 @@
               <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</FilePath>
             </File>
             <File>
+              <FileName>foc_debug_stream.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_task_scheduler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc\src\L3\foc_math_transforms.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L3\foc_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_svpwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc\src\L3\foc_svpwm.c</FilePath>
             </File>
           </Files>
         </Group>

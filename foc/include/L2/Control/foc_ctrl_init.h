@@ -14,4 +14,9 @@ void FOC_MotorInit(foc_motor_t *motor,
                    int8_t direction);
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor);
 
+/* Initialise sensor, SVPWM, and fast control-executor hardware.
+ * L1 calls this once during boot (or after reinit) instead of calling
+ * Sensor_*, SVPWM_*, FOC_ControlExecutor_Init directly. */
+void FOC_ControlPlatform_InitHardware(foc_motor_t *motor);
+
 #endif /* FOC_CONTROL_C12_INIT_H */

@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "L1_Orchestration/foc_output_mgr.h"
 #include "L2/Control/foc_ctrl_current_loop.h"
 #include "L2/Control/foc_ctrl_outer_loop.h"
 #include "L2/Control/foc_ctrl_compensation.h"
@@ -19,6 +20,9 @@ static void ResetPIDState(foc_pid_t *pid)
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
 }
+
+/* Forward declaration for Executor_SafeOutput (used in RunISR before its definition) */
+static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip);
 
 /* ================================================================
  * PWM ISR：采样 → e-cycle累积 → 电流环控制 → SVPWM输出
@@ -48,6 +52,11 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     if (motor->state.system_running == 0U) return;
     if (motor->state.motor_enabled == 0U) return;
     if (motor->state.current_loop_ready == 0U) return;
+    if (motor->state.system_fault != 0U)
+    {
+        Executor_SafeOutput(motor, 0U);
+        return;
+    }
 
     SVPWM_InterpolationISR(motor);
 
@@ -87,7 +96,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 }
 
 /* ================================================================
- * 控制主循环：传感器读取 → 故障检查 → 控制执行 → 更新角度
+ * 控制主任务：传感器读取 → 安全输出 → 控制执行
  * ================================================================ */
 
 static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip)
@@ -102,126 +111,80 @@ static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip)
     }
 }
 
-static uint8_t Executor_CheckSensor(foc_motor_t *motor,
-                                    const sensor_data_t *sensor)
+/* Public safe-output entry — used by L1 for synchronous zeroing. */
+void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor)
 {
-    if ((sensor->adc_valid != 0U) && (sensor->encoder_valid != 0U))
-    {
-        motor->state.sensor_invalid_consecutive = 0U;
-        if (motor->state.system_fault == 0U)
-        {
-            motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-        }
-        return 1U;
-    }
-
-    motor->state.sensor_invalid_consecutive++;
-    motor->state.control_skip_count++;
-
-    if (sensor->adc_valid == 0U)
-    {
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_SENSOR_ADC_INVALID;
-    }
-    else
-    {
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID;
-    }
-
-    if (motor->state.sensor_invalid_consecutive >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
-    {
-        if (motor->state.system_fault == 0U)
-        {
-            motor->state.system_fault = 1U;
-            FOC_Platform_WriteDebugText("sensor invalid threshold reached\r\n");
-        }
-    }
-
-    return 0U;
+    Executor_SafeOutput(motor, 0U);
 }
-
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
-static uint8_t Executor_CheckUndervoltage(foc_motor_t *motor,
-                                          const sensor_data_t *sensor)
-{
-    if (sensor->vbus_voltage_filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
-    {
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_UNDERVOLTAGE;
-        motor->state.system_fault = 1U;
-        Executor_SafeOutput(motor, 0U);
-        return 0U;
-    }
-    return 1U;
-}
-#endif
 
 uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
 {
     const sensor_data_t *sensor;
-    uint8_t cogging_mode_active = 0U;
 
-    if (motor == 0) return 1U;
+    if (motor == 0) return FOC_CYCLE_SKIPPED;
 
-    /* 1. 故障状态 → 安全输出 */
-    if (motor->state.system_fault != 0U)
-    {
-        Executor_SafeOutput(motor, 1U);
-        return 1U;
-    }
-
-    /* 2. 传感器读取 */
+    /* 1. 传感器读取（系统状态检查由 L1 负责，RunCycle 仅读取数据） */
     Sensor_ReadAll(motor);
     sensor = &motor->sensor;
 
-    /* 3. 传感器有效性检查 */
-    if (Executor_CheckSensor(motor, sensor) == 0U)
+    /* 2. 传感器有效性检查：仅统计计数和设置故障码，不设置 system_fault */
+    if ((sensor->adc_valid == 0U) || (sensor->encoder_valid == 0U))
     {
-        Executor_SafeOutput(motor, 0U);
-        return 1U;
-    }
+        motor->state.sensor_invalid_consecutive++;
+        motor->state.control_skip_count++;
 
-    /* 4. 欠压保护 */
+        if (sensor->adc_valid == 0U)
+            motor->state.last_fault_code = (uint8_t)FOC_FAULT_SENSOR_ADC_INVALID;
+        else
+            motor->state.last_fault_code = (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID;
+
+        if (motor->state.sensor_invalid_consecutive >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
+        {
+            return (uint8_t)FOC_CYCLE_FAULT_SENSOR;
+        }
+        return FOC_CYCLE_SKIPPED;
+    }
+    motor->state.sensor_invalid_consecutive = 0U;
+    motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
+
+    /* 3. 欠压保护：L2 检测，返回状态码让 L1 处理 */
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
-    if (Executor_CheckUndervoltage(motor, sensor) == 0U)
+    if (sensor->vbus_voltage_filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
-        return 1U;
+        motor->state.last_fault_code = (uint8_t)FOC_FAULT_UNDERVOLTAGE;
+        return (uint8_t)FOC_CYCLE_FAULT_UVLO;
     }
 #endif
 
-    /* 5. 电机是否使能 */
+    /* 4. 电机是否使能 */
     if (motor->state.motor_enabled == 0U)
     {
-        Executor_SafeOutput(motor, 1U);
-        return 1U;
+        return FOC_CYCLE_SKIPPED;
     }
 
-    /* 6. 检查控制模式变化（用于 PID 重置，executor 内部已处理） */
-    if (motor->state.control_mode != motor->prev_control_mode_check)
+    /* 5. 检查控制模式变化（用于 PID 重置） */
+    if (motor->state.control_mode != motor->mode_transition.prev_control_mode_check)
     {
-        motor->prev_control_mode_check = motor->state.control_mode;
+        motor->mode_transition.prev_control_mode_check = motor->state.control_mode;
     }
 
-    /* 7. 齿槽标定模式特殊处理 */
+    /* 6. 齿槽标定模式 — soft_switch 已由 L1 在标定开始前设置好 */
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
     if (FOC_CoggingCalibIsBusy(motor) != 0U)
     {
-        motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-        motor->current_soft_switch_status.enabled = 0U;
-
         FOC_CoggingCalibSampleStep(motor, sensor, dt_sec);
-        cogging_mode_active = 1U;
+        /* 标定期间 current_loop_ready 保持原值，由 L1 管理 */
+        return FOC_CYCLE_OK;
     }
 #endif
 
-    /* 8. 正常控制外环 */
-    if (cogging_mode_active == 0U)
-    {
-        FOC_ControlExecutor_RunOuterLoop(motor, sensor, dt_sec);
-    }
+    /* 7. 正常控制外环 */
+    FOC_ControlExecutor_RunOuterLoop(motor, sensor, dt_sec);
 
-    /* 首次控制周期完成 → 允许 ISR 执行电流环 */
+    /* after first cycle: allow ISR current loop execution */
     motor->state.current_loop_ready = 1U;
 
-    return 0U;
+    return FOC_CYCLE_OK;
 }
 
 /* ========== 外环统一入口 ========== */
@@ -237,13 +200,13 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
     cur_mode = motor->state.control_mode;
 
     /* 控制模式切换时重置 PID 状态 */
-    if (motor->prev_control_mode_valid == 0U)
+    if (motor->mode_transition.prev_control_mode_valid == 0U)
     {
-        motor->prev_control_mode = cur_mode;
-        motor->prev_control_mode_valid = 1U;
+        motor->mode_transition.prev_control_mode = cur_mode;
+        motor->mode_transition.prev_control_mode_valid = 1U;
     }
 
-    if (cur_mode != motor->prev_control_mode)
+    if (cur_mode != motor->mode_transition.prev_control_mode)
     {
         if (cur_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
         {
@@ -259,7 +222,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
         motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
         motor->current_soft_switch_blend_initialized = 0U;
 
-        motor->prev_control_mode = cur_mode;
+        motor->mode_transition.prev_control_mode = cur_mode;
     }
 
 #if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)

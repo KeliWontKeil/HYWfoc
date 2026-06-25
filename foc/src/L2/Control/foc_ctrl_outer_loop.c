@@ -81,9 +81,9 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
 
 static void FOC_ResetSpeedState(foc_motor_t *motor)
 {
-    motor->speed_err_accum_rad = 0.0f;
-    motor->prev_mech_signed_rad = 0.0f;
-    motor->speed_state_valid = 0U;
+    motor->outer_loop_state.speed_err_accum_rad = 0.0f;
+    motor->outer_loop_state.prev_mech_signed_rad = 0.0f;
+    motor->outer_loop_state.speed_state_valid = 0U;
 }
 
 static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_angle_rad)
@@ -118,22 +118,22 @@ static float FOC_UpdateSpeedAngleError(foc_motor_t *motor, float mech_angle_rad,
     dt_sec = FOC_NormalizeDt(dt_sec);
     mech_signed_rad = motor->direction * mech_angle_rad;
 
-    if (motor->speed_state_valid == 0U)
+    if (motor->outer_loop_state.speed_state_valid == 0U)
     {
-        motor->prev_mech_signed_rad = mech_signed_rad;
-        motor->speed_err_accum_rad = 0.0f;
-        motor->speed_state_valid = 1U;
+        motor->outer_loop_state.prev_mech_signed_rad = mech_signed_rad;
+        motor->outer_loop_state.speed_err_accum_rad = 0.0f;
+        motor->outer_loop_state.speed_state_valid = 1U;
         return 0.0f;
     }
 
-    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - motor->prev_mech_signed_rad);
-    motor->prev_mech_signed_rad = mech_signed_rad;
+    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - motor->outer_loop_state.prev_mech_signed_rad);
+    motor->outer_loop_state.prev_mech_signed_rad = mech_signed_rad;
     speed_cmd_delta_rad = speed_ref_rad_s * dt_sec;
-    motor->speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
-    motor->speed_err_accum_rad = Math_ClampFloat(motor->speed_err_accum_rad,
-                                                  -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
-                                                  FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
-    return motor->speed_err_accum_rad;
+    motor->outer_loop_state.speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
+    motor->outer_loop_state.speed_err_accum_rad = Math_ClampFloat(motor->outer_loop_state.speed_err_accum_rad,
+                                                                   -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
+                                                                   FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
+    return motor->outer_loop_state.speed_err_accum_rad;
 }
 
 void FOC_ControlRebaseMechanicalAngleAccum(foc_motor_t *motor, float mech_angle_rad)

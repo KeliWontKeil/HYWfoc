@@ -5,6 +5,37 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-06-25
+
+### Changed
+- **L1 函数封装统一**：`foc_app.c` 中提取 4 个静态函数（`FOC_App_OutputStartupInfo`、`FOC_App_PollCommSources`、`FOC_App_ApplyCfgDirty`、`FOC_App_HandleControlResult`），消除内联松散逻辑，使顶层函数保持在单一抽象层。
+- **L1→L3 硬件初始化调用收口**：L1 不再直接调用 `Sensor_*`/`SVPWM_*` 等 L3 硬件初始化方法，改为调用 L2/C12 新增的 `FOC_ControlPlatform_InitHardware()`。同时消除 `FOC_ControlExecutor_Init()` 在 L1 和 L2 的重复调用。
+- **4 源接收公平轮询**：`FOC_App_ServiceTrigger` 中的 4 源轮询改为 round-robin 起始偏移策略，避免固定优先级导致低优先级源被饿死。新增 `FOC_COMM_MAX_FRAMES_PER_SERVICE` 宏（默认 0=全部）可配置每 ServiceTrigger 处理的帧数上限。
+- **`comm_source_rr` 并入运行时结构体**：round-robin 起始偏移状态保存在 `foc_runtime_ctx_t` 中，不引入独立全局变量。跨 reinit 保持状态。
+
+### Added
+- `FOC_ControlPlatform_InitHardware(motor)` — L2/C12 新增硬件初始化收口函数，封装传感器、SVPWM、快速电流环初始化序列。
+- `FOC_COMM_MAX_FRAMES_PER_SERVICE` — 可配置宏（`foc_cfg_init_values.h`），控制每 ServiceTrigger 轮询入队的最大帧数（0=自动，1~4=固定上限）。
+
+### Cleanup
+- `foc_app.c` 中移除 `#include "L3/foc_sensor.h"` 和 `#include "L3/foc_svpwm.h"`（L1 依赖树宽度缩减）。
+- `FOC_App_ApplyCfgDirty` 移除冗余的 `Sensor_ADCSampleTimeOffset` 调用（已在 `FOC_Control_ApplyConfig` 中自动执行）。
+
+### Documentation
+- `docs/architecture.md`：分层约束新增第9条——L1 不直接调 L3 硬件初始化方法，硬件初始化通过 L2 收口。
+
+## [1.8.1] - 2026-06-24
+
+### Changed
+- **队列配置 LS 化**：将 `FOC_OUTPUT_QUEUE_DEPTH`、`FOC_OUTPUT_FRAME_MAX_LEN`、`FOC_OUTPUT_MAX_PER_CYCLE` 从 `foc_system_types.h` 和 `foc_output_mgr.h` 移入 `foc_cfg_init_values.h`，实现队列配置默认值收敛到 LS 层。用户可在构建前通过 `#define` 覆盖。
+
+### Removed
+- `foc_system_types.h` 中的 `FOC_OUTPUT_QUEUE_DEPTH` 和 `FOC_OUTPUT_FRAME_MAX_LEN` 本地默认值（已移到 LS_Config）
+- `foc_output_mgr.h` 中的 `FOC_OUTPUT_MAX_PER_CYCLE` 本地默认值（已移到 LS_Config）
+
+### Documentation
+- `PLAN.md`：更新为评估收敛版本，记录所有评估结论和完成项
+
 ## [1.8.0] - 2026-06-22
 
 ### Changed

@@ -7,15 +7,8 @@
 #include "L2/Protocol/foc_protocol_parser.h"
 #include "L3/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
-#include "L2/Protocol/foc_snapshot_types.h"
 
-/* ========== 内部常量 ========== */
-#define RUNTIME_COMM_SOURCE_1 1U
-#define RUNTIME_COMM_SOURCE_2 2U
-#define RUNTIME_COMM_SOURCE_3 3U
-#define RUNTIME_COMM_SOURCE_4 4U
-
-/* ========== 内部状态（指向 L1 系统配置中的遥测策略） ========== */
+/* ========== 内部状态（指向 L1 遥测策略） ========== */
 static telemetry_policy_snapshot_t *g_telemetry_ptr = 0;
 
 /* ========== 内部工具函数 ========== */
@@ -25,40 +18,7 @@ static uint8_t IsInRange(float value, float min_value, float max_value)
     return (value >= min_value && value <= max_value) ? 1U : 0U;
 }
 
-/* ========== 帧读取（原 FrameSource_*） ========== */
-
-static uint8_t FrameSource_IsReady(uint8_t source)
-{
-    if (source == RUNTIME_COMM_SOURCE_1) return FOC_Platform_CommSource1_IsFrameReady();
-    if (source == RUNTIME_COMM_SOURCE_2) return FOC_Platform_CommSource2_IsFrameReady();
-    if (source == RUNTIME_COMM_SOURCE_3) return FOC_Platform_CommSource3_IsFrameReady();
-    if (source == RUNTIME_COMM_SOURCE_4) return FOC_Platform_CommSource4_IsFrameReady();
-    return 0U;
-}
-
-static uint16_t FrameSource_Read(uint8_t source, uint8_t *buffer, uint16_t max_len)
-{
-    if (source == RUNTIME_COMM_SOURCE_1) return FOC_Platform_CommSource1_ReadFrame(buffer, max_len);
-    if (source == RUNTIME_COMM_SOURCE_2) return FOC_Platform_CommSource2_ReadFrame(buffer, max_len);
-    if (source == RUNTIME_COMM_SOURCE_3) return FOC_Platform_CommSource3_ReadFrame(buffer, max_len);
-    if (source == RUNTIME_COMM_SOURCE_4) return FOC_Platform_CommSource4_ReadFrame(buffer, max_len);
-    return 0U;
-}
-
-static uint16_t FrameSource_TryReadReady(uint8_t *buffer, uint16_t max_len)
-{
-    uint8_t source;
-    for (source = RUNTIME_COMM_SOURCE_1; source <= RUNTIME_COMM_SOURCE_4; source++)
-    {
-        if (FrameSource_IsReady(source) == 0U) continue;
-        uint16_t len = FrameSource_Read(source, buffer, max_len);
-        if (len > 0U) return len;
-    }
-    return 0U;
-}
-
 /* ========== 参数读写（直接写 motor 顶层字段） ========== */
-/* cfg 已消除，所有字段直接写入目标位置 */
 
 static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 {
@@ -91,15 +51,15 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
         if (value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ || value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ) return 0U;
-        if (g_telemetry_ptr != 0) g_telemetry_ptr->semantic_report_freq_hz = (uint16_t)value;
+        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->semantic_report_freq_hz = (uint16_t)value; }
         break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV:
         if (value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ || value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ) return 0U;
-        if (g_telemetry_ptr != 0) g_telemetry_ptr->osc_report_freq_hz = (uint16_t)value;
+        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_report_freq_hz = (uint16_t)value; }
         break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
         if (value < COMMAND_MANAGER_PARAM_OSC_MASK_MIN || value > COMMAND_MANAGER_PARAM_OSC_MASK_MAX) return 0U;
-        if (g_telemetry_ptr != 0) g_telemetry_ptr->osc_parameter_mask = (uint16_t)value;
+        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_parameter_mask = (uint16_t)value; }
         break;
 #endif
 
@@ -284,11 +244,11 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
 #endif
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
-        *value_out = (g_telemetry_ptr != 0) ? (float)g_telemetry_ptr->semantic_report_freq_hz : 0.0f; break;
+        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->semantic_report_freq_hz : 0.0f; } break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV:
-        *value_out = (g_telemetry_ptr != 0) ? (float)g_telemetry_ptr->osc_report_freq_hz : 0.0f; break;
+        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->osc_report_freq_hz : 0.0f; } break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
-        *value_out = (g_telemetry_ptr != 0) ? (float)g_telemetry_ptr->osc_parameter_mask : 0.0f; break;
+        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->osc_parameter_mask : 0.0f; } break;
 #endif
     case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
@@ -411,13 +371,13 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
         motor->state.motor_enabled = normalized; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        if (g_telemetry_ptr != 0) g_telemetry_ptr->semantic_report_enabled = normalized; break;
+        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->semantic_report_enabled = normalized; } break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        if (g_telemetry_ptr != 0) g_telemetry_ptr->osc_report_enabled = normalized; break;
+        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_report_enabled = normalized; } break;
 #else
         return 0U;
 #endif
@@ -452,13 +412,13 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
         *state_out = motor->state.motor_enabled; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        *state_out = (g_telemetry_ptr != 0) ? g_telemetry_ptr->semantic_report_enabled : 0; break;
+        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *state_out = (t != 0) ? t->semantic_report_enabled : 0; } break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        *state_out = (g_telemetry_ptr != 0) ? g_telemetry_ptr->osc_report_enabled : 0; break;
+        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *state_out = (t != 0) ? t->osc_report_enabled : 0; } break;
 #else
         return 0U;
 #endif
@@ -480,133 +440,334 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
     return 1U;
 }
 
-static void ReportAllParams(const foc_motor_t *motor) { /* ... unchanged ... */ float value; const char params[] = {
-    COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE, COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED, COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED,
+static void ReportAllParams(const foc_motor_t *motor)
+{
+    float value;
+    const char params[] = {
+        COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE, COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED, COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED,
 #if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET,
+        COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET,
 #endif
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV, COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV, COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK,
+        COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV, COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV, COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK,
 #endif
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD,
 #endif
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD,
 #endif
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD,
+        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD,
 #endif
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA, COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT,
-    COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND, COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START, COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END,
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA, COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT,
+        COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND, COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START, COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END,
 #endif
-    COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE,
+        COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE,
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT, COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE,
+        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT, COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE,
 #endif
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN,
+        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN,
 #endif
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE, COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ, COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ,
+        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE, COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ, COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ,
 #endif
-};
+    };
     uint16_t i;
     for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
         if (ReadParam(motor, params[i], &value) != 0U) FOC_Protocol_OutputParam(params[i], value);
 }
 
-static void ReportAllStates(const foc_motor_t *motor) { uint8_t state_val; const char states[] = {
-    COMMAND_MANAGER_STATE_SUBCMD_MOTOR_ENABLE,
+static void ReportAllStates(const foc_motor_t *motor)
+{
+    uint8_t state_val;
+    const char states[] = {
+        COMMAND_MANAGER_STATE_SUBCMD_MOTOR_ENABLE,
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE, COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE,
+        COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE, COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE,
 #endif
 #if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE,
+        COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE,
 #endif
 #if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
-    COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE,
+        COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE,
 #endif
-};
+    };
     uint16_t i;
     for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
         if (ReadState(motor, states[i], &state_val) != 0U) FOC_Protocol_OutputState(states[i], state_val);
 }
 
-static uint8_t ReportSingleParam(const foc_motor_t *motor, char subcommand) {
-    float value; if (ReadParam(motor, subcommand, &value) == 0U) return 0U; FOC_Protocol_OutputParam(subcommand, value); return 1U;
+static uint8_t ReportSingleParam(const foc_motor_t *motor, char subcommand)
+{
+    float value;
+    if (ReadParam(motor, subcommand, &value) == 0U) return 0U;
+    FOC_Protocol_OutputParam(subcommand, value);
+    return 1U;
 }
 
-static uint8_t ReportSingleState(const foc_motor_t *motor, char subcommand) {
-    uint8_t state_val; if (ReadState(motor, subcommand, &state_val) == 0U) return 0U; FOC_Protocol_OutputState(subcommand, state_val); return 1U;
+static uint8_t ReportSingleState(const foc_motor_t *motor, char subcommand)
+{
+    uint8_t state_val;
+    if (ReadState(motor, subcommand, &state_val) == 0U) return 0U;
+    FOC_Protocol_OutputState(subcommand, state_val);
+    return 1U;
 }
 
-/* ========== 命令执行 ========== */
-static uint8_t ExecutePCommand(foc_motor_t *motor, const protocol_command_t *cmd) { /* ... unchanged ... */ float value = 0.0f; if (cmd->has_param != 0U) { if (WriteParam(motor, cmd->subcommand, cmd->param_value) == 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } if (ReadParam(motor, cmd->subcommand, &value) != 0U) FOC_Protocol_OutputParam(cmd->subcommand, value); FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_PARAM_SUBCMD_READ_ALL) { ReportAllParams(motor); FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (ReportSingleParam(motor, cmd->subcommand) == 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; }
+/* ========== 命令执行（返回结果结构体） ========== */
 
-static uint8_t ExecuteSCommand(foc_motor_t *motor, const protocol_command_t *cmd) { uint8_t state_val = 0U; if (cmd->has_param != 0U) { if (ProtocolCore_ParseStateValue(cmd->param_value, &state_val) == 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } if (WriteState(motor, cmd->subcommand, state_val) == 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } if (ReadState(motor, cmd->subcommand, &state_val) == 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } FOC_Protocol_OutputState(cmd->subcommand, state_val); FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_STATE_SUBCMD_READ_ALL) { ReportAllStates(motor); FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (ReportSingleState(motor, cmd->subcommand) == 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; }
+static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const protocol_command_t *cmd)
+{
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+    float value = 0.0f;
 
-static uint8_t HandleSystemCommand(foc_motor_t *motor, const protocol_command_t *cmd) { /* ... unchanged ... */ if (cmd->has_param != 0U) { FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR); return 0U; } if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_RUNTIME_SUMMARY) { char out[COMMAND_MANAGER_REPLY_BUFFER_LEN]; snprintf(out, sizeof(out), "STATE RUN=%u FLT=%u INIT=0x%04X/0x%04X SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n", (unsigned int)motor->state.system_running, (unsigned int)motor->state.system_fault, (unsigned int)motor->state.init_check_mask, (unsigned int)motor->state.init_fail_mask, (unsigned int)motor->state.sensor_invalid_consecutive, (unsigned long)motor->state.protocol_error_count, (unsigned long)motor->state.param_error_count, (unsigned long)motor->state.control_skip_count); FOC_Protocol_WriteText(out); FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT) { motor->state.sensor_invalid_consecutive = 0U; motor->state.protocol_error_count = 0U; motor->state.param_error_count = 0U; motor->state.control_skip_count = 0U; motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE; motor->state.system_running = 0U; motor->state.system_fault = 0U; motor->state.init_check_mask = 0U; motor->state.init_fail_mask = 0U; motor->state.pending_system_action = FOC_SYSACTION_NONE; motor->state.cfg_dirty = 1U; motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE; FOC_Protocol_OutputDiag("INFO", "fault_recovery", "system reset completed"); FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT) { motor->state.reinit_pending = 1U; FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB) { motor->state.pending_system_action = FOC_SYSACTION_COGGING_START; FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP) { motor->state.pending_system_action = FOC_SYSACTION_COGGING_DUMP; FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT) { motor->state.pending_system_action = FOC_SYSACTION_COGGING_EXPORT; FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR); return 1U; } FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR); return 0U; }
+    if (cmd->has_param != 0U)
+    {
+        if (WriteParam(motor, cmd->subcommand, cmd->param_value) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        if (ReadParam(motor, cmd->subcommand, &value) != 0U)
+            FOC_Protocol_OutputParam(cmd->subcommand, value);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        res.param_changed = 1U;
+        return res;
+    }
 
-static uint8_t ParseAndDispatchFrame(foc_motor_t *motor, const uint8_t *frame, uint16_t len)
+    if (cmd->subcommand == COMMAND_MANAGER_PARAM_SUBCMD_READ_ALL)
+    {
+        ReportAllParams(motor);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (ReportSingleParam(motor, cmd->subcommand) == 0U)
+    {
+        FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+        res.needs_status = 1U;
+        return res;
+    }
+
+    FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+    res.comm_active  = 1U;
+    res.needs_status = 1U;
+    return res;
+}
+
+static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const protocol_command_t *cmd)
+{
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+    uint8_t state_val = 0U;
+
+    if (cmd->has_param != 0U)
+    {
+        if (ProtocolCore_ParseStateValue(cmd->param_value, &state_val) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        if (WriteState(motor, cmd->subcommand, state_val) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        if (ReadState(motor, cmd->subcommand, &state_val) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_Protocol_OutputState(cmd->subcommand, state_val);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active   = 1U;
+        res.needs_status  = 1U;
+        res.param_changed = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_STATE_SUBCMD_READ_ALL)
+    {
+        ReportAllStates(motor);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (ReportSingleState(motor, cmd->subcommand) == 0U)
+    {
+        FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+        res.needs_status = 1U;
+        return res;
+    }
+
+    FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+    res.comm_active  = 1U;
+    res.needs_status = 1U;
+    return res;
+}
+
+static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const protocol_command_t *cmd)
+{
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+
+    if (cmd->has_param != 0U)
+    {
+        FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_RUNTIME_SUMMARY)
+    {
+        /* L1 根据 needs_summary 标志生成摘要文本并入 TX 队列 */
+        res.comm_active   = 1U;
+        res.needs_summary = 1U;
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.needs_status  = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT)
+    {
+        motor->state.sensor_invalid_consecutive = 0U;
+        motor->state.protocol_error_count = 0U;
+        motor->state.param_error_count = 0U;
+        motor->state.control_skip_count = 0U;
+        motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
+        motor->state.system_fault = 0U;
+        motor->state.pending_system_action = FOC_SYSACTION_NONE;
+        motor->state.cfg_dirty = 1U;
+        motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
+        motor->state.current_loop_ready = 0U;
+
+        FOC_Protocol_OutputDiag("INFO", "fault_recovery", "system reset completed");
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT)
+    {
+        motor->state.reinit_pending = 1U;
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_CALIB)
+    {
+        motor->state.pending_system_action = FOC_SYSACTION_COGGING_START;
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP)
+    {
+        motor->state.pending_system_action = FOC_SYSACTION_COGGING_DUMP;
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT)
+    {
+        motor->state.pending_system_action = FOC_SYSACTION_COGGING_EXPORT;
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
+    res.needs_status = 1U;
+    return res;
+}
+
+/* ========== 单帧解析与分发 ========== */
+
+static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, const uint8_t *frame, uint16_t len)
 {
     const uint8_t *payload = 0;
     uint16_t payload_len = 0U;
     protocol_core_frame_parse_result_t parse_result;
     protocol_command_t command;
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
 
-    if (len == 0U) return 0U;
+    if (len == 0U) return res;
     if (ProtocolCore_ExtractFrame(frame, len, &payload, &payload_len) == 0U)
     {
         motor->state.protocol_error_count++;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_PROTOCOL_FRAME;
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_FRAME_ERROR_CHAR);
-        return 0U;
+        res.needs_status = 1U;
+        return res;
     }
+
     parse_result = ProtocolCore_ParseFrame(payload, payload_len, &command);
-    if (parse_result == PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH) return 0U;
+    if (parse_result == PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH) return res;
     if (parse_result != PROTOCOL_CORE_FRAME_PARSE_OK)
     {
         motor->state.protocol_error_count++;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_PROTOCOL_FRAME;
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_FRAME_ERROR_CHAR);
-        return 0U;
+        res.needs_status = 1U;
+        return res;
     }
+
     if (command.command == COMMAND_MANAGER_CMD_SYSTEM) return HandleSystemCommand(motor, &command);
-    if (command.command == COMMAND_MANAGER_CMD_PARAM) return ExecutePCommand(motor, &command);
-    if (command.command == COMMAND_MANAGER_CMD_STATE) return ExecuteSCommand(motor, &command);
+    if (command.command == COMMAND_MANAGER_CMD_PARAM)  return ExecutePCommand(motor, &command);
+    if (command.command == COMMAND_MANAGER_CMD_STATE)   return ExecuteSCommand(motor, &command);
+
     FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
-    return 0U;
+    res.needs_status = 1U;
+    return res;
 }
 
-void FOC_Protocol_Init(telemetry_policy_snapshot_t *telemetry_cfg)
+/* =================================================================
+ * 公开 API
+ * ================================================================= */
+
+void FOC_Protocol_Init(telemetry_policy_snapshot_t *telemetry)
 {
-    g_telemetry_ptr = telemetry_cfg;
-    if (g_telemetry_ptr != 0)
+    g_telemetry_ptr = telemetry;
+    if (telemetry != 0)
     {
-        g_telemetry_ptr->semantic_report_enabled = COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED;
-        g_telemetry_ptr->osc_report_enabled = COMMAND_MANAGER_DEFAULT_OSC_ENABLED;
-        g_telemetry_ptr->semantic_report_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
-        g_telemetry_ptr->osc_report_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
-        g_telemetry_ptr->osc_parameter_mask = COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK;
+        telemetry->semantic_report_enabled = COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED;
+        telemetry->osc_report_enabled = COMMAND_MANAGER_DEFAULT_OSC_ENABLED;
+        telemetry->semantic_report_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
+        telemetry->osc_report_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
+        telemetry->osc_parameter_mask = COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK;
     }
     FOC_Protocol_OutputDiag("INFO", "protocol", "READY");
 }
 
-uint8_t FOC_Protocol_Process(foc_motor_t *motor, uint8_t frame_budget)
+foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
+    foc_motor_t *motor,
+    const uint8_t *frame,
+    uint16_t len)
 {
-    uint8_t consumed = 0U;
-    uint8_t has_comm_activity = 0U;
-    while (consumed < frame_budget)
-    {
-        uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
-        uint16_t len = FrameSource_TryReadReady(frame, (uint16_t)sizeof(frame));
-        if (len == 0U) break;
-        if (ParseAndDispatchFrame(motor, frame, len) != 0U) has_comm_activity = 1U;
-        consumed++;
-    }
-    return has_comm_activity;
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+
+    if ((motor == 0) || (frame == 0) || (len == 0U)) return res;
+
+    res = ParseAndDispatchFrame(motor, frame, len);
+    return res;
 }
 
 void FOC_Protocol_Commit(foc_motor_t *motor)

@@ -23,8 +23,8 @@ the affected document in the same change.
 - The instance workspace under `examples/GD32F303_FOCExplore/software/` is the
   build, flash, and debug entry.
 
-Keep the dependency direction intact: `LS -> L1 -> L2 -> L3 -> L41 -> L42 -> L5`.
-`L1/L2/L3` may reach hardware only through `foc_platform_api`.
+Keep the dependency direction intact: `LS -> L1 -> L2 -> L3 -> L5`.
+`L1/L2/L3` may reach hardware only through `L3/foc_platform_api`.
 
 ## Build
 

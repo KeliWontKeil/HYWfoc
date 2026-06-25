@@ -5,11 +5,11 @@
 #include "L1_Orchestration/foc_system_types.h"
 #include "L1_Orchestration/foc_service_handler.h"
 #include "L1_Orchestration/foc_output_mgr.h"
+#include "L2/Runtime/foc_queue.h"
 #include "L3/foc_platform_api.h"
 #include "L2/Control/foc_ctrl_executor.h"
 #include "L2/Control/foc_ctrl_cfg.h"
-#include "L3/foc_sensor.h"
-#include "L3/foc_svpwm.h"
+#include "L2/Control/foc_ctrl_init.h"
 #include "L2/Protocol/foc_protocol_handler.h"
 #include "L2/Runtime/foc_task_scheduler.h"
 #include "L2/Runtime/foc_debug_stream.h"
@@ -20,6 +20,7 @@
  * ================================================================ */
 
 static foc_system_t g_sys;
+static foc_motor_t motor;
 
 /* ================================================================
  * 内部工具
@@ -33,47 +34,58 @@ static void FOC_App_SchedTickBridge(void)
 
 static void FOC_App_UpdateIndicators(void)
 {
-    uint8_t led_run_on = 0U;
-    uint8_t led_fault_on = 0U;
+    FOC_Service_UpdateIndicators(&motor, &g_sys.runtime);
+}
 
-    if (g_sys.motor.state.system_fault != 0U)
+/* 启动信息输出 */
+static void FOC_App_OutputStartupInfo(void)
+{
+    char startup_info[160];
+    snprintf(startup_info, sizeof(startup_info),
+             "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, set_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
+             (double)motor.mech_angle_at_elec_zero_rad,
+             (int)motor.direction,
+             (int)motor.pole_pairs,
+             (double)motor.vbus_voltage,
+             (double)motor.set_voltage,
+             (double)(motor.vbus_voltage > 0.0f ? motor.set_voltage / motor.vbus_voltage : 0.0f),
+             (double)motor.sensor.vbus_voltage_filtered);
+    FOC_OutputMgr_WriteDirect(startup_info);
+}
+
+/* 4 源公平轮询：从 round-robin 起始偏移遍历所有通信源，入队最多一帧 */
+static void FOC_App_PollCommSources(void)
+{
+    uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
+    uint16_t len;
+    uint8_t start = g_sys.runtime.comm_source_rr;
+    uint8_t max_frames;
+
+    max_frames = (FOC_COMM_MAX_FRAMES_PER_SERVICE == 0U) ? 4U : FOC_COMM_MAX_FRAMES_PER_SERVICE;
+    if (max_frames > 4U) max_frames = 4U;
+
+    for (uint8_t i = 0; i < 4U; i++)
     {
-        led_run_on = 0U;
-        led_fault_on = 1U;
-        g_sys.runtime.indicator.led_run_on = 0U;
-        g_sys.runtime.indicator.led_run_blink_counter = 0U;
-    }
-    else if (g_sys.motor.state.system_running != 0U)
-    {
-        if (g_sys.runtime.indicator.led_run_blink_counter >= (FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS - 1U))
+        uint8_t idx = (uint8_t)((start + i) % 4U);
+
+        switch (idx)
         {
-            g_sys.runtime.indicator.led_run_blink_counter = 0U;
-            g_sys.runtime.indicator.led_run_on = (g_sys.runtime.indicator.led_run_on == 0U) ? 1U : 0U;
+        case 0U: len = FOC_Platform_CommSource1_ReadFrame(frame, sizeof(frame)); break;
+        case 1U: len = FOC_Platform_CommSource2_ReadFrame(frame, sizeof(frame)); break;
+        case 2U: len = FOC_Platform_CommSource3_ReadFrame(frame, sizeof(frame)); break;
+        case 3U: len = FOC_Platform_CommSource4_ReadFrame(frame, sizeof(frame)); break;
+        default: len = 0U; break;
         }
-        else
+
+        if (len == 0U) continue;
+
+        if (FIFO_Enqueue(&g_sys.runtime.rx_fifo, frame) != 0U)
         {
-            g_sys.runtime.indicator.led_run_blink_counter++;
+            g_sys.runtime.comm_source_rr = (uint8_t)((idx + 1U) % 4U);
         }
-        led_run_on = g_sys.runtime.indicator.led_run_on;
-    }
-    else
-    {
-        led_run_on = 0U;
-        g_sys.runtime.indicator.led_run_on = 0U;
-        g_sys.runtime.indicator.led_run_blink_counter = 0U;
-    }
 
-    FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, led_run_on);
-    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, led_fault_on);
-
-    if (g_sys.runtime.indicator.comm_pulse_counter > 0U)
-    {
-        FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 1U);
-        g_sys.runtime.indicator.comm_pulse_counter--;
-    }
-    else
-    {
-        FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 0U);
+        /* 每 ServiceTrigger 处理的帧数上限 */
+        if (i >= (max_frames - 1U)) break;
     }
 }
 
@@ -94,8 +106,8 @@ void FOC_App_Init(void)
     g_sys.runtime.service_task_pending = 0U;
     g_sys.runtime.monitor_task_pending = 0U;
     g_sys.runtime.indicator.comm_pulse_counter = 0U;
-    g_sys.runtime.indicator.led_run_on = 0U;
     g_sys.runtime.indicator.led_run_blink_counter = 0U;
+    g_sys.runtime.comm_source_rr = 0U;
 
     /* 调度器初始化 */
     FOC_Platform_ControlTickSourceInit();
@@ -113,47 +125,27 @@ void FOC_App_Init(void)
     /* 输出管理器初始化 */
     FOC_OutputMgr_Init(&g_sys);
 
-    /* 协议初始化（传入系统遥测策略地址） */
+    /* 协议初始化（传入遥测策略） */
     FOC_Protocol_Init(&g_sys.cfg.telemetry);
 
     /* 调试流初始化 */
     DebugStream_Init(&g_sys.runtime.debug_stream);
 
-    /* 传感器初始化（包含 snapshot 初始化） */
-    Sensor_InitSnapshot(&g_sys.motor.sensor);
-    Sensor_InitSnapshot(&g_sys.motor.sensor_fast);
-    Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
-    Sensor_SetZeroOffset(&g_sys.motor);
-    Sensor_ReadAll(&g_sys.motor);
+    /* L2 硬件初始化收口：传感器/SVPWM/快速电流环 */
+    FOC_ControlPlatform_InitHardware(&motor);
 
-    /* PWM 初始化 */
-    SVPWM_Init(&g_sys.motor, FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
+    /* PWM 更新回调注册（回调指向 L1 的 ISR 桥接） */
     FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
 
-    /* 快速电流环初始化 */
-    FOC_ControlExecutor_Init(&g_sys.motor);
-
-    /* 电机硬件初始化（含控制初始化、标定等） */
-    FOC_Service_InitMotor(&g_sys.motor);
-    FOC_Control_ApplyConfig(&g_sys.motor);
+    /* 电机初始化（含控制初始化、标定等） */
+    FOC_Service_InitMotor(&motor);
+    FOC_Control_ApplyConfig(&motor);
 
     /* 初始化检查完整性校验 */
-    FOC_Service_VerifyInitChecks(&g_sys.motor, &g_sys.motor.sensor);
+    FOC_Service_VerifyInitChecks(&motor, &motor.sensor);
 
-    /* 启动信息输出（直写通道） */
-    {
-        char startup_info[160];
-        snprintf(startup_info, sizeof(startup_info),
-                 "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, set_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
-                 (double)g_sys.motor.mech_angle_at_elec_zero_rad,
-                 (int)g_sys.motor.direction,
-                 (int)g_sys.motor.pole_pairs,
-                 (double)g_sys.motor.vbus_voltage,
-                 (double)g_sys.motor.set_voltage,
-                 (double)(g_sys.motor.vbus_voltage > 0.0f ? g_sys.motor.set_voltage / g_sys.motor.vbus_voltage : 0.0f),
-                 (double)g_sys.motor.sensor.vbus_voltage_filtered);
-        FOC_OutputMgr_WriteDirect(&g_sys, startup_info);
-    }
+    /* 启动信息输出 */
+    FOC_App_OutputStartupInfo();
 
     FOC_App_UpdateIndicators();
 }
@@ -170,7 +162,7 @@ void FOC_App_Start(void)
 
 void FOC_App_Loop(void)
 {
-    /* Monitor 任务：调试流输出 */
+    /* Monitor 任务：调试流生成 + 入队 */
     if (g_sys.runtime.monitor_task_pending != 0U)
     {
         g_sys.runtime.monitor_task_pending = 0U;
@@ -178,21 +170,65 @@ void FOC_App_Loop(void)
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
         DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
                                        ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
-        DebugStream_Process(&g_sys.runtime.debug_stream,
-                            &g_sys.motor.sensor, &g_sys.motor,
-                            FOC_Protocol_GetTelemetry());
+        {
+            char line[DEBUG_STREAM_OSC_PAYLOAD_LEN];
+            while (DebugStream_GenerateLine(&g_sys.runtime.debug_stream,
+                                             &motor.sensor, &motor,
+                                             FOC_Protocol_GetTelemetry(),
+                                             line, sizeof(line)) != 0U)
+            {
+                FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
+            }
+        }
 #endif
     }
 
-    /* Service 任务 */
+    /* Service 任务：从 RX 队列取帧 → 协议处理 → 编排结果 */
     if (g_sys.runtime.service_task_pending != 0U)
     {
         g_sys.runtime.service_task_pending = 0U;
 
-        if (FOC_Service_Process(&g_sys.motor) != 0U)
+        while (FIFO_Count(&g_sys.runtime.rx_fifo) > 0U)
         {
-            g_sys.runtime.indicator.comm_pulse_counter = FOC_LED_COMM_PULSE_TICKS;
+            uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
+            foc_protocol_frame_result_t result;
+            uint16_t len;
+
+            (void)FIFO_Dequeue(&g_sys.runtime.rx_fifo, frame);
+            len = PROTOCOL_PARSER_RX_MAX_LEN;
+
+            result = FOC_Protocol_ProcessSingle(&motor, frame, len);
+
+            if (result.comm_active != 0U)
+            {
+                g_sys.runtime.indicator.comm_pulse_counter = FOC_LED_COMM_PULSE_TICKS;
+            }
+
+            if (result.needs_summary != 0U)
+            {
+                char summary[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+                snprintf(summary, sizeof(summary),
+                         "STATE RUN=%u FLT=%u INIT=0x%04X/0x%04X SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n",
+                         (unsigned int)motor.state.system_running,
+                         (unsigned int)motor.state.system_fault,
+                         (unsigned int)motor.state.init_check_mask,
+                         (unsigned int)motor.state.init_fail_mask,
+                         (unsigned int)motor.state.sensor_invalid_consecutive,
+                         (unsigned long)motor.state.protocol_error_count,
+                         (unsigned long)motor.state.param_error_count,
+                         (unsigned long)motor.state.control_skip_count);
+                FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)summary);
+            }
+
+            /* status 已在 ProcessSingle 内部直写，L1 无需处理 */
+            /* param_changed 由 cfg_dirty 检查处理 */
         }
+
+        /* 配置脏检查 */
+        FOC_Service_ApplyCfgDirty(&motor);
+
+        /* 阻塞动作（reinit / pending_system_action） */
+        (void)FOC_Service_Process(&motor);
     }
 
     /* 输出队列消费任务（主循环唯一阻塞点） */
@@ -206,6 +242,10 @@ void FOC_App_Loop(void)
 void FOC_App_ServiceTrigger(void)
 {
     FOC_App_UpdateIndicators();
+
+    /* ISR 上下文中轮询所有通信源，入队到 RX 队列 */
+    FOC_App_PollCommSources();
+
     g_sys.runtime.service_task_pending = 1U;
 }
 
@@ -216,10 +256,22 @@ void FOC_App_MonitorTrigger(void)
 
 void FOC_App_ControlTrigger(void)
 {
-    FOC_ControlExecutor_RunCycle(&g_sys.motor, FOC_CONTROL_DT_SEC);
+    uint8_t cycle_result;
+
+    /* L1 系统级屏障：重初始化进行中时不触发控制 */
+    if (motor.state.reinit_pending != 0U) return;
+
+    /* L1 系统级屏障：故障状态下不触发控制（ISR 会处理安全输出） */
+    if (motor.state.system_fault != 0U) return;
+
+    /* 委托 L2 执行控制循环 */
+    cycle_result = FOC_ControlExecutor_RunCycle(&motor, FOC_CONTROL_DT_SEC);
+
+    /* L1 根据执行结果更新系统状态 */
+    FOC_Service_HandleControlResult(&motor, cycle_result);
 }
 
 void FOC_App_OnPwmUpdateISR(void)
 {
-    FOC_ControlExecutor_RunISR(&g_sys.motor);
+    FOC_ControlExecutor_RunISR(&motor);
 }

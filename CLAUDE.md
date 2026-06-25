@@ -34,40 +34,35 @@ Project uses a **"core library + board instance"** organization. The core librar
 
 ### Layer architecture (strict unidirectional)
 ```
-LS → L1 → L2 → L3 → L41 → L42 → L5
+LS → L1 → L2 → L3 → L5
 ```
 
 | Layer | Location | Responsibility |
 |---|---|---|
 | `LS` | `foc/include/LS_Config/` | Symbol definitions, feature switches, init values, compile constraints, types |
-| `L1` | `foc/src/L1_Orchestration/foc_app.c` | Startup, scheduler, control entry |
-| `L2` | `foc/src/L2_Service/runtime_c*` | Frame parsing, state machine, command execution, control service bridge |
-| `L3` | `foc/src/L3_Algorithm/foc_control_c*` | Control algorithms (FOC chain entry, init/calibration, outer loop, current loop, param learn, cogging comp, SVPWM actuation) |
-| `L41` | `foc/src/L41_Math/` | Platform-independent math and LUTs |
-| `L42` | `foc/include/L42_PAL/foc_platform_api.h` | Single bridge interface from library to board drivers |
+| `L1` | `foc/src/L1_Orchestration/foc_app.c` + `foc_service_handler.c` | Startup, service task, reinit, output manager, indicators |
+| `L2/Control` | `foc/src/L2/Control/foc_ctrl_*.c` (8 modules) | Control algorithms: executor, config, init, outer loop, current loop, param learn, compensation, actuation |
+| `L2/Protocol` | `foc/src/L2/Protocol/foc_protocol_*.c` | Frame parsing, command execution (P/S/Y channels), output adaptation |
+| `L2/Runtime` | `foc/src/L2/Runtime/foc_task_scheduler.c`, `foc_debug_stream.c` | Scheduler, debug stream (independent tools) |
+| `L3` | `foc/include/L3/`, `foc/src/L3/` | Math transforms, LUT, platform API (PAL), sensor, SVPWM |
 | `L5` | `examples/.../Utilities/` | Peripheral drivers and chip library |
 
 ### Key constraints
-- `L1/L2/L3` access hardware **only** through `L42_PAL` (foc_platform_api.h)
+- `L1/L2/L3` access hardware **only** through `L3/foc_platform_api.h`
 - Public headers must never expose `gd32f30x_*` device headers
 - `L5` must not reverse-depend on `foc/src/*`
 - Configuration constants must converge in `foc_cfg_*.h` — no scattered defaults in `.c` files
 
-### L3 algorithm module naming
+### L2 Control module naming
 ```
-foc_control_c11_entry.c    — Algorithm entry (outer/inner/open-loop/compensation dispatch)
-foc_control_c12_init.c     — Initialization and calibration
-foc_control_c13_cfg_state.c — Runtime config state management
-foc_control_c21_outer_loop.c — Speed/position outer loop
-foc_control_c22_current_loop.c — Current inner loop
-foc_control_c23_motor_param_learn.c — Motor parameter learning
-foc_control_c24_compensation.c — Cogging compensation
-foc_control_c31_actuation.c — SVPWM execution output
-```
-
-### L2 runtime pipeline (fixed chain)
-```
-runtime_c1_entry → runtime_c2_frame_source → runtime_c3_runtime_fsm → runtime_c4_runtime_core → runtime_c5_output_adapter
+foc_ctrl_executor.c     — Control executor (ISR path + outer loop dispatch)
+foc_ctrl_cfg.c          — Config state management (fine-tuning, soft-switch, cogging setters)
+foc_ctrl_init.c         — Motor initialization and calibration
+foc_ctrl_outer_loop.c   — Speed and speed+angle outer loop
+foc_ctrl_current_loop.c — Current inner loop (PID + soft-switch)
+foc_ctrl_param_learn.c  — Motor parameter learning (direction/pole-pairs estimation)
+foc_ctrl_compensation.c — Cogging compensation + calibration
+foc_ctrl_actuation.c    — Electrical angle application + SVPWM drive
 ```
 
 ### Application entry
@@ -115,23 +110,21 @@ Frame format: `a<driver_id><cmd><subcmd><param>b`
 
 ## Version Control
 
-- Semantic versioning (current: `v1.6.0`, target: `v1.6.1`)
+- Semantic versioning (current: `v1.8.2`, target: `v2.0.0`)
 - Default branch: `main` (develop directly on main)
 - Push gate: only on `MINOR` or `MAJOR` version bumps
 - Document sync: `architecture.md`, `development.md`, `README.md`, `CHANGELOG.md`, `NEXT_MISSION.md`, `copilot-instructions.md` must be updated in same iteration as code changes
 
-## Current Mission (v1.6.0 → v1.6.1)
+## Current Mission
 
-1. Parameter calibration re-init integration into protocol command system
-2. State machine binary states → bitfield optimization (evaluate benefit)
-3. Long term: sensorless FOC, host tool implementation
+See `NEXT_MISSION.md` for current milestone plan.
 
 ## Key Files Reference
 
 | File | Purpose |
 |---|---|
-| `foc/include/L42_PAL/foc_platform_api.h` | Platform adaptation API (must implement for new boards) |
-| `foc/port/foc_platform_api_empty.c` | Empty reference implementation for porting |
+| `foc/include/L3/foc_platform_api.h` | Platform adaptation API (must implement for new boards) |
+| `foc/src/L3/foc_platform_api_empty.c` does not exist; see `examples/.../foc_platform_api.c` | Empty reference implementation for porting |
 | `foc/include/LS_Config/foc_cfg_feature_switches.h` | All feature/trim switches |
 | `foc/include/LS_Config/foc_cfg_init_values.h` | Default init values |
 | `foc/include/LS_Config/foc_compile_limits.h` | Compile-time static assertions |

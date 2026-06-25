@@ -2,16 +2,18 @@
 
 #include <stdio.h>
 
+#include "L1_Orchestration/foc_output_mgr.h"
 #include "L2/Control/foc_ctrl_executor.h"
 #include "L2/Control/foc_ctrl_cfg.h"
 #include "L2/Control/foc_ctrl_init.h"
 #include "L2/Control/foc_ctrl_compensation.h"
 #include "L2/Control/foc_ctrl_current_loop.h"
+#include "L2/Protocol/foc_protocol_handler.h"
+#include "L2/Runtime/foc_runtime_types.h"
 #include "L3/foc_svpwm.h"
 #include "L3/foc_sensor.h"
 #include "L3/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
-#include "L2/Protocol/foc_protocol_handler.h"
 
 /* ================================================================
  * 电机硬件初始化
@@ -39,6 +41,9 @@ void FOC_Service_ReInitMotor(foc_motor_t *motor)
 {
     FOC_Platform_WriteDebugText("\r\n=== ReInitMotor started ===\r\n");
 
+    /* 暂停运行时中断（模拟启动时序，使阻塞标定不被 ISR/ADC 干扰） */
+    FOC_Platform_SetControlRuntimeInterrupts(0U);
+
     /* 停止快速电流环 + 开环归零 */
     FOC_ControlExecutor_Stop(motor);
     FOC_CurrentControlOpenLoopStep(motor, 0.0f, 0.0f,
@@ -48,11 +53,15 @@ void FOC_Service_ReInitMotor(foc_motor_t *motor)
     /* 设置重初始化标志（ISR 检测到后会提前退出） */
     motor->state.reinit_pending = 1U;
 
-    /* 重新初始化硬件+控制 */
+    /* 重新初始化硬件+控制（内含阻塞标定，此时无 ISR 打扰） */
     FOC_Service_InitMotor(motor);
 
-    /* 清除重初始化标志 */
+    /* 清除重初始化标志 + 阻止 ISR 在首周期前运行 */
     motor->state.reinit_pending = 0U;
+    motor->state.current_loop_ready = 0U;
+
+    /* 恢复运行时中断 */
+    FOC_Platform_SetControlRuntimeInterrupts(1U);
 
     /* 日志输出 */
     {
@@ -145,12 +154,92 @@ void FOC_Service_VerifyInitChecks(foc_motor_t *motor, const sensor_data_t *senso
 }
 
 /* ================================================================
- * Service 任务：协议处理 + 系统命令
+ * 配置脏检查提交
+ * ================================================================ */
+
+void FOC_Service_ApplyCfgDirty(foc_motor_t *motor)
+{
+    if (motor->state.cfg_dirty != 0U)
+    {
+        FOC_Control_ApplyConfig(motor);
+        FOC_Protocol_Commit(motor);
+    }
+}
+
+/* ================================================================
+ * 控制循环结果处理
+ * ================================================================ */
+
+void FOC_Service_HandleControlResult(foc_motor_t *motor, uint8_t cycle_result)
+{
+    switch (cycle_result)
+    {
+    case FOC_CYCLE_OK:
+        motor->state.system_running = 1U;
+        break;
+
+    case FOC_CYCLE_FAULT_SENSOR:
+        motor->state.system_fault = 1U;
+        motor->state.system_running = 0U;
+        FOC_OutputMgr_WriteDirect("sensor invalid threshold reached\r\n");
+        break;
+
+    case FOC_CYCLE_FAULT_UVLO:
+        motor->state.system_fault = 1U;
+        motor->state.system_running = 0U;
+        FOC_ControlExecutor_SafeOutput(motor);
+        break;
+
+    default:
+        break;
+    }
+}
+
+/* ================================================================
+ * LED 指示器更新
+ * ================================================================ */
+
+void FOC_Service_UpdateIndicators(foc_motor_t *motor, foc_runtime_ctx_t *runtime)
+{
+    uint8_t led_run_on = 0U;
+    uint8_t led_fault_on = 0U;
+
+    if (motor->state.system_fault != 0U)
+    {
+        led_fault_on = 1U;
+        runtime->indicator.led_run_blink_counter = 0U;
+    }
+    else if (motor->state.system_running != 0U)
+    {
+        runtime->indicator.led_run_blink_counter++;
+        if (runtime->indicator.led_run_blink_counter >= (2U * FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS))
+        {
+            runtime->indicator.led_run_blink_counter = 0U;
+        }
+        led_run_on = (runtime->indicator.led_run_blink_counter < FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS) ? 1U : 0U;
+    }
+
+    FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, led_run_on);
+    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, led_fault_on);
+
+    if (runtime->indicator.comm_pulse_counter > 0U)
+    {
+        FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 1U);
+        runtime->indicator.comm_pulse_counter--;
+    }
+    else
+    {
+        FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 0U);
+    }
+}
+
+/* ================================================================
+ * Service 任务：仅处理阻塞动作（协议处理已由 L1 主循环编排）
  * ================================================================ */
 
 uint8_t FOC_Service_Process(foc_motor_t *motor)
 {
-    uint8_t comm_active = 0U;
+    uint8_t activity = 0U;
 
     if (motor == 0) return 0U;
 
@@ -159,17 +248,7 @@ uint8_t FOC_Service_Process(foc_motor_t *motor)
     {
         FOC_Service_ReInitMotor(motor);
         FOC_Control_ApplyConfig(motor);
-    }
-
-    /* 协议处理：读取帧→解析→修改 motor */
-    comm_active = FOC_Protocol_Process(motor, 1U);
-
-    /* 配置脏检查：协议修改参数后应用 */
-    if (motor->state.cfg_dirty != 0U)
-    {
-        FOC_Control_ApplyConfig(motor);
-        Sensor_ADCSampleTimeOffset(motor->sensor_sample_offset_percent);
-        FOC_Protocol_Commit(motor);
+        activity = 1U;
     }
 
     /* 系统命令处理（Y通道） */
@@ -196,6 +275,7 @@ uint8_t FOC_Service_Process(foc_motor_t *motor)
             break;
         }
         motor->state.pending_system_action = FOC_SYSACTION_NONE;
+        activity = 1U;
     }
 
     /* 齿槽标定数据导出 */
@@ -204,13 +284,15 @@ uint8_t FOC_Service_Process(foc_motor_t *motor)
     {
         motor->cogging_calib_state.request_dump = 0U;
         FOC_CoggingCalibDumpTable(motor);
+        activity = 1U;
     }
     if (motor->cogging_calib_state.request_export != 0U)
     {
         motor->cogging_calib_state.request_export = 0U;
         FOC_CoggingCalibExportTable(motor);
+        activity = 1U;
     }
 #endif
 
-    return comm_active;
+    return activity;
 }

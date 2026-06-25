@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "L1_Orchestration/foc_output_mgr.h"
 #include "L2/Control/foc_ctrl_current_loop.h"
 #include "L2/Control/foc_ctrl_param_learn.h"
 #include "L2/Control/foc_ctrl_compensation.h"
@@ -10,6 +11,8 @@
 #include "L3/foc_math_lut.h"
 #include "L3/foc_math_transforms.h"
 #include "L3/foc_platform_api.h"
+#include "L3/foc_sensor.h"
+#include "L3/foc_svpwm.h"
 #include "LS_Config/foc_config.h"
 #include "LS_Config/foc_cogging_table.h"
 #include "L2/Control/foc_ctrl_cfg.h"
@@ -69,7 +72,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             motor->mech_angle_accum_rad = 0.0f;
             motor->mech_angle_prev_rad = 0.0f;
             motor->mech_angle_prev_valid = 0U;
-            FOC_Platform_WriteDebugText("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
+            FOC_OutputMgr_WriteDirect("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
         }
     }
     else
@@ -101,7 +104,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             {
                 motor->pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
             }
-            FOC_Platform_WriteDebugText("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
+            FOC_OutputMgr_WriteDirect("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
         }
     }
 
@@ -149,17 +152,17 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mech_angle_prev_valid = 1U;
     motor->direction = direction;
 
-    motor->alpha = 0.0f;
-    motor->beta = 0.0f;
-    motor->phase_a = 0.0f;
-    motor->phase_b = 0.0f;
-    motor->phase_c = 0.0f;
+    motor->alpha_beta.alpha = 0.0f;
+    motor->alpha_beta.beta = 0.0f;
+    motor->alpha_beta.phase_a = 0.0f;
+    motor->alpha_beta.phase_b = 0.0f;
+    motor->alpha_beta.phase_c = 0.0f;
     motor->svpwm.output.duty_a = 0.0f;
     motor->svpwm.output.duty_b = 0.0f;
     motor->svpwm.output.duty_c = 0.0f;
     motor->svpwm.output.sector = 0U;
 
-    /* 初始化运行时状态（per-motor） */
+    /* init per-motor runtime state */
     motor->state.system_running = 0U;
     motor->state.system_fault = 0U;
     motor->state.reinit_pending = 0U;
@@ -176,7 +179,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->state.control_skip_count = 0U;
     motor->state.current_loop_ready = 0U;
 
-    /* 初始化控制配置默认值（直接写顶层字段） */
+    /* init control config defaults (write top-level fields directly) */
     motor->target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
     motor->angle_position_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
     motor->speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
@@ -207,17 +210,17 @@ void FOC_MotorInit(foc_motor_t *motor,
 #endif
 
     FOC_ControlConfigResetDefault(motor);
-    /* 新 per-motor 状态字段初始化 */
-    motor->prev_control_mode = 0U;
-    motor->prev_control_mode_valid = 0U;
-    motor->prev_control_mode_check = 0xFFU;
-    motor->speed_err_accum_rad = 0.0f;
-    motor->prev_mech_signed_rad = 0.0f;
-    motor->speed_state_valid = 0U;
-    motor->svpwm_lpf_state_valid = 0U;
-    motor->svpwm_lpf_phase_a = 0.0f;
-    motor->svpwm_lpf_phase_b = 0.0f;
-    motor->svpwm_lpf_phase_c = 0.0f;
+    /* per-motor sub-struct init */
+    motor->mode_transition.prev_control_mode = 0U;
+    motor->mode_transition.prev_control_mode_valid = 0U;
+    motor->mode_transition.prev_control_mode_check = 0xFFU;
+    motor->outer_loop_state.speed_err_accum_rad = 0.0f;
+    motor->outer_loop_state.prev_mech_signed_rad = 0.0f;
+    motor->outer_loop_state.speed_state_valid = 0U;
+    motor->svpwm_lpf.valid = 0U;
+    motor->svpwm_lpf.phase_a = 0.0f;
+    motor->svpwm_lpf.phase_b = 0.0f;
+    motor->svpwm_lpf.phase_c = 0.0f;
 
     FOC_ControlExecutor_Init(motor);
 
@@ -249,11 +252,11 @@ void FOC_MotorInit(foc_motor_t *motor,
 
         if (table_defined != 0U)
         {
-            FOC_Platform_WriteDebugText("init.cogging: static table defined, compensation ready\r\n");
+            FOC_OutputMgr_WriteDirect("init.cogging: static table defined, compensation ready\r\n");
         }
         else
         {
-            FOC_Platform_WriteDebugText("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
+            FOC_OutputMgr_WriteDirect("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
         }
     }
 #endif
@@ -268,4 +271,20 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ecycle_accum_b = 0.0f;
     motor->ecycle_offset_valid = 0U;
 #endif
+}
+
+/* L2 硬件初始化收口：封装 Sensor/SVPWM/ControlExecutor 初始化序列 */
+void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+
+    Sensor_InitSnapshot(&motor->sensor);
+    Sensor_InitSnapshot(&motor->sensor_fast);
+    Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
+    Sensor_SetZeroOffset(motor);
+    Sensor_ReadAll(motor);
+
+    SVPWM_Init(motor, FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
+
+    FOC_ControlExecutor_Init(motor);
 }

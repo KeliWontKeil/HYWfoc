@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "L2/Control/foc_ctrl_compensation.h"
+#include "L3/foc_sensor.h"
 #include "LS_Config/foc_config.h"
 
 static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)

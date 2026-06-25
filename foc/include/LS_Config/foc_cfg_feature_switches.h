@@ -38,8 +38,8 @@
 /* Initialization and calibration feature switches. */
 #define FOC_INIT_CALIBRATION_ENABLE FOC_CFG_ENABLE
 
-#define FOC_COGGING_COMP_ENABLE FOC_CFG_DISABLE
-#define FOC_COGGING_CALIB_ENABLE FOC_CFG_DISABLE
+#define FOC_COGGING_COMP_ENABLE FOC_CFG_ENABLE
+#define FOC_COGGING_CALIB_ENABLE FOC_CFG_ENABLE
 
 /*
  * Protocol command trimming switches.

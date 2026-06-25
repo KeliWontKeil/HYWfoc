@@ -189,6 +189,19 @@
 #define FOC_COGGING_LUT_IQ_LSB_A 0.005f
 #define FOC_COGGING_COMP_IQ_LIMIT_A 0.50f
 
+/* Queue configuration (can be overridden before including LS_Config). */
+#define FOC_RX_QUEUE_DEPTH          4U
+#define FOC_OUTPUT_QUEUE_DEPTH      8U
+#define FOC_OUTPUT_FRAME_MAX_LEN    96U
+#define FOC_OUTPUT_MAX_PER_CYCLE    4U
+
+/* RX polling: max frames to enqueue per ServiceTrigger call.
+ * 0 = auto (poll all 4 comm sources, one frame per source at most);
+ * 1..4 = fixed max frames per trigger (round-robin across sources);
+ * larger values allow higher throughput when service rate is low.
+ */
+#define FOC_COMM_MAX_FRAMES_PER_SERVICE  0U
+
 /*LED initialization defaults. */
 #define FOC_LED_RUN_INDEX 2U
 #define FOC_LED_COMM_INDEX 1U

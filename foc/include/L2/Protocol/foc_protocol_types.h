@@ -26,4 +26,19 @@ typedef enum {
     PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH
 } protocol_core_frame_parse_result_t;
 
+/*
+ * 单帧处理结果：
+ * 协议层解析并执行一帧数据后，告诉 L1 需要做哪些后续动作。
+ * comm_active   = 1: 当前帧有通信活动（用于 LED 指示）
+ * needs_status  = 1: 状态码已在协议内部直写完成
+ * needs_summary = 1: 请求 L1 生成 RUNTIME_SUMMARY 并发送
+ * param_changed = 1: 参数被修改，需要 L1 调用 ApplyConfig
+ */
+typedef struct {
+    uint8_t comm_active   : 1;
+    uint8_t needs_status  : 1;
+    uint8_t needs_summary : 1;
+    uint8_t param_changed : 1;
+} foc_protocol_frame_result_t;
+
 #endif /* FOC_PROTOCOL_TYPES_H */

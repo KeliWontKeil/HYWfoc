@@ -198,9 +198,9 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
 
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
     *iq_out = Math_FirstOrderLpf(*iq_out,
-                                  &motor->iq_lpf_state,
+                                  &motor->iq_lpf.state,
                                   FOC_CURRENT_LOOP_IQ_LPF_ALPHA,
-                                  &motor->iq_lpf_state_valid);
+                                  &motor->iq_lpf.valid);
 #endif
 }
 

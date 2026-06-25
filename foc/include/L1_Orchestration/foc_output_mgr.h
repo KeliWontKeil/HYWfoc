@@ -3,27 +3,26 @@
 
 #include <stdint.h>
 
+#include "LS_Config/foc_config.h"
 #include "L1_Orchestration/foc_system_types.h"
 
 /*
  * ================================================================
- * 双通道输出管理器
+ * 输出管理器（L1）
  *
- * 队列类型 foc_output_queue_t 定义在 foc_system_types.h 中。
+ * 队列操作（WriteQueue/FlushQueue）内部使用 L2/Runtime FIFO 模块。
+ * L2 层不再调用本模块函数，所有输出数据通过返回值/回调由 L1 编排。
  * ================================================================
  */
-
-#ifndef FOC_OUTPUT_MAX_PER_CYCLE
-#define FOC_OUTPUT_MAX_PER_CYCLE    4U
-#endif
 
 void FOC_OutputMgr_Init(foc_system_t *sys);
 void FOC_OutputMgr_FlushQueue(foc_system_t *sys);
 uint8_t FOC_OutputMgr_GetOverflowCount(const foc_system_t *sys);
 
-/* 无句柄版本（供 L2 调用，内部通过全局队列指针访问） */
+/* 直写（无缓冲，通过 L3 平台 API 立即输出） */
 void FOC_OutputMgr_WriteDirect(const char *text);
-void FOC_OutputMgr_WriteQueue(const char *text);
+
+/* 写状态字节（直写） */
 void FOC_OutputMgr_WriteStatus(uint8_t status);
 
 #endif /* FOC_OUTPUT_MGR_H */

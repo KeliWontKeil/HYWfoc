@@ -37,11 +37,12 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
  * =====================================================================
  */
 
-/* 1 if calibration in progress (safe inline for all build configs). */
+/* 1 if calibration in progress or start requested (safe inline for all build configs). */
 static inline uint8_t FOC_CoggingCalibIsBusy(const foc_motor_t *motor)
 {
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    return motor->cogging_calib_state.in_progress;
+    return (motor->cogging_calib_state.in_progress != 0U) ||
+           (motor->cogging_calib_state.request_start != 0U);
 #else
     (void)motor;
     return 0U;

@@ -27,18 +27,37 @@ Project File Date:  06/24/2026
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 6 (build 750)', folder: 'D:\Keil_v5_ARM\ARM\ARMCC\Bin'
 Build target 'GD32F30X_CL'
+compiling foc_sensor.c...
+compiling foc_output_mgr.c...
+..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c(80): warning:  #1-D: last line of file ends without a newline
+  }
+..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c: 1 warning, 0 errors
+compiling foc_task_scheduler.c...
+..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c(103): warning:  #1-D: last line of file ends without a newline
+  }
+..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c: 1 warning, 0 errors
+compiling foc_debug_stream.c...
+..\..\..\foc\src\L2\Runtime\foc_debug_stream.c(329): warning:  #1-D: last line of file ends without a newline
+  }
+..\..\..\foc\src\L2\Runtime\foc_debug_stream.c: 1 warning, 0 errors
+compiling foc_ctrl_executor.c...
+..\..\..\foc\include\L2/Control/foc_ctrl_executor.h(40): warning:  #1-D: last line of file ends without a newline
+  																			
+..\..\..\foc\include\L3/foc_svpwm.h(41): warning:  #1-D: last line of file ends without a newline
+  													 
+..\..\..\foc\src\L2\Control\foc_ctrl_executor.c(330): warning:  #1-D: last line of file ends without a newline
+  }
+..\..\..\foc\src\L2\Control\foc_ctrl_executor.c: 3 warnings, 0 errors
+compiling foc_svpwm.c...
+..\..\..\foc\include\L3/foc_svpwm.h(41): warning:  #1-D: last line of file ends without a newline
+  													 
+..\..\..\foc\src\L3\foc_svpwm.c(361): warning:  #1-D: last line of file ends without a newline
+  }
+..\..\..\foc\src\L3\foc_svpwm.c: 2 warnings, 0 errors
 linking...
-.\output\Project.axf: Error: L6218E: Undefined symbol ControlScheduler_GetExecutionCycles (referred from foc_app.o).
-.\output\Project.axf: Error: L6218E: Undefined symbol ControlScheduler_Init (referred from foc_app.o).
-.\output\Project.axf: Error: L6218E: Undefined symbol ControlScheduler_RunTick (referred from foc_app.o).
-.\output\Project.axf: Error: L6218E: Undefined symbol ControlScheduler_SetCallback (referred from foc_app.o).
-.\output\Project.axf: Error: L6218E: Undefined symbol DebugStream_Init (referred from foc_app.o).
-.\output\Project.axf: Error: L6218E: Undefined symbol DebugStream_Process (referred from foc_app.o).
-.\output\Project.axf: Error: L6218E: Undefined symbol DebugStream_SetExecutionCycles (referred from foc_app.o).
-Not enough information to list image symbols.
-Not enough information to list load addresses in the image map.
-Finished: 2 information, 0 warning and 7 error messages.
-".\output\Project.axf" - 7 Error(s), 0 Warning(s).
+Program Size: Code=45754 RO-data=22554 RW-data=84 ZI-data=7828  
+FromELF: creating hex file...
+".\output\Project.axf" - 0 Error(s), 8 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -61,8 +80,7 @@ Package Vendor: GigaDevice
 <h2>Collection of Component Files used:</h2>
 
    * Component: ARM::CMSIS:CORE:5.2.0
-Target not created.
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

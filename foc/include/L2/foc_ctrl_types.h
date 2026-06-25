@@ -6,7 +6,44 @@
 #include "LS_Config/foc_config.h"
 #include "L3/foc_math_types.h"
 
-/* SVPWM output snapshot type. */
+/* ========== Alpha-beta / three-phase voltage state ========== */
+typedef struct {
+    float alpha;
+    float beta;
+    float phase_a;
+    float phase_b;
+    float phase_c;
+} foc_alpha_beta_phase_t;
+
+/* ========== Outer-loop runtime state ========== */
+typedef struct {
+    float  speed_err_accum_rad;
+    float  prev_mech_signed_rad;
+    uint8_t speed_state_valid;
+} foc_outer_loop_state_t;
+
+/* ========== Control mode transition tracking ========== */
+typedef struct {
+    uint8_t prev_control_mode;
+    uint8_t prev_control_mode_valid;
+    uint8_t prev_control_mode_check;
+} foc_mode_transition_t;
+
+/* ========== SVPWM LPF filter state ========== */
+typedef struct {
+    uint8_t  valid;
+    float    phase_a;
+    float    phase_b;
+    float    phase_c;
+} foc_svpwm_lpf_state_t;
+
+/* ========== Iq LPF filter state ========== */
+typedef struct {
+    uint8_t  valid;
+    float    state;
+} foc_iq_lpf_state_t;
+
+/* ========== SVPWM output snapshot type ========== */
 typedef struct {
     uint8_t sector;
     float duty_a;
@@ -130,9 +167,8 @@ typedef enum {
 
 /* ========== Motor aggregate state ========== */
 /*
- * foc_motor_cfg_t 和 foc_control_runtime_config_t 已消除。
- * 所有配置字段直接作为 foc_motor_t 顶层字段，协议 WriteParam
- * 直接写目标字段，cfg_dirty 仅标记副作用需求。
+ * 所有配置字段直接作为 foc_motor_t 顶层字段。
+ * 运行时字段按功能块聚合为子结构体。
  */
 typedef struct {
     /* === 运行时状态 === */
@@ -167,17 +203,13 @@ typedef struct {
     uint8_t mech_angle_prev_valid;
     int32_t mech_turn_count;
 
-    /* Alpha-beta, three-phase voltages. */
-    float alpha;
-    float beta;
-    float phase_a;
-    float phase_b;
-    float phase_c;
+    /* Alpha-beta, three-phase voltages (子结构体). */
+    foc_alpha_beta_phase_t alpha_beta;
 
     /* SVPWM 插值引擎状态 */
     svpwm_interp_state_t svpwm;
 
-    /* ====== 配置字段（原 cfg + runtime_cfg，直接写入 ====== */
+    /* ====== 配置字段（原 cfg + runtime_cfg，直接写入） ====== */
 
     /* 控制目标参数 */
     float target_angle_rad;
@@ -242,25 +274,17 @@ typedef struct {
     uint8_t  fast_current_div_counter;
 
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
-    uint8_t  iq_lpf_state_valid;
-    float    iq_lpf_state;
+    foc_iq_lpf_state_t iq_lpf;
 #endif
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     uint8_t  prev_softswitch_active_mode;
 #endif
 
-    /* 搬迁的 per-motor 状态 */
-    uint8_t prev_control_mode;
-    uint8_t prev_control_mode_valid;
-    uint8_t prev_control_mode_check;
-    float   speed_err_accum_rad;
-    float   prev_mech_signed_rad;
-    uint8_t speed_state_valid;
-    uint8_t svpwm_lpf_state_valid;
-    float   svpwm_lpf_phase_a;
-    float   svpwm_lpf_phase_b;
-    float   svpwm_lpf_phase_c;
+    /* 按功能块聚合的子结构体 */
+    foc_outer_loop_state_t outer_loop_state;
+    foc_mode_transition_t  mode_transition;
+    foc_svpwm_lpf_state_t  svpwm_lpf;
 
 } foc_motor_t;
 

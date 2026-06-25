@@ -87,6 +87,7 @@ virtualFolder:
         - path: ../../../foc/src/L3/foc_sensor.c
         - path: ../../../foc/src/L3/foc_svpwm.c
         - path: ../../../foc/src/L1_Orchestration/foc_output_mgr.c
+        - path: ../../../foc/src/L2/Runtime/foc_queue.c
       folders: []
 dependenceList: []
 outDir: build

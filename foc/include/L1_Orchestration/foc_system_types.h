@@ -3,26 +3,12 @@
 
 #include <stdint.h>
 
+#include "LS_Config/foc_config.h"
 #include "L2/Runtime/foc_scheduler_types.h"
+#include "L2/Runtime/foc_queue.h"
+#include "L2/Runtime/foc_debug_stream.h"
 #include "L2/Protocol/foc_snapshot_types.h"
 #include "L2/foc_ctrl_types.h"
-
-#ifndef FOC_OUTPUT_QUEUE_DEPTH
-#define FOC_OUTPUT_QUEUE_DEPTH      8U
-#endif
-
-#ifndef FOC_OUTPUT_FRAME_MAX_LEN
-#define FOC_OUTPUT_FRAME_MAX_LEN    96U
-#endif
-
-/* ========== 输出队列类型 ========== */
-typedef struct {
-    char buffer[FOC_OUTPUT_QUEUE_DEPTH][FOC_OUTPUT_FRAME_MAX_LEN];
-    uint8_t write_idx;
-    uint8_t read_idx;
-    uint8_t count;
-    uint8_t overflow_count;
-} foc_output_queue_t;
 
 /*
  * ================================================================
@@ -50,21 +36,6 @@ typedef struct {
 
 /*
  * ================================================================
- * 调试流状态
- * ================================================================
- */
-typedef struct {
-    uint16_t semantic_report_counter;
-    uint16_t osc_report_counter;
-    uint16_t semantic_last_freq_hz;
-    uint16_t osc_last_freq_hz;
-    uint16_t semantic_period_ticks;
-    uint16_t osc_period_ticks;
-    uint32_t last_exec_cycles;
-} debug_stream_state_t;
-
-/*
- * ================================================================
  * 系统运行时状态（每次 reinit 重置）
  *
  * 调度器、调试流、指示器等运行时可变状态。
@@ -84,12 +55,19 @@ typedef struct {
     /* 指示器 */
     struct {
         uint16_t comm_pulse_counter;
-        uint8_t  led_run_on;
         uint16_t led_run_blink_counter;
     } indicator;
 
-    /* 输出队列 */
-    foc_output_queue_t output_queue;
+    /* 通信轮询公平调度：下一次轮询起始源索引（round-robin 偏移） */
+    uint8_t comm_source_rr;
+
+    /* RX 帧队列：ISR 入队帧数据，主循环出队解析 */
+    fifo_queue_t rx_fifo;
+    uint8_t rx_fifo_buffer[FOC_RX_QUEUE_DEPTH][PROTOCOL_PARSER_RX_MAX_LEN];
+
+    /* TX 文本队列：主循环入队调试/协议行，主循环同周期出队发送 */
+    fifo_queue_t tx_fifo;
+    uint8_t tx_fifo_buffer[FOC_OUTPUT_QUEUE_DEPTH][FOC_OUTPUT_FRAME_MAX_LEN];
 } foc_runtime_ctx_t;
 
 /*
@@ -100,7 +78,6 @@ typedef struct {
 typedef struct {
     foc_system_cfg_t cfg;        /* 持久配置 */
     foc_runtime_ctx_t runtime;   /* 运行时状态 */
-    foc_motor_t motor;           /* 电机实例 */
 } foc_system_t;
 
 #endif /* FOC_SYSTEM_TYPES_H */

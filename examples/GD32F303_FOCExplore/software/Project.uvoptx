@@ -1042,7 +1042,7 @@
       <GroupNumber>6</GroupNumber>
       <FileNumber>41</FileNumber>
       <FileType>1</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\foc\src\L1_Orchestration\foc_app.c</PathWithFileName>
@@ -1057,6 +1057,18 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</PathWithFileName>
+      <FilenameWithoutPath>foc_output_mgr.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>43</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</PathWithFileName>
       <FilenameWithoutPath>foc_service_handler.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
@@ -1064,7 +1076,7 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>43</FileNumber>
+      <FileNumber>44</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1076,7 +1088,7 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>44</FileNumber>
+      <FileNumber>45</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1088,7 +1100,7 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>45</FileNumber>
+      <FileNumber>46</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1100,7 +1112,7 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>46</FileNumber>
+      <FileNumber>47</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1112,25 +1124,13 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>47</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\foc\src\L2\Control\foc_ctrl_entry.c</PathWithFileName>
-      <FilenameWithoutPath>foc_ctrl_entry.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-    <File>
-      <GroupNumber>6</GroupNumber>
       <FileNumber>48</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\foc\src\L2\Control\foc_ctrl_fast.c</PathWithFileName>
-      <FilenameWithoutPath>foc_ctrl_fast.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</PathWithFileName>
+      <FilenameWithoutPath>foc_ctrl_executor.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -1177,30 +1177,6 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\foc\src\L2\Control\foc_sensor.c</PathWithFileName>
-      <FilenameWithoutPath>foc_sensor.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-    <File>
-      <GroupNumber>6</GroupNumber>
-      <FileNumber>53</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\foc\src\L2\Control\foc_svpwm.c</PathWithFileName>
-      <FilenameWithoutPath>foc_svpwm.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-    <File>
-      <GroupNumber>6</GroupNumber>
-      <FileNumber>54</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</PathWithFileName>
       <FilenameWithoutPath>foc_protocol_handler.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
@@ -1208,7 +1184,7 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>55</FileNumber>
+      <FileNumber>53</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -1220,13 +1196,37 @@
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
-      <FileNumber>56</FileNumber>
+      <FileNumber>54</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</PathWithFileName>
       <FilenameWithoutPath>foc_protocol_parser.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>55</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</PathWithFileName>
+      <FilenameWithoutPath>foc_debug_stream.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>56</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</PathWithFileName>
+      <FilenameWithoutPath>foc_task_scheduler.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -1239,6 +1239,30 @@
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\foc\src\L3\foc_math_transforms.c</PathWithFileName>
       <FilenameWithoutPath>foc_math_transforms.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>58</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\foc\src\L3\foc_sensor.c</PathWithFileName>
+      <FilenameWithoutPath>foc_sensor.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>59</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\foc\src\L3\foc_svpwm.c</PathWithFileName>
+      <FilenameWithoutPath>foc_svpwm.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

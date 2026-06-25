@@ -24,16 +24,21 @@
 
 ### 2. 实施
 
-1. 遵循分层约束：`L1/L2/L3 -> L42_PAL -> L5`。
+1. 遵循分层约束：`LS → L1 → L2 → L3 → L5`（L2 下分 Control/Protocol/Runtime，各块间不直接调用）。
 2. 默认在 `main` 分支工作，除非用户明确要求新分支。
 3. 所有可配置参数先进入 `foc/include/LS_Config/foc_cfg_*.h`，再在 `.c` 中使用。
-4. L2 运行时主链保持 `C1->C2->C3->C4->C5` 单向依赖。
-5. L3 控制链采用当前命名口径：`C11/C12/C13/C21/C22/C23/C24/C31`。
+4. 运行时主循环由 L1 编排，三个任务段顺序无关，无固定管线链：
+   - Monitor 段：调试流生成器逐行输出 → 入 TX 队列
+   - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列、配置脏检查）
+   - TX 消费段：TX 队列出队 → 平台发送
+5. L2/Control 模块命名：`foc_ctrl_executor/cfg/init/outer_loop/current_loop/param_learn/compensation/actuation`。
+6. L2/Runtime 新增工具模块（如队列）需同步更新 `builder.params`。
+7. L2 层不持有任何队列实例，队列存储由 L1 在 `foc_runtime_ctx_t` 中分配。
 
 ### 3. 验证
 
 1. 构建必须 `0 error`，并且不得新增 warning。
-2. 验证 include 边界、接口签名和跨层依赖。
+2. 验证 include 边界、接口签名和跨层依赖（特别是 L2 不得包含 `L1_Orchestration/` 头文件）。
 3. 涉及行为变化时，补充实例级硬件验证（命令链路、状态反馈、关键控制路径）。
 4. 若会话上下文被压缩或切换，继续改动前需重读关键文件。
 
@@ -43,7 +48,7 @@
 2. 流程或协作变化：更新 `copilot-instructions.md` 与 `.github/*.md`。
 3. 版本基线与任务阶段变化：更新 `NEXT_MISSION.md` 与 `CHANGELOG.md`。
 4. 协议命令、裁剪开关、默认值变化：更新 `docs/protocol-parameters-bilingual.md` 与实例协议文档。
-5. 不新增“平行事实源”文档，优先更新已有主文档。
+5. 不新增"平行事实源"文档，优先更新已有主文档。
 
 ## P0 可维护性验收
 
@@ -53,6 +58,7 @@
 2. `L1/L2/L3` 不直接依赖设备驱动头。
 3. 宏裁剪链路一致：声明、定义、调用在同一条件编译语义下。
 4. 关键约束可映射到可执行检查动作（检索/构建/日志）。
+5. L2 层不持有队列实例，不包含 L1 头文件。
 
 ### 拒收条件
 
@@ -73,7 +79,7 @@
 2. 手动调用 `unify_builder.exe` 可能需要设置 `DOTNET_ROLL_FORWARD=Major`。
 3. 若出现 `Not found any source files`，优先检查 `builder.params` 的 `sourceList` 路径。
 4. `get_errors` 可能残留过期诊断，最终以真实编译/链接结果为准。
-5. 功能宏关闭后，务必同步收口受控函数的声明/定义/调用，避免“裁掉定义但未裁掉调用”。
+5. 功能宏关闭后，务必同步收口受控函数的声明/定义/调用，避免"裁掉定义但未裁掉调用"。
 
 ## 质量门禁
 

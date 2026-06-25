@@ -56,6 +56,7 @@
         "../../../foc/src/L2/Protocol/foc_protocol_output.c",
         "../../../foc/src/L2/Protocol/foc_protocol_parser.c",
         "../../../foc/src/L2/Runtime/foc_debug_stream.c",
+        "../../../foc/src/L2/Runtime/foc_queue.c",
         "../../../foc/src/L2/Runtime/foc_task_scheduler.c",
         "../../../foc/src/L3/foc_math_transforms.c",
         "../../../foc/src/L3/foc_sensor.c",
