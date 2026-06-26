@@ -1,4 +1,4 @@
-﻿#ifndef FOC_SVPWM_H
+#ifndef FOC_SVPWM_H
 
 #define FOC_SVPWM_H
 
@@ -38,4 +38,3 @@ void SVPWM_InterpolationISR(foc_motor_t *motor);
 const svpwm_output_t* SVPWM_GetOutput(const foc_motor_t *motor);
 
 #endif /* FOC_SVPWM_H */
-													 

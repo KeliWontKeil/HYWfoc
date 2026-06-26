@@ -8,8 +8,8 @@
 
 - 当前项目状态：单电机有感 FOC 驱动库（稳定版本）
 - 硬件已更新
-- 当前稳定基线：v1.8.3
-- 下一活跃目标版本：v1.9.0
+- 当前稳定基线：v1.9.1
+- 下一活跃目标版本：v1.9.2
 
 ## 何意味？（这个项目是什么）
 
@@ -45,7 +45,7 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 - 探索 AI 辅助嵌入式开发的新工作流。
 
 支持：
-- 高度可配置的大量宏定义参数/代码裁剪
+- 高度可配置的大量宏定义代码裁剪和参数配置
 - 外部角度传感器采样（慢速/快速）
 - 同步电流采样，支持两相/三相电流采样及相应滤波/漂移抑制措施
 - 数学变换链（Clarke / Park / 反变换）
@@ -162,7 +162,7 @@ FOC_VSCODE/
 - [foc_core/include/L3_Hal/foc_platform_api.h](foc_core/include/L3_Hal/foc_platform_api.h)：所有需要实现的相关API
 - [examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c](examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c)：具体API实现的一个工程实例
 
-#### 主包主包，太麻烦了怎么办？
+#### 还是太麻烦了怎么办？
 全~都~交给AI吧!从外设初始化到 API 实现，只需验证硬件行为即可!（而且效果应该还不错，我自己写GD32标准库的初始化就是AI干的，但是一定要让他做好计划并审查，不然干出来是一坨）
 
 ---

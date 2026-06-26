@@ -1,6 +1,7 @@
-﻿#include "L1_Orchestration/foc_app.h"
+#include "L1_Orchestration/foc_app.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "L1_Orchestration/foc_system_types.h"
 #include "L1_Orchestration/foc_service_handler.h"
@@ -25,14 +26,23 @@
 static foc_system_t g_sys;
 static foc_motor_t motor;
 
+/* 示波器行累积缓冲区（主循环用） */
+static char g_osc_collect_buf[DEBUG_STREAM_OSC_PAYLOAD_LEN];
+static uint16_t g_osc_collect_offset;
+
 /* ================================================================
  * 内部工具
  * ================================================================ */
 
-/* 调度器 tick 回调桥接（C 函数指针，无参数） */
+/* 调度器 tick 回调桥接（C 函数指针，无参数）
+ * 在 RunTick 之后立即保存本 ISR 总执行周期数到 debug_stream，
+ * 确保 MonitorTrigger 后续读到的 exec_time 是刚完成的本轮 ISR 的值。
+ */
 static void FOC_App_SchedTickBridge(void)
 {
     ControlScheduler_RunTick(&g_sys.runtime.scheduler);
+    DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
+        ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
 }
 
 static void FOC_App_UpdateIndicators(void)
@@ -108,6 +118,7 @@ void FOC_App_Init(void)
     /* 初始化系统运行时 */
     g_sys.runtime.service_task_pending = 0U;
     g_sys.runtime.monitor_task_pending = 0U;
+    g_sys.runtime.monitor_frame_active = 0U;
     g_sys.runtime.indicator.comm_pulse_counter = 0U;
     g_sys.runtime.indicator.led_run_blink_counter = 0U;
     g_sys.runtime.comm_source_rr = 0U;
@@ -127,6 +138,12 @@ void FOC_App_Init(void)
 
     /* 输出管理器初始化 */
     FOC_OutputMgr_Init(&g_sys);
+
+    /* Monitor 元素队列初始化 */
+    FIFO_Init(&g_sys.runtime.monitor_elem_q,
+              (uint8_t *)g_sys.runtime.monitor_elem_buffer,
+              sizeof(monitor_element_t),
+              FOC_MONITOR_ELEM_QUEUE_DEPTH);
 
     /* 协议初始化（传入遥测策略） */
     FOC_Protocol_Init(&g_sys.cfg.telemetry);
@@ -165,25 +182,170 @@ void FOC_App_Start(void)
 
 void FOC_App_Loop(void)
 {
-    /* Monitor 任务：调试流生成 + 入队 */
+    /* Monitor 任务：从 monitor_elem_q 出队 → 格式化 → 入 TX FIFO
+     * 检查 monitor_frame_active：若 ISR 正在写入帧，跳过本轮消费，
+     * 避免读取半帧导致 tag/value 错位。
+     */
     if (g_sys.runtime.monitor_task_pending != 0U)
     {
         g_sys.runtime.monitor_task_pending = 0U;
 
-#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
-        DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
-                                       ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
+        if (g_sys.runtime.monitor_frame_active != 0U)
         {
-            char line[DEBUG_STREAM_OSC_PAYLOAD_LEN];
-            while (DebugStream_GenerateLine(&g_sys.runtime.debug_stream,
-                                             &motor.sensor, &motor,
-                                             FOC_Protocol_GetTelemetry(),
-                                             line, sizeof(line)) != 0U)
+            /* ISR 正在写入帧，下一轮再消费 */
+            g_sys.runtime.monitor_task_pending = 1U;
+            return;
+        }
+
+        uint8_t consumed = 0U;
+        uint8_t in_frame = 0U;
+        uint8_t collecting_osc = 0U;
+
+        while (consumed < FOC_MONITOR_MAX_DEQUEUE_PER_CYCLE)
+        {
+            monitor_element_t elem;
+
+            if (FIFO_Dequeue(&g_sys.runtime.monitor_elem_q, (uint8_t *)&elem) == 0U)
             {
-                FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
+                break;
+            }
+            consumed++;
+
+            if (elem.tag == MONITOR_ELEM_FRAME_START)
+            {
+                /* 新帧开始：丢弃上一帧未完成的残余 */
+                collecting_osc = 0U;
+                in_frame = 1U;
+                continue;
+            }
+
+            if (!in_frame)
+            {
+                /* 安全兜底：未遇到 FRAME_START 的元素丢弃 */
+                continue;
+            }
+
+            /* ---- 语义行 ---- */
+            if (elem.tag <= MONITOR_ELEM_SEMANTIC_7)
+            {
+                char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+                if (elem.aux == 0U)
+                {
+                    /* 无效行，输出状态行 */
+                    uint8_t idx = elem.tag - MONITOR_ELEM_SEMANTIC_0;
+                    switch (idx)
+                    {
+                    case 0U:
+                        snprintf(line, sizeof(line),
+                            "measurement.current.status=invalid\r\n");
+                        break;
+                    case 3U:
+                        snprintf(line, sizeof(line),
+                            "measurement.encoder.status=invalid\r\n");
+                        break;
+                    case 5U:
+                        snprintf(line, sizeof(line),
+                            "measurement.vbus.status=invalid\r\n");
+                        break;
+                    default:
+                        continue;
+                    }
+                }
+                else
+                {
+                    DebugStream_FormatSemanticLine(elem.tag, elem.value,
+                                                    line, sizeof(line));
+                }
+
+                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
+                continue;
+            }
+
+            /* 语义帧结束 */
+            if (elem.tag == MONITOR_ELEM_SEMANTIC_END)
+            {
+                in_frame = 0U;
+                continue;
+            }
+
+            /* ---- 示波器值 (累积) ---- */
+            if (elem.tag == MONITOR_ELEM_OSC_VALUE)
+            {
+                if (collecting_osc == 0U)
+                {
+                    g_osc_collect_offset = 0U;
+                    g_osc_collect_buf[0] = '\0';
+                    collecting_osc = 1U;
+                }
+                DebugStream_AppendOscValue(g_osc_collect_buf,
+                                            &g_osc_collect_offset,
+                                            elem.value);
+                continue;
+            }
+
+            /* 示波器行结束 */
+            if (elem.tag == MONITOR_ELEM_OSC_END)
+            {
+                char line[DEBUG_STREAM_OSC_PAYLOAD_LEN];
+                uint16_t off = 0U;
+                int written;
+
+                written = snprintf(line, sizeof(line), "%c",
+                                   (char)DEBUG_STREAM_OSC_HEAD_BYTE);
+                if (written > 0) off = (uint16_t)written;
+
+                /* 追加已累积的 value */
+                {
+                    uint16_t copy_len = (sizeof(line) > off + 1U) ?
+                                         (uint16_t)(sizeof(line) - off - 1U) : 0U;
+                    uint16_t src_len = (uint16_t)strlen(g_osc_collect_buf);
+                    if (copy_len > src_len) copy_len = src_len;
+                    if (copy_len > 0U)
+                    {
+                        (void)memcpy(line + off, g_osc_collect_buf, copy_len);
+                        off += copy_len;
+                        line[off] = '\0';
+                    }
+                }
+
+                /* 追加尾字节 */
+                if ((off + 6U) < sizeof(line))
+                {
+                    written = snprintf(line + off, sizeof(line) - off,
+                                       " %c ", (char)DEBUG_STREAM_OSC_TAIL_BYTE);
+                    if (written > 0) off += (uint16_t)written;
+                }
+
+                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
+                collecting_osc = 0U;
+                in_frame = 0U;
+                continue;
+            }
+
+            /* ---- 协议摘要行 ---- */
+            if (elem.tag == MONITOR_ELEM_PROTOCOL_SUMMARY)
+            {
+                char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+                snprintf(line, sizeof(line),
+                         "STATE RUN=%u FLT=%u INIT=0x%04X/0x%04X "
+                         "SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu "
+                         "CTRL_SKIP=%lu\r\n",
+                         (unsigned int)motor.state.system_running,
+                         (unsigned int)motor.state.system_fault,
+                         (unsigned int)motor.state.init_check_mask,
+                         (unsigned int)motor.state.init_fail_mask,
+                         (unsigned int)motor.state.sensor_invalid_consecutive,
+                         (unsigned long)motor.state.protocol_error_count,
+                         (unsigned long)motor.state.param_error_count,
+                         (unsigned long)motor.state.control_skip_count);
+
+                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
+                in_frame = 0U;
+                continue;
             }
         }
-#endif
     }
 
     /* Service 任务：从 RX 队列取帧 → 协议处理 → 编排结果 */
@@ -209,18 +371,18 @@ void FOC_App_Loop(void)
 
             if (result.needs_summary != 0U)
             {
-                char summary[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-                snprintf(summary, sizeof(summary),
-                         "STATE RUN=%u FLT=%u INIT=0x%04X/0x%04X SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu CTRL_SKIP=%lu\r\n",
-                         (unsigned int)motor.state.system_running,
-                         (unsigned int)motor.state.system_fault,
-                         (unsigned int)motor.state.init_check_mask,
-                         (unsigned int)motor.state.init_fail_mask,
-                         (unsigned int)motor.state.sensor_invalid_consecutive,
-                         (unsigned long)motor.state.protocol_error_count,
-                         (unsigned long)motor.state.param_error_count,
-                         (unsigned long)motor.state.control_skip_count);
-                FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)summary);
+                /*
+                 * 协议摘要行通过 monitor_elem_q 统一输出，
+                 * 避免 Service 段直入 TX FIFO 与 Monitor 段交错。
+                 */
+                monitor_element_t elem;
+                elem.tag   = MONITOR_ELEM_PROTOCOL_SUMMARY;
+                elem.aux   = 0U;
+                elem.value = 0.0f;
+
+                (void)FIFO_Enqueue(&g_sys.runtime.monitor_elem_q,
+                                   (uint8_t *)&elem);
+                g_sys.runtime.monitor_task_pending = 1U;
             }
 
             /* status 已在 ProcessSingle 内部直写，L1 无需处理 */
@@ -254,23 +416,47 @@ void FOC_App_ServiceTrigger(void)
 
 void FOC_App_MonitorTrigger(void)
 {
+#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
+
+    /* ISR 上下文：按需读取 motor 字段 + 逐元素入 monitor_elem_q */
+
+    g_sys.runtime.monitor_frame_active = 1U;
+
+    /* Push 帧起始标记 */
+    {
+        monitor_element_t start_elem;
+        start_elem.tag   = MONITOR_ELEM_FRAME_START;
+        start_elem.aux   = 0U;
+        start_elem.value = 0.0f;
+        (void)FIFO_Enqueue(&g_sys.runtime.monitor_elem_q,
+                           (uint8_t *)&start_elem);
+    }
+
+    /* Poll 所有元素并入队 */
+    {
+        monitor_element_t elem;
+        while (DebugStream_PollNextValue(&g_sys.runtime.debug_stream,
+                                          &motor,
+                                          FOC_Protocol_GetTelemetry(),
+                                          &elem) != 0U)
+        {
+            (void)FIFO_Enqueue(&g_sys.runtime.monitor_elem_q,
+                               (uint8_t *)&elem);
+        }
+    }
+
+    g_sys.runtime.monitor_frame_active = 0U;
     g_sys.runtime.monitor_task_pending = 1U;
+#else
+    /* Both semantic and osc reports disabled: no need to wake Monitor task. */
+#endif
 }
 
 void FOC_App_ControlTrigger(void)
 {
     uint8_t phase;
     uint8_t cycle_result = FOC_CYCLE_OK;
-
-    /*
-     * ================================================================
-     * 控制阶段路由
-     *
-     * L1 根据 motor->state.control_phase 将当前控制周期路由到
-     * 对应的处理模块。公共安全检查（传感器有效、欠压保护）对所有
-     * 阶段通用。
-     * ================================================================
-     */
 
     phase = motor.state.control_phase;
 

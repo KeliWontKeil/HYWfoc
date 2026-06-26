@@ -1,4 +1,4 @@
-﻿#ifndef FOC_SERVICE_HANDLER_H
+#ifndef FOC_SERVICE_HANDLER_H
 #define FOC_SERVICE_HANDLER_H
 
 #include "L2_Core/foc_ctrl_types.h"

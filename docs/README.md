@@ -1,52 +1,36 @@
-# Library Documentation Index
+# 库文档索引
 
-> 版本基线：v1.9.0
+> 版本基线：v1.9.1
+> 项目命名：HYW FOC（中文名：何易位FOC）
 
-## 文档列表
+## 作用范围
+
+本目录只放置"库级通用文档"：架构、接口契约、开发流程、协议定义。
+
+实例/板级文档放在各实例目录下（例如 `../examples/GD32F303_FOCExplore/`）。
+
+## 文档分层边界
+
+- 放在 `docs/`：可复用的库行为、依赖契约、通用开发规则
+- 放在 `examples/<instance>/`：硬件管脚、工具链配置、构建烧录步骤、通道映射
+- 库文档可以链接实例文档，但不承载实例专有实现细节
+
+## 本目录文档
 
 | 文档 | 描述 | 必读 |
 |------|------|:----:|
 | [architecture.md](architecture.md) | 分层架构、数据流、依赖关系（SSOT） | ✅ |
 | [development.md](development.md) | 通用开发流程、编译约束、调试经验 | ✅ |
-| [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md) | 协议帧格式、参数中英对照、裁剪表 | ✅ |
+| [protocol-parameters.md](protocol-parameters.md) | 通信协议帧格式、参数表、裁剪规则 | ✅ |
 
-## 文档边界规则
-
-- `docs/` 下的文档描述**驱动库的通用设计**，不涉及具体硬件平台细节
-- 实例级文档（板级管脚、驱动适配说明、实例构建）位于 `examples/<instance>/` 下
-- 不要在同一文档中混合库级和实例级内容
-
-## 版本历史
-
-完整版本历史见 [CHANGELOG.md](../CHANGELOG.md)。
-# 文档索引（库级）
-
-## 作用范围
-
-本目录只放"库级通用文档"：架构、接口契约、通用流程、协议定义。
-
-实例/板级文档必须放在各实例目录下（例如 [../examples/GD32F303_FOCExplore/](../examples/GD32F303_FOCExplore/)）。
-
-## 文档分层边界
-
-- 放在 `docs/`：可复用的库行为、依赖契约、通用开发规则。
-- 放在 `examples/<instance>/`：硬件管脚、工具链配置、构建烧录步骤、通道映射。
-- 库文档可以链接实例文档，但不承载实例专有实现细节。
+说明：结构类重复文档已移除，不再保留兼容跳转页。
 
 ## 当前基线
 
-- 版本基线：v1.9.0
-- 项目命名：HYW FOC（中文名：何易位FOC）
-- 任务目标：下一目标版本见 [../NEXT_MISSION.md](../NEXT_MISSION.md)
-- 第三方许可证声明：见 [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
-
-## 本目录文档
-
-- [architecture.md](architecture.md)：唯一结构说明（SSOT），含分层、依赖、时序、控制链路。
-- [development.md](development.md)：通用开发流程、构建验证、编译/调试经验沉淀。
-- [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)：通信协议与运行参数（中英对照）。
-
-说明：结构类重复文档已移除，不再保留兼容跳转页。
+- 版本基线：v1.9.1
+- 项目名称：HYW FOC（何易位FOC）
+- 任务目标：下一目标版本见 [NEXT_MISSION.md](../NEXT_MISSION.md)
+- 第三方许可证声明：见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
 
 ## 相关实例文档（GD32F303）
 
@@ -59,10 +43,10 @@
 
 1. [architecture.md](architecture.md)
 2. [development.md](development.md)
-3. [protocol-parameters-bilingual.md](protocol-parameters-bilingual.md)
+3. [protocol-parameters.md](protocol-parameters.md)
 
 ## 维护约定
 
 - API、配置头、层级归属变化时，需在同次迭代同步更新本目录文档。
-- [../CHANGELOG.md](../CHANGELOG.md) 的版本基线需与本索引一致。
-- [../NEXT_MISSION.md](../NEXT_MISSION.md) 需与当前阶段状态一致（已完成项不可继续标注为进行中）。
+- [CHANGELOG.md](../CHANGELOG.md) 的版本基线需与本索引一致。
+- [NEXT_MISSION.md](../NEXT_MISSION.md) 需与当前阶段状态一致（已完成项不可继续标注为进行中）。

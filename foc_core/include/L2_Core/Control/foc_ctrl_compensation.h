@@ -1,4 +1,4 @@
-﻿#ifndef FOC_CTRL_COMPENSATION_H
+#ifndef FOC_CTRL_COMPENSATION_H
 #define FOC_CTRL_COMPENSATION_H
 
 #include "L2_Core/foc_ctrl_types.h"

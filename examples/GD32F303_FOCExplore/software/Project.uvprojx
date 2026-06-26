@@ -312,7 +312,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>3</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_STDPERIPH_DRIVER,GD32F30X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc\include\L1_Orchestration;..\..\..\foc\include\L2;..\..\..\foc\include\L3;..\..\..\foc\include\LS_Config;..\..\..\foc\include</IncludePath>
+              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc_core\include\L1_Orchestration;..\..\..\foc_core\include\L2_Core;..\..\..\foc_core\include\L3_Hal;..\..\..\foc_core\include\LS_Config;..\..\..\foc_core\include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -610,97 +610,112 @@
             <File>
               <FileName>foc_app.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_app.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
               <FileName>foc_output_mgr.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
             </File>
             <File>
               <FileName>foc_service_handler.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_actuation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_actuation.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_cfg.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_cfg.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_compensation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_compensation.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_current_loop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_current_loop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_executor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_init.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_init.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_outer_loop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_outer_loop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_param_learn.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_param_learn.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_output.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_output.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_parser.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_service_handler.c</FilePath>
             </File>
             <File>
               <FileName>foc_debug_stream.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_debug_stream.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_queue.c</FilePath>
             </File>
             <File>
               <FileName>foc_task_scheduler.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_task_scheduler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_handler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_handler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_output.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_output.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_parser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_parser.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_actuation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_actuation.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_cfg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cfg.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_cogging_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cogging_calib.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_compensation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_compensation.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_current_loop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_current_loop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_executor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_executor.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_init.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_outer_loop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_outer_loop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_param_learn.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_reinit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_reinit.c</FilePath>
             </File>
             <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_math_transforms.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
             </File>
             <File>
               <FileName>foc_sensor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_sensor.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_sensor.c</FilePath>
             </File>
             <File>
               <FileName>foc_svpwm.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_svpwm.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_svpwm.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1313,97 +1328,112 @@
             <File>
               <FileName>foc_app.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_app.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
               <FileName>foc_output_mgr.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
             </File>
             <File>
               <FileName>foc_service_handler.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_actuation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_actuation.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_cfg.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_cfg.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_compensation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_compensation.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_current_loop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_current_loop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_executor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_init.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_init.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_outer_loop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_outer_loop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_param_learn.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_param_learn.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_output.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_output.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_parser.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_service_handler.c</FilePath>
             </File>
             <File>
               <FileName>foc_debug_stream.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_debug_stream.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_queue.c</FilePath>
             </File>
             <File>
               <FileName>foc_task_scheduler.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_task_scheduler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_handler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_handler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_output.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_output.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_parser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_parser.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_actuation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_actuation.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_cfg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cfg.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_cogging_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cogging_calib.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_compensation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_compensation.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_current_loop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_current_loop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_executor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_executor.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_init.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_outer_loop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_outer_loop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_param_learn.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_reinit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_reinit.c</FilePath>
             </File>
             <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_math_transforms.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
             </File>
             <File>
               <FileName>foc_sensor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_sensor.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_sensor.c</FilePath>
             </File>
             <File>
               <FileName>foc_svpwm.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_svpwm.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_svpwm.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2016,97 +2046,112 @@
             <File>
               <FileName>foc_app.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_app.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
               <FileName>foc_output_mgr.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_output_mgr.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
             </File>
             <File>
               <FileName>foc_service_handler.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L1_Orchestration\foc_service_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_actuation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_actuation.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_cfg.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_cfg.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_compensation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_compensation.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_current_loop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_current_loop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_executor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_executor.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_init.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_init.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_outer_loop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_outer_loop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_param_learn.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Control\foc_ctrl_param_learn.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_output.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_output.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_protocol_parser.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Protocol\foc_protocol_parser.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_service_handler.c</FilePath>
             </File>
             <File>
               <FileName>foc_debug_stream.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Runtime\foc_debug_stream.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_debug_stream.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_queue.c</FilePath>
             </File>
             <File>
               <FileName>foc_task_scheduler.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L2\Runtime\foc_task_scheduler.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_task_scheduler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_handler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_handler.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_output.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_output.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_protocol_parser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Protocol\foc_protocol_parser.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_actuation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_actuation.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_cfg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cfg.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_cogging_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cogging_calib.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_compensation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_compensation.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_current_loop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_current_loop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_executor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_executor.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_init.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_outer_loop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_outer_loop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_param_learn.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_reinit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_reinit.c</FilePath>
             </File>
             <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_math_transforms.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
             </File>
             <File>
               <FileName>foc_sensor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_sensor.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_sensor.c</FilePath>
             </File>
             <File>
               <FileName>foc_svpwm.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc\src\L3\foc_svpwm.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_svpwm.c</FilePath>
             </File>
           </Files>
         </Group>

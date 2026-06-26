@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_current_loop.h"
+#include "L2_Core/Control/foc_ctrl_current_loop.h"
 
 #include <math.h>
 
@@ -378,7 +378,6 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
                             float electrical_angle,
                             float dt_sec)
 {
-    uint8_t *blend_initialized;
     float    local_angle;
 
     if (motor == 0)
@@ -397,8 +396,6 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    blend_initialized = &motor->current_soft_switch_blend_initialized;
-
     if (motor->current_soft_switch_status.enabled != 0U)
     {
         FOC_CurrentControlSoftSwitchStep(motor,
@@ -406,22 +403,14 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
                                          dt_sec);
     }
     else
-#endif
     {
         if (sensor->adc_valid == 0U) return;
-
-        if (blend_initialized != 0)
-        {
-            *blend_initialized = 0U;
-        }
-
+        motor->current_soft_switch_blend_initialized = 0U;
         if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
         {
             motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
             motor->current_soft_switch_status.blend_factor = 1.0f;
-            FOC_CurrentControlClosedLoopStep(motor,
-                                             sensor,
-                                             dt_sec);
+            FOC_CurrentControlClosedLoopStep(motor, sensor, dt_sec);
         }
         else
         {
@@ -430,14 +419,18 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
             FOC_CurrentLoopComputeIqMeasured(sensor,
-                                             local_angle,
+                                             motor->electrical_phase_angle,
                                              &motor->iq_measured,
                                              motor);
 #endif
         }
     }
 #else
-    (void)blend_initialized;
+    /* FOC_CURRENT_SOFT_SWITCH_ENABLE == DISABLE: always run closed-loop PID */
+    if (sensor->adc_valid == 0U) return;
+    FOC_CurrentControlClosedLoopStep(motor, sensor, dt_sec);
+#endif
+#else
     (void)sensor;
     FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
 #endif

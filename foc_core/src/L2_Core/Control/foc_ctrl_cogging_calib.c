@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_cogging_calib.h"
+#include "L2_Core/Control/foc_ctrl_cogging_calib.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -347,8 +347,10 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     motor->cogging_comp_status.source      = FOC_COGGING_COMP_SOURCE_CALIB;
     motor->cogging_comp_status.available   = 1U;
 
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.enabled       = state->saved_softswitch_enabled;
     motor->current_soft_switch_status.configured_mode = state->saved_softswitch_mode;
+#endif
 
     state->in_progress       = 0U;
     state->progress_percent  = 100U;
@@ -393,8 +395,10 @@ static uint8_t CoggingCalib_Start(foc_motor_t *motor)
     motor->cogging_calib_state.rev_count              = 0U;
     motor->cogging_calib_state.pass_num               = 0U;
 
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_calib_state.saved_softswitch_enabled = motor->current_soft_switch_status.enabled;
     motor->cogging_calib_state.saved_softswitch_mode    = motor->current_soft_switch_status.configured_mode;
+#endif
 
     FOC_Platform_WriteDebugText("COGGING CALIB START (position-deviation method)\r\n");
 

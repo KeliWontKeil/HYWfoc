@@ -1,4 +1,4 @@
-﻿#ifndef FOC_CTRL_TYPES_H
+#ifndef FOC_CTRL_TYPES_H
 #define FOC_CTRL_TYPES_H
 
 #include <stdint.h>
@@ -262,8 +262,10 @@ typedef struct {
 
     /* ====== 运行时状态（子结构体） ====== */
 
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     foc_current_soft_switch_status_t current_soft_switch_status;
     uint8_t current_soft_switch_blend_initialized;
+#endif
 
 #if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
     float    ecycle_offset_dyn_a;

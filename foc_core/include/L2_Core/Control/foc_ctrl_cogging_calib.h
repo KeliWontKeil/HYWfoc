@@ -1,4 +1,4 @@
-﻿#ifndef FOC_CTRL_COGGING_CALIB_H
+#ifndef FOC_CTRL_COGGING_CALIB_H
 #define FOC_CTRL_COGGING_CALIB_H
 
 #include <stdint.h>
@@ -69,3 +69,4 @@ void FOC_CoggingCalibDumpTable(const foc_motor_t *motor);
 void FOC_CoggingCalibExportTable(const foc_motor_t *motor);
 
 #endif /* FOC_CTRL_COGGING_CALIB_H */
+

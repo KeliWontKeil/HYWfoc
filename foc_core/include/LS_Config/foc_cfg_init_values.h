@@ -72,7 +72,7 @@
 #define COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S 2.0f
 
 /* Runtime default flags and rates. */
-#define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED FOC_CFG_DISABLE
+#define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED FOC_CFG_ENABLE
 #define COMMAND_MANAGER_DEFAULT_OSC_ENABLED FOC_CFG_DISABLE
 #define COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE FOC_CFG_ENABLE
 #define COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ 2U
@@ -183,9 +183,13 @@
 
 /* Queue configuration (can be overridden before including LS_Config). */
 #define FOC_RX_QUEUE_DEPTH          4U
-#define FOC_OUTPUT_QUEUE_DEPTH      8U
+#define FOC_OUTPUT_QUEUE_DEPTH      24U
 #define FOC_OUTPUT_FRAME_MAX_LEN    96U
-#define FOC_OUTPUT_MAX_PER_CYCLE    4U
+#define FOC_OUTPUT_MAX_PER_CYCLE    12U
+
+/* Monitor element queue (ISR → main-loop snapshot handoff). */
+#define FOC_MONITOR_ELEM_QUEUE_DEPTH        32U
+#define FOC_MONITOR_MAX_DEQUEUE_PER_CYCLE   24U
 
 /* RX polling: max frames to enqueue per ServiceTrigger call.
  * 0 = auto (poll all 4 comm sources, one frame per source at most);

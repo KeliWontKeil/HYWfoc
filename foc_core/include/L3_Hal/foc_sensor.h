@@ -1,4 +1,4 @@
-﻿#ifndef FOC_SENSOR_H
+#ifndef FOC_SENSOR_H
 
 #define FOC_SENSOR_H
 

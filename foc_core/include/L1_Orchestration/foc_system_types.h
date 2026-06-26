@@ -9,6 +9,7 @@
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Protocol/foc_snapshot_types.h"
 #include "L2_Core/foc_ctrl_types.h"
+#include "L1_Orchestration/foc_monitor_queue_types.h"
 
 /*
  * ================================================================
@@ -61,6 +62,9 @@ typedef struct {
     /* 通信轮询公平调度：下一次轮询起始源索引（round-robin 偏移） */
     uint8_t comm_source_rr;
 
+    /* Monitor 帧写入标志：ISR 写入帧时置 1，写完清 0；主循环检查此标志避免读半帧 */
+    volatile uint8_t monitor_frame_active;
+
     /* RX 帧队列：ISR 入队帧数据，主循环出队解析 */
     fifo_queue_t rx_fifo;
     uint8_t rx_fifo_buffer[FOC_RX_QUEUE_DEPTH][PROTOCOL_PARSER_RX_MAX_LEN];
@@ -68,6 +72,10 @@ typedef struct {
     /* TX 文本队列：主循环入队调试/协议行，主循环同周期出队发送 */
     fifo_queue_t tx_fifo;
     uint8_t tx_fifo_buffer[FOC_OUTPUT_QUEUE_DEPTH][FOC_OUTPUT_FRAME_MAX_LEN];
+
+    /* Monitor 元素队列：ISR 采样入队 → 主循环出队格式化 */
+    fifo_queue_t monitor_elem_q;
+    uint8_t monitor_elem_buffer[FOC_MONITOR_ELEM_QUEUE_DEPTH][sizeof(monitor_element_t)];
 } foc_runtime_ctx_t;
 
 /*

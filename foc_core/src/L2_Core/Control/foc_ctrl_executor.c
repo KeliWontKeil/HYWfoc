@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_executor.h"
+#include "L2_Core/Control/foc_ctrl_executor.h"
 
 #include <math.h>
 
@@ -206,9 +206,11 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
         ResetPIDState(&motor->angle_pid);
         FOC_ControlResetSpeedLoopState(motor);
 
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
         motor->current_soft_switch_status.enabled = 0U;
         motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
         motor->current_soft_switch_blend_initialized = 0U;
+#endif
 
         motor->mode_transition.prev_control_mode = cur_mode;
     }

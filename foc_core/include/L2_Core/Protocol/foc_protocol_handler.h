@@ -1,4 +1,4 @@
-﻿#ifndef FOC_PROTOCOL_HANDLER_H
+#ifndef FOC_PROTOCOL_HANDLER_H
 #define FOC_PROTOCOL_HANDLER_H
 
 #include <stdint.h>

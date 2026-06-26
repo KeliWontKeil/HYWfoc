@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_outer_loop.h"
+#include "L2_Core/Control/foc_ctrl_outer_loop.h"
 
 #include <math.h>
 

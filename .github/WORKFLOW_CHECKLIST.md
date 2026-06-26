@@ -2,8 +2,8 @@
 
 ## 1. 编码前检查
 
-- [ ] 阅读 `NEXT_MISSION.md`，确认当前阶段目标
-- [ ] 阅读 `copilot-instructions.md` 与 `docs/development.md`
+- [ ] (可选，有时不需要)阅读 `NEXT_MISSION.md`，确认当前阶段目标
+- [ ] 阅读 `AI_INITIALIZATION.md` 与 `docs/development.md`
 - [ ] 若上下文被压缩或会话切换，重新阅读关键文档与关键代码文件
 - [ ] 判定任务类型：改代码 / 仅设计 / 暂缓
 - [ ] 选择 Agent（见 `.github/AGENTS.md`）
@@ -41,7 +41,7 @@
 ## 4. 文档同步检查
 
 - [ ] 结构/依赖变化已更新 `docs/architecture.md`
-- [ ] 流程变化已更新 `.github/*` 与 `copilot-instructions.md`
+- [ ] 流程变化已更新 `.github/*` 与 `AI_INITIALIZATION.md`
 - [ ] 版本或里程碑变化已更新 `NEXT_MISSION.md` 和必要的 `CHANGELOG.md`
 - [ ] 库级文档未写死控制频率，统一使用“配置宏决定”口径
 - [ ] 不存在重复结构事实源或兼容跳转页

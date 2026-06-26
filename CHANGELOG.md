@@ -5,6 +5,22 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-06-26
+
+### Changed
+- **Monitor 输出路径修复**：`FOC_App_MonitorTrigger` 由仅设标志位改为 ISR 中快照 sensor 关键字段 + `DebugStream_PollNextValue` 逐元素入 `monitor_elem_q`。主循环 Monitor 段改为出队 + tag switch 格式化 + 入 TX FIFO。协议摘要通过 `MONITOR_ELEM_PROTOCOL_SUMMARY` 经 monitor_elem_q 统一输出。
+- **慢路径统一为标记元素队列**：新增 `monitor_element_t {tag, aux, value}` 标记元素类型，`FRAME_START` 帧隔离标记防止主循环阻塞后帧交错。语义行（SEMANTIC_0~7）、示波器值（OSC_VALUE/OSC_END）、协议摘要（PROTOCOL_SUMMARY）全部走同一队列。
+- **`foc_debug_stream` 拆分为双接口**：`DebugStream_PollNextValue`（ISR 安全，跑 state machine 输出元素）和 `DebugStream_FormatSemanticLine`/`AppendOscValue`/`FormatOscLine`（主循环格式化）。原 `GenerateLine` 保留为向后兼容封装。
+
+### Added
+- `foc_monitor_queue_types.h` — `monitor_elem_tag_t` 枚举与 `monitor_element_t` 结构体（L1 新增）。
+- `foc_runtime_ctx_t` 中新增 `monitor_elem_q` 队列字段（FIFO，32 元素深度）。
+- `FOC_MONITOR_ELEM_QUEUE_DEPTH` / `FOC_MONITOR_MAX_DEQUEUE_PER_CYCLE` 配置宏（`foc_cfg_init_values.h`）。
+
+### Documentation
+- `docs/architecture.md`：新增 Monitor 元素队列机制描述，更新数据流图和输出路径表。
+- `docs/README.md`、`copilot-instructions.md`：版本基线 v1.9.0→v1.9.1。
+
 ## [1.9.0] - 2026-06-25
 
 ### Changed
@@ -679,128 +695,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LED status indication
 - Initial development guidelines and rules
 
----
-
-## Development Guide (Legacy)
-
-### Scope
-Single source of truth for AI work in this repository. Keep it compact and accurate.
-Prefer referencing files over pasting long code blocks.
-
-### Iteration policy
-- **Current baseline**: **Iteration 3** (2026-03-11)
-- **Process**:
-  - The user writes *next iteration* requirements in `NEXT_MISSION.md`.
-  - After completing an iteration, update:
-    - `CHANGELOG.md` (version history and changes)
-    - `dev-guidelines/rules/*` and `dev-guidelines/skills/*` (AI workflow)
-    - `examples/GD32F303_FOCExplore/hardware/hardware.md` only if pin mapping changes
-
-### Project snapshot (v0.3.0)
-- **MCU**: GD32F303CC (Cortex-M4)
-- **Dev env**: VS Code / Cursor + EIDE extension (`cl.eide`)
-- **Toolchain**: ARM Compiler 5 (AC5)
-- **EIDE target**: `GD32F30X_CL`
-- **Build outputs**: `examples/<instance>/software/build/GD32F30X_CL/` (e.g. `Project.axf`, `Project.hex`)
-
-### What exists in code (high-signal)
-
-- **Entry & init**
-  - `Application/Source/main.c` initializes:
-    - SysTick (1kHz)
-    - LED GPIO
-    - USART1 (interrupt-driven)
-    - PWM (TIMER0 complementary, 3 channels)
-    - Timer1 via `Timer1_Algorithm_Init()` (1kHz callback → algorithm scheduler)
-
-- **Interrupt vectors**
-  - `Application/Source/gd32f30x_it.c`:
-    - SysTick → `delay_decrement()`
-    - TIMER1/TIMER2/USART1 → forward to module-level `*_Internal()` handlers
-  - This forwarding structure reflects the **current architecture**, not a permanent constraint. Structural refactors are allowed when required by the mission.
-
-- **Timing / algorithm skeleton**
-  - `Application/Source/timer1_algorithm.c`:
-    - `Timer1_Algorithm_Init()` initializes TIMER1 with parameters
-    - `Timer1_Algorithm_Handler()` provides multi-rate task slots (1kHz/100Hz/10Hz/1Hz)
-    - DWT cycle counter is used for execution-time measurement
-  - `Utilities/TIMER1/*`:
-    - Generic TIMER1 module with parameterized initialization
-  - `Utilities/TIMER2/*`:
-    - Generic TIMER2 module with parameterized initialization
-
-- **PWM**
-  - `Utilities/PWM/*`:
-
-### What exists in code (high-signal)
-
-- **Entry & init**
-  - `Application/Source/main.c` initializes:
-    - SysTick (1kHz)
-    - LED GPIO
-    - USART1 (interrupt-driven)
-    - PWM (TIMER0 complementary, 3 channels)
-    - Timer1 via `Timer1_Algorithm_Init()` (1kHz callback → algorithm scheduler)
-
-- **Interrupt vectors**
-  - `Application/Source/gd32f30x_it.c`:
-    - SysTick → `delay_decrement()`
-    - TIMER1/TIMER2/USART1 → forward to module-level `*_Internal()` handlers
-  - This forwarding structure reflects the **current architecture**, not a permanent constraint. Structural refactors are allowed when required by the mission.
-
-- **Timing / algorithm skeleton**
-  - `Application/Source/timer1_algorithm.c`:
-    - `Timer1_Algorithm_Init()` initializes TIMER1 with parameters
-    - `Timer1_Algorithm_Handler()` provides multi-rate task slots (1kHz/100Hz/10Hz/1Hz)
-    - DWT cycle counter is used for execution-time measurement
-  - `Utilities/TIMER1/*`:
-    - Generic TIMER1 module with parameterized initialization
-  - `Utilities/TIMER2/*`:
-    - Generic TIMER2 module with parameterized initialization
-
-- **PWM**
-  - `Utilities/PWM/*`:
-    - TIMER0 complementary PWM (3 channels)
-    - Configuration parameters moved to initialization function
-
-- **USART**
-  - `Utilities/USART/*`:
-    - USART1 interrupt-driven TX/RX with ring buffers
-    - Optional loopback supported
-
-- **LED**
-  - `Utilities/LED/*`:
-    - LED GPIO outputs. Pin mapping lives in `Hardware.md`
-
-- **I2C**
-  - `Utilities/I2C/*`:
-    - Hardware I2C driver for GD32F30x (I2C0 on PB6/PB7)
-    - Supports standard 100kHz communication
-    - Includes byte and multi-byte read/write functions
-    - Uses interrupt-based timeout handling with systick
-
-- **AS5600**
-  - `Utilities/AS5600/*`:
-    - Complete driver for AS5600 magnetic encoder with I2C interface
-    - Provides angle reading in degrees and radians
-    - Includes magnet detection and strength checking
-    - Supports configuration of start/stop positions and filtering
-
-### Key changes in Iteration 2
-1. **PWM dead time implementation** - Added proper `PWM_SetDeadTime()` function using GD32's `timer_break_config()` API
-2. **Timer1 algorithm callback system** - Replaced static task functions with dynamic callback registration system (`Timer1_SetAlgorithmCallback()`)
-3. **LED blink callback encapsulation** - Moved LED3 blink logic from `timer1_algorithm.c` to `main.c` as a callback function
-4. **Hardware I2C driver** - Created complete I2C0 driver for GD32F30x with timeout handling and error checking
-5. **AS5600 sensor driver** - Implemented full AS5600 magnetic encoder driver with I2C interface, magnet detection, and angle conversion
-
-### AI guardrails (minimal)
-- **Default do-not-edit**: `Firmware/**` (vendor libs), `.eide/**` (project config)
-  - Exceptions: only when explicitly required by the mission or to fix build/flash issues
-- **Prefer editing**: `Application/**`, `Utilities/**`, docs, `dev-guidelines/**`
-- **Change scope**: decide per mission (small precision edits vs module implementation vs refactor)
-
-### External reference (GD32 official examples)
-GD32 official examples exist at:
-`D:\GD32 相关\GD32F30x_Firmware_Library_V3.0.3\GD32F30x_Firmware_Library_V3.0.3\Examples`
-
-Default policy: **do not read** unless necessary for a specific task (token-cost control)

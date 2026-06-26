@@ -1,4 +1,4 @@
-﻿#include "L3_Hal/foc_svpwm.h"
+#include "L3_Hal/foc_svpwm.h"
 
 #include <math.h>
 

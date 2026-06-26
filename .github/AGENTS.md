@@ -20,8 +20,8 @@
 
 重点文件：
 
-1. `foc_core/src/L3_Algorithm/foc_control*.c`
-2. `foc_core/src/L3_Algorithm/svpwm.c`
+1. `foc_core/src/L2_Core/Control/foc_ctrl_*.c`
+2. `foc_core/src/L3_Hal/foc_svpwm.c`
 3. `foc_core/src/L1_Orchestration/foc_app.c`
 4. `foc_core/include/LS_Config/foc_cfg_*.h`
 
@@ -32,7 +32,7 @@
 重点文件：
 
 1. `foc_core/include/**/*.h`
-2. `foc_core/include/L42_PAL/foc_platform_api.h`
+2. `foc_core/include/L3_Hal/foc_platform_api.h`
 3. `examples/**/Application/Source/foc_platform_api.c`
 4. `examples/**/Utilities/**`
 
@@ -66,4 +66,16 @@
 2. 分层约束不被破坏。
 3. `docs/architecture.md` 与实际结构一致。
 4. `NEXT_MISSION.md` 与当前阶段一致。
+
+## 5. 构建相关
+
+构建脚本（自动定位最新 EIDE 扩展版本）：
+
+```powershell
+.\tools\build_gd32f303.ps1
+```
+
+验收标准：0 errors, no newly introduced warnings, ROM <= 256 KB, RAM <= 96 KB。
+
+根 `AGENTS.md` 中的构建脚本信息已合并至此。
 

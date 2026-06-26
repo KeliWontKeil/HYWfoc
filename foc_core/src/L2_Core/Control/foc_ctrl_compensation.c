@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_compensation.h"
+#include "L2_Core/Control/foc_ctrl_compensation.h"
 
 #include <math.h>
 #include <stdio.h>

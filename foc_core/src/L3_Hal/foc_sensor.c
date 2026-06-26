@@ -1,4 +1,4 @@
-﻿#include "L3_Hal/foc_sensor.h"
+#include "L3_Hal/foc_sensor.h"
 
 #include <math.h>
 

@@ -1,4 +1,4 @@
-﻿#include "L1_Orchestration/foc_service_handler.h"
+#include "L1_Orchestration/foc_service_handler.h"
 
 #include <stdio.h>
 

@@ -1,4 +1,4 @@
-﻿#ifndef FOC_CTRL_EXECUTOR_H
+#ifndef FOC_CTRL_EXECUTOR_H
 #define FOC_CTRL_EXECUTOR_H
 
 #include <stdint.h>

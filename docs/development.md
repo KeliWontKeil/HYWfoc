@@ -18,13 +18,13 @@
 
 ### 1. 任务确认
 
-1. 先读 `NEXT_MISSION.md`，确认范围和验收口径。
+1. 先读 `AI_INITIALIZATION.md` 与 `NEXT_MISSION.md`，确认范围和验收口径。
 2. 明确任务属性：改代码 / 仅设计 / 暂缓。
 3. 评估影响层级与回滚点。
 
 ### 2. 实施
 
-1. 遵循分层约束：`LS → L1 → L2 → L3 → L5`（L2 下分 Control/Protocol/Runtime，各块间不直接调用）。
+1. 遵循分层约束。详细分层见 `docs/architecture.md`（L2 下分 Control/Protocol/Runtime，各块间不直接调用）。
 2. 默认在 `main` 分支工作，除非用户明确要求新分支。
 3. 所有可配置参数先进入 `foc_core/include/LS_Config/foc_cfg_*.h`，再在 `.c` 中使用。
 4. 运行时主循环由 L1 编排，三个任务段顺序无关，无固定管线链：
@@ -46,16 +46,16 @@
 ### 4. 文档同步
 
 1. 结构、依赖、时序变化：更新 `docs/architecture.md`。
-2. 流程或协作变化：更新 `copilot-instructions.md` 与 `.github/*.md`。
+2. 流程或协作变化：更新 `AI_INITIALIZATION.md` 与 `.github/*.md`。
 3. 版本基线与任务阶段变化：更新 `NEXT_MISSION.md` 与 `CHANGELOG.md`。
-4. 协议命令、裁剪开关、默认值变化：更新 `docs/protocol-parameters-bilingual.md` 与实例协议文档。
+4. 协议命令、裁剪开关、默认值变化：更新 `docs/protocol-parameters.md` 与实例协议文档。
 5. 不新增"平行事实源"文档，优先更新已有主文档。
 
 ## P0 可维护性验收
 
 ### 必须满足
 
-1. `main` 仅调用 `L1` 库入口与 `L5` 初始化入口。
+1. `main` 仅调用 `L1` 库入口与板级外设初始化函数。
 2. `L1/L2/L3` 不直接依赖设备驱动头。
 3. 宏裁剪链路一致：声明、定义、调用在同一条件编译语义下。
 4. 关键约束可映射到可执行检查动作（检索/构建/日志）。
@@ -76,14 +76,57 @@
 
 ## 编译与调试经验
 
-1. VS Code 任务输出不完整时，优先查看终端完整构建日志。
-2. 手动调用 `unify_builder.exe` 可能需要设置 `DOTNET_ROLL_FORWARD=Major`。
-3. 若出现 `Not found any source files`，优先检查 `builder.params` 的 `sourceList` 路径。
-4. `get_errors` 可能残留过期诊断，最终以真实编译/链接结果为准。
-5. 功能宏关闭后，务必同步收口受控函数的声明/定义/调用，避免"裁掉定义但未裁掉调用"。
+### 构建命令
+
+```batch
+set DOTNET_ROLL_FORWARD=Major
+"C:\Users\MSI-NB\.vscode\extensions\cl.eide-3.26.9\res\tools\win32\unify_builder\unify_builder.exe" --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
+```
+
+- `--rebuild`：强制全量重建
+- `-p`：指定 `builder.params` 路径
+
+辅助脚本（自动定位最新 EIDE 扩展版本，避免硬编码版本路径）：
+
+```powershell
+.\tools\build_gd32f303.ps1
+```
+
+### 构建目标约束
+
+- 编译器：ARM Compiler 5 (AC5)
+- 语言标准：C99
+- 优化等级：level-1（CL target）
+- microLIB 启用，one-elf-section-per-function
+- 0 error，不新增 warning
+- ROM ≤ 256KB，RAM ≤ 96KB（GD32F303CC 实例限制）
+- 跨平台移植预留：建议 ROM ≤ 64KB，RAM ≤ 16KB
+
+### 常见错误与解决方案
+
+| 错误 | 根因 | 解决方案 |
+|------|------|----------|
+| `Not found any source files` / 文件未编译 | `builder.params` 中 `sourceList` 路径错误或文件缺失 | 检查 `.c` 文件是否存在，路径基于 `rootDir` 的相对引用 |
+| `L6218E: Undefined symbol`（链接错误）| 某 `.c` 文件未加入 `sourceList`，或函数名拼写差异 | 检查 `builder.params.sourceList` 是否包含该文件；检查声明/定义/调用三者一致 |
+| `#20: identifier undefined` / 类型未定义 | 头文件依赖缺失或 `#include` 路径不对 | 检查 `builder.params.incDirs` 是否包含所需头文件目录 |
+| `#147-D: declaration is incompatible` | 函数声明与定义参数不匹配 | 检查 `.h` 与 `.c` 的函数签名一致 |
+| 条件编译宏裁掉函数定义但未裁掉调用 | 宏裁剪链路不同步 | 功能宏关闭后，必须同步收口所有引用点的声明/定义/调用 |
+
+### 构建日志查看
+
+- 完整实时日志：`unify_builder.exe` 的 stdout 输出
+- 历史日志：`build/GD32F30X_CL/unify_builder.log`
+- 仅当 VS Code 任务输出不完整时，优先查看终端完整构建日志
+
+### 调试要点
+
+1. 手动调用 `unify_builder.exe` 可能需要设置 `DOTNET_ROLL_FORWARD=Major`。
+2. 若出现 `Not found any source files`，优先检查 `builder.params` 的 `sourceList` 是否与 `rootDir` 匹配。
+3. `get_errors` 可能残留过期诊断，最终以真实编译/链接结果为准。
+4. 功能宏关闭后，务必同步收口受控函数的声明/定义/调用，避免"裁掉定义但未裁掉调用"。
 
 ## 质量门禁
 
-1. no newly introduced warnings。
+1. 不得新增 warning（0 error，不新增 warning）。
 2. 代码与文档必须同次迭代同步。
 3. 公共接口变更需评估实例适配影响。

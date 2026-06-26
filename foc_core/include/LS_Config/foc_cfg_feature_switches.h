@@ -4,12 +4,11 @@
 #include "LS_Config/foc_symbol_defs.h"
 
 /* Telemetry output feature switches. */
-#define DEBUG_STREAM_ENABLE_SEMANTIC_REPORT FOC_CFG_DISABLE
+#define DEBUG_STREAM_ENABLE_SEMANTIC_REPORT FOC_CFG_ENABLE
 #define DEBUG_STREAM_ENABLE_OSC_REPORT FOC_CFG_ENABLE
 
 /* Diagnostics feature switches. */
 #define FOC_FEATURE_DIAG_OUTPUT FOC_CFG_ENABLE
-#define FOC_FEATURE_DIAG_STATS FOC_CFG_ENABLE
 
 /* Safety feature switches. */
 #define FOC_FEATURE_UNDERVOLTAGE_PROTECTION FOC_CFG_ENABLE
