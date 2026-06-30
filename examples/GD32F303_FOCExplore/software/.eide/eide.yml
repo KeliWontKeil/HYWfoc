@@ -82,7 +82,6 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_task_scheduler.c
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_handler.c
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_output.c
-        - path: ../../../foc_core/src/L1_Orchestration/foc_service_handler.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_executor.c
         - path: ../../../foc_core/src/L3_Hal/foc_sensor.c
         - path: ../../../foc_core/src/L3_Hal/foc_svpwm.c
@@ -90,6 +89,9 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_queue.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_cogging_calib.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_reinit.c
+        - path: ../../../foc_core/src/L1_Orchestration/foc_app.c
+        - path: ../../../foc_core/src/L1_Orchestration/foc_indicator.c
+        - path: ../../../foc_core/src/L1_Orchestration/foc_init_check.c
       folders: []
 dependenceList: []
 outDir: build

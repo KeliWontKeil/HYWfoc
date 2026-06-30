@@ -112,7 +112,7 @@ L1 主循环（`FOC_App_Loop`）编排三个独立任务段，顺序无关：
 
 ## Version control practices
 
-- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v1.9.1`）
+- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v1.9.2`）
 - 默认在 `main` 直接开发，不创建新分支
 - 每次完整修改后仅做本地 `git commit`
 - 默认不 `git push`，仅在用户明确要求时执行

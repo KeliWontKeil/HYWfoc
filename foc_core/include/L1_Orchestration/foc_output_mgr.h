@@ -25,4 +25,10 @@ void FOC_OutputMgr_WriteDirect(const char *text);
 /* 写状态字节（直写） */
 void FOC_OutputMgr_WriteStatus(uint8_t status);
 
+/* 轮询所有通信源帧数据，入 RX 队列 */
+void FOC_OutputMgr_PollSources(foc_system_t *sys);
+
+/* 输出启动信息 */
+void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor);
+
 #endif /* FOC_OUTPUT_MGR_H */

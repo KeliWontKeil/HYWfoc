@@ -5,6 +5,22 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-06-30
+
+### Changed
+- **L1 层职责重构**：`foc_service_handler.c/h` 删除，拆分为 `foc_indicator.c/h`（指示器）+ `foc_init_check.c/h`（初始化校验），其余函数内联到 `foc_app.c`。
+- **`foc_app.c` 精简**：从 ~575 行精简至 ~260 行，通信轮询迁至 `foc_output_mgr.c`，无效/摘要行格式化迁至 L2 层。
+- **`foc_runtime_ctx_t` 新增 `osc` 字段**：替代 `foc_app.c` 静态全局示波器累积缓冲区。
+
+### Fixed
+- **齿槽补偿标定后 DMA 死锁**（USART 不可重入函数被 ISR 抢占）：标定阶段主循环跳过 Monitor/Service 任务、dump 输出移至 ISR 内 `CoggingCalib_Finish`。
+- **示波器 `iq_measured` 始终为 0**：`DebugStream_PollNextValue` 中 `case 8` 不匹配掩码位 `0x0200`（bit 9），switch 缺少 `case 9U`。
+
+### Added
+- `DebugStream_FormatInvalidLine()` — L2 无效语义行格式化。
+- `FOC_Protocol_FormatSummaryLine()` — L2 协议摘要行字符串转换（纯方法，无全局变量）。
+- `FOC_OutputMgr_PollSources()` / `FOC_OutputMgr_WriteStartupInfo()` — L1 输出管理器扩展。
+
 ## [1.9.1] - 2026-06-26
 
 ### Changed

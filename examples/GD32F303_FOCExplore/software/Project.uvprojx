@@ -618,11 +618,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
             </File>
             <File>
-              <FileName>foc_service_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_service_handler.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_debug_stream.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_debug_stream.c</FilePath>
@@ -716,6 +711,16 @@
               <FileName>foc_svpwm.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_svpwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_indicator.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_indicator.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_init_check.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init_check.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1336,11 +1341,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
             </File>
             <File>
-              <FileName>foc_service_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_service_handler.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_debug_stream.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_debug_stream.c</FilePath>
@@ -1434,6 +1434,16 @@
               <FileName>foc_svpwm.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_svpwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_indicator.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_indicator.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_init_check.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init_check.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2054,11 +2064,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
             </File>
             <File>
-              <FileName>foc_service_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_service_handler.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_debug_stream.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Runtime\foc_debug_stream.c</FilePath>
@@ -2152,6 +2157,16 @@
               <FileName>foc_svpwm.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_svpwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_indicator.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_indicator.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_init_check.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init_check.c</FilePath>
             </File>
           </Files>
         </Group>

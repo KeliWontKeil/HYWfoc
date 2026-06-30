@@ -318,6 +318,30 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
     }
 }
 
+uint8_t DebugStream_FormatInvalidLine(uint8_t tag, char *line_out, uint16_t line_max)
+{
+    uint8_t idx;
+
+    if ((line_out == 0) || (line_max == 0U)) return 0U;
+
+    idx = tag & 0x0FU;
+    switch (idx)
+    {
+    case 0U:
+        snprintf(line_out, line_max, "measurement.current.status=invalid\r\n");
+        break;
+    case 3U:
+        snprintf(line_out, line_max, "measurement.encoder.status=invalid\r\n");
+        break;
+    case 5U:
+        snprintf(line_out, line_max, "measurement.vbus.status=invalid\r\n");
+        break;
+    default:
+        return 0U;
+    }
+    return 1U;
+}
+
 void DebugStream_AppendOscValue(char *osc_buffer, uint16_t *offset,
                                  float value)
 {

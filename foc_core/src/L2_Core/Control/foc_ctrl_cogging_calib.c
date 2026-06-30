@@ -358,7 +358,11 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
 
     FOC_Platform_WriteDebugText("COGGING CALIB FINISHED\r\n");
 
-    motor->cogging_calib_state.request_dump = 1U;
+    /*
+     * 在 ISR 中直接输出 dump 表：此时 control_phase 仍为 COGGING_CALIB，
+     * 主循环已跳过 Monitor/Service 任务，USART 无竞争。
+     */
+    FOC_CoggingCalibDumpTable(motor);
 }
 
 static uint8_t CoggingCalib_Start(foc_motor_t *motor)

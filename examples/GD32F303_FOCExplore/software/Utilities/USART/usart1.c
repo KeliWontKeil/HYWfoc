@@ -302,6 +302,8 @@ static usart_status_t USART1_DMATxTransfer(const uint8_t *data, uint16_t len)
     }
 
     dma_channel_disable(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL);
+    /* Wait for CHEN to read back 0 before reconfiguring (GD32/STM32 DMA sync) */
+    while ((DMA_CHCTL(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL) & DMA_CHXCTL_CHEN) != 0U) {}
     dma_memory_address_config(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL, (uint32_t)data);
     dma_transfer_number_config(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL, len);
     dma_flag_clear(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL, DMA_FLAG_G);
@@ -315,6 +317,7 @@ static usart_status_t USART1_DMATxTransfer(const uint8_t *data, uint16_t len)
 
     dma_flag_clear(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL, DMA_FLAG_G);
     dma_channel_disable(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL);
+    while ((DMA_CHCTL(USART1_TX_DMA_PERIPH, USART1_TX_DMA_CHANNEL) & DMA_CHXCTL_CHEN) != 0U) {}
     usart_dma_transmit_config(USART1_PERIPH, USART_TRANSMIT_DMA_DISABLE);
 
     while (usart_flag_get(USART1_PERIPH, USART_FLAG_TC) == RESET)

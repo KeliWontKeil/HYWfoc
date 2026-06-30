@@ -145,15 +145,6 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor,
     motor->state.sensor_invalid_consecutive = 0U;
     motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
 
-    /* 3. 欠压保护 */
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
-    if (sensor->vbus_voltage_filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
-    {
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_UNDERVOLTAGE;
-        return (uint8_t)FOC_CYCLE_FAULT_UVLO;
-    }
-#endif
-
     /* 4. 电机是否使能 */
     if (motor->state.motor_enabled == 0U)
     {

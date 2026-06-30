@@ -102,13 +102,6 @@ void FOC_Platform_IndicatorInit(void) {}
  */
 void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on) { (void)led_index; (void)on; }
 
-/**
- * @brief 设置心跳指示灯
- * @param on 0=灭, 1=亮
- * @note  可选功能，用于指示系统正常运行。
- */
-void FOC_Platform_SetHeartbeatIndicator(uint8_t on) { (void)on; }
-
 /* ===== Communication (通信) ===== */
 
 /**
@@ -171,7 +164,7 @@ uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffer, uint16_t max_len) {
  * @brief 写入调试文本到主机输出通道（如UART发送）
  * @param str 以null结尾的字符串，内容为调试信息或协议响应
  * @note  此函数可能在中上下文（ISR）中被调用，必须保证线程安全且非阻塞。
- *        建议使用DMA或冲区方式发送数据。
+ *        建议使用DMA或缓冲区方式发送数据。
  */
 void FOC_Platform_WriteDebugText(const char *str) { (void)str; }
 

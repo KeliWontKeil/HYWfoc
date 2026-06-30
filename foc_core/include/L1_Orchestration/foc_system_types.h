@@ -59,6 +59,12 @@ typedef struct {
         uint16_t led_run_blink_counter;
     } indicator;
 
+    /* 示波器行累积状态（主循环跨轮收集用） */
+    struct {
+        char collect_buf[DEBUG_STREAM_OSC_PAYLOAD_LEN];
+        uint16_t collect_offset;
+    } osc;
+
     /* 通信轮询公平调度：下一次轮询起始源索引（round-robin 偏移） */
     uint8_t comm_source_rr;
 

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "L2_Core/foc_ctrl_types.h"  /* for foc_motor_t */
+
 /* 通过调试端口写入文本 */
 void FOC_Protocol_WriteText(const char *text);
 
@@ -20,5 +22,9 @@ void FOC_Protocol_OutputParam(char subcommand, float value);
 
 /* 格式化并输出状态（subcommand+value） */
 void FOC_Protocol_OutputState(char subcommand, uint8_t value);
+
+/* 格式化协议摘要行（纯字符串转换，不入队列不写硬件） */
+void FOC_Protocol_FormatSummaryLine(const foc_motor_t *motor,
+                                     char *line_out, uint16_t line_max);
 
 #endif /* FOC_PROTOCOL_OUTPUT_H */

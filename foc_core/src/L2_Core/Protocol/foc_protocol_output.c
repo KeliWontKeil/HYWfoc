@@ -93,3 +93,22 @@ void FOC_Protocol_OutputState(char subcommand, uint8_t value)
                                  value);
     FOC_Protocol_WriteText(out);
 }
+
+void FOC_Protocol_FormatSummaryLine(const foc_motor_t *motor,
+                                     char *line_out, uint16_t line_max)
+{
+    if ((motor == 0) || (line_out == 0) || (line_max == 0U)) return;
+
+    snprintf(line_out, line_max,
+             "STATE RUN=%u FLT=%u INIT=0x%04X/0x%04X "
+             "SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu "
+             "CTRL_SKIP=%lu\r\n",
+             (unsigned int)motor->state.system_running,
+             (unsigned int)motor->state.system_fault,
+             (unsigned int)motor->state.init_check_mask,
+             (unsigned int)motor->state.init_fail_mask,
+             (unsigned int)motor->state.sensor_invalid_consecutive,
+             (unsigned long)motor->state.protocol_error_count,
+             (unsigned long)motor->state.param_error_count,
+             (unsigned long)motor->state.control_skip_count);
+}

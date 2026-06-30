@@ -64,6 +64,9 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
 void DebugStream_FormatSemanticLine(uint8_t tag, float value,
                                      char *line_out, uint16_t line_max);
 
+/* 格式化语义无效行（aux==0 时），返回 1=已输出，0=跳过 */
+uint8_t DebugStream_FormatInvalidLine(uint8_t tag, char *line_out, uint16_t line_max);
+
 /* 追加一个示波器参数值（内部维护 buffer，由 FormatOscLine 完成） */
 void DebugStream_AppendOscValue(char *osc_buffer, uint16_t *offset,
                                  float value);

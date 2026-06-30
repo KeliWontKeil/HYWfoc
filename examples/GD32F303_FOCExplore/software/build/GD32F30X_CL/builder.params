@@ -42,8 +42,10 @@
     ],
     "sourceList": [
         "../../../foc_core/src/L1_Orchestration/foc_app.c",
+        "../../../foc_core/src/L1_Orchestration/foc_app.c",
+        "../../../foc_core/src/L1_Orchestration/foc_indicator.c",
+        "../../../foc_core/src/L1_Orchestration/foc_init_check.c",
         "../../../foc_core/src/L1_Orchestration/foc_output_mgr.c",
-        "../../../foc_core/src/L1_Orchestration/foc_service_handler.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_actuation.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_cfg.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_cogging_calib.c",

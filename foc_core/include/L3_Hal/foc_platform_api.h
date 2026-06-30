@@ -39,9 +39,6 @@ void FOC_Platform_IndicatorInit(void);
 /** @brief Set indicator on/off state by logical indicator index. */
 void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on);
 
-/** @brief Set heartbeat indicator state. */
-void FOC_Platform_SetHeartbeatIndicator(uint8_t on);
-
 /* ===== Communication ===== */
 
 /** @brief Initialize communication peripherals used by platform transport. */
