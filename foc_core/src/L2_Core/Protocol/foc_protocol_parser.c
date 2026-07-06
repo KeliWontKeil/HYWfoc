@@ -230,7 +230,7 @@ const char *ProtocolText_GetParamName(char subcommand)
         return "angle_position_speed_rad_s";
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
         return "speed_only_speed_rad_s";
-#if (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET == FOC_CFG_ENABLE)
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
         return "sensor_sample_offset_percent";
 #endif
@@ -284,17 +284,20 @@ const char *ProtocolText_GetParamName(char subcommand)
     case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
         return "cogging_calib_gain_k";
 #endif
-#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
         return "cogging_comp_iq_limit_a";
     case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE:
         return "cogging_comp_speed_gate_rad_s";
 #endif
-#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
         return "current_soft_switch_mode";
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
         return "current_soft_switch_auto_open_iq_a";
+#endif
+/* 'Y' subcommand shared with COGGING_CALIB_GAIN; only active when calib is disabled */
+#if ((FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
         return "current_soft_switch_auto_closed_iq_a";
 #endif
@@ -315,11 +318,11 @@ const char *ProtocolText_GetStateName(char subcommand)
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
         return "oscilloscope_report_enabled";
 #endif
-#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
         return "current_soft_switch_enabled";
 #endif
-#if (FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE)
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
         return "cogging_comp_enabled";
 #endif
@@ -338,9 +341,13 @@ uint8_t ProtocolText_IsIntegerParam(char subcommand)
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
 #endif
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
-#if (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE)
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
 #endif
+/* Note: CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ ('Y') shares the same subcommand char
+ * as COGGING_CALIB_GAIN. It is excluded from IsIntegerParam to avoid collision,
+ * and is conditionally compiled only when FOC_COGGING_CALIB_ENABLE is disabled.
+ */
         return 1U;
     default:
         return 0U;

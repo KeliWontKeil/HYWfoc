@@ -68,10 +68,16 @@ uint16_t FOC_Platform_CommSource3_ReadFrame(uint8_t *buffer, uint16_t max_len);
 /** @brief Read one received frame from communication source 4. */
 uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffer, uint16_t max_len);
 
-/** @brief Write human-readable debug text to host output channel. */
+/** @brief Write human-readable debug text to host output channel.
+ *  Main-loop only (blocking DMA). Not safe for ISR context. */
 void FOC_Platform_WriteDebugText(const char *str);
 
-/** @brief Write one compact status byte to host output channel. */
+/** @brief Write debug text via fast path (ISR-safe, non-blocking).
+ *  Uses ring buffer + TXE interrupt. Suitable for short status strings. */
+void FOC_Platform_WriteDebugFast(const char *str);
+
+/** @brief Write one compact status byte to host output channel.
+ *  ISR-safe, non-blocking. Suitable for any context including ISR. */
 void FOC_Platform_WriteStatusByte(uint8_t status_code);
 
 /* ===== Sensor / Acquisition ===== */

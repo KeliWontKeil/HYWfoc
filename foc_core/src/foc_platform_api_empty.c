@@ -161,18 +161,26 @@ uint16_t FOC_Platform_CommSource3_ReadFrame(uint8_t *buffer, uint16_t max_len) {
 uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffer, uint16_t max_len) { (void)buffer; (void)max_len; return 0U; }
 
 /**
- * @brief 写入调试文本到主机输出通道（如UART发送）
+ * @brief 写入调试文本到主机输出通道（如UART发送）——慢路径
  * @param str 以null结尾的字符串，内容为调试信息或协议响应
- * @note  此函数可能在中上下文（ISR）中被调用，必须保证线程安全且非阻塞。
- *        建议使用DMA或缓冲区方式发送数据。
+ * @note  此函数仅在主循环上下文中使用（阻塞DMA）。不可用于ISR。
+ *        建议使用DMA方式进行大数据量发送。
  */
 void FOC_Platform_WriteDebugText(const char *str) { (void)str; }
 
 /**
+ * @brief 写入调试文本到主机输出通道（如UART发送）——快路径
+ * @param str 以null结尾的字符串，内容为短状态信息
+ * @note  ISR-safe，非阻塞。使用环形缓冲区+TXE中断驱动发送。
+ *        适用于ISR中的短状态文本输出。缓冲区满时丢弃剩余字符。
+ */
+void FOC_Platform_WriteDebugFast(const char *str) { (void)str; }
+
+/**
  * @brief 写入单字节状态码到主机输出通道
  * @param status_code 状态码字符，如'O'/'E'/'P'/'I'/'T'
- * @note  用于协议响应中的状态反馈，必须与WriteDebugText使用相同的输出通道。
- *        也被用在ISR上下文中，需要非阻塞实现。
+ * @note  ISR-safe，非阻塞。用于协议响应中的状态反馈。
+ *        与WriteDebugFast共享同一条快路径发送通道。
  */
 void FOC_Platform_WriteStatusByte(uint8_t status_code) { (void)status_code; }
 

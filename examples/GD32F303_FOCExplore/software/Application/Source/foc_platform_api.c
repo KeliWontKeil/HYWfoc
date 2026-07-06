@@ -103,12 +103,17 @@ __attribute__((weak)) uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffe
 
 void FOC_Platform_WriteDebugText(const char *str)
 {
-    USART1_SendString(str);
+    USART1_SlowWriter_SendData((const uint8_t *)str, (uint16_t)strlen(str));
+}
+
+void FOC_Platform_WriteDebugFast(const char *str)
+{
+    USART1_FastWriter_PutString(str);
 }
 
 void FOC_Platform_WriteStatusByte(uint8_t status_code)
 {
-    USART1_SendByte(status_code);
+    USART1_FastWriter_PutByte(status_code);
 }
 
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)

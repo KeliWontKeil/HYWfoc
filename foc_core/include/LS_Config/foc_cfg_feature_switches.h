@@ -46,15 +46,18 @@
  *
  * The minimal control protocol set is always enabled and not guarded by these
  * macros: P:A/R/S/D, S:M, Y:R/C.
+ *
+ * The following protocol features are controlled by their corresponding
+ * feature macro (FOC_*_ENABLE) rather than a separate protocol macro:
+ *   - COGGING_COMP   — uses FOC_COGGING_COMP_ENABLE
+ *   - SOFT_SWITCH    — uses FOC_CURRENT_SOFT_SWITCH_ENABLE
+ *   - SAMPLE_OFFSET  — uses FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE
  */
-#define FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET FOC_CFG_ENABLE
 #define FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT FOC_CFG_ENABLE
 #define FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING FOC_CFG_ENABLE
 #define FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING FOC_CFG_DISABLE
 #define FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING FOC_CFG_DISABLE
 #define FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING FOC_CFG_DISABLE
-#define FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH FOC_CFG_DISABLE
-#define FOC_PROTOCOL_ENABLE_COGGING_COMP FOC_CFG_DISABLE
 
 /* Control build and startup motion defaults. */
 #define FOC_BUILD_CONTROL_ALGO_SET FOC_CTRL_ALGO_BUILD_FULL

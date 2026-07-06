@@ -123,9 +123,6 @@
 #if ((FOC_INIT_CALIBRATION_ENABLE != FOC_CFG_DISABLE) && (FOC_INIT_CALIBRATION_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_INIT_CALIBRATION_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
-#if ((FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET != FOC_CFG_ENABLE))
-#error "FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
-#endif
 #if ((FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT != FOC_CFG_ENABLE))
 #error "FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
@@ -140,12 +137,6 @@
 #endif
 #if ((FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING != FOC_CFG_ENABLE))
 #error "FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
-#endif
-#if ((FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH != FOC_CFG_ENABLE))
-#error "FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
-#endif
-#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_DISABLE) && (FOC_PROTOCOL_ENABLE_COGGING_COMP != FOC_CFG_ENABLE))
-#error "FOC_PROTOCOL_ENABLE_COGGING_COMP must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
 #if ((FOC_COGGING_CALIB_ENABLE != FOC_CFG_DISABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_COGGING_CALIB_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
@@ -179,20 +170,6 @@
 #warning FOC_CFG_HINT_FEATURE_DEPENDENCY current soft-switch feature is enabled but current-loop PID is disabled; soft-switch code path is compiled out.
 #else
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEPENDENCY: current soft-switch feature is enabled but current-loop PID is disabled; soft-switch code path is compiled out.")
-#endif
-#endif
-#if ((FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_ENABLE))
-#if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_FEATURE_PROTOCOL current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: current soft-switch protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
-#endif
-#endif
-#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && (FOC_COGGING_COMP_ENABLE != FOC_CFG_ENABLE))
-#if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_FEATURE_PROTOCOL cogging comp protocol chain is enabled while feature is disabled; related protocol commands become non-effective.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_PROTOCOL: cogging comp protocol chain is enabled while feature is disabled; related protocol commands become non-effective.")
 #endif
 #endif
 #if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE))
@@ -316,8 +293,8 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
  * COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ.
  * In practice these are mutually exclusive by feature switch guard.
  */
-#if ((FOC_PROTOCOL_ENABLE_COGGING_COMP == FOC_CFG_ENABLE) && \
-     (FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH == FOC_CFG_ENABLE))
+#if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && \
+     (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
 #if defined(__ARMCC_VERSION)
 #warning "PROTOCOL SUBCOMMAND COLLISION: COGGING_CALIB_GAIN and SOFT_SWITCH_AUTO_CLOSED_IQ both use symbol 'Y'. These two feature groups cannot coexist."
 #else

@@ -312,6 +312,11 @@ void FOC_App_Loop(void)
         FOC_App_ApplyCfgDirty();
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        if (FOC_CoggingCalibIsDumpPending(&motor) != 0U)
+        {
+            FOC_CoggingCalibClearDumpPending(&motor);
+            FOC_CoggingCalibDumpTable(&motor);
+        }
         if (FOC_CoggingCalibIsExportPending(&motor) != 0U)
         {
             FOC_CoggingCalibClearExportPending(&motor);

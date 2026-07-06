@@ -5,6 +5,7 @@
     \file    usart.h
     \brief   USART1 module for basic serial communication
 
+    \version 2026-7-6, V2.0.0 — Refactored: split TX into FastWriter/SlowWriter
     \version 2026-3-9, V1.0.0
 */
 
@@ -42,7 +43,12 @@
 
 /* Buffer sizes */
 #define USART1_RX_BUFFER_SIZE  128
-#define USART1_TX_BUFFER_SIZE  128
+
+/* Fast path ring buffer size (ISR-safe, TXE interrupt driven) */
+#define USART1_FAST_RING_SIZE  16U
+
+/* Slow path TX buffer size (DMA driven, main-loop only) */
+#define USART1_SLOW_TX_BUF_SIZE  128U
 
 /* USART status flags */
 typedef enum {
@@ -52,14 +58,20 @@ typedef enum {
     USART_STATUS_BUFFER_FULL
 } usart_status_t;
 
-/* Function prototypes */
+/* ===== RX (unchanged) ===== */
 void USART1_Init(void);
-usart_status_t USART1_SendByte(uint8_t data);
-usart_status_t USART1_SendString(const char *str);
-usart_status_t USART1_SendData(const uint8_t *data, uint16_t len);
 uint8_t USART1_IsFrameReady(void);
 uint16_t USART1_ReadFrame(uint8_t *buffer, uint16_t max_len);
 void USART1_ClearBuffers(void);
+
+/* ===== TX: Fast Writer (ISR-safe, non-blocking, TXE interrupt driven) ===== */
+void USART1_FastWriter_PutByte(uint8_t byte);
+void USART1_FastWriter_PutString(const char *str);
+uint8_t USART1_FastWriter_IsEmpty(void);
+void USART1_FastWriter_Flush(void);
+
+/* ===== TX: Slow Writer (main-loop only, blocking DMA) ===== */
+usart_status_t USART1_SlowWriter_SendData(const uint8_t *data, uint16_t len);
 
 /* Interrupt callback type */
 typedef void (*usart_rx_callback_t)(uint8_t data);

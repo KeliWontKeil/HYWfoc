@@ -5,6 +5,31 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3] - 2026-07-06
+
+### Changed
+- **SETTLE 阶段重写**：将原来"旋转一圈"的积分行程判定改为"锁定当前角度 N 个控制周期"（`FOC_COGGING_CALIB_SETTLE_CYCLES`，默认 150 周期 ≈ 100ms）。消除了因微小角度差（~0.0004 rad/步）逐周期积分噪声导致的行程误判。
+- **SCAN 阶段 bin 判定去抖**：改用方向锁定的前进判定替代单纯的 `!=` 比较——仅接受沿旋转方向前进的 bin 切换，拒绝传感器噪声导致的 bin 弹回和重复写入。
+- **移除角度同步**：删除 SETTLE→SCAN 和 CHECK→SCAN 过渡处的 `pred_mech_angle = sensor->mech_angle_rad.output_value` 同步，保持驱动电角度连续无跳变。
+- **USART TX 快慢路径分离**：将 USART1 输出重构为两条独立路径——快路径（`USART1_FastWriter_*`，ISR-safe，环形缓冲区+TXE中断驱动）和慢路径（`USART1_SlowWriter_SendData`，主循环阻塞DMA）。删除旧 `USART1_SendByte/SendString/SendData` API。
+- **新增 `FOC_Platform_WriteDebugFast`**：ISR-safe 快路径文本输出 API，用于 ISR 中的短状态信息。
+- **齿槽标定输出路径分离**：`CoggingCalib_Finish` 中所有短状态文本改为快路径输出，大表 dump 改为设 `request_dump` 标志由主循环 Service 段输出，消除 ISR 中阻塞 DMA 导致的死锁。
+
+### Added
+- `USART1_FastWriter_PutString` — 快路径非阻塞字符串输出。
+- `FOC_Platform_WriteDebugFast` — L3 平台 API 快路径文本输出（`foc_platform_api.h`）。
+
+### Removed
+- `foc_cogging_calib_state_t` 中 `travel_accum_rad`、`angle_prev_rad`、`rev_count` 三个字段（不再使用）。
+- `FOC_COGGING_CALIB_SETTLE_REV` 配置宏（替换为 `FOC_COGGING_CALIB_SETTLE_CYCLES`）。
+- `CoggingCalib_AngleDelta` 辅助函数（不再使用）。
+- `USART1_SendByte`、`USART1_SendString`、`USART1_SendData` — 已由 FastWriter/SlowWriter 替代。
+
+### Fixed
+- 齿槽标定过程中因 `bins_collected` 计数误触（噪声使 bin index 弹回导致同一 bin 被重复写入）导致的 LUT 连续异常值。
+- 标定过渡阶段因 `pred_mech_angle` 同步导致的驱动电角度跳变。
+- **ISR 中调用慢路径阻塞 DMA 导致系统卡死**：`CoggingCalib_Finish` 在控制 ISR 中通过 `FOC_Platform_WriteDebugText`（慢路径 DMA）输出状态信息和齿槽表，DMA 阻塞等待被 ISR 优先级阻塞导致永久死锁。修复方式：短文本改为 `FOC_Platform_WriteDebugFast`（非阻塞 TXE 中断），大表输出改为设标志位由主循环 Service 段处理。
+
 ## [1.9.2] - 2026-06-30
 
 ### Changed

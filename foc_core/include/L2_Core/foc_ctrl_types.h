@@ -116,12 +116,10 @@ typedef struct {
     uint16_t point_index;
     uint8_t completed_pass_count;
     float pred_mech_angle;
-    float travel_accum_rad;
-    float angle_prev_rad;
+    uint16_t settle_counter;
     uint16_t last_lut_index;
     uint16_t bins_collected;
     uint8_t pass_num;
-    uint8_t rev_count;
     uint8_t last_reported_progress;
     uint8_t saved_softswitch_enabled;
     uint8_t saved_softswitch_mode;
