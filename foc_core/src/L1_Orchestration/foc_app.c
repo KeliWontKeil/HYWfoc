@@ -270,15 +270,6 @@ void FOC_App_Loop(void)
                 continue;
             }
 
-            /* 协议摘要行 */
-            if (elem.tag == MONITOR_ELEM_PROTOCOL_SUMMARY)
-            {
-                char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-                FOC_Protocol_FormatSummaryLine(&motor, line, sizeof(line));
-                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
-                in_frame = 0U;
-                continue;
-            }
         }
     }
 
@@ -300,12 +291,9 @@ void FOC_App_Loop(void)
 
             if (result.needs_summary != 0U)
             {
-                monitor_element_t elem;
-                elem.tag   = MONITOR_ELEM_PROTOCOL_SUMMARY;
-                elem.aux   = 0U;
-                elem.value = 0.0f;
-                (void)FIFO_Enqueue(&g_sys.runtime.monitor_elem_q, (uint8_t *)&elem);
-                g_sys.runtime.monitor_task_pending = 1U;
+                char summary_line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+                FOC_Protocol_FormatSummaryLine(&motor, summary_line, sizeof(summary_line));
+                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)summary_line);
             }
         }
 
