@@ -5,6 +5,20 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2026-07-09
+
+### Changed
+- **禁用 ADC 硬件过采样**：移除 `adc_oversample_mode_config/enable` 配置，所有计算使用 12-bit 原始值（0~4095）。解决过采样导致采样窗口过大、大电流下有效采样窗口过小的问题。
+- **`monitor_elem_q` 队列竞态修复**：协议摘要（PROTOCOL_SUMMARY）不再经 `monitor_elem_q` 中转，改为 Service 段直接入 `tx_fifo`。消除 ISR（MonitorTrigger）与主循环（Service）的队列写冲突导致的帧丢失和串口卡死。
+- **示波器输出 5 通道**：默认输出 `current_a.output_value`、`current_b.output_value`、`current_c.output_value`、`current_a_raw`（ADC 驱动输出值，方向系数后零偏前）、`current_b_raw`。精简默认掩码，关闭 angle/iq_target/iq_measured 等不必要通道。
+
+### Added
+- `sensor_data_t` 新增 `current_a_raw` / `current_b_raw` 字段（ADC 原始采样值，过采样后，未零偏/电周期补偿）。
+- `DEBUG_STREAM_OSC_PARAM_CURRENT_A_RAW` / `CURRENT_B_RAW` 位掩码定义。
+
+### Fixed
+- **串口输出卡死问题**：Service 段入队 PROTOCOL_SUMMARY 到 `monitor_elem_q` 与 ISR 端写入冲突 → 队列状态损坏 → 出队读到不完整 tag → 帧丢弃 → 串口无输出。修复后 `monitor_elem_q` 为纯 ISR 写 → 主循环读，无竞态。
+
 ## [1.9.3] - 2026-07-06
 
 ### Changed
