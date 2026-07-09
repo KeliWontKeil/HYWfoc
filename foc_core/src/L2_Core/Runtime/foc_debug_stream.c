@@ -246,6 +246,8 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                                                 motor->sensor.vbus_voltage_filtered : 0.0f; break;
                     case 7U: elem_out->value = motor->iq_target; break;
                     case 8U: elem_out->value = motor->iq_measured; break;
+                    case 9U: elem_out->value = motor->sensor.current_a_raw; break;
+                    case 10U: elem_out->value = motor->sensor.current_b_raw; break;
                     default: elem_out->value = 0.0f; break;
                     }
 

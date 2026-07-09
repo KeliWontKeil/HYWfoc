@@ -191,6 +191,9 @@ typedef struct {
     float vbus_voltage_raw;
     float vbus_voltage_filtered;
     uint8_t vbus_valid;
+    /* ADC 原始采样值（硬件过采样后，未经过零偏/电周期补偿） */
+    float current_a_raw;
+    float current_b_raw;
 } sensor_data_t;
 
 /* ========== Torque mode ========== */

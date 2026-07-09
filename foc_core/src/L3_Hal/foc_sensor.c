@@ -72,6 +72,8 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->vbus_valid = 0;
     out->vbus_voltage_raw = 0.0f;
     out->vbus_voltage_filtered = 0.0f;
+    out->current_a_raw = 0.0f;
+    out->current_b_raw = 0.0f;
 }
 
 /*
@@ -222,6 +224,10 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     {
         sensor_data_t *out = &motor->sensor_fast;
 
+        /* 捕获原始 ADC 值（过采样后，未零偏/电周期补偿） */
+        out->current_a_raw = current_a;
+        out->current_b_raw = current_b;
+
 #if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
         Kalman_Update(&out->current_a, current_a);
         Kalman_Update(&out->current_b, current_b);
@@ -324,6 +330,8 @@ void Sensor_SyncCurrentSnapshot(foc_motor_t *motor)
         motor->sensor.current_a = motor->sensor_fast.current_a;
         motor->sensor.current_b = motor->sensor_fast.current_b;
         motor->sensor.current_c = motor->sensor_fast.current_c;
+        motor->sensor.current_a_raw = motor->sensor_fast.current_a_raw;
+        motor->sensor.current_b_raw = motor->sensor_fast.current_b_raw;
         motor->sensor.adc_valid = 1U;
     }
 }
