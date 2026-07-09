@@ -76,7 +76,7 @@
 
 /* Current calculation constants */
 #define ADC_VREF              3.28f    /* Reference voltage (V) */
-#define ADC_15_MAX_VALUE         32760.0f /* 15-bit ADC max value (12-bit * 8x oversampling) */
+#define ADC_15_MAX_VALUE         4095.0f /* 12-bit ADC max value (oversampling disabled) */
 #define ADC_12_MAX_VALUE           4095.0f /* 12-bit ADC max value */
 
 /* Phase A current sensor parameters */

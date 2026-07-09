@@ -34,7 +34,7 @@
 
 /* Motor initialization parameters. */
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
-#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 11.4f
+#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 10.0f
 #define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
 
 /* Alignment/calibration voltage is derived from set_voltage. */
@@ -95,7 +95,7 @@
 #define DEBUG_STREAM_OSC_DEFAULT_SHOW_CURRENT_B_RAW FOC_CFG_ENABLE
 
 /* Sensor and filter initialization defaults. */
-#define FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 45.0f
+#define FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 51.0f
 
 #define FOC_SENSOR_KALMAN_CURRENT_A_MEAS_ERR 0.4f
 #define FOC_SENSOR_KALMAN_CURRENT_A_EST_ERR 0.0f
