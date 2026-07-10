@@ -20,7 +20,7 @@ static uint8_t IsInRange(float value, float min_value, float max_value)
     return (value >= min_value && value <= max_value) ? 1U : 0U;
 }
 
-/* ========== 参数读写（直接写 motor 顶层字段） ========== */
+/* ========== P 命令组参数读写（运行参数） ========== */
 
 static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 {
@@ -65,150 +65,10 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
         break;
 #endif
 
-    /* PID 参数直接写入 PID 对象 */
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP:
-#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U) return 0U;
-        motor->torque_current_pid.kp = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI:
-#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U) return 0U;
-        motor->torque_current_pid.ki = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD:
-#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U) return 0U;
-        motor->torque_current_pid.kd = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP:
-#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U) return 0U;
-        motor->angle_pid.kp = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI:
-#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MAX) == 0U) return 0U;
-        motor->angle_pid.ki = value;
-        break;
-#else
-        return 0U;
-#endif
-#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MAX) == 0U) return 0U;
-        motor->angle_pid.kd = value;
-        break;
-#endif
-
-#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP:
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U) return 0U;
-        motor->speed_pid.kp = value;
-        break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI:
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KI_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KI_MAX) == 0U) return 0U;
-        motor->speed_pid.ki = value;
-        break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD:
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KD_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KD_MAX) == 0U) return 0U;
-        motor->speed_pid.kd = value;
-        break;
-#endif
-
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA:
-#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        if (value < 0.0f) return 0U;
-        motor->min_mech_angle_accum_delta_rad = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT:
-#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        if (value < 0.0f) return 0U;
-        motor->angle_hold_integral_limit = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND:
-#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        if (value < 0.0f) return 0U;
-        motor->angle_hold_pid_deadband_rad = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START:
-#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        if (value < 0.0f) return 0U;
-        motor->speed_angle_transition_start_rad = value;
-        break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END:
-#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        if (value < 0.0f) return 0U;
-        motor->speed_angle_transition_end_rad = value;
-        break;
-#else
-        return 0U;
-#endif
-
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
         if ((value < COMMAND_MANAGER_PARAM_CONTROL_MODE_MIN) || (value > COMMAND_MANAGER_PARAM_CONTROL_MODE_MAX)) return 0U;
         motor->state.control_mode = (uint8_t)value;
         break;
-
-    /* 齿槽补偿参数 */
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MIN_A, COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MAX_A) == 0U) return 0U;
-        motor->cogging_comp_status.iq_limit_a = value;
-        break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE:
-        if (IsInRange(value, COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MIN_RAD_S, COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MAX_RAD_S) == 0U) return 0U;
-        motor->cogging_comp_status.speed_gate_rad_s = value;
-        break;
-#endif
-#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
-        if (value < 0.0f) return 0U;
-        motor->cogging_comp_status.calib_gain_k = value;
-        break;
-#endif
-
-    /* 电流软切换参数 */
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
-        if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_MODE_MIN) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_MODE_MAX)) return 0U;
-        motor->current_soft_switch_status.configured_mode = (uint8_t)value;
-        break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
-        if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_MIN_A) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_MAX_A) || (value > motor->current_soft_switch_status.auto_closed_iq_a)) return 0U;
-        motor->current_soft_switch_status.auto_open_iq_a = value;
-        break;
-#endif
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
-        if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MIN_A) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MAX_A) || (value < motor->current_soft_switch_status.auto_open_iq_a)) return 0U;
-        motor->current_soft_switch_status.auto_closed_iq_a = value;
-        break;
-#endif
 
     default:
         return 0U;
@@ -243,101 +103,324 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
         { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->osc_parameter_mask : 0.0f; } break;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP:
+    case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
+        *value_out = (float)motor->state.control_mode; break;
+    default:
+        return 0U;
+    }
+    return 1U;
+}
+
+/* ========== C 命令组参数读写（调优/配置参数） ========== */
+
+static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value)
+{
+    switch (subcommand)
+    {
+    /* PID 电流环 */
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KP:
+#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U) return 0U;
+        motor->torque_current_pid.kp = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KI:
+#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U) return 0U;
+        motor->torque_current_pid.ki = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KD:
+#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U) return 0U;
+        motor->torque_current_pid.kd = value;
+        break;
+#else
+        return 0U;
+#endif
+
+    /* PID 角度环 */
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KP:
+#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U) return 0U;
+        motor->angle_pid.kp = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KI:
+#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KI_MAX) == 0U) return 0U;
+        motor->angle_pid.ki = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KD:
+#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MAX) == 0U) return 0U;
+        motor->angle_pid.kd = value;
+        break;
+#else
+        return 0U;
+#endif
+
+    /* PID 速度环 */
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KP:
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U) return 0U;
+        motor->speed_pid.kp = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KI:
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KI_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KI_MAX) == 0U) return 0U;
+        motor->speed_pid.ki = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KD:
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KD_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KD_MAX) == 0U) return 0U;
+        motor->speed_pid.kd = value;
+        break;
+#else
+        return 0U;
+#endif
+
+    /* 控制 fine-tuning */
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_MIN_MECH_DELTA:
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        if (value < 0.0f) return 0U;
+        motor->min_mech_angle_accum_delta_rad = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_I_LIMIT:
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        if (value < 0.0f) return 0U;
+        motor->angle_hold_integral_limit = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_DEADBAND:
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        if (value < 0.0f) return 0U;
+        motor->angle_hold_pid_deadband_rad = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_START:
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        if (value < 0.0f) return 0U;
+        motor->speed_angle_transition_start_rad = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_END:
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        if (value < 0.0f) return 0U;
+        motor->speed_angle_transition_end_rad = value;
+        break;
+#else
+        return 0U;
+#endif
+
+    /* 齿槽补偿 */
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_IQ_LIMIT:
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MIN_A, COMMAND_MANAGER_PARAM_COGGING_COMP_IQ_LIMIT_MAX_A) == 0U) return 0U;
+        motor->cogging_comp_status.iq_limit_a = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_SPEED_GATE:
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MIN_RAD_S, COMMAND_MANAGER_PARAM_COGGING_COMP_SPEED_GATE_MAX_RAD_S) == 0U) return 0U;
+        motor->cogging_comp_status.speed_gate_rad_s = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_CALIB_GAIN:
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        if (value < 0.0f) return 0U;
+        motor->cogging_comp_status.calib_gain_k = value;
+        break;
+#else
+        return 0U;
+#endif
+
+    /* 电流软切换 */
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_MODE_MIN) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_MODE_MAX)) return 0U;
+        motor->current_soft_switch_status.configured_mode = (uint8_t)value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_MIN_A) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_MAX_A) || (value > motor->current_soft_switch_status.auto_closed_iq_a)) return 0U;
+        motor->current_soft_switch_status.auto_open_iq_a = value;
+        break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MIN_A) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MAX_A) || (value < motor->current_soft_switch_status.auto_open_iq_a)) return 0U;
+        motor->current_soft_switch_status.auto_closed_iq_a = value;
+        break;
+#else
+        return 0U;
+#endif
+
+    default:
+        return 0U;
+    }
+    motor->state.cfg_dirty = 1U;
+    return 1U;
+}
+
+static uint8_t ReadConfigParam(const foc_motor_t *motor, char subcommand, float *value_out)
+{
+    if (value_out == 0) return 0U;
+
+    switch (subcommand)
+    {
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KP:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->torque_current_pid.kp; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KI:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->torque_current_pid.ki; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KD:
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->torque_current_pid.kd; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KP:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->angle_pid.kp; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KI:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->angle_pid.ki; break;
 #else
         return 0U;
 #endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KD:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
         *value_out = motor->angle_pid.kd; break;
+#else
+        return 0U;
 #endif
-
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KP:
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP:
         *value_out = motor->speed_pid.kp; break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI:
-        *value_out = motor->speed_pid.ki; break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD:
-        *value_out = motor->speed_pid.kd; break;
+#else
+        return 0U;
 #endif
-
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KI:
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        *value_out = motor->speed_pid.ki; break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KD:
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        *value_out = motor->speed_pid.kd; break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_MIN_MECH_DELTA:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->min_mech_angle_accum_delta_rad; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_I_LIMIT:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->angle_hold_integral_limit; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_DEADBAND:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->angle_hold_pid_deadband_rad; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_START:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->speed_angle_transition_start_rad; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_END:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         *value_out = motor->speed_angle_transition_end_rad; break;
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
-        *value_out = (float)motor->state.control_mode; break;
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_IQ_LIMIT:
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
         *value_out = motor->cogging_comp_status.iq_limit_a; break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE:
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_SPEED_GATE:
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
         *value_out = motor->cogging_comp_status.speed_gate_rad_s; break;
+#else
+        return 0U;
 #endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_CALIB_GAIN:
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
         *value_out = motor->cogging_comp_status.calib_gain_k; break;
+#else
+        return 0U;
 #endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
         *value_out = (float)motor->current_soft_switch_status.configured_mode; break;
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
-        *value_out = motor->current_soft_switch_status.auto_open_iq_a; break;
+#else
+        return 0U;
 #endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
+        *value_out = motor->current_soft_switch_status.auto_open_iq_a; break;
+#else
+        return 0U;
+#endif
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
         *value_out = motor->current_soft_switch_status.auto_closed_iq_a; break;
+#else
+        return 0U;
 #endif
     default:
         return 0U;
@@ -411,6 +494,8 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
     return 1U;
 }
 
+/* ========== 批量报告（P 组） ========== */
+
 static void ReportAllParams(const foc_motor_t *motor)
 {
     float value;
@@ -422,34 +507,46 @@ static void ReportAllParams(const foc_motor_t *motor)
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV, COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV, COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK,
 #endif
-#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD,
-#endif
-#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD,
-#endif
-#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP, COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI, COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD,
-#endif
-#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA, COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT,
-        COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND, COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START, COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END,
-#endif
         COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE,
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT, COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE,
-#endif
-#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN,
-#endif
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE, COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ,
-        COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ,
-#endif
     };
     uint16_t i;
     for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
         if (ReadParam(motor, params[i], &value) != 0U) FOC_Protocol_OutputParam(params[i], value);
+}
+
+/* ========== 批量报告（C 组） ========== */
+
+static void ReportAllConfigs(const foc_motor_t *motor)
+{
+    float value;
+    const char configs[] = {
+#if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KP, COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KI, COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KD,
+#endif
+#if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KP, COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KI, COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KD,
+#endif
+#if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KP, COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KI, COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KD,
+#endif
+#if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_CFG_MIN_MECH_DELTA, COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_I_LIMIT,
+        COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_DEADBAND, COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_START, COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_END,
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_IQ_LIMIT, COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_SPEED_GATE,
+#endif
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_CALIB_GAIN,
+#endif
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_MODE, COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ,
+        COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ,
+#endif
+    };
+    uint16_t i;
+    for (i = 0U; i < (uint16_t)(sizeof(configs) / sizeof(configs[0])); i++)
+        if (ReadConfigParam(motor, configs[i], &value) != 0U) FOC_Protocol_OutputConfigParam(configs[i], value);
 }
 
 static void ReportAllStates(const foc_motor_t *motor)
@@ -477,6 +574,14 @@ static uint8_t ReportSingleParam(const foc_motor_t *motor, char subcommand)
     return 1U;
 }
 
+static uint8_t ReportSingleConfig(const foc_motor_t *motor, char subcommand)
+{
+    float value;
+    if (ReadConfigParam(motor, subcommand, &value) == 0U) return 0U;
+    FOC_Protocol_OutputConfigParam(subcommand, value);
+    return 1U;
+}
+
 static uint8_t ReportSingleState(const foc_motor_t *motor, char subcommand)
 {
     uint8_t state_val;
@@ -485,7 +590,7 @@ static uint8_t ReportSingleState(const foc_motor_t *motor, char subcommand)
     return 1U;
 }
 
-/* ========== 命令执行（返回结果结构体） ========== */
+/* ========== P 命令执行 ========== */
 
 static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const protocol_command_t *cmd)
 {
@@ -530,6 +635,54 @@ static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const pro
     res.needs_status = 1U;
     return res;
 }
+
+/* ========== C 命令执行 ========== */
+
+static foc_protocol_frame_result_t ExecuteCCommand(foc_motor_t *motor, const protocol_command_t *cmd)
+{
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+    float value = 0.0f;
+
+    if (cmd->has_param != 0U)
+    {
+        if (WriteConfigParam(motor, cmd->subcommand, cmd->param_value) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        if (ReadConfigParam(motor, cmd->subcommand, &value) != 0U)
+            FOC_Protocol_OutputConfigParam(cmd->subcommand, value);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        res.param_changed = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_CONFIG_SUBCMD_READ_ALL)
+    {
+        ReportAllConfigs(motor);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (ReportSingleConfig(motor, cmd->subcommand) == 0U)
+    {
+        FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+        res.needs_status = 1U;
+        return res;
+    }
+
+    FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+    res.comm_active  = 1U;
+    res.needs_status = 1U;
+    return res;
+}
+
+/* ========== S 命令执行 ========== */
 
 static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const protocol_command_t *cmd)
 {
@@ -585,6 +738,8 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
     res.needs_status = 1U;
     return res;
 }
+
+/* ========== Y 命令执行 ========== */
 
 static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const protocol_command_t *cmd)
 {
@@ -709,6 +864,7 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
 
     if (command.command == COMMAND_MANAGER_CMD_SYSTEM) return HandleSystemCommand(motor, &command);
     if (command.command == COMMAND_MANAGER_CMD_PARAM)  return ExecutePCommand(motor, &command);
+    if (command.command == COMMAND_MANAGER_CMD_CONFIG) return ExecuteCCommand(motor, &command);
     if (command.command == COMMAND_MANAGER_CMD_STATE)   return ExecuteSCommand(motor, &command);
 
     FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);

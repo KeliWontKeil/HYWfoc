@@ -82,6 +82,19 @@ void FOC_Protocol_OutputParam(char subcommand, float value)
     FOC_Protocol_WriteText(out);
 }
 
+/* 格式化并输出 C 组配置参数（subcommand+value） */
+void FOC_Protocol_OutputConfigParam(char subcommand, float value)
+{
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    ProtocolText_FormatConfigLine(out,
+                                  (uint16_t)sizeof(out),
+                                  subcommand,
+                                  value);
+
+    FOC_Protocol_WriteText(out);
+}
+
 /* 格式化并输出状态（subcommand+value） */
 void FOC_Protocol_OutputState(char subcommand, uint8_t value)
 {

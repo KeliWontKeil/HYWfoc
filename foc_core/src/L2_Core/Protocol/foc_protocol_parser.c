@@ -220,6 +220,8 @@ uint8_t ProtocolCore_ParseStateValue(float value, uint8_t *state_out)
     return 0U;
 }
 
+/* ========== P 组参数名映射 ========== */
+
 const char *ProtocolText_GetParamName(char subcommand)
 {
     switch (subcommand)
@@ -242,68 +244,79 @@ const char *ProtocolText_GetParamName(char subcommand)
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
         return "oscilloscope_param_mask";
 #endif
+    case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
+        return "control_mode";
+    default:
+        return "unknown";
+    }
+}
+
+/* ========== C 组参数名映射 ========== */
+
+const char *ProtocolText_GetConfigName(char subcommand)
+{
+    switch (subcommand)
+    {
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KP:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KP:
         return "pid_current_kp";
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KI:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KI:
         return "pid_current_ki";
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_CURRENT_KD:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_CURRENT_KD:
         return "pid_current_kd";
 #endif
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KP:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KP:
         return "pid_angle_kp";
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KI:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KI:
         return "pid_angle_ki";
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_ANGLE_KD:
         return "pid_angle_kd";
 #endif
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KP:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KP:
         return "pid_speed_kp";
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KI:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KI:
         return "pid_speed_ki";
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_SPEED_KD:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_PID_SPEED_KD:
         return "pid_speed_kd";
 #endif
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_MIN_MECH_DELTA:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_MIN_MECH_DELTA:
         return "control_min_mech_angle_accum_delta_rad";
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_I_LIMIT:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_I_LIMIT:
         return "control_angle_hold_integral_limit";
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_HOLD_DEADBAND:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_DEADBAND:
         return "control_angle_hold_pid_deadband_rad";
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_START:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_START:
         return "control_speed_angle_transition_start_rad";
-    case COMMAND_MANAGER_PARAM_SUBCMD_CFG_BLEND_END:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_END:
         return "control_speed_angle_transition_end_rad";
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
-        return "control_mode";
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_CALIB_GAIN:
         return "cogging_calib_gain_k";
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_IQ_LIMIT:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_IQ_LIMIT:
         return "cogging_comp_iq_limit_a";
-    case COMMAND_MANAGER_PARAM_SUBCMD_COGGING_COMP_SPEED_GATE:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_COGGING_COMP_SPEED_GATE:
         return "cogging_comp_speed_gate_rad_s";
 #endif
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
         return "current_soft_switch_mode";
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
         return "current_soft_switch_auto_open_iq_a";
-#endif
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
         return "current_soft_switch_auto_closed_iq_a";
 #endif
     default:
         return "unknown";
     }
 }
+
+/* ========== S 组状态名映射 ========== */
 
 const char *ProtocolText_GetStateName(char subcommand)
 {
@@ -326,6 +339,8 @@ const char *ProtocolText_GetStateName(char subcommand)
     }
 }
 
+/* ========== P 组整数参数检测 ========== */
+
 uint8_t ProtocolText_IsIntegerParam(char subcommand)
 {
     switch (subcommand)
@@ -336,17 +351,28 @@ uint8_t ProtocolText_IsIntegerParam(char subcommand)
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
 #endif
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
-#endif
-/* Note: CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ ('N') shares the same subcommand char
- * as PID_ANGLE_KD. Only active when FOC_CURRENT_SOFT_SWITCH_ENABLE is ENABLE.
- */
         return 1U;
     default:
         return 0U;
     }
 }
+
+/* ========== C 组整数参数检测 ========== */
+
+uint8_t ProtocolText_IsIntegerConfigParam(char subcommand)
+{
+    switch (subcommand)
+    {
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_CONFIG_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
+#endif
+        return 1U;
+    default:
+        return 0U;
+    }
+}
+
+/* ========== P 组格式化输出 ========== */
 
 void ProtocolText_FormatParamLine(char *out,
                                   uint16_t out_len,
@@ -375,6 +401,38 @@ void ProtocolText_FormatParamLine(char *out,
                  value);
     }
 }
+
+/* ========== C 组格式化输出 ========== */
+
+void ProtocolText_FormatConfigLine(char *out,
+                                   uint16_t out_len,
+                                   char subcommand,
+                                   float value)
+{
+    if ((out == 0) || (out_len == 0U))
+    {
+        return;
+    }
+
+    if (ProtocolText_IsIntegerConfigParam(subcommand) != 0U)
+    {
+        snprintf(out,
+                 out_len,
+                 "config.%s=%u\r\n",
+                 ProtocolText_GetConfigName(subcommand),
+                 (unsigned int)((value < 0.0f) ? 0U : (uint16_t)value));
+    }
+    else
+    {
+        snprintf(out,
+                 out_len,
+                 "config.%s=%.3f\r\n",
+                 ProtocolText_GetConfigName(subcommand),
+                 value);
+    }
+}
+
+/* ========== S 组格式化输出 ========== */
 
 void ProtocolText_FormatStateLine(char *out,
                                   uint16_t out_len,

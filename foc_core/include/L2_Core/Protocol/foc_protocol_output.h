@@ -17,8 +17,11 @@ const char *FOC_Protocol_GetFaultName(uint8_t fault_code);
 /* 输出诊断信息（level/module/detail格式） */
 void FOC_Protocol_OutputDiag(const char *level, const char *module, const char *detail);
 
-/* 格式化并输出参数（subcommand+value） */
+/* 格式化并输出 P 组参数（subcommand+value） */
 void FOC_Protocol_OutputParam(char subcommand, float value);
+
+/* 格式化并输出 C 组配置参数（subcommand+value） */
+void FOC_Protocol_OutputConfigParam(char subcommand, float value);
 
 /* 格式化并输出状态（subcommand+value） */
 void FOC_Protocol_OutputState(char subcommand, uint8_t value);

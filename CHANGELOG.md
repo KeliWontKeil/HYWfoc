@@ -5,6 +5,23 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-07-10
+
+### Changed
+- **P 命令组拆分为 P 组 + C 组**：因原 P 组（`'P'`）26 个大写字母地址空间已耗尽且存在 3 组字符冲突（`'U'`: PID_SPEED_KI / COGGING_COMP_IQ_LIMIT；`'V'`: PID_SPEED_KD / COGGING_COMP_SPEED_GATE；`'N'`: PID_ANGLE_KD / CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ），将调优/配置参数（PID、control fine-tuning、齿槽补偿、电流软切换）移至新命令组 `'C'`（Configuration）。P 组仅保留运行时参数（目标角度/速度/控制模式/遥测配置），释放 17 个空闲 A-Z 槽位。
+- **C 组新增 `X` 批量读取哨兵**：`C:X` 对应 `aaCXb`，一次性输出所有 C 组配置参数（PID + fine-tuning + 齿槽 + 软切换），格式 `config.<name>=<value>`。
+
+### Added
+- `COMMAND_MANAGER_CMD_CONFIG` 命令组（`'C'`）及 20 个 `COMMAND_MANAGER_CONFIG_SUBCMD_*` 子命令宏。
+- `FOC_Protocol_OutputConfigParam()` / `ProtocolText_GetConfigName()` / `ProtocolText_IsIntegerConfigParam()` / `ProtocolText_FormatConfigLine()` — C 组参数格式化/输出函数链。
+
+### Fixed
+- 消除 P 组 `'U'`/`'V'`/`'N'` 子命令宏定义冲突（speed PID tuning / cogging compensation / current soft switch 互斥限制不再需要）。
+
+### Documentation
+- `docs/protocol-parameters.md`：完整更新 C 命令组表格、示例命令、裁剪映射表。
+- `docs/README.md`、`README.md`、`NEXT_MISSION.md`：版本基线更新至 v1.10.0。
+
 ## [1.9.4] - 2026-07-09
 
 ### Changed

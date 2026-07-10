@@ -33,7 +33,7 @@ a<driver_id><cmd><subcmd><param>b
 - `<cmd>`：大写字母 `A-Z`
 - `<subcmd>`：大写字母 `A-Z`
 - `<param>`：可选，命令特定的含义：
-  - `P`/`S` 带参数表示写入，不带参数表示读取
+  - `P`/`C`/`S` 带参数表示写入，不带参数表示读取
   - `Y` 不能携带参数
 
 示例：
@@ -78,13 +78,14 @@ aaPA3.14b
 
 | 命令 | 含义 | 典型格式 |
 |------|------|---------|
-| `P` | 参数通道 | `a<id>P<subcmd>[value]b` |
+| `P` | 运行参数通道 | `a<id>P<subcmd>[value]b` |
+| `C` | 调优/配置参数通道 | `a<id>C<subcmd>[value]b` |
 | `S` | 状态通道（仅开关态） | `a<id>S<subcmd>[0/1]b` |
 | `Y` | 系统语义通道 | `a<id>Y<subcmd>b` |
 
 执行语义：
 
-- `P`：带值=写参数；不带值=读参数
+- `P`/`C`：带值=写参数；不带值=读参数
 - `S`：带值=写状态；不带值=读状态
 - `Y`：不允许带值
 
@@ -101,7 +102,9 @@ aaPA3.14b
 
 兼容性说明：
 
-- 本版本为全新协议更新，不再为 `W/R/Q/F` 保留兼容别名。
+- 本版本将调优/配置参数（PID、fine-tuning、齿槽补偿、电流软切换）从 `P` 组分离至新的 `C` 命令组。
+- 原 `P:U`/`P:V` 的字符冲突（与速度 PID 共用）已通过分入 C 组独立解决。
+- 旧上位机工具需要更新以支持 `C` 命令组。
 
 ### 3.1 编译期协议裁剪
 
@@ -110,6 +113,7 @@ aaPA3.14b
 最小集（始终启用，不可裁剪）：
 
 - `P`：`A/R/S/D`
+- `C`：（无固定子命令）
 - `S`：`M`
 - `Y`：`R/C`
 
@@ -119,22 +123,19 @@ aaPA3.14b
 |----|------------|
 | `FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET` | `P:W` |
 | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `P:L/H/O`、`S:S/O` |
-| `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `P:C/I/J` |
-| `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `P:G/K/N` |
-| `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `P:P/U/V` |
-| `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `P:M/B/E/F/T` |
-| `FOC_PROTOCOL_ENABLE_CURRENT_SOFT_SWITCH` | `P:Q/Z/Y`、`S:C` |
-| `FOC_PROTOCOL_ENABLE_COGGING_COMP` | `P:U/V`、`S:G`、`Y:G`、`Y:D`、`Y:T` |
+| `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `C:C/I/J` |
+| `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `C:G/K/N` |
+| `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `C:P/S/R` |
+| `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `C:M/B/E/F/T` |
+| `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `C:Q/Z/O`、`S:C` |
+| `FOC_COGGING_COMP_ENABLE` | `C:L/A`、`S:G` |
+| `FOC_COGGING_CALIB_ENABLE` | `C:Y`、`Y:G`、`Y:D`、`Y:T` |
 
 当可选子命令被裁剪后，对该子命令的写/读在帧解析成功后返回参数无效（`P`）。
 
-注意：
-
-- `P:k` 子命令（齿槽标定增益）由 `FOC_COGGING_CALIB_ENABLE` 守卫，不由 `FOC_PROTOCOL_ENABLE_COGGING_COMP` 守卫。
-
 ## 4. 参数子命令
 
-### 4.1 完整参数表
+### 4.1 P 组：运行参数
 
 说明：下表对应完整协议配置。在裁剪构建中，可选条目按第 3.1 节可能不可用。
 
@@ -147,32 +148,36 @@ aaPA3.14b
 | `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaPL20b` | `aaPLb` |
 | `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `aaPH100b` | `aaPHb` |
 | `O` | oscilloscope_param_mask | uint | [0, 65535] | 779 (0x030B) | bitmask | `aaPO63b` | `aaPOb` |
-| `C` | pid_current_kp | float | [0, 50] | 4.0 | - | `aaPC2.0b` | `aaPCb` |
-| `I` | pid_current_ki | float | [0, 50] | 60.0 | - | `aaPI10b` | `aaPIb` |
-| `J` | pid_current_kd | float | [0, 10] | 0.00 | - | `aaPJ0.01b` | `aaPJb` |
-| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaPG2.5b` | `aaPGb` |
-| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaPK0.9b` | `aaPKb` |
-| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaPN0.02b` | `aaPNb` |
-| `P` | pid_speed_kp | float | [0, 50] | 0.8 | - | `aaPP1.5b` | `aaPPb` |
-| `U` | pid_speed_ki | float | [0, 50] | 0.6 | - | `aaPU0.6b` | `aaPUb` |
-| `V` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaPV0.005b` | `aaPVb` |
-| `U`\* | cogging_comp_iq_limit_a | float | [0, 10] | 0.50（见 `FOC_COGGING_COMP_IQ_LIMIT_A`） | A | `aaPU1.0b` | `aaPUb` |
-| `V`\* | cogging_comp_speed_gate_rad_s | float | [0, 36] | 12.0（见 `FOC_COGGING_COMP_SPEED_GATE_RAD_S`） | rad/s | `aaPV8.0b` | `aaPVb` |
-| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaPM0.002b` | `aaPMb` |
-| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.05 | - | `aaPB0.10b` | `aaPBb` |
-| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaPE0.004b` | `aaPEb` |
-| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `aaPF0.45b` | `aaPFb` |
-| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `aaPT0.70b` | `aaPTb` |
 | `D` | control_mode | uint | 0 或 1 | 0（完整构建默认） | - | `aaPD0b` | `aaPDb` |
-| `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `aaPQ2b` | `aaPQb` |
-| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.20 | A | `aaPZ0.5b` | `aaPZb` |
-| `Y` | current_soft_switch_auto_closed_iq_a | float | [0, 100] 且 >= open | 0.50 | A | `aaPY1.0b` | `aaPYb` |
-| `k` | cogging_calib_gain_k | float | >= 0 | 0.05 | - | `aaPk0.10b` | `aaPkb` |
 | `X` | read_all 哨兵 | - | 只读 | - | - | 不可用 | `aaPXb` |
 
-\* 齿槽补偿参数与速度 PID 调参共用 `P:U`/`P:V` 子命令字母（分别对应 `pid_speed_ki`、`pid_speed_kd`）。由于解析器仅支持大写字母的约束以及 `A-Z` 空间的限制，`FOC_PROTOCOL_ENABLE_COGGING_COMP` 和 `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` 在编译时**互斥**。若两者均设为 `ENABLE`，编译器会发出提示，仅一个代码路径生效（见 `foc_compile_limits.h`）。
+### 4.2 C 组：调优/配置参数
 
-### 4.2 控制模式值
+| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 写示例（`C`） | 读示例（`C`） |
+|--------|--------|------|------|--------|------|--------------|-------------|
+| `C` | pid_current_kp | float | [0, 50] | 4.0 | - | `aaCC2.0b` | `aaCCb` |
+| `I` | pid_current_ki | float | [0, 50] | 60.0 | - | `aaCI10b` | `aaCIb` |
+| `J` | pid_current_kd | float | [0, 10] | 0.00 | - | `aaCJ0.01b` | `aaCJb` |
+| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaCG2.5b` | `aaCGb` |
+| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaCK0.9b` | `aaCKb` |
+| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaCN0.02b` | `aaCNb` |
+| `P` | pid_speed_kp | float | [0, 50] | 0.8 | - | `aaCP1.5b` | `aaCPb` |
+| `S` | pid_speed_ki | float | [0, 50] | 0.6 | - | `aaCS0.6b` | `aaCSb` |
+| `R` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaCR0.005b` | `aaCRb` |
+| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaCM0.002b` | `aaCMb` |
+| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.05 | - | `aaCB0.10b` | `aaCBb` |
+| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaCE0.004b` | `aaCEb` |
+| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `aaCF0.45b` | `aaCFb` |
+| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `aaCT0.70b` | `aaCTb` |
+| `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `aaCQ2b` | `aaCQb` |
+| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.20 | A | `aaCZ0.5b` | `aaCZb` |
+| `O` | current_soft_switch_auto_closed_iq_a | float | [0, 100] 且 >= open | 0.50 | A | `aaCO1.0b` | `aaCOb` |
+| `L` | cogging_comp_iq_limit_a | float | [0, 10] | 0.50 | A | `aaCL1.0b` | `aaCLb` |
+| `A` | cogging_comp_speed_gate_rad_s | float | [0, 36] | 12.0 | rad/s | `aaCA8.0b` | `aaCAb` |
+| `Y` | cogging_calib_gain_k | float | >= 0 | 0.05 | - | `aaCY0.10b` | `aaCYb` |
+| `X` | read_all 哨兵 | - | 只读 | - | - | 不可用 | `aaCXb` |
+
+### 4.3 控制模式值
 
 - `0`：速度+角度模式
 - `1`：纯速度模式
@@ -188,7 +193,7 @@ aaPA3.14b
 - `R`（`angle_position_speed_rad_s`）：速度+角度模式使用的速度参考（非负限幅）
 - `S`（`speed_only_speed_rad_s`）：纯速度模式使用的速度参考（支持负方向）
 
-### 4.3 电流环 PID 抗饱和算法
+### 4.4 电流环 PID 抗饱和算法
 
 电流环 PID 使用**条件积分（Conditional Integration）**抗饱和策略：
 
@@ -203,7 +208,7 @@ aaPA3.14b
 
 与 back-calculation 相比，条件积分允许积分器在瞬态响应中自由建立，更适合电流环小 KP + 大 KI 的参数风格。
 
-### 4.4 电流软切换模式值
+### 4.5 电流软切换模式值
 
 - `0`：开环（纯开环电流模型）
 - `1`：闭环（纯电流 PID）
@@ -211,7 +216,7 @@ aaPA3.14b
 
 混合时间常数当前使用编译期宏 `FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC`（本版本不暴露为运行时参数）。
 
-### 4.5 示波参数掩码位
+### 4.6 示波参数掩码位
 
 | 位 | 十六进制 | 字段 | 默认启用 |
 |----|---------|------|---------|
@@ -263,10 +268,17 @@ aaPA3.14b
 
 ```
 parameter.pid_speed_kp=3.000
+config.pid_speed_kp=3.000
 state.semantic_report_enabled=ENABLE
 STATE SYS=1 COMM=1 REPORT=1 DIRTY=1 LAST=1 INIT=1 FAULT=NONE SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
 FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
 ```
+
+文本前缀规则：
+
+- `P` 组参数输出：`parameter.<name>=<value>`
+- `C` 组配置参数输出：`config.<name>=<value>`
+- `S` 组状态输出：`state.<name>=ENABLE/DISABLE`
 
 格式化规则：
 
@@ -286,7 +298,7 @@ FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
 ```text
 aaPA3.14b   # 写入 target_angle_rad
 aaPAb       # 读取 target_angle_rad
-aaPXb       # 读取所有参数
+aaPXb       # 读取所有 P 组参数
 aaSM1b      # motor_enable = ENABLE
 aaSMb       # 读取 motor_enable
 aaSXb       # 读取所有状态
@@ -298,6 +310,7 @@ aaYIb       # 运行时电机参数重初始化（方向/极对数/零位标定�
 ### 7.2 常用参数写入
 
 ```text
+# P 组（运行参数）
 aaPD0b      # control_mode = 速度+角度
 aaPD1b      # control_mode = 纯速度
 aaPS-20b    # 纯速度速度参考 = -20rad/s
@@ -306,13 +319,19 @@ aaPW45b     # 传感器采样偏移百分比 = 45
 aaPL20b     # 语义报告频率参数示例值 = 20
 aaPH100b    # 示波报告频率参数示例值 = 100
 aaPO63b     # 示波掩码位 0..5 全开
-aaPP1.5b    # 速度 kp
-aaPU0.6b    # 速度 ki
-aaPV0.005b  # 速度 kd
-aaPQ2b      # current_soft_switch_mode = 自动
-aaPZ0.5b    # current_soft_switch_auto_open_iq_a = 0.5A
-aaPY1.0b    # current_soft_switch_auto_closed_iq_a = 1.0A
-aaPk0.10b   # cogging_calib_gain_k = 0.10
+
+# C 组（调优/配置参数）
+aaCP1.5b    # pid_speed_kp
+aaCS0.6b    # pid_speed_ki
+aaCR0.005b  # pid_speed_kd
+aaCC2.0b    # pid_current_kp
+aaCG2.5b    # pid_angle_kp
+aaCQ2b      # current_soft_switch_mode = 自动
+aaCZ0.5b    # current_soft_switch_auto_open_iq_a = 0.5A
+aaCO1.0b    # current_soft_switch_auto_closed_iq_a = 1.0A
+aaCY0.10b   # cogging_calib_gain_k = 0.10
+aaCL1.0b    # cogging_comp_iq_limit_a = 1.0A
+aaCA8.0b    # cogging_comp_speed_gate_rad_s = 8.0
 ```
 
 ### 7.3 常用状态写入
@@ -323,7 +342,7 @@ aaSM0b      # 电机关闭
 aaSS1b      # 语义报告使能
 aaSO1b      # 示波报告使能
 aaSC1b      # 电流软切换使能
-aaSG1b      # 齿槽补偿使能（仅当 FOC_PROTOCOL_ENABLE_COGGING_COMP=ENABLE）
+aaSG1b      # 齿槽补偿使能（仅当 FOC_COGGING_COMP_ENABLE=ENABLE）
 aaYGb       # 启动运行时齿槽标定（仅当 FOC_COGGING_CALIB_ENABLE=ENABLE）
 aaYDb       # 导出齿槽补偿表到串口（仅当 FOC_COGGING_CALIB_ENABLE=ENABLE）
 aaYTb       # 以 C 代码形式导出齿槽补偿表到串口（仅当 FOC_COGGING_CALIB_ENABLE=ENABLE）
@@ -338,10 +357,10 @@ aaPRb       # 读取 angle_position_speed_rad_s
 aaSMb       # 读取 motor_enable
 aaPWb       # 读取 sensor_sample_offset_percent
 aaPOb       # 读取 oscilloscope_param_mask
-aaPPb       # 读取 pid_speed_kp
-aaPMb       # 读取 min_mech_angle_accum_delta
+aaCPb       # 读取 pid_speed_kp
+aaCMb       # 读取 min_mech_angle_accum_delta
 aaSCb       # 读取 current_soft_switch_enabled
-aaPkb       # 读取 cogging_calib_gain_k
+aaCYb       # 读取 cogging_calib_gain_k
 ```
 
 ## 8. 常见错误与原因
@@ -360,10 +379,10 @@ aaPkb       # 读取 cogging_calib_gain_k
 ## 9. 推荐测试流程
 
 1. 打开绑定到实例输入/输出通道的主机工具。
-2. 发送 `aaPXb` 确认完整参数转储出现在输出通道。
-3. 发送一个参数写入命令（例如 `aaPP1.5b`），验证：
+2. 发送 `aaPXb` 确认 P 组参数转储出现在输出通道。
+3. 发送一个参数写入命令（例如 `aaCP1.5b`），验证：
    - 输出通道收到 `O`
-   - 输出通道打印更新的参数行
+   - 输出通道打印 `config.pid_speed_kp=1.500`
 4. 发送一个状态写入命令（例如 `aaSM1b`）并验证状态输出行。
 5. 发送 `aaYRb` 检查运行时状态摘要。
 6. 发送 `aaYCb` 确认故障计数器已清除。

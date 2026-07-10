@@ -172,14 +172,9 @@
 FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEPENDENCY: current soft-switch feature is enabled but current-loop PID is disabled; soft-switch code path is compiled out.")
 #endif
 #endif
-#if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE))
-#if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_PROTOCOL_CONFLICT speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_COGGING_COMP_ENABLE.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_PROTOCOL_CONFLICT: speed pid tuning and cogging comp both use P:U/V subcommand letters; enable only one of FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING / FOC_COGGING_COMP_ENABLE.")
-#endif
-#endif
-
+/* Note: The original P:U/V subcommand conflict between speed PID tuning and
+ * cogging compensation no longer applies. Both moved to C command group with
+ * separate subcommand letters (C:S/R for speed PID, C:L/A for cogging comp). */
 #if ((FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_ENABLE) && (COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
 #if defined(__CC_ARM) && !defined(__clang__)
 #warning FOC_CFG_HINT_FEATURE_DEFAULT current soft-switch default state is ENABLE but feature is disabled; runtime will force disable.
