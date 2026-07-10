@@ -288,20 +288,4 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 
 #define COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK DEBUG_STREAM_OSC_DEFAULT_PARAM_MASK
 
-/*
- * Protocol subcommand symbol collision warnings.
- * When both COGGING and SOFT_SWITCH protocols are enabled, the 'Y' subcommand
- * collides between COMMAND_MANAGER_PARAM_SUBCMD_COGGING_CALIB_GAIN and
- * COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ.
- * In practice these are mutually exclusive by feature switch guard.
- */
-#if ((FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE) && \
-     (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE))
-#if defined(__ARMCC_VERSION)
-#warning "PROTOCOL SUBCOMMAND COLLISION: COGGING_CALIB_GAIN and SOFT_SWITCH_AUTO_CLOSED_IQ both use symbol 'Y'. These two feature groups cannot coexist."
-#else
-#pragma message "PROTOCOL SUBCOMMAND COLLISION: COGGING_CALIB_GAIN and SOFT_SWITCH_AUTO_CLOSED_IQ both use symbol 'Y'. These two feature groups cannot coexist."
-#endif
-#endif
-
 #endif /* FOC_COMPILE_LIMITS_H */

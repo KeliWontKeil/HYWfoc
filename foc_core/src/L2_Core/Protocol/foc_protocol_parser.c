@@ -296,8 +296,7 @@ const char *ProtocolText_GetParamName(char subcommand)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
         return "current_soft_switch_auto_open_iq_a";
 #endif
-/* 'Y' subcommand shared with COGGING_CALIB_GAIN; only active when calib is disabled */
-#if ((FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
         return "current_soft_switch_auto_closed_iq_a";
 #endif
@@ -317,10 +316,6 @@ const char *ProtocolText_GetStateName(char subcommand)
         return "semantic_report_enabled";
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
         return "oscilloscope_report_enabled";
-#endif
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
-        return "current_soft_switch_enabled";
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
@@ -344,9 +339,8 @@ uint8_t ProtocolText_IsIntegerParam(char subcommand)
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE:
 #endif
-/* Note: CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ ('Y') shares the same subcommand char
- * as COGGING_CALIB_GAIN. It is excluded from IsIntegerParam to avoid collision,
- * and is conditionally compiled only when FOC_COGGING_CALIB_ENABLE is disabled.
+/* Note: CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ ('N') shares the same subcommand char
+ * as PID_ANGLE_KD. Only active when FOC_CURRENT_SOFT_SWITCH_ENABLE is ENABLE.
  */
         return 1U;
     default:

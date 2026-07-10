@@ -106,13 +106,11 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KD_MAX) == 0U) return 0U;
         motor->angle_pid.kd = value;
         break;
-#else
-        return 0U;
 #endif
 
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
@@ -205,8 +203,7 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
         motor->current_soft_switch_status.auto_open_iq_a = value;
         break;
 #endif
-/* 'Y' subcommand shared with COGGING_CALIB_GAIN; only active when calib is disabled */
-#if ((FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
         if ((value < COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MIN_A) || (value > COMMAND_MANAGER_PARAM_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_MAX_A) || (value < motor->current_soft_switch_status.auto_open_iq_a)) return 0U;
         motor->current_soft_switch_status.auto_closed_iq_a = value;
@@ -276,11 +273,9 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
 #else
         return 0U;
 #endif
-    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
+    case COMMAND_MANAGER_PARAM_SUBCMD_PID_ANGLE_KD:
         *value_out = motor->angle_pid.kd; break;
-#else
-        return 0U;
 #endif
 
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
@@ -340,8 +335,7 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ:
         *value_out = motor->current_soft_switch_status.auto_open_iq_a; break;
 #endif
-/* 'Y' subcommand shared with COGGING_CALIB_GAIN; only active when calib is disabled */
-#if ((FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE) && (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE))
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ:
         *value_out = motor->current_soft_switch_status.auto_closed_iq_a; break;
 #endif
@@ -369,14 +363,6 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_report_enabled = normalized; } break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        motor->current_soft_switch_status.enabled = normalized;
-        motor->state.cfg_dirty = 1U;
-        break;
 #else
         return 0U;
 #endif
@@ -410,12 +396,6 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *state_out = (t != 0) ? t->osc_report_enabled : 0; } break;
-#else
-        return 0U;
-#endif
-    case COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE:
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        *state_out = motor->current_soft_switch_status.enabled; break;
 #else
         return 0U;
 #endif
@@ -464,9 +444,7 @@ static void ReportAllParams(const foc_motor_t *motor)
 #endif
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
         COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_MODE, COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ,
-#if (FOC_COGGING_CALIB_ENABLE != FOC_CFG_ENABLE)
         COMMAND_MANAGER_PARAM_SUBCMD_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ,
-#endif
 #endif
     };
     uint16_t i;
@@ -481,9 +459,6 @@ static void ReportAllStates(const foc_motor_t *motor)
         COMMAND_MANAGER_STATE_SUBCMD_MOTOR_ENABLE,
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
         COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE, COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE,
-#endif
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        COMMAND_MANAGER_STATE_SUBCMD_CURRENT_SOFT_SWITCH_ENABLE,
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
         COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE,
