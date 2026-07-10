@@ -19,6 +19,7 @@ uint8_t ProtocolCore_IsDriverIdFormatValid(uint8_t driver_id);
 uint8_t ProtocolCore_IsDriverAddressedToLocal(uint8_t driver_id);
 uint8_t ProtocolCore_ParseStateValue(float value, uint8_t *state_out);
 
+/* P 命令组文本辅助函数 */
 const char *ProtocolText_GetParamName(char subcommand);
 const char *ProtocolText_GetStateName(char subcommand);
 uint8_t ProtocolText_IsIntegerParam(char subcommand);
@@ -31,5 +32,12 @@ void ProtocolText_FormatStateLine(char *out,
                                   char subcommand,
                                   uint8_t value);
 
-#endif /* PROTOCOL_CORE_H */
+/* C 命令组文本辅助函数 */
+const char *ProtocolText_GetConfigName(char subcommand);
+uint8_t ProtocolText_IsIntegerConfigParam(char subcommand);
+void ProtocolText_FormatConfigLine(char *out,
+                                   uint16_t out_len,
+                                   char subcommand,
+                                   float value);
 
+#endif /* PROTOCOL_CORE_H */
