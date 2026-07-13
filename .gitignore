@@ -28,6 +28,7 @@ examples/**/software/**/*.map
 examples/**/software/**/*.lst
 examples/**/software/**/*.hex
 examples/**/software/**/*.bin
+*.uvguix.*
 
 # eide template
 *.ept
