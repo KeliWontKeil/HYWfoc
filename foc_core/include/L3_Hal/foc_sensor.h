@@ -51,12 +51,9 @@ void Sensor_ReadVBUS(sensor_data_t *out);
 void Sensor_SetZeroOffset(foc_motor_t *motor);
 
 /*
- * Sensor_AccumulateEcycle: accumulate phase-current samples for electrical-cycle
- * drift offset estimation. Called after each fast current read (ISR path).
- * Angle reference:
- *   - When FOC_SENSOR_ANGLE_FAST_ENABLE: taken from current_snapshot->mech_angle_rad
- *   - Otherwise: taken from motor->ecycle_ref_angle_rad (volatile bridge)
- * When FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE, this is a no-op.
+ * Sensor_AccumulateEcycle: placeholder for electrical-cycle drift offset estimation.
+ * Currently a no-op; reserved for future implementation.
+ * Called after each fast current read (ISR path).
  */
 void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_snapshot);
 

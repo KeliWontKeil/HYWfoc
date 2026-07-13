@@ -151,39 +151,18 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
         return;
     }
 
-    /* Apply electrical-cycle dynamic drift offset before Clarke/Park. */
+    /* Apply Clarke/Park transform. Static zero offsets already applied in sensor layer. */
 #if (FOC_CURRENT_SENSE_PHASES == 2U)
     {
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-        if (motor->ecycle_offset_valid != 0U)
-        {
-            ia_comp = sensor->current_a.output_value - motor->ecycle_offset_dyn_a;
-            ib_comp = sensor->current_b.output_value - motor->ecycle_offset_dyn_b;
-        }
-        else
-#endif
-        {
-            ia_comp = sensor->current_a.output_value;
-            ib_comp = sensor->current_b.output_value;
-        }
+        ia_comp = sensor->current_a.output_value;
+        ib_comp = sensor->current_b.output_value;
         ic_comp = -(ia_comp + ib_comp);
     }
 #else
     {
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-        if (motor->ecycle_offset_valid != 0U)
-        {
-            ia_comp = sensor->current_a.output_value - motor->ecycle_offset_dyn_a;
-            ib_comp = sensor->current_b.output_value - motor->ecycle_offset_dyn_b;
-            ic_comp = sensor->current_c.output_value - motor->ecycle_offset_dyn_c;
-        }
-        else
-#endif
-        {
-            ia_comp = sensor->current_a.output_value;
-            ib_comp = sensor->current_b.output_value;
-            ic_comp = sensor->current_c.output_value;
-        }
+        ia_comp = sensor->current_a.output_value;
+        ib_comp = sensor->current_b.output_value;
+        ic_comp = sensor->current_c.output_value;
     }
 #endif
 

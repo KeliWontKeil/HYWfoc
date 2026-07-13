@@ -232,10 +232,6 @@ const char *ProtocolText_GetParamName(char subcommand)
         return "angle_position_speed_rad_s";
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
         return "speed_only_speed_rad_s";
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-    case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
-        return "sensor_sample_offset_percent";
-#endif
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
         return "semantic_report_frequency_hz";

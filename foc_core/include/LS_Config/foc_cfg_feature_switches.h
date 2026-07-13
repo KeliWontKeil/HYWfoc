@@ -27,7 +27,7 @@
 #define FOC_SENSOR_KALMAN_ANGLE_ENABLE FOC_CFG_DISABLE
 #define FOC_SENSOR_ANGLE_LPF_ENABLE FOC_CFG_ENABLE
 
-#define FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE FOC_CFG_DISABLE //零偏抑制功能存在问题，不建议开启
+#define FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE FOC_CFG_DISABLE /* 预留：电周期动态零偏抑制（当前未实现） */
 
 /* Modulation and control feature switches. */
 #define FOC_CURRENT_LOOP_PID_ENABLE FOC_CFG_ENABLE
@@ -38,7 +38,7 @@
 
 /* Initialization and calibration feature switches. */
 #define FOC_INIT_CALIBRATION_ENABLE FOC_CFG_ENABLE
-#define FOC_REINIT_ENABLE FOC_CFG_DISABLE //重初始化，内存占用高，功能意义不大，不建议开启
+#define FOC_REINIT_ENABLE FOC_CFG_ENABLE //重初始化，内存占用高，功能意义不大，不建议开启
 
 #define FOC_COGGING_COMP_ENABLE FOC_CFG_DISABLE
 #define FOC_COGGING_CALIB_ENABLE FOC_CFG_DISABLE

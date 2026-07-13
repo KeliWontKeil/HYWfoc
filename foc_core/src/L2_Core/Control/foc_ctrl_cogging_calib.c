@@ -479,14 +479,8 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
             table = motor->cogging_comp_table_q15;
             mech_actual = Math_WrapRad(sensor->mech_angle_rad.output_value);
 
-            if (motor->direction == FOC_DIR_NORMAL)
-            {
-                pred_wrapped = Math_WrapRad(state->pred_mech_angle);
-            }
-            else
-            {
-                pred_wrapped = Math_WrapRad(FOC_MATH_TWO_PI - state->pred_mech_angle);
-            }
+            /* pred_mech_angle 已包含方向符号（direction × dt），直接归约 */
+            pred_wrapped = Math_WrapRad(state->pred_mech_angle);
 
             dtheta = Math_WrapRadDelta(mech_actual - pred_wrapped);
 
@@ -521,6 +515,11 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 if (accept != 0U)
                 {
                     float iq_comp  = -dtheta * FOC_COGGING_CALIB_DTHETA_SCALE;
+                    /* 反向时补偿也需反向 */
+                    if (motor->direction == FOC_DIR_REVERSED)
+                    {
+                        iq_comp = -iq_comp;
+                    }
                     int16_t q15_val = FloatToQ15(iq_comp, FOC_COGGING_LUT_IQ_LSB_A);
                     uint8_t pcnt    = state->completed_pass_count;
 
