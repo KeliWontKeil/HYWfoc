@@ -16,7 +16,7 @@
 #include "LS_Config/foc_cfg_feature_switches.h"
 #include "LS_Config/foc_cfg_init_values.h"
 
-#if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
+#if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE && FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
 
 static const int16_t foc_cogging_default_table_q15[FOC_COGGING_LUT_POINT_COUNT] =
 {

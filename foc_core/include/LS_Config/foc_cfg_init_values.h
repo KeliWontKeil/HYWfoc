@@ -4,14 +4,6 @@
 #include "LS_Config/foc_symbol_defs.h"
 #include "LS_Config/foc_cfg_feature_switches.h"
 
-/* ========== Mathematical constants (single source of truth) ========== */
-#define FOC_MATH_PI         3.1415926f
-#define FOC_MATH_TWO_PI     6.2831852f
-#define FOC_MATH_SQRT3      1.7320508f
-#define FOC_MATH_SQRT3_BY_2 0.8660254f
-#define FOC_MATH_PI_BY_3    1.0471975f
-#define FOC_MATH_EPSILON    1e-6f
-
 /* Platform timing base and timer source setup. */
 #define FOC_PLATFORM_BASE_CLOCK_KHZ 120000U
 
@@ -34,14 +26,16 @@
 
 /* Motor initialization parameters. */
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
-#define FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT 10.0f 
-//建议FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT为FOC_MOTOR_INIT_VBUS_DEFAULT的80%-90%，
-//低测电流采样情况下过高会导致采样区间落入开关噪声区域和下半桥关断区域，引发失真
-#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
+#define FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT 12.0f
+/* max_phase_voltage 限制相电压幅值(≤ VBUS)，用于 PID 饱和、过调制限制、电流计算。 */
+#define FOC_SVPWM_MAX_DUTY_CYCLE 0.9f
+/* max_duty_cycle 限制 SVPWM 占空比对称上限(如 0.85 → duty∈[0.15,0.85])，
+ * 避免低侧电流采样落入开关噪声/下半桥关断区域*/
+#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 6.0f//13.2f
 
-/* Alignment/calibration voltage is derived from set_voltage. */
+/* Alignment/calibration voltage is derived from max_phase_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
-#define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 7U
+#define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT FOC_POLE_PAIRS_UNDEFINED//7U
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED
 #define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED
 
@@ -158,8 +152,8 @@
 /* Current-loop anti-noise and soft-switch defaults. */
 #define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE FOC_CFG_ENABLE
 #define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE FOC_CURRENT_SOFT_SWITCH_MODE_AUTO
-#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A 0.20f
-#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A 0.50f
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_OPEN_IQ_A 0.15f
+#define COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_AUTO_CLOSED_IQ_A 0.30f
 
 #define FOC_CURRENT_SOFT_SWITCH_BLEND_TAU_DEFAULT_SEC 0.60f
 

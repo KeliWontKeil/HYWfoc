@@ -90,7 +90,7 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_motor_t *mo
         return;
     }
 
-    voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+    voltage_limit = Math_ClampFloat(motor->max_phase_voltage, 0.0f, motor->vbus_voltage);
     phase_resistance = fabsf(motor->phase_resistance);
 
     if (phase_resistance < 1e-6f)
@@ -462,7 +462,7 @@ void FOC_CurrentControlOpenLoopStep(foc_motor_t *motor,
         FOC_MATH_TWO_PI * turn_speed * motor->pole_pairs * dt_sec * motor->direction);
 
     motor->ud = 0.0f;
-    motor->uq = Math_ClampFloat(voltage, -motor->set_voltage, motor->set_voltage);
+    motor->uq = Math_ClampFloat(voltage, -motor->max_phase_voltage, motor->max_phase_voltage);
     FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
 }
 

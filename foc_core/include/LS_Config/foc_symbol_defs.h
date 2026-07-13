@@ -1,6 +1,14 @@
 #ifndef FOC_SYMBOL_DEFS_H
 #define FOC_SYMBOL_DEFS_H
 
+/* ========== Mathematical constants (single source of truth) ========== */
+#define FOC_MATH_PI         3.1415926f
+#define FOC_MATH_TWO_PI     6.2831852f
+#define FOC_MATH_SQRT3      1.7320508f
+#define FOC_MATH_SQRT3_BY_2 0.8660254f
+#define FOC_MATH_PI_BY_3    1.0471975f
+#define FOC_MATH_EPSILON    1e-6f
+
 /* Unified binary semantics for all enable or disable style macros. */
 #define FOC_CFG_DISABLE 0U
 #define FOC_CFG_ENABLE 1U
@@ -67,6 +75,7 @@
 #define COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP 'D'
 #define COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT 'T'
 #define COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT 'I'
+#define COMMAND_MANAGER_SYSTEM_SUBCMD_INFO 'X'
 
 /* =================================================================
  * P 命令组（运行参数）—— 帧格式 a<P_driver><P><subcmd>[param]b

@@ -228,14 +228,14 @@ void FOC_Control_ApplyConfig(foc_motor_t *motor)
     if (motor == 0) return;
 
     phase_res = (fabsf(motor->phase_resistance) > 1e-6f) ? fabsf(motor->phase_resistance) : 1e-6f;
-    i_max = motor->set_voltage / phase_res;
+    i_max = motor->max_phase_voltage / phase_res;
     if (i_max < 0.0f) i_max = 0.0f;
 
     FOC_PIDInit(&motor->torque_current_pid,
                 motor->torque_current_pid.kp,
                 motor->torque_current_pid.ki,
                 motor->torque_current_pid.kd,
-                -motor->set_voltage, motor->set_voltage);
+                -motor->max_phase_voltage, motor->max_phase_voltage);
     FOC_PIDInit(&motor->angle_pid,
                 motor->angle_pid.kp, motor->angle_pid.ki, motor->angle_pid.kd,
                 -i_max, i_max);

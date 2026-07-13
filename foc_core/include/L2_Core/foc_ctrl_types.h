@@ -227,7 +227,7 @@ typedef struct {
     float electrical_phase_angle;
     float ud;
     float uq;
-    float set_voltage;
+    float max_phase_voltage;
 
     /* Current-loop runtime states. */
     float iq_target;
@@ -314,6 +314,7 @@ typedef struct {
 #endif
 
     uint8_t  fast_current_div_counter;
+    uint32_t current_loop_cycles;
 
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
     foc_iq_lpf_state_t iq_lpf;

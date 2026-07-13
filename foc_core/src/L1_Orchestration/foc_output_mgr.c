@@ -105,13 +105,13 @@ void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
     if (motor == 0) return;
 
     snprintf(buf, sizeof(buf),
-             "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, set_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
+             "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, max_phase_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
              (double)motor->mech_angle_at_elec_zero_rad,
              (int)motor->direction,
              (int)motor->pole_pairs,
              (double)motor->vbus_voltage,
-             (double)motor->set_voltage,
-             (double)(motor->vbus_voltage > 0.0f ? motor->set_voltage / motor->vbus_voltage : 0.0f),
+             (double)motor->max_phase_voltage,
+             (double)(motor->vbus_voltage > 0.0f ? motor->max_phase_voltage / motor->vbus_voltage : 0.0f),
              (double)motor->sensor.vbus_voltage_filtered);
     FOC_OutputMgr_WriteDirect(buf);
 }

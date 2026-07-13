@@ -24,6 +24,7 @@ typedef enum {
     MONITOR_ELEM_SEMANTIC_5       = 0x05,  /* 语义行 5: vbus raw */
     MONITOR_ELEM_SEMANTIC_6       = 0x06,  /* 语义行 6: vbus filtered */
     MONITOR_ELEM_SEMANTIC_7       = 0x07,  /* 语义行 7: execution time */
+    MONITOR_ELEM_SEMANTIC_8       = 0x08,  /* 语义行 8: current loop execution time */
     MONITOR_ELEM_SEMANTIC_END     = 0x7F,  /* 语义帧结束标记 */
     MONITOR_ELEM_OSC_VALUE        = 0x80,  /* 示波器参数值（aux 记录掩码位索引） */
     MONITOR_ELEM_OSC_END          = 0x81,  /* 示波器行结束标记 */

@@ -6,10 +6,10 @@
 #include "L3_Hal/foc_platform_api.h"
 
 /*
- * 语义遥测最多生成 8 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
- * 各 invalid 行 + exec_time）
+ * 语义遥测最多生成 9 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
+ * 各 invalid 行 + exec_time + current_loop_exec_time）
  */
-#define SEMANTIC_LINE_COUNT 8U
+#define SEMANTIC_LINE_COUNT 9U
 
 /* 状态标记：已经过语义行数检查 */
 #define SEMANTIC_PHASE_COUNTER_CHECK 0xFFU
@@ -153,6 +153,13 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
             break;
         case 7U:
             elem_out->value = (float)ds->last_exec_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
+            elem_out->aux = 2U;
+            break;
+        case 8U:
+            if (motor != 0)
+                elem_out->value = (float)motor->current_loop_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
+            else
+                elem_out->value = 0.0f;
             elem_out->aux = 2U;
             break;
         default:
@@ -312,7 +319,11 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
         break;
     case 7U:
         snprintf(line_out, line_max,
-            "control.execution_time_us=%.3f\r\n\r\n", value);
+            "control.execution_time_us=%.3f\r\n", value);
+        break;
+    case 8U:
+        snprintf(line_out, line_max,
+            "control.current_loop_execution_time_us=%.3f\r\n\r\n", value);
         break;
     default:
         snprintf(line_out, line_max, "measurement.status=invalid\r\n");
@@ -425,7 +436,7 @@ uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
                                          line_out, line_max);
     }
 
-    if (elem.tag <= MONITOR_ELEM_SEMANTIC_7)
+    if (elem.tag <= MONITOR_ELEM_SEMANTIC_8)
     {
         if (elem.aux == 0U)
         {

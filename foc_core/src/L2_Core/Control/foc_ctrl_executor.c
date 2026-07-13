@@ -56,6 +56,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 {
     uint8_t divider;
     float current_loop_dt_sec;
+    uint32_t isr_start;
 
     if (motor == 0) return;
 
@@ -80,6 +81,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 
     current_loop_dt_sec = (FOC_PWM_FREQ_KHZ == 0U) ? FOC_CONTROL_DT_SEC
                           : ((float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f));
+
+    isr_start = FOC_Platform_ReadCycleCounter();
 
     /* 阶段1: 采样 — 电流采样唯一入口 */
     if (FOC_ControlRequiresCurrentSample() != 0U)
@@ -111,6 +114,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
                                current_loop_dt_sec);
         FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
     }
+
+    motor->current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
 }
 
 /* Public safe-output entry — used by L1 for synchronous zeroing. */

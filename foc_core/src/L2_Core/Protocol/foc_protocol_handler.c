@@ -496,6 +496,7 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
 
 /* ========== 批量报告（P 组） ========== */
 
+#if (FOC_PROTOCOL_ENABLE_BATCH_READ == FOC_CFG_ENABLE)
 static void ReportAllParams(const foc_motor_t *motor)
 {
     float value;
@@ -565,6 +566,7 @@ static void ReportAllStates(const foc_motor_t *motor)
     for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
         if (ReadState(motor, states[i], &state_val) != 0U) FOC_Protocol_OutputState(states[i], state_val);
 }
+#endif /* FOC_PROTOCOL_ENABLE_BATCH_READ */
 
 static uint8_t ReportSingleParam(const foc_motor_t *motor, char subcommand)
 {
@@ -614,6 +616,7 @@ static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const pro
         return res;
     }
 
+#if (FOC_PROTOCOL_ENABLE_BATCH_READ == FOC_CFG_ENABLE)
     if (cmd->subcommand == COMMAND_MANAGER_PARAM_SUBCMD_READ_ALL)
     {
         ReportAllParams(motor);
@@ -622,6 +625,7 @@ static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const pro
         res.needs_status = 1U;
         return res;
     }
+#endif
 
     if (ReportSingleParam(motor, cmd->subcommand) == 0U)
     {
@@ -660,6 +664,7 @@ static foc_protocol_frame_result_t ExecuteCCommand(foc_motor_t *motor, const pro
         return res;
     }
 
+#if (FOC_PROTOCOL_ENABLE_BATCH_READ == FOC_CFG_ENABLE)
     if (cmd->subcommand == COMMAND_MANAGER_CONFIG_SUBCMD_READ_ALL)
     {
         ReportAllConfigs(motor);
@@ -668,6 +673,7 @@ static foc_protocol_frame_result_t ExecuteCCommand(foc_motor_t *motor, const pro
         res.needs_status = 1U;
         return res;
     }
+#endif
 
     if (ReportSingleConfig(motor, cmd->subcommand) == 0U)
     {
@@ -717,6 +723,7 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
         return res;
     }
 
+#if (FOC_PROTOCOL_ENABLE_BATCH_READ == FOC_CFG_ENABLE)
     if (cmd->subcommand == COMMAND_MANAGER_STATE_SUBCMD_READ_ALL)
     {
         ReportAllStates(motor);
@@ -725,6 +732,7 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
         res.needs_status = 1U;
         return res;
     }
+#endif
 
     if (ReportSingleState(motor, cmd->subcommand) == 0U)
     {
@@ -738,6 +746,72 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
     res.needs_status = 1U;
     return res;
 }
+
+/* ========== 系统信息报告（Y:X） ========== */
+
+#if (FOC_PROTOCOL_ENABLE_BATCH_READ == FOC_CFG_ENABLE)
+static void ReportSystemInfo(const foc_motor_t *motor)
+{
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    if (motor == 0) return;
+
+    snprintf(out, sizeof(out), "system.phase_resistance=%.3f\r\n", motor->phase_resistance);
+    FOC_Protocol_WriteText(out);
+
+    snprintf(out, sizeof(out), "system.pole_pairs=%u\r\n", (unsigned int)motor->pole_pairs);
+    FOC_Protocol_WriteText(out);
+
+    snprintf(out, sizeof(out), "system.mech_zero_rad=%.3f\r\n", motor->mech_angle_at_elec_zero_rad);
+    FOC_Protocol_WriteText(out);
+
+    {
+        const char *dir_str = "UNDEFINED";
+        if (motor->direction == FOC_DIR_NORMAL)
+            dir_str = "NORMAL";
+        else if (motor->direction == FOC_DIR_REVERSED)
+            dir_str = "REVERSED";
+        snprintf(out, sizeof(out), "system.direction=%s\r\n", dir_str);
+        FOC_Protocol_WriteText(out);
+    }
+
+    snprintf(out, sizeof(out), "system.vbus_voltage_v=%.3f\r\n", motor->vbus_voltage);
+    FOC_Protocol_WriteText(out);
+
+    snprintf(out, sizeof(out), "system.max_phase_voltage_v=%.3f\r\n", motor->max_phase_voltage);
+    FOC_Protocol_WriteText(out);
+
+    snprintf(out, sizeof(out), "system.zero_offset_a=%.3f\r\n", motor->sensor_zero_offset_a);
+    FOC_Protocol_WriteText(out);
+
+    snprintf(out, sizeof(out), "system.zero_offset_b=%.3f\r\n", motor->sensor_zero_offset_b);
+    FOC_Protocol_WriteText(out);
+
+#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
+    snprintf(out, sizeof(out), "system.ecycle_offset_valid=%u\r\n", (unsigned int)motor->ecycle_offset_valid);
+    FOC_Protocol_WriteText(out);
+#endif
+
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    {
+        const char *src_str = "DISABLED";
+        if (motor->cogging_comp_status.source == FOC_COGGING_COMP_SOURCE_NONE)
+            src_str = "NONE";
+        else if (motor->cogging_comp_status.source == FOC_COGGING_COMP_SOURCE_STATIC)
+            src_str = "STATIC";
+        else if (motor->cogging_comp_status.source == FOC_COGGING_COMP_SOURCE_CALIB)
+            src_str = "CALIB";
+        snprintf(out, sizeof(out), "system.cogging=%s\r\n", src_str);
+        FOC_Protocol_WriteText(out);
+    }
+    snprintf(out, sizeof(out), "system.cogging_point_count=%u\r\n",
+             (unsigned int)motor->cogging_comp_status.point_count);
+    FOC_Protocol_WriteText(out);
+    snprintf(out, sizeof(out), "system.cogging_iq_lsb_a=%.5f\r\n", motor->cogging_comp_status.iq_lsb_a);
+    FOC_Protocol_WriteText(out);
+#endif
+}
+#endif /* FOC_PROTOCOL_ENABLE_BATCH_READ */
 
 /* ========== Y 命令执行 ========== */
 
@@ -825,6 +899,17 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
         res.needs_status = 1U;
         return res;
     }
+
+#if (FOC_PROTOCOL_ENABLE_BATCH_READ == FOC_CFG_ENABLE)
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_INFO)
+    {
+        ReportSystemInfo(motor);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+#endif
 
     FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
     res.needs_status = 1U;

@@ -114,7 +114,7 @@ static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
     elec_angle = Math_WrapRad(mech_for_elec * (float)motor->pole_pairs);
 
     //uq = FOC_COGGING_CALIB_IQ_A * phase_resistance;
-    //uq = Math_ClampFloat(uq, -motor->set_voltage, motor->set_voltage);
+    //uq = Math_ClampFloat(uq, -motor->max_phase_voltage, motor->max_phase_voltage);
 
     motor->ud = 0.0f;
     motor->uq = FOC_COGGING_CALIB_IQ_A * motor->phase_resistance;

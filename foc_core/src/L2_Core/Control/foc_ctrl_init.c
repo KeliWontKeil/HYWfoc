@@ -47,8 +47,8 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     backup_ud = motor->ud;
     backup_uq = motor->uq;
 
-    calib_uq = motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
-    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->set_voltage);
+    calib_uq = motor->max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
+    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->max_phase_voltage);
 
     motor->uq = 0.0f;
     motor->ud = calib_uq;
@@ -115,7 +115,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
 void FOC_MotorInit(foc_motor_t *motor,
                    float vbus_voltage,
-                   float set_voltage,
+                   float max_phase_voltage,
                    float phase_resistance,
                    uint8_t pole_pairs,
                    float mech_angle_at_elec_zero_rad,
@@ -130,12 +130,12 @@ void FOC_MotorInit(foc_motor_t *motor,
     {
         vbus_voltage = 0.0f;
     }
-    set_voltage = Math_ClampFloat(set_voltage, 0.0f, vbus_voltage);
+    max_phase_voltage = Math_ClampFloat(max_phase_voltage, 0.0f, vbus_voltage);
 
     motor->electrical_phase_angle = 0.0f;
     motor->ud = 0.0f;
     motor->uq = 0.0f;
-    motor->set_voltage = set_voltage;
+    motor->max_phase_voltage = max_phase_voltage;
     motor->vbus_voltage = vbus_voltage;
     motor->iq_target = 0.0f;
 

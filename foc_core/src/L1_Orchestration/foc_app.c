@@ -136,7 +136,7 @@ void FOC_App_Init(void)
 
     FOC_MotorInit(&motor,
                   FOC_MOTOR_INIT_VBUS_DEFAULT,
-                  FOC_MOTOR_INIT_SET_VOLTAGE_DEFAULT,
+                  FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT,
                   FOC_MOTOR_INIT_PHASE_RES_DEFAULT,
                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
@@ -198,7 +198,7 @@ void FOC_App_Loop(void)
             if (!in_frame) continue;
 
             /* 语义行 */
-            if (elem.tag <= MONITOR_ELEM_SEMANTIC_7)
+            if (elem.tag <= MONITOR_ELEM_SEMANTIC_8)
             {
                 char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 

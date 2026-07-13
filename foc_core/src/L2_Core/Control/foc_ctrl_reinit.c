@@ -185,9 +185,9 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 #endif
             ReInit_WriteLog("ReInit: zero offset done\r\n");
 
-            /* 计算对齐电压，与阻塞标定一致：ud = calib_uq, uq = 0 */
-            rs->calib_uq = motor->set_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
-            rs->calib_uq = Math_ClampFloat(rs->calib_uq, 0.0f, motor->set_voltage);
+            /* 计算对齐电压，与标定一致：ud = calib_uq, uq = 0 */
+            rs->calib_uq = motor->max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
+            rs->calib_uq = Math_ClampFloat(rs->calib_uq, 0.0f, motor->max_phase_voltage);
 
             /* 进入对齐 */
             rs->phase = FOC_REINIT_PHASE_ALIGN_SETTLE;

@@ -78,104 +78,124 @@ aaPA3.14b
 
 | 命令 | 含义 | 典型格式 |
 |------|------|---------|
-| `P` | 运行参数通道 | `a<id>P<subcmd>[value]b` |
-| `C` | 调优/配置参数通道 | `a<id>C<subcmd>[value]b` |
-| `S` | 状态通道（仅开关态） | `a<id>S<subcmd>[0/1]b` |
-| `Y` | 系统语义通道 | `a<id>Y<subcmd>b` |
+| `P` | 运行参数通道（读写） | `a<id>P<subcmd>[value]b` |
+| `C` | 调优/配置参数通道（读写） | `a<id>C<subcmd>[value]b` |
+| `S` | 状态通道（开关量，读写） | `a<id>S<subcmd>[0/1]b` |
+| `Y` | 系统语义通道（只读/执行） | `a<id>Y<subcmd>b` |
 
 执行语义：
 
-- `P`/`C`：带值=写参数；不带值=读参数
+- `P/C`：带值=写参数；不带值=读参数
 - `S`：带值=写状态；不带值=读状态
 - `Y`：不允许带值
 
-系统子命令：
+### 3.1 全子命令索引
 
-| `Y` 子命令 | 含义 |
-|-----------|------|
-| `R` | 运行时摘要 |
-| `C` | 故障清除 + 软诊断重初始化 |
-| `I` | 运行时电机参数重初始化（方向/极对数/零位重新标定） |
-| `G` | 启动齿槽标定（仅当 `FOC_COGGING_CALIB_ENABLE`） |
-| `D` | 导出齿槽表（仅当 `FOC_COGGING_CALIB_ENABLE`） |
-| `T` | 以 C 代码形式导出齿槽表（仅当 `FOC_COGGING_CALIB_ENABLE`） |
+按字母排序，快速查找每个子命令所属命令组和作用。
 
-兼容性说明：
+| 子命令 | 命令组 | 简要描述 |
+|--------|--------|---------|
+| `P:A` | 运行参数 | target_angle_rad |
+| `P:D` | 运行参数 | control_mode |
+| `P:H` | 运行参数 | oscilloscope_report_frequency_hz |
+| `P:L` | 运行参数 | semantic_report_frequency_hz |
+| `P:O` | 运行参数 | oscilloscope_param_mask |
+| `P:R` | 运行参数 | angle_position_speed_rad_s |
+| `P:S` | 运行参数 | speed_only_speed_rad_s |
+| `P:W` | 运行参数 | sensor_sample_offset_percent |
+| `P:X` | 运行参数 | 读取全部（批读哨兵） |
+| `C:A` | 配置参数 | cogging_comp_speed_gate_rad_s |
+| `C:B` | 配置参数 | control_angle_hold_integral_limit |
+| `C:C` | 配置参数 | pid_current_kp |
+| `C:E` | 配置参数 | control_angle_hold_pid_deadband_rad |
+| `C:F` | 配置参数 | control_speed_angle_transition_start_rad |
+| `C:G` | 配置参数 | pid_angle_kp |
+| `C:I` | 配置参数 | pid_current_ki |
+| `C:J` | 配置参数 | pid_current_kd |
+| `C:K` | 配置参数 | pid_angle_ki |
+| `C:L` | 配置参数 | cogging_comp_iq_limit_a |
+| `C:M` | 配置参数 | control_min_mech_angle_accum_delta_rad |
+| `C:N` | 配置参数 | pid_angle_kd |
+| `C:O` | 配置参数 | current_soft_switch_auto_closed_iq_a |
+| `C:P` | 配置参数 | pid_speed_kp |
+| `C:Q` | 配置参数 | current_soft_switch_mode |
+| `C:R` | 配置参数 | pid_speed_kd |
+| `C:S` | 配置参数 | pid_speed_ki |
+| `C:T` | 配置参数 | control_speed_angle_transition_end_rad |
+| `C:X` | 配置参数 | 读取全部（批读哨兵） |
+| `C:Y` | 配置参数 | cogging_calib_gain_k |
+| `C:Z` | 配置参数 | current_soft_switch_auto_open_iq_a |
+| `S:C` | 状态 | current_soft_switch_enabled |
+| `S:G` | 状态 | cogging_comp_enabled |
+| `S:M` | 状态 | motor_enable |
+| `S:O` | 状态 | oscilloscope_report_enabled |
+| `S:S` | 状态 | semantic_report_enabled |
+| `S:X` | 状态 | 读取全部（批读哨兵） |
+| `Y:C` | 系统 | 故障清除 + 软诊断重初始化 |
+| `Y:D` | 系统 | 导出齿槽表 |
+| `Y:G` | 系统 | 启动齿槽标定 |
+| `Y:I` | 系统 | 运行时电机参数重初始化 |
+| `Y:R` | 系统 | 运行时摘要 |
+| `Y:T` | 系统 | 以 C 代码形式导出齿槽表 |
+| `Y:X` | 系统 | 系统信息（只读） |
 
-- 本版本将调优/配置参数（PID、fine-tuning、齿槽补偿、电流软切换）从 `P` 组分离至新的 `C` 命令组。
-- 原 `P:U`/`P:V` 的字符冲突（与速度 PID 共用）已通过分入 C 组独立解决。
-- 旧上位机工具需要更新以支持 `C` 命令组。
+### 3.2 编译期协议裁剪
 
-### 3.1 编译期协议裁剪
+协议可用性由 `foc_core/include/LS_Config/foc_cfg_feature_switches.h` 中的编译宏控制。每个子命令的裁剪宏在第 4、5 节的参数表中标注。
 
-协议可用性分为固定最小集和可选组，由 `foc_core/include/LS_Config/foc_cfg_feature_switches.h` 中的编译宏控制。
+不可裁剪的固定最小集：
 
-最小集（始终启用，不可裁剪）：
+| 命令组 | 固定子命令 |
+|--------|-----------|
+| `P` | `A`、`R`、`S`、`D`（读写） |
+| `C` | （无固定子命令） |
+| `S` | `M`（读写） |
+| `Y` | `R`、`C`（只读/执行） |
+| 所有 `*:X` | `FOC_PROTOCOL_ENABLE_BATCH_READ`（总控宏，参见第 4 节） |
 
-- `P`：`A/R/S/D`
-- `C`：（无固定子命令）
-- `S`：`M`
-- `Y`：`R/C`
-
-可选组：
-
-| 宏 | 影响的子命令 |
-|----|------------|
-| `FOC_PROTOCOL_ENABLE_SENSOR_SAMPLE_OFFSET` | `P:W` |
-| `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `P:L/H/O`、`S:S/O` |
-| `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `C:C/I/J` |
-| `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `C:G/K/N` |
-| `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `C:P/S/R` |
-| `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `C:M/B/E/F/T` |
-| `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `C:Q/Z/O`、`S:C` |
-| `FOC_COGGING_COMP_ENABLE` | `C:L/A`、`S:G` |
-| `FOC_COGGING_CALIB_ENABLE` | `C:Y`、`Y:G`、`Y:D`、`Y:T` |
-
-当可选子命令被裁剪后，对该子命令的写/读在帧解析成功后返回参数无效（`P`）。
+当子命令对应的裁剪宏禁用后，对该子命令的写/读在帧解析成功后返回参数无效（`P`）。
 
 ## 4. 参数子命令
 
 ### 4.1 P 组：运行参数
 
-说明：下表对应完整协议配置。在裁剪构建中，可选条目按第 3.1 节可能不可用。
-
-| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 写示例（`P`） | 读示例（`P`） |
-|--------|--------|------|------|--------|------|--------------|-------------|
-| `A` | target_angle_rad | float | [-100, 100] | 3.14 | rad | `aaPA1.57b` | `aaPAb` |
-| `R` | angle_position_speed_rad_s | float | [0, 36] | 18.0 | rad/s | `aaPR12b` | `aaPRb` |
-| `S` | speed_only_speed_rad_s | float | [-36, 36] | 2.0 | rad/s | `aaPS-20b` | `aaPSb` |
-| `W` | sensor_sample_offset_percent | float | [0, 100] | 45.0 | % | `aaPW45b` | `aaPWb` |
-| `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `aaPL20b` | `aaPLb` |
-| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `aaPH100b` | `aaPHb` |
-| `O` | oscilloscope_param_mask | uint | [0, 65535] | 779 (0x030B) | bitmask | `aaPO63b` | `aaPOb` |
-| `D` | control_mode | uint | 0 或 1 | 0（完整构建默认） | - | `aaPD0b` | `aaPDb` |
-| `X` | read_all 哨兵 | - | 只读 | - | - | 不可用 | `aaPXb` |
+| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 裁剪宏 | 写示例 | 读示例 |
+|--------|--------|------|------|--------|------|--------|--------|--------|
+| `A` | target_angle_rad | float | [-100, 100] | 3.14 | rad | （固定） | `aaPA1.57b` | `aaPAb` |
+| `R` | angle_position_speed_rad_s | float | [0, 36] | 18.0 | rad/s | （固定） | `aaPR12b` | `aaPRb` |
+| `S` | speed_only_speed_rad_s | float | [-36, 36] | 2.0 | rad/s | （固定） | `aaPS-20b` | `aaPSb` |
+| `D` | control_mode | uint | 0 或 1 | 0 | - | （固定） | `aaPD0b` | `aaPDb` |
+| `W` | sensor_sample_offset_percent | float | [0, 100] | 45.0 | % | `FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE` | `aaPW45b` | `aaPWb` |
+| `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPL20b` | `aaPLb` |
+| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPH100b` | `aaPHb` |
+| `O` | oscilloscope_param_mask | uint | [0, 65535] | 779 (0x030B) | bitmask | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPO63b` | `aaPOb` |
+| `X` | read_all 哨兵 | - | 只读 | - | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaPXb` |
 
 ### 4.2 C 组：调优/配置参数
 
-| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 写示例（`C`） | 读示例（`C`） |
-|--------|--------|------|------|--------|------|--------------|-------------|
-| `C` | pid_current_kp | float | [0, 50] | 4.0 | - | `aaCC2.0b` | `aaCCb` |
-| `I` | pid_current_ki | float | [0, 50] | 60.0 | - | `aaCI10b` | `aaCIb` |
-| `J` | pid_current_kd | float | [0, 10] | 0.00 | - | `aaCJ0.01b` | `aaCJb` |
-| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `aaCG2.5b` | `aaCGb` |
-| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `aaCK0.9b` | `aaCKb` |
-| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `aaCN0.02b` | `aaCNb` |
-| `P` | pid_speed_kp | float | [0, 50] | 0.8 | - | `aaCP1.5b` | `aaCPb` |
-| `S` | pid_speed_ki | float | [0, 50] | 0.6 | - | `aaCS0.6b` | `aaCSb` |
-| `R` | pid_speed_kd | float | [0, 10] | 0.005 | - | `aaCR0.005b` | `aaCRb` |
-| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `aaCM0.002b` | `aaCMb` |
-| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.05 | - | `aaCB0.10b` | `aaCBb` |
-| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `aaCE0.004b` | `aaCEb` |
-| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `aaCF0.45b` | `aaCFb` |
-| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `aaCT0.70b` | `aaCTb` |
-| `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `aaCQ2b` | `aaCQb` |
-| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.20 | A | `aaCZ0.5b` | `aaCZb` |
-| `O` | current_soft_switch_auto_closed_iq_a | float | [0, 100] 且 >= open | 0.50 | A | `aaCO1.0b` | `aaCOb` |
-| `L` | cogging_comp_iq_limit_a | float | [0, 10] | 0.50 | A | `aaCL1.0b` | `aaCLb` |
-| `A` | cogging_comp_speed_gate_rad_s | float | [0, 36] | 12.0 | rad/s | `aaCA8.0b` | `aaCAb` |
-| `Y` | cogging_calib_gain_k | float | >= 0 | 0.05 | - | `aaCY0.10b` | `aaCYb` |
-| `X` | read_all 哨兵 | - | 只读 | - | - | 不可用 | `aaCXb` |
+| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 裁剪宏 | 写示例 | 读示例 |
+|--------|--------|------|------|--------|------|--------|--------|--------|
+| `C` | pid_current_kp | float | [0, 50] | 4.0 | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCC2.0b` | `aaCCb` |
+| `I` | pid_current_ki | float | [0, 50] | 60.0 | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCI10b` | `aaCIb` |
+| `J` | pid_current_kd | float | [0, 10] | 0.00 | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCJ0.01b` | `aaCJb` |
+| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCG2.5b` | `aaCGb` |
+| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCK0.9b` | `aaCKb` |
+| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCN0.02b` | `aaCNb` |
+| `P` | pid_speed_kp | float | [0, 50] | 0.8 | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCP1.5b` | `aaCPb` |
+| `S` | pid_speed_ki | float | [0, 50] | 0.6 | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCS0.6b` | `aaCSb` |
+| `R` | pid_speed_kd | float | [0, 10] | 0.005 | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCR0.005b` | `aaCRb` |
+| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCM0.002b` | `aaCMb` |
+| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.05 | - | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCB0.10b` | `aaCBb` |
+| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCE0.004b` | `aaCEb` |
+| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCF0.45b` | `aaCFb` |
+| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCT0.70b` | `aaCTb` |
+| `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCQ2b` | `aaCQb` |
+| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.20 | A | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCZ0.5b` | `aaCZb` |
+| `O` | current_soft_switch_auto_closed_iq_a | float | [0, 100] 且 >= open | 0.50 | A | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCO1.0b` | `aaCOb` |
+| `L` | cogging_comp_iq_limit_a | float | [0, 10] | 0.50 | A | `FOC_COGGING_COMP_ENABLE` | `aaCL1.0b` | `aaCLb` |
+| `A` | cogging_comp_speed_gate_rad_s | float | [0, 36] | 12.0 | rad/s | `FOC_COGGING_COMP_ENABLE` | `aaCA8.0b` | `aaCAb` |
+| `Y` | cogging_calib_gain_k | float | >= 0 | 0.05 | - | `FOC_COGGING_CALIB_ENABLE` | `aaCY0.10b` | `aaCYb` |
+| `X` | read_all 哨兵 | - | 只读 | - | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaCXb` |
 
 ### 4.3 控制模式值
 
@@ -190,8 +210,8 @@ aaPA3.14b
 
 速度参数映射：
 
-- `R`（`angle_position_speed_rad_s`）：速度+角度模式使用的速度参考（非负限幅）
-- `S`（`speed_only_speed_rad_s`）：纯速度模式使用的速度参考（支持负方向）
+- `P:R`（`angle_position_speed_rad_s`）：速度+角度模式使用的速度参考（非负限幅）
+- `P:S`（`speed_only_speed_rad_s`）：纯速度模式使用的速度参考（支持负方向）
 
 ### 4.4 电流环 PID 抗饱和算法
 
@@ -233,18 +253,36 @@ aaPA3.14b
 
 默认掩码：0x030B（current_a + current_b + angle_filtered + iq_target + iq_measured）。
 
+### 4.7 语义调试行说明
+
+启用语义报告（`S:S=1`）后，调试流按周期输出以下行（行 0~8 共 9 行）：
+
+| 行 | 标签 | 输出格式示例 | 说明 |
+|----|------|-------------|------|
+| 0 | current_a | `measurement.phase_current_a_ampere=0.123` | A 相电流 |
+| 1 | current_b | `measurement.phase_current_b_ampere=-0.456` | B 相电流 |
+| 2 | current_c | `measurement.phase_current_c_ampere=-0.333` | C 相电流 |
+| 3 | angle_raw | `measurement.encoder_angle_raw_rad=1.570` | 编码器原始角度 |
+| 4 | angle_filtered | `measurement.encoder_angle_filtered_rad=1.571` | 编码器滤波后角度 |
+| 5 | vbus_raw | `measurement.vbus_voltage_raw_v=23.800` | VBUS 原始电压 |
+| 6 | vbus_filtered | `measurement.vbus_voltage_filtered_v=23.900` | VBUS 滤波后电压 |
+| 7 | exec_time | `control.execution_time_us=15.200` | 调度器 tick 执行时间 |
+| 8 | current_loop_time | `control.current_loop_execution_time_us=8.500` | 电流环 ISR 执行时间 |
+
+传感器无效时跳过对应行，末尾以一个空行结束帧。
+
 ## 5. 状态子命令
 
 状态通道使用命令 `S`，状态值为严格数字 `0` 或 `1`。
 
-| 子命令 | 状态名 | 默认值 | 写示例（`S`） | 读示例（`S`） |
-|--------|--------|--------|--------------|-------------|
-| `M` | motor_enable | 1 | `aaSM1b` | `aaSMb` |
-| `S` | semantic_report_enabled | 0 | `aaSS1b` | `aaSSb` |
-| `O` | oscilloscope_report_enabled | 0 | `aaSO1b` | `aaSOb` |
-| `C` | current_soft_switch_enabled | 1（宏默认，实际值取决于特性/协议开关） | `aaSC1b` | `aaSCb` |
-| `G` | cogging_comp_enabled | 0（跟随 `FOC_COGGING_COMP_ENABLE`） | `aaSG1b` | `aaSGb` |
-| `X` | read_all 哨兵 | - | 不可用 | `aaSXb` |
+| 子命令 | 状态名 | 默认值 | 裁剪宏 | 写示例 | 读示例 |
+|--------|--------|--------|--------|--------|--------|
+| `M` | motor_enable | 1 | （固定） | `aaSM1b` | `aaSMb` |
+| `S` | semantic_report_enabled | 0 | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaSS1b` | `aaSSb` |
+| `O` | oscilloscope_report_enabled | 0 | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaSO1b` | `aaSOb` |
+| `C` | current_soft_switch_enabled | 1 | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaSC1b` | `aaSCb` |
+| `G` | cogging_comp_enabled | 0 | `FOC_COGGING_COMP_ENABLE` | `aaSG1b` | `aaSGb` |
+| `X` | read_all 哨兵 | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaSXb` |
 
 ## 6. 返回与状态码
 
@@ -270,8 +308,7 @@ aaPA3.14b
 parameter.pid_speed_kp=3.000
 config.pid_speed_kp=3.000
 state.semantic_report_enabled=ENABLE
-STATE SYS=1 COMM=1 REPORT=1 DIRTY=1 LAST=1 INIT=1 FAULT=NONE SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
-FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
+STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
 ```
 
 文本前缀规则：
@@ -279,6 +316,7 @@ FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
 - `P` 组参数输出：`parameter.<name>=<value>`
 - `C` 组配置参数输出：`config.<name>=<value>`
 - `S` 组状态输出：`state.<name>=ENABLE/DISABLE`
+- `Y:X` 系统信息输出：`system.<name>=<value>`
 
 格式化规则：
 
@@ -291,79 +329,7 @@ FAULT_CTRL state=1 fault=NONE proto_err=0 param_err=0 ctrl_skip=0
 - 在 FAULT 状态下，调试流定期语义/示波输出被抑制。
 - 命令路径诊断和显式查询/清除命令仍可用。
 
-## 7. 完整命令示例
-
-### 7.1 核心命令
-
-```text
-aaPA3.14b   # 写入 target_angle_rad
-aaPAb       # 读取 target_angle_rad
-aaPXb       # 读取所有 P 组参数
-aaSM1b      # motor_enable = ENABLE
-aaSMb       # 读取 motor_enable
-aaSXb       # 读取所有状态
-aaYRb       # 读取运行时状态摘要
-aaYCb       # 清除故障计数器 + 软诊断重初始化
-aaYIb       # 运行时电机参数重初始化（方向/极对数/零位标定）
-```
-
-### 7.2 常用参数写入
-
-```text
-# P 组（运行参数）
-aaPD0b      # control_mode = 速度+角度
-aaPD1b      # control_mode = 纯速度
-aaPS-20b    # 纯速度速度参考 = -20rad/s
-aaPR12b     # 速度+角度模式速度限制/参考 = 12rad/s
-aaPW45b     # 传感器采样偏移百分比 = 45
-aaPL20b     # 语义报告频率参数示例值 = 20
-aaPH100b    # 示波报告频率参数示例值 = 100
-aaPO63b     # 示波掩码位 0..5 全开
-
-# C 组（调优/配置参数）
-aaCP1.5b    # pid_speed_kp
-aaCS0.6b    # pid_speed_ki
-aaCR0.005b  # pid_speed_kd
-aaCC2.0b    # pid_current_kp
-aaCG2.5b    # pid_angle_kp
-aaCQ2b      # current_soft_switch_mode = 自动
-aaCZ0.5b    # current_soft_switch_auto_open_iq_a = 0.5A
-aaCO1.0b    # current_soft_switch_auto_closed_iq_a = 1.0A
-aaCY0.10b   # cogging_calib_gain_k = 0.10
-aaCL1.0b    # cogging_comp_iq_limit_a = 1.0A
-aaCA8.0b    # cogging_comp_speed_gate_rad_s = 8.0
-```
-
-### 7.3 常用状态写入
-
-```text
-aaSM1b      # 电机使能
-aaSM0b      # 电机关闭
-aaSS1b      # 语义报告使能
-aaSO1b      # 示波报告使能
-aaSC1b      # 电流软切换使能
-aaSG1b      # 齿槽补偿使能（仅当 FOC_COGGING_COMP_ENABLE=ENABLE）
-aaYGb       # 启动运行时齿槽标定（仅当 FOC_COGGING_CALIB_ENABLE=ENABLE）
-aaYDb       # 导出齿槽补偿表到串口（仅当 FOC_COGGING_CALIB_ENABLE=ENABLE）
-aaYTb       # 以 C 代码形式导出齿槽补偿表到串口（仅当 FOC_COGGING_CALIB_ENABLE=ENABLE）
-```
-
-### 7.4 常用读取
-
-```text
-aaPDb       # 读取 control_mode
-aaPSb       # 读取 speed_only_speed_rad_s
-aaPRb       # 读取 angle_position_speed_rad_s
-aaSMb       # 读取 motor_enable
-aaPWb       # 读取 sensor_sample_offset_percent
-aaPOb       # 读取 oscilloscope_param_mask
-aaCPb       # 读取 pid_speed_kp
-aaCMb       # 读取 min_mech_angle_accum_delta
-aaSCb       # 读取 current_soft_switch_enabled
-aaCYb       # 读取 cogging_calib_gain_k
-```
-
-## 8. 常见错误与原因
+## 7. 常见错误与原因
 
 | 帧 | 预期反馈 | 原因 |
 |----|---------|------|
@@ -376,7 +342,7 @@ aaCYb       # 读取 cogging_calib_gain_k
 | `2PA1b` | `E` | 缺少帧头 `a` |
 | `aaPA1` | `E` | 缺少帧尾 `b` |
 
-## 9. 推荐测试流程
+## 8. 推荐测试流程
 
 1. 打开绑定到实例输入/输出通道的主机工具。
 2. 发送 `aaPXb` 确认 P 组参数转储出现在输出通道。
@@ -395,3 +361,78 @@ aaCYb       # 读取 cogging_calib_gain_k
 - 一次只发送一帧（不要在单次突发中拼接多帧）。
 - 保持命令/子命令大写，帧分隔符小写（`a`、`b`）。
 - 将写入值保持在有效范围内。
+
+---
+
+## 附录 A：完整命令参考
+
+### A.1 核心命令
+
+```text
+aaPA3.14b   # 写入 target_angle_rad（P:A）
+aaPAb       # 读取 target_angle_rad（P:A）
+aaPXb       # 读取所有 P 组参数（P:X）
+aaSM1b      # motor_enable = ENABLE（S:M）
+aaSMb       # 读取 motor_enable（S:M）
+aaSXb       # 读取所有状态（S:X）
+aaYRb       # 读取运行时状态摘要（Y:R）
+aaYCb       # 清除故障计数器 + 软诊断重初始化（Y:C）
+aaYIb       # 运行时电机参数重初始化（Y:I）
+aaYXb       # 读取系统参数信息（Y:X）
+```
+
+### A.2 常用参数写入
+
+```text
+# P 组（运行参数）
+aaPD0b      # control_mode = 速度+角度（P:D）
+aaPD1b      # control_mode = 纯速度（P:D）
+aaPS-20b    # 纯速度速度参考 = -20rad/s（P:S）
+aaPR12b     # 速度+角度模式速度限制/参考 = 12rad/s（P:R）
+aaPW45b     # 传感器采样偏移百分比 = 45（P:W）
+aaPL20b     # 语义报告频率 = 20（P:L）
+aaPH100b    # 示波报告频率 = 100（P:H）
+aaPO63b     # 示波掩码位 0..5 全开（P:O）
+
+# C 组（调优/配置参数）
+aaCP1.5b    # pid_speed_kp（C:P）
+aaCS0.6b    # pid_speed_ki（C:S）
+aaCR0.005b  # pid_speed_kd（C:R）
+aaCC2.0b    # pid_current_kp（C:C）
+aaCG2.5b    # pid_angle_kp（C:G）
+aaCQ2b      # current_soft_switch_mode = 自动（C:Q）
+aaCZ0.5b    # current_soft_switch_auto_open_iq_a = 0.5A（C:Z）
+aaCO1.0b    # current_soft_switch_auto_closed_iq_a = 1.0A（C:O）
+aaCY0.10b   # cogging_calib_gain_k = 0.10（C:Y）
+aaCL1.0b    # cogging_comp_iq_limit_a = 1.0A（C:L）
+aaCA8.0b    # cogging_comp_speed_gate_rad_s = 8.0（C:A）
+```
+
+### A.3 常用状态写入
+
+```text
+aaSM1b      # 电机使能（S:M）
+aaSM0b      # 电机关闭（S:M）
+aaSS1b      # 语义报告使能（S:S）
+aaSO1b      # 示波报告使能（S:O）
+aaSC1b      # 电流软切换使能（S:C）
+aaSG1b      # 齿槽补偿使能（S:G）
+aaYGb       # 启动运行时齿槽标定（Y:G）
+aaYDb       # 导出齿槽补偿表到串口（Y:D）
+aaYTb       # 以 C 代码形式导出齿槽补偿表（Y:T）
+```
+
+### A.4 常用读取
+
+```text
+aaPDb       # 读取 control_mode（P:D）
+aaPSb       # 读取 speed_only_speed_rad_s（P:S）
+aaPRb       # 读取 angle_position_speed_rad_s（P:R）
+aaSMb       # 读取 motor_enable（S:M）
+aaPWb       # 读取 sensor_sample_offset_percent（P:W）
+aaPOb       # 读取 oscilloscope_param_mask（P:O）
+aaCPb       # 读取 pid_speed_kp（C:P）
+aaCMb       # 读取 min_mech_angle_accum_delta（C:M）
+aaSCb       # 读取 current_soft_switch_enabled（S:C）
+aaCYb       # 读取 cogging_calib_gain_k（C:Y）
+aaYXb       # 读取系统信息（Y:X）

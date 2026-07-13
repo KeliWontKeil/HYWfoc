@@ -3,7 +3,7 @@
 HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核心库 + 实例工程"组织方式。核心库 `foc_core/` 是平台无关的，实例工程在 `examples/<instance>/` 中。当前主要实例工程基于 GD32F303CC 。
 
 ## Project structure
-
+- 建议先阅读以下文档，确保对项目结构的清晰理解
 - `foc_core/` — 平台无关可复用控制库
   - `foc_core/include/` — 头文件（按功能分层：`LS_Config/`、`L1_Orchestration/`、`L2/{Control,Protocol, Runtime}/`、`L3/`）
   - `foc_core/src/` — 源文件（同上层级结构）

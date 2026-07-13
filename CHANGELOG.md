@@ -5,6 +5,21 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1] - 2026-07-13
+
+### Added
+- **电流环 ISR 执行时间监控**：新增语义调试行 8（`control.current_loop_execution_time_us`），在调试流中输出 PWM ISR 中电流环的执行时间（微秒）。
+- **系统参数只读命令 `Y:X`**：新增系统子命令 `Y:X`，支持通过 `aaYXb` 读取电机系统参数：相电阻、极对数、零位、方向、总线电压、最大相电压、ADC 零偏等。
+- **X指令裁剪宏 `FOC_PROTOCOL_ENABLE_BATCH_READ`**：新增 `foc_cfg_feature_switches.h` 总控宏，关闭后 `P:X`/`C:X`/`S:X`/`Y:X` 四个批读命令的字符串和函数体全部编译排除，节省 ROM。
+
+### Changed
+- **语义调试流行数扩展至 9 行**：`SEMANTIC_LINE_COUNT` 从 8 增加到 9，新增行 8 为电流环 ISR 执行时间，行 7（调度器执行时间）格式移除末尾多余空行。
+
+### Documentation
+- `docs/protocol-parameters.md`：全子命令索引表（3.1 节）、裁剪宏列合并到参数表、表格列结构统一为 9 列、示例精简为附录 A、新增 4.7 节语义调试行说明。Y 组新增 `X` 子命令。
+- `docs/README.md`、`README.md`、`NEXT_MISSION.md`：版本基线更新至 v1.10.1。
+- `CHANGELOG.md`：新增 v1.10.1 变更记录。
+
 ## [1.10.0] - 2026-07-10
 
 ### Changed

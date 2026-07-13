@@ -58,7 +58,14 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     electrical_angle = Math_WrapRad(electrical_angle);
     motor->electrical_phase_angle = electrical_angle;
 
-    voltage_limit = Math_ClampFloat(motor->set_voltage, 0.0f, motor->vbus_voltage);
+    voltage_limit = Math_ClampFloat(motor->max_phase_voltage, 0.0f, motor->vbus_voltage);
+
+    /* SVPWM 最大占空比限制，保护低侧电流采样 */
+    {
+        float duty_limit_v = motor->vbus_voltage * (2.0f * FOC_SVPWM_MAX_DUTY_CYCLE - 1.0f);
+        if (duty_limit_v < 0.0f) duty_limit_v = 0.0f;
+        if (voltage_limit > duty_limit_v) voltage_limit = duty_limit_v;
+    }
 
     dq_magnitude = sqrtf(motor->ud * motor->ud + motor->uq * motor->uq);
     ud_applied = motor->ud;
