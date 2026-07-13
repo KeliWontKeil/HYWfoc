@@ -6,13 +6,12 @@
 #include "L1_Orchestration/foc_system_types.h"
 #include "L1_Orchestration/foc_output_mgr.h"
 #include "L1_Orchestration/foc_indicator.h"
-#include "L1_Orchestration/foc_init_check.h"
+#include "L1_Orchestration/foc_init.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L2_Core/Runtime/foc_task_scheduler.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
-#include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_cogging_calib.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
@@ -30,34 +29,6 @@ static foc_motor_t motor;
 /* ================================================================
  * 内部工具
  * ================================================================ */
-
-static uint8_t FOC_App_IsCalibrating(void)
-{
-    return (motor.state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ? 1U : 0U;
-}
-
-static void FOC_App_SampleSensors(void)
-{
-#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
-    Sensor_ReadEncoder(&motor, &motor.sensor);
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-    motor.ecycle_ref_angle_rad = motor.sensor.mech_angle_rad.output_value;
-    motor.ecycle_ref_angle_valid = motor.sensor.encoder_valid;
-#endif
-#else
-    motor.sensor.mech_angle_rad = motor.sensor_fast.mech_angle_rad;
-    motor.sensor.encoder_valid = motor.sensor_fast.encoder_valid;
-#endif
-    Sensor_ReadVBUS(&motor.sensor);
-    Sensor_SyncCurrentSnapshot(&motor);
-}
-
-static void FOC_App_SchedTickBridge(void)
-{
-    ControlScheduler_RunTick(&g_sys.runtime.scheduler);
-    DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
-        ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
-}
 
 static void FOC_App_HandleResult(uint8_t cycle_result)
 {
@@ -82,13 +53,11 @@ static void FOC_App_HandleResult(uint8_t cycle_result)
     }
 }
 
-static void FOC_App_ApplyCfgDirty(void)
+static void FOC_App_SchedTickBridge(void)
 {
-    if (motor.state.cfg_dirty != 0U)
-    {
-        FOC_Control_ApplyConfig(&motor);
-        motor.state.cfg_dirty = 0U;
-    }
+    ControlScheduler_RunTick(&g_sys.runtime.scheduler);
+    DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
+        ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
 }
 
 /* ================================================================
@@ -104,46 +73,14 @@ void FOC_App_Init(void)
     FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 1U);
     FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 1U);
 
-    g_sys.runtime.service_task_pending = 0U;
-    g_sys.runtime.monitor_task_pending = 0U;
-    g_sys.runtime.monitor_frame_active = 0U;
-    g_sys.runtime.indicator.comm_pulse_counter = 0U;
-    g_sys.runtime.indicator.led_run_blink_counter = 0U;
-    g_sys.runtime.comm_source_rr = 0U;
-    g_sys.runtime.osc.collect_offset = 0U;
-    g_sys.runtime.osc.collect_buf[0] = '\0';
-
-    FOC_Platform_ControlTickSourceInit();
-    ControlScheduler_Init(&g_sys.runtime.scheduler);
-    FOC_Platform_SetControlTickCallback(FOC_App_SchedTickBridge);
-    ControlScheduler_SetCallback(&g_sys.runtime.scheduler, FOC_TASK_RATE_SERVICE, FOC_App_ServiceTrigger);
-    ControlScheduler_SetCallback(&g_sys.runtime.scheduler, FOC_TASK_RATE_FAST_CONTROL, FOC_App_ControlTrigger);
-    ControlScheduler_SetCallback(&g_sys.runtime.scheduler, FOC_TASK_RATE_MONITOR, FOC_App_MonitorTrigger);
-    FOC_Platform_SetControlRuntimeInterrupts(0U);
-
-    FOC_Platform_CommInit();
-    FOC_OutputMgr_Init(&g_sys);
-
-    FIFO_Init(&g_sys.runtime.monitor_elem_q,
-              (uint8_t *)g_sys.runtime.monitor_elem_buffer,
-              sizeof(monitor_element_t),
-              FOC_MONITOR_ELEM_QUEUE_DEPTH);
-
-    FOC_Protocol_Init(&g_sys.cfg.telemetry);
-    DebugStream_Init(&g_sys.runtime.debug_stream);
-    FOC_ControlPlatform_InitHardware(&motor);
-    FOC_Platform_SetPwmUpdateCallback(FOC_App_OnPwmUpdateISR);
-
-    FOC_MotorInit(&motor,
-                  FOC_MOTOR_INIT_VBUS_DEFAULT,
-                  FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT,
-                  FOC_MOTOR_INIT_PHASE_RES_DEFAULT,
-                  FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
-                  FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
-                  FOC_MOTOR_INIT_DIRECTION_DEFAULT);
-    FOC_Control_ApplyConfig(&motor);
-
-    FOC_InitCheck_Verify(&motor, &motor.sensor);
+    FOC_Init_Runtime(&g_sys, &motor,
+                     FOC_App_SchedTickBridge,
+                     FOC_App_ServiceTrigger,
+                     FOC_App_ControlTrigger,
+                     FOC_App_MonitorTrigger,
+                     FOC_App_OnPwmUpdateISR);
+    FOC_Init_MotorAndCalib(&motor);
+    FOC_Init_Verify(&motor, &motor.sensor);
     FOC_OutputMgr_WriteStartupInfo(&motor);
     FOC_Indicator_Update(&motor, &g_sys.runtime);
 }
@@ -160,7 +97,7 @@ void FOC_App_Start(void)
 
 void FOC_App_Loop(void)
 {
-    if (FOC_App_IsCalibrating() != 0U)
+    if (motor.state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB)
     {
         FOC_OutputMgr_FlushQueue(&g_sys);
         return;
@@ -177,105 +114,17 @@ void FOC_App_Loop(void)
             return;
         }
 
-        uint8_t consumed = 0U;
-        uint8_t in_frame = 0U;
-        uint8_t collecting_osc = 0U;
-
-        while (consumed < FOC_MONITOR_MAX_DEQUEUE_PER_CYCLE)
-        {
-            monitor_element_t elem;
-
-            if (FIFO_Dequeue(&g_sys.runtime.monitor_elem_q, (uint8_t *)&elem) == 0U)
-                break;
-            consumed++;
-
-            if (elem.tag == MONITOR_ELEM_FRAME_START)
-            {
-                collecting_osc = 0U;
-                in_frame = 1U;
-                continue;
-            }
-            if (!in_frame) continue;
-
-            /* 语义行 */
-            if (elem.tag <= MONITOR_ELEM_SEMANTIC_8)
-            {
-                char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-
-                if (elem.aux == 0U)
-                {
-                    if (DebugStream_FormatInvalidLine(elem.tag, line, sizeof(line)) == 0U)
-                        continue;
-                }
-                else
-                {
-                    DebugStream_FormatSemanticLine(elem.tag, elem.value, line, sizeof(line));
-                }
-                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
-                continue;
-            }
-
-            if (elem.tag == MONITOR_ELEM_SEMANTIC_END)
-            {
-                in_frame = 0U;
-                continue;
-            }
-
-            /* 示波器累积 */
-            if (elem.tag == MONITOR_ELEM_OSC_VALUE)
-            {
-                if (collecting_osc == 0U)
-                {
-                    g_sys.runtime.osc.collect_offset = 0U;
-                    g_sys.runtime.osc.collect_buf[0] = '\0';
-                    collecting_osc = 1U;
-                }
-                DebugStream_AppendOscValue(g_sys.runtime.osc.collect_buf,
-                                            &g_sys.runtime.osc.collect_offset,
-                                            elem.value);
-                continue;
-            }
-
-            if (elem.tag == MONITOR_ELEM_OSC_END)
-            {
-                char line[DEBUG_STREAM_OSC_PAYLOAD_LEN];
-                uint16_t off = 0U;
-                int written;
-
-                written = snprintf(line, sizeof(line), "%c", (char)DEBUG_STREAM_OSC_HEAD_BYTE);
-                if (written > 0) off = (uint16_t)written;
-
-                if ((int)(sizeof(line)) > (int)(off + 1))
-                {
-                    uint16_t copy_len = (uint16_t)(sizeof(line) - off - 1);
-                    uint16_t src_len = (uint16_t)strlen(g_sys.runtime.osc.collect_buf);
-                    if (copy_len > src_len) copy_len = src_len;
-                    if (copy_len > 0U)
-                    {
-                        (void)memcpy(line + off, g_sys.runtime.osc.collect_buf, copy_len);
-                        off += copy_len;
-                        line[off] = '\0';
-                    }
-                }
-
-                if ((off + 6U) < sizeof(line))
-                {
-                    written = snprintf(line + off, sizeof(line) - off,
-                                       " %c ", (char)DEBUG_STREAM_OSC_TAIL_BYTE);
-                    if (written > 0) off += (uint16_t)written;
-                }
-                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)line);
-                collecting_osc = 0U;
-                in_frame = 0U;
-                continue;
-            }
-
-        }
+        FOC_OutputMgr_ProcessMonitorElements(&g_sys);
     }
 
     /* ---- Service 段 ---- */
     if (g_sys.runtime.service_task_pending != 0U)
     {
+        uint8_t needs_param_dump   = 0U;
+        uint8_t needs_config_dump  = 0U;
+        uint8_t needs_state_dump   = 0U;
+        uint8_t needs_system_info  = 0U;
+
         g_sys.runtime.service_task_pending = 0U;
 
         while (FIFO_Count(&g_sys.runtime.rx_fifo) > 0U)
@@ -295,9 +144,23 @@ void FOC_App_Loop(void)
                 FOC_Protocol_FormatSummaryLine(&motor, summary_line, sizeof(summary_line));
                 (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)summary_line);
             }
+
+            needs_param_dump   |= result.needs_param_dump;
+            needs_config_dump  |= result.needs_config_dump;
+            needs_state_dump   |= result.needs_state_dump;
+            needs_system_info  |= result.needs_system_info;
         }
 
-        FOC_App_ApplyCfgDirty();
+        if (motor.state.cfg_dirty != 0U)
+        {
+            FOC_Control_ApplyConfig(&motor);
+            motor.state.cfg_dirty = 0U;
+        }
+
+        if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.runtime.tx_fifo);
+        if (needs_config_dump  != 0U) FOC_Protocol_QueueConfigs(&motor, &g_sys.runtime.tx_fifo);
+        if (needs_state_dump   != 0U) FOC_Protocol_QueueStates(&motor, &g_sys.runtime.tx_fifo);
+        if (needs_system_info  != 0U) FOC_Protocol_QueueSystemInfo(&motor, &g_sys.runtime.tx_fifo);
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
         if (FOC_CoggingCalibIsDumpPending(&motor) != 0U)
@@ -365,7 +228,14 @@ void FOC_App_ControlTrigger(void)
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
 
-    FOC_App_SampleSensors();
+#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    Sensor_ReadEncoder(&motor, &motor.sensor);
+#else
+    motor.sensor.mech_angle_rad = motor.sensor_fast.mech_angle_rad;
+    motor.sensor.encoder_valid = motor.sensor_fast.encoder_valid;
+#endif
+    Sensor_ReadVBUS(&motor.sensor);
+    Sensor_SyncCurrentSnapshot(&motor);
 
     if ((motor.sensor.adc_valid == 0U) || (motor.sensor.encoder_valid == 0U))
     {

@@ -6,6 +6,7 @@
 #include "L2_Core/foc_ctrl_types.h"
 #include "L2_Core/Protocol/foc_protocol_types.h"
 #include "L2_Core/Protocol/foc_snapshot_types.h"
+#include "L2_Core/Runtime/foc_queue.h"
 
 /*
  * L2/Protocol — 协议处理器
@@ -39,5 +40,11 @@ void FOC_Protocol_Commit(foc_motor_t *motor);
 
 /* 获取遥测策略（供 L1/debug 流使用） */
 const telemetry_policy_snapshot_t *FOC_Protocol_GetTelemetry(void);
+
+/* 批量输出（入 TX FIFO，供 X 指令使用） */
+void FOC_Protocol_QueueParams(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
+void FOC_Protocol_QueueConfigs(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
+void FOC_Protocol_QueueStates(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
+void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
 
 #endif /* FOC_PROTOCOL_HANDLER_H */

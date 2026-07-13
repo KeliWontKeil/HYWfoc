@@ -109,7 +109,7 @@
 #define FOC_SENSOR_ANGLE_LPF_ALPHA 0.30f
 
 /* Electrical-cycle dynamic offset compensation defaults. */
-#define FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA       0.40f
+#define FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA       0.60f
 #define FOC_ELEC_CYCLE_OFFSET_MIN_VALID_CYCLES 1U
 
 /* Sensor zero-calibration defaults (stationary current offset sampling). */
@@ -132,7 +132,7 @@
 #define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD 0.8f
 #define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD 1.0f
 
-#define FOC_SVPWM_PRE_LPF_ALPHA 0.20f
+#define FOC_SVPWM_PRE_LPF_ALPHA 0.60f
 #define FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V 0.1f
 
 /* PID default gains. */

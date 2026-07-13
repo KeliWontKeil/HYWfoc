@@ -465,108 +465,14 @@ static float Sensor_UpdateAngleLpf(foc_motor_t *motor, float measurement)
 }
 #endif
 
-/* ========== Electrical-cycle drift offset accumulation ========== */
+/* ========== Electrical-cycle drift offset accumulation (reserved) ========== */
 
 #if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-
-#if (FOC_CURRENT_SENSE_PHASES == 2U)
-static void Sensor_EcycleUpdateTwoPhase(foc_motor_t *motor,
-                                        const sensor_data_t *sensor)
-{
-    float avg_a;
-    float avg_b;
-    float alpha;
-    uint16_t count;
-
-    (void)sensor;
-    count = motor->ecycle_sample_count;
-
-    if (count > 0U)
-    {
-        avg_a = motor->ecycle_accum_a / (float)count;
-        avg_b = motor->ecycle_accum_b / (float)count;
-
-        alpha = Math_ClampFloat(FOC_ELEC_CYCLE_OFFSET_LPF_ALPHA, 0.0f, 1.0f);
-        motor->ecycle_offset_dyn_a += alpha * (avg_a - motor->ecycle_offset_dyn_a);
-        motor->ecycle_offset_dyn_b += alpha * (avg_b - motor->ecycle_offset_dyn_b);
-        motor->ecycle_offset_valid = 1U;
-    }
-
-    motor->ecycle_accum_a = 0.0f;
-    motor->ecycle_accum_b = 0.0f;
-    motor->ecycle_sample_count = 0U;
-    motor->ecycle_accu_mech_delta = 0.0f;
-}
-
-#elif (FOC_CURRENT_SENSE_PHASES == 3U)
-static void Sensor_EcycleUpdateThreePhase(foc_motor_t *motor,
-                                          const sensor_data_t *sensor)
-{
-    (void)motor;
-    (void)sensor;
-}
-#endif /* FOC_CURRENT_SENSE_PHASES == 3U */
-
-void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_snapshot)
-{
-    float mech_now;
-    float raw_delta;
-    float delta_mech;
-
-    if (motor == 0) return;
-    if (current_snapshot == 0) return;
-
-    /*
-     * Obtain angle reference:
-     *   - When FOC_SENSOR_ANGLE_FAST_ENABLE: angle comes from current_snapshot
-     *     (written by Sensor_ReadEncoder in the same PWM ISR context — no race)
-     *   - Otherwise: angle comes from the volatile bridge updated by Control ISR
-     */
-#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-    if (current_snapshot->encoder_valid == 0U) return;
-    mech_now = current_snapshot->mech_angle_rad.output_value;
-#else
-    if (motor->ecycle_ref_angle_valid == 0U) return;
-    mech_now = motor->ecycle_ref_angle_rad;
-#endif
-
-    raw_delta = mech_now - motor->ecycle_prev_mech_angle;
-    if (raw_delta > FOC_MATH_PI)
-    {
-        raw_delta -= FOC_MATH_TWO_PI;
-    }
-    else if (raw_delta < -FOC_MATH_PI)
-    {
-        raw_delta += FOC_MATH_TWO_PI;
-    }
-    delta_mech = (raw_delta >= 0.0f) ? raw_delta : (-raw_delta);
-
-    motor->ecycle_accu_mech_delta += delta_mech;
-
-    if (motor->ecycle_accu_mech_delta * (float)motor->pole_pairs >= FOC_MATH_TWO_PI)
-    {
-#if (FOC_CURRENT_SENSE_PHASES == 2U)
-        Sensor_EcycleUpdateTwoPhase(motor, current_snapshot);
-#else
-        Sensor_EcycleUpdateThreePhase(motor, current_snapshot);
-#endif
-    }
-
-#if (FOC_CURRENT_SENSE_PHASES == 2U)
-    motor->ecycle_accum_a += current_snapshot->current_a.filtered_value;
-    motor->ecycle_accum_b += current_snapshot->current_b.filtered_value;
-    motor->ecycle_sample_count++;
-#else
-    motor->ecycle_accum_a += current_snapshot->current_a.filtered_value;
-    motor->ecycle_accum_b += current_snapshot->current_b.filtered_value;
-    motor->ecycle_accum_c += current_snapshot->current_c.filtered_value;
-    motor->ecycle_sample_count++;
-#endif
-    motor->ecycle_prev_mech_angle = mech_now;
-}
-
+/* 
+ * 两相/三相分离骨架已预留。两相使用 Sensor_EcycleUpdateTwoPhase，
+ * 三相使用 Sensor_EcycleUpdateThreePhase，未来实现可按需扩展。
+ */
 #else /* FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_DISABLE */
-
 void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_snapshot)
 {
     (void)motor;

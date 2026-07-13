@@ -44,7 +44,7 @@
         "../../../foc_core/src/L1_Orchestration/foc_app.c",
         "../../../foc_core/src/L1_Orchestration/foc_app.c",
         "../../../foc_core/src/L1_Orchestration/foc_indicator.c",
-        "../../../foc_core/src/L1_Orchestration/foc_init_check.c",
+        "../../../foc_core/src/L1_Orchestration/foc_init.c",
         "../../../foc_core/src/L1_Orchestration/foc_output_mgr.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_actuation.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_cfg.c",
@@ -118,7 +118,7 @@
             "C_FLAGS": "--diag_suppress=1 --diag_suppress=1295",
             "c99-mode": true,
             "one-elf-section-per-function": true,
-            "optimization": "level-1",
+            "optimization": "level-2",
             "warnings": "all-warnings"
         },
         "global": {

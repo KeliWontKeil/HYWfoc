@@ -267,26 +267,6 @@ typedef struct {
     foc_current_soft_switch_status_t current_soft_switch_status;
     uint8_t current_soft_switch_blend_initialized;
 #endif
-
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-    float    ecycle_offset_dyn_a;
-    float    ecycle_offset_dyn_b;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-    float    ecycle_offset_dyn_c;
-#endif
-    float    ecycle_prev_mech_angle;
-    float    ecycle_accu_mech_delta;
-    uint16_t ecycle_sample_count;
-    float    ecycle_accum_a;
-    float    ecycle_accum_b;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-    float    ecycle_accum_c;
-#endif
-    uint8_t  ecycle_offset_valid;
-    /* Volatile bridge: Control ISR writes, PWM ISR reads (atomic on CM3). */
-    volatile float    ecycle_ref_angle_rad;
-    volatile uint8_t  ecycle_ref_angle_valid;
-#endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     foc_cogging_comp_status_t cogging_comp_status;
     int16_t cogging_comp_table_q15[FOC_COGGING_LUT_POINT_COUNT];

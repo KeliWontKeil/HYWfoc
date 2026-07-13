@@ -5,6 +5,21 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.2] - 2026-07-13
+
+### Changed
+- **X 指令输出路径从快路径改为队列**：`P:X`/`C:X`/`S:X`/`Y:X` 四个批读命令的批量输出从快路径直写改为 TX FIFO 队列输出，消除 Service 段因批量 DMA 写入引起的长阻塞（最大约 50ms）。批量输出函数移至 L2 Protocol 层（`FOC_Protocol_QueueParams/Configs/States/SystemInfo`），复用已有的 `ReadParam/ReadConfigParam/ReadState` 静态函数，消除 L1 层的字段映射重复。
+- **`foc_app.c` 精简重构**：初始化逻辑移至 `foc_init.h/.c`（取代 `foc_init_check.h/.c`），Monitor 段元素处理移至 `foc_output_mgr.c` 的 `FOC_OutputMgr_ProcessMonitorElements`，辅助函数（`IsCalibrating/ApplyCfgDirty/SampleSensors`）内联。`foc_app.c` 从 432 行精简至 272 行。
+
+### Fixed
+- **齿槽标定逆方向（direction=-1）不工作**：`foc_ctrl_cogging_calib.c` SCAN 阶段修复两个 bug——`pred_wrapped` 使用 `2π - pred_mech_angle` 而非 `Math_WrapRad(pred_mech_angle)` 导致 `dtheta` 计算错误；反向标定时 `iq_comp` 缺少符号反转。
+
+### Removed
+- `foc_init_check.h/.c` 删除，由 `foc_init.h/.c` 替代。
+
+### Documentation
+- 版本基线更新至 v1.10.2。
+
 ## [1.10.1] - 2026-07-13
 
 ### Added

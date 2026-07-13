@@ -1,8 +1,11 @@
 ﻿#include "L1_Orchestration/foc_output_mgr.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "L2_Core/Runtime/foc_queue.h"
+#include "L2_Core/Runtime/foc_debug_stream.h"
+#include "L1_Orchestration/foc_monitor_queue_types.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -115,3 +118,103 @@ void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
              (double)motor->sensor.vbus_voltage_filtered);
     FOC_OutputMgr_WriteDirect(buf);
 }
+
+void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
+{
+    uint8_t consumed = 0U;
+    uint8_t in_frame = 0U;
+    uint8_t collecting_osc = 0U;
+
+    if (sys == 0) return;
+
+    while (consumed < FOC_MONITOR_MAX_DEQUEUE_PER_CYCLE)
+    {
+        monitor_element_t elem;
+
+        if (FIFO_Dequeue(&sys->runtime.monitor_elem_q, (uint8_t *)&elem) == 0U)
+            break;
+        consumed++;
+
+        if (elem.tag == MONITOR_ELEM_FRAME_START)
+        {
+            collecting_osc = 0U;
+            in_frame = 1U;
+            continue;
+        }
+        if (!in_frame) continue;
+
+        /* 语义行 */
+        if (elem.tag <= MONITOR_ELEM_SEMANTIC_8)
+        {
+            char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+            if (elem.aux == 0U)
+            {
+                if (DebugStream_FormatInvalidLine(elem.tag, line, sizeof(line)) == 0U)
+                    continue;
+            }
+            else
+            {
+                DebugStream_FormatSemanticLine(elem.tag, elem.value, line, sizeof(line));
+            }
+            (void)FIFO_Enqueue(&sys->runtime.tx_fifo, (uint8_t *)line);
+            continue;
+        }
+
+        if (elem.tag == MONITOR_ELEM_SEMANTIC_END)
+        {
+            in_frame = 0U;
+            continue;
+        }
+
+        /* 示波器累积 */
+        if (elem.tag == MONITOR_ELEM_OSC_VALUE)
+        {
+            if (collecting_osc == 0U)
+            {
+                sys->runtime.osc.collect_offset = 0U;
+                sys->runtime.osc.collect_buf[0] = '\0';
+                collecting_osc = 1U;
+            }
+            DebugStream_AppendOscValue(sys->runtime.osc.collect_buf,
+                                        &sys->runtime.osc.collect_offset,
+                                        elem.value);
+            continue;
+        }
+
+        if (elem.tag == MONITOR_ELEM_OSC_END)
+        {
+            char line[DEBUG_STREAM_OSC_PAYLOAD_LEN];
+            uint16_t off = 0U;
+            int written;
+
+            written = snprintf(line, sizeof(line), "%c", (char)DEBUG_STREAM_OSC_HEAD_BYTE);
+            if (written > 0) off = (uint16_t)written;
+
+            if ((int)(sizeof(line)) > (int)(off + 1))
+            {
+                uint16_t copy_len = (uint16_t)(sizeof(line) - off - 1);
+                uint16_t src_len = (uint16_t)strlen(sys->runtime.osc.collect_buf);
+                if (copy_len > src_len) copy_len = src_len;
+                if (copy_len > 0U)
+                {
+                    (void)memcpy(line + off, sys->runtime.osc.collect_buf, copy_len);
+                    off += copy_len;
+                    line[off] = '\0';
+                }
+            }
+
+            if ((off + 6U) < sizeof(line))
+            {
+                written = snprintf(line + off, sizeof(line) - off,
+                                   " %c ", (char)DEBUG_STREAM_OSC_TAIL_BYTE);
+                if (written > 0) off += (uint16_t)written;
+            }
+            (void)FIFO_Enqueue(&sys->runtime.tx_fifo, (uint8_t *)line);
+            collecting_osc = 0U;
+            in_frame = 0U;
+            continue;
+        }
+    }
+}
+

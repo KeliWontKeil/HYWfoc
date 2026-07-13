@@ -31,4 +31,7 @@ void FOC_OutputMgr_PollSources(foc_system_t *sys);
 /* 输出启动信息 */
 void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor);
 
+/* 处理 Monitor 元素队列（元素出队→格式化→入 TX 队列） */
+void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys);
+
 #endif /* FOC_OUTPUT_MGR_H */
