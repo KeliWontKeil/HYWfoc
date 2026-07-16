@@ -13,6 +13,7 @@
 #include "L2_Core/Control/foc_ctrl_executor.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_cogging_calib.h"
+#include "L2_Core/Control/foc_ctrl_reinit.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -46,6 +47,7 @@ static void FOC_App_HandleResult(uint8_t cycle_result)
     case FOC_CYCLE_FAULT_UVLO:
         motor.state.system_fault = 1U;
         motor.state.system_running = 0U;
+        FOC_OutputMgr_WriteDirect("under voltage threshold reached\r\n");
         FOC_ControlExecutor_SafeOutput(&motor);
         break;
     default:

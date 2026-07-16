@@ -1,13 +1,12 @@
-﻿# HYW FOC
+﻿# 何易位|HYW FOC
 
 ### 🚧 项目正在锐意开发中！(?) 
 ### 诸位点个Star好不好，~~求求你了~求求你了~帮帮可莉吧~~
 
 - 项目名称：何易位FOC
-- English Name：How Y-axis Works FOC（强行翻译） 
+- English Name：HYW FOC（想不到怎么翻译好，先这样用首字母吧）
 
 - 当前项目状态：单电机有感 FOC 驱动库（稳定版本）
-- 硬件已更新
 - 当前稳定基线：v1.10.2
 - 下一活跃目标版本：v1.10.x/v1.11.x
 
@@ -23,14 +22,11 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 - 部分功能可使用宏裁剪
 
 使用 AI 辅助开发（非 VibeCoding）🤖  
-- 开发过程中使用了多种AI插件开发，copilot、cline  
-~~感谢copilot对本项目的大力支持~~  
-~~先别支持了狗日的微软把我的额度干废了~~  
-~~还是看看远处的deepseek v3.4吧家人们~~  
-梁圣的恩！情！还不完  
+- 开发过程中尝试使用了多种AI插件开发，copilot、cline、claudecode等等，目前还是用的cline  
+- 梁圣的恩！情！还不完  
 
-演示视频：暂时没拍  (好麻烦啊)
-硬件开源地址：暂时没有，硬件仍在优化中，新硬件将支持三相采样，目前两相采样想要的话直接去examples/GD32F303_FOCExplore/hardware文件夹里找，是个嘉立创EDA的工程，还没开源出去
+B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库] https://www.bilibili.com/video/BV1QWK56yEaN/?share_source=copy_web&vd_source=023bcb10e6adbb3330677c68017bc143
+硬件开源地址：[何易位FOC|HYW FOC：低成本无刷电机FOC驱动](https://oshwhub.com/wqsarvearf/project_wripnfij)
 
 ---
 

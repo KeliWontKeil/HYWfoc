@@ -111,13 +111,10 @@ static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
     }
 
     mech_for_elec = motor->cogging_calib_state.pred_mech_angle - motor->mech_angle_at_elec_zero_rad;
-    elec_angle = Math_WrapRad(mech_for_elec * (float)motor->pole_pairs);
-
-    //uq = FOC_COGGING_CALIB_IQ_A * phase_resistance;
-    //uq = Math_ClampFloat(uq, -motor->max_phase_voltage, motor->max_phase_voltage);
+    elec_angle = Math_WrapRad(mech_for_elec * (float)motor->pole_pairs * (float)motor->direction);
 
     motor->ud = 0.0f;
-    motor->uq = FOC_COGGING_CALIB_IQ_A * motor->phase_resistance;
+    motor->uq = FOC_COGGING_CALIB_IQ_A * motor->phase_resistance * (float)motor->direction;
     motor->iq_target = 0.0f;
 
     motor->electrical_phase_angle = elec_angle;
@@ -325,6 +322,7 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     motor->cogging_comp_status.iq_lsb_a    = FOC_COGGING_LUT_IQ_LSB_A;
     motor->cogging_comp_status.source      = FOC_COGGING_COMP_SOURCE_CALIB;
     motor->cogging_comp_status.available   = 1U;
+    motor->cogging_comp_status.enabled     = 1U;
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.enabled       = state->saved_softswitch_enabled;
@@ -602,14 +600,6 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 state->last_lut_index        = 0xFFFFU;
                 state->last_reported_progress = 0U;
                 state->bins_collected        = 0U;
-
-                {
-                    char buf[48];
-                    (void)snprintf(buf, sizeof(buf),
-                                  "CALIB: pass %u done\r\n",
-                                  (unsigned)(state->pass_num));
-                    FOC_Platform_WriteDebugFast(buf);
-                }
             }
             else
             {

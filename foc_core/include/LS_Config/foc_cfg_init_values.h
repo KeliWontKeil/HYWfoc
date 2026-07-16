@@ -20,7 +20,7 @@
 #define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
 
 /* Fast current-loop: execute every N-th PWM ISR. */
-#define FOC_CURRENT_LOOP_ISR_DIVIDER   2U
+#define FOC_CURRENT_LOOP_ISR_DIVIDER   3U
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
 #define FOC_CONTROL_DT_SEC              (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
 
@@ -31,7 +31,7 @@
 #define FOC_SVPWM_MAX_DUTY_CYCLE 0.9f
 /* max_duty_cycle 限制 SVPWM 占空比对称上限(如 0.85 → duty∈[0.15,0.85])，
  * 避免低侧电流采样落入开关噪声/下半桥关断区域*/
-#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 6.0f//13.2f
+#define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
 
 /* Alignment/calibration voltage is derived from max_phase_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
@@ -159,7 +159,7 @@
 
 /* Cogging compensation defaults (optional feature). */
 
-#define FOC_COGGING_STATIC_TABLE_DEFINED FOC_CFG_ENABLE
+#define FOC_COGGING_STATIC_TABLE_DEFINED FOC_CFG_DISABLE
 #define FOC_COGGING_LUT_POINT_COUNT 512U
 #define FOC_COGGING_CALIB_GAIN_K      0.03f
 #define FOC_COGGING_COMP_SPEED_GATE_RAD_S 12.0f

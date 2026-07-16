@@ -718,9 +718,9 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_indicator.c</FilePath>
             </File>
             <File>
-              <FileName>foc_init_check.c</FileName>
+              <FileName>foc_init.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init_check.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1441,9 +1441,9 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_indicator.c</FilePath>
             </File>
             <File>
-              <FileName>foc_init_check.c</FileName>
+              <FileName>foc_init.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init_check.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2164,9 +2164,9 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_indicator.c</FilePath>
             </File>
             <File>
-              <FileName>foc_init_check.c</FileName>
+              <FileName>foc_init.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init_check.c</FilePath>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
           </Files>
         </Group>

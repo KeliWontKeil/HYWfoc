@@ -61,7 +61,7 @@
 ".\output\foc_sensor.o"
 ".\output\foc_svpwm.o"
 ".\output\foc_indicator.o"
-".\output\foc_init_check.o"
+".\output\foc_init.o"
 --strict --scatter ".\output\Project.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
