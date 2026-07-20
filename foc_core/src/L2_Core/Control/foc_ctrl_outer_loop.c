@@ -131,8 +131,8 @@ static float FOC_UpdateSpeedAngleError(foc_motor_t *motor, float mech_angle_rad,
     speed_cmd_delta_rad = speed_ref_rad_s * dt_sec;
     motor->outer_loop_state.speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
     motor->outer_loop_state.speed_err_accum_rad = Math_ClampFloat(motor->outer_loop_state.speed_err_accum_rad,
-                                                                   -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
-                                                                   FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
+                                                                    -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
+                                                                    FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
     return motor->outer_loop_state.speed_err_accum_rad;
 }
 
@@ -151,24 +151,29 @@ void FOC_ControlResetSpeedLoopState(foc_motor_t *motor)
 }
 
 void FOC_SpeedOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
-                            float speed_ref_rad_s, const sensor_data_t *sensor, float dt_sec)
+                            float speed_ref_rad_s, float dt_sec)
 {
     float speed_angle_error_rad;
-    if ((motor == 0) || (speed_pid == 0) || (sensor == 0)) return;
+    float mech_angle_rad;
+
+    if ((motor == 0) || (speed_pid == 0)) return;
 
     dt_sec = FOC_NormalizeDt(dt_sec);
-    speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, sensor->mech_angle_rad.output_value,
+    mech_angle_rad = motor->ctrl_input.mech_angle_rad;
+
+    speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, mech_angle_rad,
                                                        speed_ref_rad_s, dt_sec);
     motor->iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
     motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
-    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor, sensor->mech_angle_rad.output_value);
+    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor, mech_angle_rad);
 }
 
 void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
                                  foc_pid_t *angle_hold_pid,
                                  float angle_ref_rad, float angle_position_speed_rad_s,
-                                 const sensor_data_t *sensor, float dt_sec)
+                                 float dt_sec)
 {
+    float mech_angle_rad;
     float torque_ref_speed;
     float torque_ref_hold;
     float mech_signed_total_rad;
@@ -179,12 +184,13 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
     float speed_ref_rad_s;
     float speed_angle_error_rad;
 
-    if ((motor == 0) || (speed_pid == 0) || (angle_hold_pid == 0) || (sensor == 0)) return;
+    if ((motor == 0) || (speed_pid == 0) || (angle_hold_pid == 0)) return;
 
     dt_sec = FOC_NormalizeDt(dt_sec);
+    mech_angle_rad = motor->ctrl_input.mech_angle_rad;
     angle_ref_rad *= motor->direction;
 
-    FOC_UpdateAccumulatedMechanicalAngle(motor, sensor->mech_angle_rad.output_value);
+    FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
     mech_signed_total_rad = motor->direction * motor->mech_angle_accum_rad;
     angle_error_rad = angle_ref_rad - mech_signed_total_rad;
     abs_angle_error_rad = fabsf(angle_error_rad);
@@ -209,7 +215,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
     }
     else
     {
-        speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, sensor->mech_angle_rad.output_value,
+        speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, mech_angle_rad,
                                                            speed_ref_rad_s, dt_sec);
         torque_ref_speed = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
     }
@@ -219,5 +225,5 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
 
     motor->iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
     motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
-    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor, sensor->mech_angle_rad.output_value);
+    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor, mech_angle_rad);
 }

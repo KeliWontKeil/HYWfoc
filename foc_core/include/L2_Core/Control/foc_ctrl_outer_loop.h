@@ -12,7 +12,6 @@ void FOC_ControlResetSpeedLoopState(foc_motor_t *motor);
 void FOC_SpeedOuterLoopStep(foc_motor_t *motor,
                             foc_pid_t *speed_pid,
                             float speed_ref_rad_s,
-                            const sensor_data_t *sensor,
                             float dt_sec);
 
 void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
@@ -20,7 +19,6 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor,
                                  foc_pid_t *angle_hold_pid,
                                  float angle_ref_rad,
                                  float angle_position_speed_rad_s,
-                                 const sensor_data_t *sensor,
                                  float dt_sec);
 
 #endif /* FOC_CONTROL_C21_OUTER_LOOP_H */

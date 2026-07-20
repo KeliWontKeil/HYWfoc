@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "L1_Orchestration/foc_output_mgr.h"
 #include "L2_Core/Control/foc_ctrl_current_loop.h"
 #include "L2_Core/Control/foc_ctrl_param_learn.h"
 #include "L2_Core/Control/foc_ctrl_compensation.h"
@@ -72,7 +71,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             motor->mech_angle_accum_rad = 0.0f;
             motor->mech_angle_prev_rad = 0.0f;
             motor->mech_angle_prev_valid = 0U;
-            FOC_OutputMgr_WriteDirect("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
+            FOC_Platform_WriteDebugText("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
         }
     }
     else
@@ -104,7 +103,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             {
                 motor->pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
             }
-            FOC_OutputMgr_WriteDirect("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
+            FOC_Platform_WriteDebugText("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
         }
     }
 
@@ -253,11 +252,11 @@ void FOC_MotorInit(foc_motor_t *motor,
 
         if (table_defined != 0U)
         {
-            FOC_OutputMgr_WriteDirect("init.cogging: static table defined, compensation ready\r\n");
+            FOC_Platform_WriteDebugText("init.cogging: static table defined, compensation ready\r\n");
         }
         else
         {
-            FOC_OutputMgr_WriteDirect("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
+            FOC_Platform_WriteDebugText("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
         }
     }
 #endif

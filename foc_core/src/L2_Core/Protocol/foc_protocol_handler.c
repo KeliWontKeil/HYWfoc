@@ -5,8 +5,8 @@
 
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
-#include "L2_Core/Control/foc_ctrl_cogging_calib.h"
-#include "L2_Core/Control/foc_ctrl_reinit.h"
+#include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
+#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"

@@ -72,24 +72,33 @@ virtualFolder:
       files:
         - path: ../../../foc_core/src/L3_Hal/foc_math_transforms.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_actuation.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_bridge.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_cfg.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_cogging_calib.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_compensation.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_current_loop.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_encoder.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_smo.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_hfi.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_flux.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_executor.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_init.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_outer_loop.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_param_learn.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_reinit.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_startup.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_startup_openloop.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_transition.c
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_parser.c
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_debug_stream.c
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_task_scheduler.c
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_handler.c
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_output.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_executor.c
         - path: ../../../foc_core/src/L3_Hal/foc_sensor.c
         - path: ../../../foc_core/src/L3_Hal/foc_svpwm.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_output_mgr.c
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_queue.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_cogging_calib.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_reinit.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_app.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_indicator.c
       folders: []
@@ -139,6 +148,8 @@ targets:
       - <virtual_root>/Application/runtime_c34_command_diag.c
       - <virtual_root>/FOC_CORE/foc_runtime_entry.c
       - <virtual_root>/FOC_CORE/foc_init_check.c
+      - <virtual_root>/FOC_CORE/foc_ctrl_cogging_calib.c
+      - <virtual_root>/FOC_CORE/foc_ctrl_reinit.c
     settings:
       debugger: cortex-debug
     toolchain: AC5

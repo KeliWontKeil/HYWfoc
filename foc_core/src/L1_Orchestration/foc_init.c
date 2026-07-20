@@ -10,6 +10,7 @@
 #include "L2_Core/Runtime/foc_runtime_types.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
+#include "L2_Core/Control/foc_ctrl_estim.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L3_Hal/foc_sensor.h"
 #include "L3_Hal/foc_svpwm.h"
@@ -68,6 +69,16 @@ void FOC_Init_MotorAndCalib(foc_motor_t *motor)
                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
     FOC_Control_ApplyConfig(motor);
+
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    FOC_EstimEncoder_Init(motor);
+    FOC_Estimator_Select(motor, FOC_ESTIMATOR_TYPE_ENCODER);
+#elif (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE) || \
+      (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
+    motor->est_state.source = FOC_ESTIMATOR_TYPE_NONE;
+#else
+    motor->est_state.source = FOC_ESTIMATOR_TYPE_NONE;
+#endif
 }
 
 void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
@@ -82,7 +93,11 @@ void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
                                    RUNTIME_INIT_CHECK_DEBUG |
                                    RUNTIME_INIT_CHECK_PWM;
 
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     if ((sensor->adc_valid != 0U) && (sensor->encoder_valid != 0U))
+#else
+    if (sensor->adc_valid != 0U)
+#endif
     {
         motor->state.init_check_mask |= RUNTIME_INIT_CHECK_SENSOR;
     }

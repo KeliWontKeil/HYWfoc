@@ -48,7 +48,7 @@ void DebugStream_SetExecutionCycles(debug_stream_state_t *ds, uint32_t exec_cycl
 static uint8_t DebugStream_IsOscInputValid(const foc_motor_t *motor)
 {
     if (motor == 0) return 0U;
-    if ((motor->sensor.adc_valid == 0U) || (motor->sensor.encoder_valid == 0U)) return 0U;
+    if ((motor->sensor.adc_valid == 0U) || (motor->ctrl_input.valid == 0U)) return 0U;
     return 1U;
 }
 
@@ -128,14 +128,14 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
                 return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
             break;
         case 3U:
-            if ((motor != 0) && (motor->sensor.encoder_valid != 0U))
+            if ((motor != 0) && (motor->ctrl_input.valid != 0U))
                 elem_out->value = motor->sensor.mech_angle_rad.raw_value;
             else
                 elem_out->aux = 0U;
             break;
         case 4U:
-            if ((motor != 0) && (motor->sensor.encoder_valid != 0U))
-                elem_out->value = motor->sensor.mech_angle_rad.output_value;
+            if ((motor != 0) && (motor->ctrl_input.valid != 0U))
+                elem_out->value = motor->ctrl_input.mech_angle_rad;
             else
                 return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
             break;
@@ -246,7 +246,7 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                     case 0U: elem_out->value = motor->sensor.current_a.output_value; break;
                     case 1U: elem_out->value = motor->sensor.current_b.output_value; break;
                     case 2U: elem_out->value = motor->sensor.current_c.output_value; break;
-                    case 3U: elem_out->value = motor->sensor.mech_angle_rad.output_value; break;
+                    case 3U: elem_out->value = motor->ctrl_input.mech_angle_rad; break;
                     case 4U: elem_out->value = motor->mech_angle_accum_rad; break;
                     case 5U: elem_out->value = (float)ds->last_exec_cycles / 120.0f; break;
                     case 6U: elem_out->value = (motor->sensor.vbus_valid != 0U) ?
@@ -303,11 +303,11 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
         break;
     case 3U:
         snprintf(line_out, line_max,
-            "measurement.encoder_angle_raw_rad=%.3f\r\n", value);
+            "measurement.mech_angle_raw_rad=%.3f\r\n", value);
         break;
     case 4U:
         snprintf(line_out, line_max,
-            "measurement.encoder_angle_filtered_rad=%.3f\r\n", value);
+            "measurement.mech_angle_filtered_rad=%.3f\r\n", value);
         break;
     case 5U:
         snprintf(line_out, line_max,
@@ -344,7 +344,7 @@ uint8_t DebugStream_FormatInvalidLine(uint8_t tag, char *line_out, uint16_t line
         snprintf(line_out, line_max, "measurement.current.status=invalid\r\n");
         break;
     case 3U:
-        snprintf(line_out, line_max, "measurement.encoder.status=invalid\r\n");
+        snprintf(line_out, line_max, "measurement.mech_angle.status=invalid\r\n");
         break;
     case 5U:
         snprintf(line_out, line_max, "measurement.vbus.status=invalid\r\n");
@@ -449,7 +449,7 @@ uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
                 break;
             case 3U:
                 snprintf(line_out, line_max,
-                    "measurement.encoder.status=invalid\r\n");
+                    "measurement.mech_angle.status=invalid\r\n");
                 break;
             case 5U:
                 snprintf(line_out, line_max,

@@ -64,4 +64,19 @@
 /* Control build and startup motion defaults. */
 #define FOC_BUILD_CONTROL_ALGO_SET FOC_CTRL_ALGO_BUILD_FULL
 
+/* ── 传感器硬件使能 ── */
+#define FOC_SENSOR_ENCODER_ENABLE         FOC_CFG_ENABLE
+
+/* ── 估计器 ── */
+#define FOC_ESTIMATOR_ENCODER_ENABLE   FOC_CFG_ENABLE
+#define FOC_ESTIMATOR_SMO_ENABLE       FOC_CFG_DISABLE
+#define FOC_ESTIMATOR_HFI_ENABLE       FOC_CFG_DISABLE
+#define FOC_ESTIMATOR_FLUX_ENABLE      FOC_CFG_DISABLE
+
+/* ── 启动策略 ── */
+#define FOC_STARTUP_OPENLOOP_ENABLE    FOC_CFG_DISABLE
+
+/* ── 过渡管理 ── */
+#define FOC_TRANSITION_ENABLE          FOC_CFG_DISABLE
+
 #endif /* FOC_CFG_FEATURE_SWITCHES_H */

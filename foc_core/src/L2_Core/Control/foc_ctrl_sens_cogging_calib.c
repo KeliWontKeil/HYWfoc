@@ -1,4 +1,4 @@
-#include "L2_Core/Control/foc_ctrl_cogging_calib.h"
+#include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 
 #include <math.h>
 #include <stdio.h>
