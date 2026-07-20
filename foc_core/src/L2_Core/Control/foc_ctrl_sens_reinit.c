@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_reinit.h"
+﻿#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 
 #if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
 

@@ -32,10 +32,10 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
 /*
  * =====================================================================
  *  inline queries: delegates to focussed calibration module header
- *  Full calibration module is at foc_ctrl_cogging_calib.h/.c
+ *  Full calibration module is at foc_ctrl_sens_cogging_calib.h/.c
  * =====================================================================
  */
 
 /* Forward include for the inline definitions */
-#include "L2_Core/Control/foc_ctrl_cogging_calib.h"
+#include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #endif /* FOC_CONTROL_C24_COMPENSATION_H */

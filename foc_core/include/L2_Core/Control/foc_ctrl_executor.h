@@ -19,14 +19,10 @@ void FOC_ControlExecutor_Init(foc_motor_t *motor);
 void FOC_ControlExecutor_RunISR(foc_motor_t *motor);
 
 /**
- * @brief Normal control cycle: sensor read → outer loop → current loop.
+ * @brief Normal control cycle: sensor validity checked by L1.
  *        Called from L1 only when control_phase == NORMAL.
- *        sensor must point to the caller-provided snapshot (typically motor->sensor).
- *        Cogging calibration and reinit are handled by separate modules.
  */
-uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor,
-                                     const sensor_data_t *sensor,
-                                     float dt_sec);
+uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec);
 
 /** @brief Safe output: zero voltage, open-loop stop. */
 void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor);
@@ -35,8 +31,6 @@ void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor);
 void FOC_ControlExecutor_Stop(foc_motor_t *motor);
 
 /** @brief Outer-loop unified entry (speed or speed-angle). */
-void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor,
-                                      const sensor_data_t *sensor,
-                                      float dt_sec);
+void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec);
 
 #endif /* FOC_CTRL_EXECUTOR_H */

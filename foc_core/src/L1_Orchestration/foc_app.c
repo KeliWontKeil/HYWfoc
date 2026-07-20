@@ -12,8 +12,11 @@
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
-#include "L2_Core/Control/foc_ctrl_cogging_calib.h"
-#include "L2_Core/Control/foc_ctrl_reinit.h"
+#include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
+#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/Control/foc_ctrl_estim.h"
+#include "L2_Core/Control/foc_ctrl_bridge.h"
+#include "L2_Core/Control/foc_ctrl_startup.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -230,6 +233,7 @@ void FOC_App_ControlTrigger(void)
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
 
+    /* 阶段1：传感器读取 */
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
     Sensor_ReadEncoder(&motor, &motor.sensor);
 #else
@@ -239,7 +243,12 @@ void FOC_App_ControlTrigger(void)
     Sensor_ReadVBUS(&motor.sensor);
     Sensor_SyncCurrentSnapshot(&motor);
 
+    /* 传感器有效性检查 */
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     if ((motor.sensor.adc_valid == 0U) || (motor.sensor.encoder_valid == 0U))
+#else
+    if (motor.sensor.adc_valid == 0U)
+#endif
     {
         motor.state.sensor_invalid_consecutive++;
         motor.state.control_skip_count++;
@@ -262,12 +271,35 @@ void FOC_App_ControlTrigger(void)
     }
 #endif
 
+    /* 阶段2：估计器更新 */
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE) || \
+    (FOC_ESTIMATOR_SMO_ENABLE   == FOC_CFG_ENABLE) || \
+    (FOC_ESTIMATOR_HFI_ENABLE   == FOC_CFG_ENABLE)
+    if (motor.estimator_step_fn != 0)
+        motor.estimator_step_fn(&motor, &motor.est_state, FOC_CONTROL_DT_SEC);
+#endif
+
+    /* 阶段3：桥接 */
+    FOC_Bridge_CopyInput(&motor);
+
+    /* 阶段4：控制执行 */
     switch (phase)
     {
     case FOC_CONTROL_PHASE_NORMAL:
         if (motor.state.motor_enabled == 0U) return;
-        cycle_result = FOC_ControlExecutor_RunCycle(&motor, &motor.sensor, FOC_CONTROL_DT_SEC);
+        cycle_result = FOC_ControlExecutor_RunCycle(&motor, FOC_CONTROL_DT_SEC);
         FOC_App_HandleResult(cycle_result);
+        break;
+
+    case FOC_CONTROL_PHASE_STARTUP:
+        FOC_Startup_RunStep(&motor, FOC_CONTROL_DT_SEC);
+        if (FOC_Startup_IsComplete(&motor) != 0U)
+        {
+            motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+            FOC_Estimator_Select(&motor, FOC_ESTIMATOR_TYPE_SMO);
+#endif
+        }
         break;
 
     case FOC_CONTROL_PHASE_COGGING_CALIB:

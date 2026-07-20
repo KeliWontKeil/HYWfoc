@@ -15,6 +15,33 @@ typedef struct {
     float phase_c;
 } foc_alpha_beta_phase_t;
 
+/* ========== 估计器输出快照 ========== */
+typedef struct {
+    uint8_t  source;               /* FOC_ESTIMATOR_TYPE_* */
+    uint8_t  state;                /* FOC_ESTIMATOR_STATE_* */
+    uint8_t  valid;
+    float    confidence;           /* 0.0~1.0 */
+
+    float    elec_angle_rad;
+    float    elec_speed_rad_s;
+
+    float    mech_angle_rad;
+    float    mech_angle_accum_rad; /* 调试/遥测用途 */
+    float    mech_speed_rad_s;     /* 调试/遥测用途 */
+} foc_est_state_t;
+
+/* ========== 控制算法统一输入 ========== */
+typedef struct {
+    uint8_t  valid;
+    uint8_t  source;               /* FOC_ESTIMATOR_TYPE_* */
+
+    float    mech_angle_rad;
+
+    float    current_a;
+    float    current_b;
+    float    current_c;
+} foc_control_input_t;
+
 /* ========== Outer-loop runtime state ========== */
 typedef struct {
     float  speed_err_accum_rad;
@@ -59,14 +86,16 @@ typedef enum {
     FOC_FAULT_UNDERVOLTAGE = 3U,
     FOC_FAULT_PROTOCOL_FRAME = 4U,
     FOC_FAULT_PARAM_INVALID = 5U,
-    FOC_FAULT_INIT_FAILED = 6U
+    FOC_FAULT_INIT_FAILED = 6U,
+    FOC_FAULT_ESTIMATOR_INVALID = 7U
 } foc_fault_code_t;
 
 /* ========== 控制阶段枚举（L1 控制任务路由选择） ========== */
 typedef enum {
     FOC_CONTROL_PHASE_NORMAL        = 0U,
     FOC_CONTROL_PHASE_COGGING_CALIB = 1U,
-    FOC_CONTROL_PHASE_REINIT        = 2U
+    FOC_CONTROL_PHASE_REINIT        = 2U,
+    FOC_CONTROL_PHASE_STARTUP       = 3U
 } foc_control_phase_t;
 
 /* ========== 运行时状态（per-motor） ========== */
@@ -127,6 +156,54 @@ typedef struct {
     uint8_t request_dump;
     uint8_t request_export;
 } foc_cogging_calib_state_t;
+
+/* ========== 编码器估计器私有状态 ========== */
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+typedef struct {
+    kalman_filter_t mech_angle_kalman;
+    uint8_t         lpf_valid;
+    float           lpf_state;
+} foc_estim_encoder_state_t;
+#endif
+
+/* ========== SMO 估计器私有状态 ========== */
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+typedef struct {
+    float    ialpha_est;
+    float    ibeta_est;
+    float    bemf_alpha;
+    float    bemf_beta;
+} foc_estim_smo_state_t;
+#endif
+
+/* ========== HFI 估计器私有状态 ========== */
+#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
+typedef struct {
+    float    hf_sin_demod;
+    float    hf_cos_demod;
+} foc_estim_hfi_state_t;
+#endif
+
+/* ========== 强拖启动私有状态 ========== */
+#if (FOC_STARTUP_OPENLOOP_ENABLE == FOC_CFG_ENABLE)
+typedef struct {
+    uint8_t  phase;
+    float    virtual_angle_rad;
+    float    current_ref_a;
+    float    ramp_rate_rad_s2;
+    float    target_speed_rad_s;
+} foc_startup_openloop_state_t;
+#endif
+
+/* ========== 过渡管理私有状态 ========== */
+#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+typedef struct {
+    float    blend_factor;
+    float    blend_rate;
+    uint8_t  active;
+    uint8_t  target_source;
+} foc_transition_state_t;
+#endif
 
 /* ========== 非阻塞重初始化状态 ========== */
 #define FOC_REINIT_PHASE_IDLE          0U
@@ -202,12 +279,16 @@ typedef enum {
     FOC_TORQUE_MODE_CURRENT_PID = 1
 } foc_torque_mode_t;
 
+/* ========== 估计器函数指针类型 ========== */
+typedef struct foc_motor_t foc_motor_t;
+typedef void (*foc_estimator_step_t)(foc_motor_t *motor, foc_est_state_t *out, float dt_sec);
+
 /* ========== Motor aggregate state ========== */
 /*
  * 所有配置字段直接作为 foc_motor_t 顶层字段。
  * 运行时字段按功能块聚合为子结构体。
  */
-typedef struct {
+typedef struct foc_motor_t {
     /* === 运行时状态 === */
     foc_motor_state_t state;
 
@@ -260,6 +341,45 @@ typedef struct {
     float angle_hold_pid_deadband_rad;
     float speed_angle_transition_start_rad;
     float speed_angle_transition_end_rad;
+
+    /* ====== 估计器输出 ====== */
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE) || \
+    (FOC_ESTIMATOR_SMO_ENABLE   == FOC_CFG_ENABLE) || \
+    (FOC_ESTIMATOR_HFI_ENABLE   == FOC_CFG_ENABLE)
+    foc_est_state_t est_state;
+    foc_est_state_t est_state_alt;
+
+    foc_estimator_step_t estimator_step_fn;
+    foc_estimator_step_t estimator_step_fn_alt;
+#endif
+
+    /* ====== 编码器估计器私有状态 ====== */
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    foc_estim_encoder_state_t estim_encoder_state;
+#endif
+
+    /* ====== SMO 估计器私有状态 ====== */
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    foc_estim_smo_state_t estim_smo_state;
+#endif
+
+    /* ====== HFI 估计器私有状态 ====== */
+#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
+    foc_estim_hfi_state_t estim_hfi_state;
+#endif
+
+    /* ====== 过渡管理私有状态 ====== */
+#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+    foc_transition_state_t transition_state;
+#endif
+
+    /* ====== 启动策略私有状态 ====== */
+#if (FOC_STARTUP_OPENLOOP_ENABLE == FOC_CFG_ENABLE)
+    foc_startup_openloop_state_t startup_openloop_state;
+#endif
+
+    /* ====== 控制输入快照（无条件存在）====== */
+    foc_control_input_t ctrl_input;
 
     /* ====== 运行时状态（子结构体） ====== */
 
