@@ -5,6 +5,34 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-20
+
+### Added
+- **无感 FOC 架构扩展**：项目从仅支持编码器反馈扩展至多源估计器统一框架，覆盖编码器（有感）、SMO（中高速无感）、HFI（零速/低速无感）、FLUX（预留）。
+- **估计器体系**：新增 `foc_ctrl_estim.h/c`（选择/注册中心）、`foc_ctrl_estim_encoder.c`（编码器估计器实现）、`foc_ctrl_estim_smo.c`、`foc_ctrl_estim_hfi.c`、`foc_ctrl_estim_flux.c`（空桩）。
+- **桥接层**：新增 `foc_ctrl_bridge.h/c`，实现估计器输出到控制输入快照（`est_state` → `ctrl_input`）的单一拷贝路径。
+- **启动策略模块**：新增 `foc_ctrl_startup.h/c`（管理状态机）+ `foc_ctrl_startup_openloop.c`（强拖空桩）。
+- **过渡管理**：新增 `foc_ctrl_transition.h/c`，支持双估计器加权混合过渡。
+- **控制输入快照**：新增 `foc_control_input_t`，控制算法统一从 `ctrl_input` 读取角度和电流，不直接接触估计器内部状态。
+- **配置宏**：新增 `FOC_SENSOR_ENCODER_ENABLE`、`FOC_ESTIMATOR_*_ENABLE`、`FOC_STARTUP_OPENLOOP_ENABLE`、`FOC_TRANSITION_ENABLE`，传感器硬件和算法使用通过不同宏独立控制。
+
+### Changed
+- **数据结构扩展**：`foc_motor_t` 新增 `est_state`/`est_state_alt`、函数指针、5 个条件编译子结构体、`ctrl_input` 字段。
+- **控制阶段枚举**：新增 `FOC_CONTROL_PHASE_STARTUP`。
+- **故障码**：新增 `FOC_FAULT_ESTIMATOR_INVALID`。
+- **Control ISR 4 阶段**：传感器读取 → 估计器更新 → 桥接拷贝 → 控制执行。
+- **PWM ISR 4 阶段**：插值与采样 → 电流环 → 角度同步 + 估计器 → SVPWM。
+- **外环数据源**：从 `sensor->mech_angle_rad.output_value` 改为 `motor->ctrl_input.mech_angle_rad`。
+- **传感器有效性检查**：收口到 L1 单一检查点，由 `FOC_SENSOR_ENCODER_ENABLE` 宏条件化。
+- **DebugStream 适配**：角度门控从 `encoder_valid` 改为 `ctrl_input.valid`，标签从 `encoder_angle` 改为 `mech_angle`。
+- **有感模块重命名**：`foc_ctrl_cogging_calib` → `foc_ctrl_sens_cogging_calib`，`foc_ctrl_reinit` → `foc_ctrl_sens_reinit`。
+- **编译期约束**：新增 13 条约束（估计器依赖、齿槽依赖、SMO 启动策略依赖等）。
+
+### Documentation
+- `docs/architecture.md`：完整更新为 20 模块架构，新增估计器数据流、控制阶段枚举、宏组合表。
+- `.clinerules/hywfoc-project-rules.md`：新增 6 条通用规则（架构扩展零回归、构建入口同步、头文件一致性等）。
+- 版本基线更新至 v2.0.0。
+
 ## [1.10.2] - 2026-07-13
 
 ### Changed
