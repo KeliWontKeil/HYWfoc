@@ -25,7 +25,7 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 - 开发过程中尝试使用了多种AI插件开发，copilot、cline、claudecode等等，目前还是用的cline  
 - 梁圣的恩！情！还不完  
 
-B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库] https://www.bilibili.com/video/BV1QWK56yEaN/?share_source=copy_web&vd_source=023bcb10e6adbb3330677c68017bc143
+B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库](https://www.bilibili.com/video/BV1QWK56yEaN/?share_source=copy_web&vd_source=023bcb10e6adbb3330677c68017bc143)  
 硬件开源地址：[何易位FOC|HYW FOC：低成本无刷电机FOC驱动](https://oshwhub.com/wqsarvearf/project_wripnfij)
 
 ---

@@ -28,7 +28,7 @@
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
 #define FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT 12.0f
 /* max_phase_voltage 限制相电压幅值(≤ VBUS)，用于 PID 饱和、过调制限制、电流计算。 */
-#define FOC_SVPWM_MAX_DUTY_CYCLE 0.9f
+#define FOC_SVPWM_MAX_DUTY_CYCLE 0.92f
 /* max_duty_cycle 限制 SVPWM 占空比对称上限(如 0.85 → duty∈[0.15,0.85])，
  * 避免低侧电流采样落入开关噪声/下半桥关断区域*/
 #define FOC_MOTOR_INIT_PHASE_RES_DEFAULT 13.2f
@@ -92,7 +92,7 @@
 #define DEBUG_STREAM_OSC_DEFAULT_SHOW_CURRENT_B_RAW FOC_CFG_DISABLE
 
 /* Sensor and filter initialization defaults. */
-#define FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 49.0f
+#define FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 48.0f
 
 #define FOC_SENSOR_KALMAN_CURRENT_A_MEAS_ERR 0.4f
 #define FOC_SENSOR_KALMAN_CURRENT_A_EST_ERR 0.0f
