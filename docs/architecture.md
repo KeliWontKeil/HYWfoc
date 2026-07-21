@@ -357,6 +357,53 @@ typedef enum {
    - SMO 需至少一种启动策略（当编码器不可用时）
    - 过渡管理需至少两个估计器同时使能
 
+## 滤波器子系统
+
+滤波器子系统采用**编译时类型推导 + 按作用对象分组**的配置方式，支持每位置独立选择算法（Kalman/LPF1/None/Biquad）并通过类型推导宏自动绑定正确的结构体类型和门控函数。
+
+### 文件角色
+
+| 文件 | 层级 | 职责 |
+|------|------|------|
+| `LS_Config/foc_cfg_filter.h` | LS | 滤波器参数配置：按作用对象分组，每组内按算法子分类（Kalman/LPF1 参数） |
+| `LS_Config/foc_symbol_defs.h` | LS | 类型值符号（`FOC_FILTER_TYPE_NONE/KALMAN/LPF1/BIQUAD`）和类型推导宏表（`FOC_FILTER_TYPEDEF_0/1/2/3`） |
+| `L3_Hal/foc_filter_types.h` | L3 | 滤波器数据结构体（`foc_filter_kalman_t`、`foc_filter_lpf1_t`、`foc_filter_biquad_t`） |
+| `L3_Hal/foc_filter_math.h/.c` | L3 | 纯数学滤波算法（无状态、可复用），如 `FOC_FilterMath_KalmanStep`、`FOC_FilterMath_Lpf1Step`、`FOC_FilterMath_Lpf1AngleStep`（带 0/2pi 环绕处理的 LPF1 变体） |
+| `L3_Hal/foc_filter_gate.h` | L3 | 门控函数（static inline），在编译时通过 `#if` 选择正确的纯数学函数并传入默认 alpha |
+
+### 参数组织方式（按作用对象分组）
+
+`foc_cfg_filter.h` 中的参数按 **7 个滤波器位置**分组，每组名称前缀格式为 `FOC_FILTER_<POSITION>_<ALGORITHM>_<PARAM>`：
+
+| 位置分组 | 前缀 | 包含参数 | 算法 |
+|----------|------|----------|------|
+| SENSOR_CURRENT_A | `FOC_FILTER_SENSOR_CURRENT_A_KALMAN_*` / `LPF_ALPHA` | MEAS_ERR, EST_ERR, PROC_NOISE, INIT, LPF_ALPHA | Kalman + LPF1 |
+| SENSOR_CURRENT_B | `FOC_FILTER_SENSOR_CURRENT_B_KALMAN_*` / `LPF_ALPHA` | MEAS_ERR, EST_ERR, PROC_NOISE, INIT, LPF_ALPHA | Kalman + LPF1 |
+| SENSOR_CURRENT_C | `FOC_FILTER_SENSOR_CURRENT_C_KALMAN_*` / `LPF_ALPHA` | MEAS_ERR, EST_ERR, PROC_NOISE, INIT, LPF_ALPHA | Kalman + LPF1 |
+| SENSOR_ANGLE | `FOC_FILTER_SENSOR_ANGLE_KALMAN_*` / `LPF_ALPHA` | MEAS_ERR, EST_ERR, PROC_NOISE, INIT, LPF_ALPHA | Kalman + LPF1 |
+| CURRENT_LOOP_IQ | `FOC_FILTER_CURRENT_LOOP_IQ_LPF_ALPHA` | alpha 系数 | LPF1 |
+| SVPWM | `FOC_FILTER_SVPWM_LPF_ALPHA` | alpha 系数 | LPF1 |
+| ENCODER_SPEED | `FOC_FILTER_ENCODER_SPEED_LPF_ALPHA` | alpha 系数 | LPF1 |
+
+类型选择宏 `FOC_FILTER_SENSOR_CURRENT_A` 等定义于 `foc_cfg_feature_switches.h`，供用户选择每位置的滤波器类型。
+
+### 类型推导宏表
+
+`foc_symbol_defs.h` 中定义了 4 元推导表，将类型值（0/1/2/3）隐式映射为对应的 C 类型：
+
+```c
+#define FOC_FILTER_TYPEDEF_0    uint8_t              // NONE
+#define FOC_FILTER_TYPEDEF_1    foc_filter_kalman_t   // KALMAN
+#define FOC_FILTER_TYPEDEF_2    foc_filter_lpf1_t     // LPF1
+#define FOC_FILTER_TYPEDEF_3    foc_filter_biquad_t   // BIQUAD
+```
+
+在 `foc_ctrl_types.h` 中，`sensor_data_t` 的每个滤波器字段通过 `FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_A)` 推导出正确的类型。
+
+### 门控函数
+
+`foc_filter_gate.h` 为 7 个位置各提供一个 `FOC_FilterGate_<Position>()` static inline 函数。这些函数在编译时根据位置选择宏的值展开对应的算法分支，消除运行时 dispatch 开销。LPF1 分支直接使用位置特定的 `FOC_FILTER_<POSITION>_LPF_ALPHA` 宏。其中 Angle 门的 LPF1 分支使用 `FOC_FilterMath_Lpf1AngleStep`（处理 0/2PI 环绕），其余位置使用标准 `FOC_FilterMath_Lpf1Step`。
+
 ## 维护规则
 
 1. 结构/依赖变化必须同步更新本文件。

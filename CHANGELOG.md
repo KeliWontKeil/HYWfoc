@@ -5,6 +5,30 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-07-21
+
+### Added
+- **滤波器架构重构**：可替换滤波器系统，支持编译期切换 Kalman/LPF1/Biquad 滤波器类型。
+- 新增 `foc_filter_type_map.h`（LS_Config）— 滤波器类型枚举 + 类型推导宏表，用户每个位置只需修改一个整数值宏。
+- 新增 `foc_filter_types.h`（L3_Hal）— `foc_filter_kalman_t`、`foc_filter_lpf1_t`、`foc_filter_biquad_t` 统一滤波器类型。
+- 新增 `foc_filter_math.h/.c`（L3_Hal）— 纯数学函数：`KalmanStep`、`KalmanAngleStep`、`Lpf1Step`、`BiquadStep`（骨架），零状态依赖，可任意复用。
+- 新增 `foc_filter_gate.h`（L3_Hal）— 每个滤波位置一个 `static inline` 门控函数，编译期 `#if` 选择纯数学函数，调用方只需 `FOC_FilterGate_*()`。
+
+### Changed
+- **传感器滤波统一**：`sensor_data_t` 中 `kalman_filter_t` 替换为 `FOC_FILTER_TYPEDEF()` 推导宏，支持每个通道独立选择滤波器类型。
+- **电流Iq滤波统一**：`motor->iq_lpf` 替换为 `motor->iq_lpf_filter`（`FOC_FILTER_TYPEDEF` 推导）。
+- **角度数据流收口**：`mech_angle_rad` 滤波后统一通过 `output_value` 字段读取，消除 `raw_value`/`filtered_value` 旁路泄漏（`foc_ctrl_executor.c`、`foc_ctrl_estim_encoder.c`、`foc_debug_stream.c`）。
+- **Kalman 函数提升**：`foc_sensor.c` 中 `static` 的 `Kalman_Init/Update/Update_Angle` 提升为 L3 公开 API（`FOC_FilterMath_Kalman*`）。
+- **旧宏清理**：删除 `FOC_SENSOR_KALMAN_CURRENT_ENABLE`、`FOC_SENSOR_KALMAN_ANGLE_ENABLE`，统一为 `FOC_FILTER_*` 宏体系。
+- **构建入口同步**：`builder.params` 新增 `foc_filter_math.c`。
+
+### Fixed
+- 修复 `foc_filter_lpf1_t` 缺少 `raw_value`/`output_value` 字段导致切换 LPF 编译失败。
+- 修复 `Sensor_InitSnapshot` 初始化共用 `CURRENT_A` 条件导致 `CURRENT_B`/`CURRENT_C` 类型不匹配。
+- 修复 `foc_cfg_filter.h` 缺少 `FOC_FILTER_SENSOR_CURRENT_C_KALMAN_*` 参数宏（当前 `FOC_CURRENT_SENSE_PHASES=2U` 下被屏蔽）。
+- 修复 `Sensor_InitSnapshot` 中 C 相 Kalman Init 引用了 A 相参数宏（`FOC_FILTER_SENSOR_CURRENT_A_KALMAN_*`），应引用 C 相宏。
+- 修复角度 LPF（`FOC_FilterMath_Lpf1Step`）在 0/2PI 切换点的环绕振荡：新增 `FOC_FilterMath_Lpf1AngleStep`，使用 `Math_WrapRadDelta` 计算最短路径角度增量后平滑，Angle 门 LPF1 分支改为此函数（`foc_filter_gate.h`、`foc_filter_math.h/.c`）。
+
 ## [2.0.0] - 2026-07-20
 
 ### Added

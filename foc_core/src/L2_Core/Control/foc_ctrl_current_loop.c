@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L3_Hal/foc_filter_gate.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
@@ -176,10 +177,7 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
     (void)id_measured;
 
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
-    *iq_out = Math_FirstOrderLpf(*iq_out,
-                                  &motor->iq_lpf.state,
-                                  FOC_CURRENT_LOOP_IQ_LPF_ALPHA,
-                                  &motor->iq_lpf.valid);
+    *iq_out = FOC_FilterGate_IqLpf(&motor->iq_lpf_filter, *iq_out);
 #endif
 }
 

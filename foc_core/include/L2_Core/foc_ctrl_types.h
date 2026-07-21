@@ -5,6 +5,15 @@
 
 #include "LS_Config/foc_config.h"
 #include "L3_Hal/foc_math_types.h"
+#include "L3_Hal/foc_filter_types.h"
+
+/* ========== SVPWM LPF filter state (three-phase) ========== */
+typedef struct {
+    uint8_t  valid;
+    float    phase_a;
+    float    phase_b;
+    float    phase_c;
+} foc_svpwm_lpf_state_t;
 
 /* ========== Alpha-beta / three-phase voltage state ========== */
 typedef struct {
@@ -55,20 +64,6 @@ typedef struct {
     uint8_t prev_control_mode_valid;
     uint8_t prev_control_mode_check;
 } foc_mode_transition_t;
-
-/* ========== SVPWM LPF filter state ========== */
-typedef struct {
-    uint8_t  valid;
-    float    phase_a;
-    float    phase_b;
-    float    phase_c;
-} foc_svpwm_lpf_state_t;
-
-/* ========== Iq LPF filter state ========== */
-typedef struct {
-    uint8_t  valid;
-    float    state;
-} foc_iq_lpf_state_t;
 
 /* ========== SVPWM output snapshot type ========== */
 typedef struct {
@@ -160,7 +155,7 @@ typedef struct {
 /* ========== 编码器估计器私有状态 ========== */
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
 typedef struct {
-    kalman_filter_t mech_angle_kalman;
+    foc_filter_kalman_t mech_angle_kalman;
     uint8_t         lpf_valid;
     float           lpf_state;
 } foc_estim_encoder_state_t;
@@ -259,10 +254,10 @@ typedef struct {
 
 /* ========== Sensor data snapshot ========== */
 typedef struct {
-    kalman_filter_t current_a;
-    kalman_filter_t current_b;
-    kalman_filter_t current_c;
-    kalman_filter_t mech_angle_rad;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_A) current_a;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_B) current_b;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_C) current_c;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_ANGLE)     mech_angle_rad;
     uint8_t adc_valid;
     uint8_t encoder_valid;
     float vbus_voltage_raw;
@@ -408,16 +403,11 @@ typedef struct foc_motor_t {
     float sensor_zero_offset_c;
 #endif
 
-#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
-    uint8_t  sensor_angle_lpf_valid;
-    float    sensor_angle_lpf_state;
-#endif
-
     uint8_t  fast_current_div_counter;
     uint32_t current_loop_cycles;
 
 #if ((FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_IQ_LPF_ENABLE == FOC_CFG_ENABLE))
-    foc_iq_lpf_state_t iq_lpf;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_CURRENT_LOOP_IQ) iq_lpf_filter;
 #endif
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
@@ -432,7 +422,7 @@ typedef struct foc_motor_t {
     /* 按功能块聚合的子结构体 */
     foc_outer_loop_state_t outer_loop_state;
     foc_mode_transition_t  mode_transition;
-    foc_svpwm_lpf_state_t  svpwm_lpf;
+    foc_svpwm_lpf_state_t svpwm_lpf;
 
 } foc_motor_t;
 

@@ -5,5 +5,6 @@
 #include "LS_Config/foc_cfg_feature_switches.h"
 #include "LS_Config/foc_cfg_init_values.h"
 #include "LS_Config/foc_compile_limits.h"
+#include "LS_Config/foc_cfg_filter.h"
 
 #endif /* FOC_CONFIG_H */

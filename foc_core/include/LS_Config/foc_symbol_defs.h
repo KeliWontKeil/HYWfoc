@@ -9,6 +9,21 @@
 #define FOC_MATH_PI_BY_3    1.0471975f
 #define FOC_MATH_EPSILON    1e-6f
 
+/* ========== 滤波器类型枚举值 ========== */
+#define FOC_FILTER_TYPE_NONE    0
+#define FOC_FILTER_TYPE_KALMAN  1
+#define FOC_FILTER_TYPE_LPF1    2
+#define FOC_FILTER_TYPE_BIQUAD  3
+
+/* ========== 从类型值推导类型名（二次展开） ========== */
+#define FOC_FILTER_TYPEDEF_0    uint8_t
+#define FOC_FILTER_TYPEDEF_1    foc_filter_kalman_t
+#define FOC_FILTER_TYPEDEF_2    foc_filter_lpf1_t
+#define FOC_FILTER_TYPEDEF_3    foc_filter_biquad_t
+
+#define FOC_FILTER_TYPEDEF_CONCAT_(x)  FOC_FILTER_TYPEDEF_##x
+#define FOC_FILTER_TYPEDEF(id)         FOC_FILTER_TYPEDEF_CONCAT_(id)
+
 /* Unified binary semantics for all enable or disable style macros. */
 #define FOC_CFG_DISABLE 0U
 #define FOC_CFG_ENABLE 1U

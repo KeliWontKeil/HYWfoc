@@ -31,16 +31,16 @@ static void FOC_ApplySvpwmPreLpf(foc_motor_t *motor,
 
     *phase_a = Math_FirstOrderLpf(*phase_a,
                                   &motor->svpwm_lpf.phase_a,
-                                  FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf.valid);
+                                   FOC_FILTER_SVPWM_LPF_ALPHA,
+                                   &motor->svpwm_lpf.valid);
     *phase_b = Math_FirstOrderLpf(*phase_b,
-                                  &motor->svpwm_lpf.phase_b,
-                                  FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf.valid);
+                                   &motor->svpwm_lpf.phase_b,
+                                   FOC_FILTER_SVPWM_LPF_ALPHA,
+                                   &motor->svpwm_lpf.valid);
     *phase_c = Math_FirstOrderLpf(*phase_c,
-                                  &motor->svpwm_lpf.phase_c,
-                                  FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf.valid);
+                                   &motor->svpwm_lpf.phase_c,
+                                   FOC_FILTER_SVPWM_LPF_ALPHA,
+                                   &motor->svpwm_lpf.valid);
 }
 #endif
 

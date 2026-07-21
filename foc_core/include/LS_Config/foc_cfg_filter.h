@@ -1,0 +1,47 @@
+#ifndef FOC_CFG_FILTER_H
+#define FOC_CFG_FILTER_H
+
+/* ── SENSOR_CURRENT_A ── */
+/* Kalman parameters (used when type == KALMAN) */
+#define FOC_FILTER_SENSOR_CURRENT_A_KALMAN_MEAS_ERR   0.4f
+#define FOC_FILTER_SENSOR_CURRENT_A_KALMAN_EST_ERR    0.0f
+#define FOC_FILTER_SENSOR_CURRENT_A_KALMAN_PROC_NOISE 0.025f
+#define FOC_FILTER_SENSOR_CURRENT_A_KALMAN_INIT       0.0f
+/* LPF1 parameter (used when type == LPF1) */
+#define FOC_FILTER_SENSOR_CURRENT_A_LPF_ALPHA         0.8f
+
+/* ── SENSOR_CURRENT_B ── */
+#define FOC_FILTER_SENSOR_CURRENT_B_KALMAN_MEAS_ERR   0.4f
+#define FOC_FILTER_SENSOR_CURRENT_B_KALMAN_EST_ERR    0.0f
+#define FOC_FILTER_SENSOR_CURRENT_B_KALMAN_PROC_NOISE 0.02f
+#define FOC_FILTER_SENSOR_CURRENT_B_KALMAN_INIT       0.0f
+#define FOC_FILTER_SENSOR_CURRENT_B_LPF_ALPHA         0.8f
+
+/* ── SENSOR_CURRENT_C ── */
+/* Kalman parameters (used when type == KALMAN) */
+#define FOC_FILTER_SENSOR_CURRENT_C_KALMAN_MEAS_ERR   0.4f
+#define FOC_FILTER_SENSOR_CURRENT_C_KALMAN_EST_ERR    0.0f
+#define FOC_FILTER_SENSOR_CURRENT_C_KALMAN_PROC_NOISE 0.025f
+#define FOC_FILTER_SENSOR_CURRENT_C_KALMAN_INIT       0.0f
+/* LPF1 parameter (used when type == LPF1) */
+#define FOC_FILTER_SENSOR_CURRENT_C_LPF_ALPHA         0.8f
+
+/* ── SENSOR_ANGLE ── */
+/* Kalman parameters */
+#define FOC_FILTER_SENSOR_ANGLE_KALMAN_MEAS_ERR       0.005f
+#define FOC_FILTER_SENSOR_ANGLE_KALMAN_EST_ERR        0.0f
+#define FOC_FILTER_SENSOR_ANGLE_KALMAN_PROC_NOISE     0.001f
+#define FOC_FILTER_SENSOR_ANGLE_KALMAN_INIT           0.0f
+/* LPF1 parameter (used when type == LPF1) */
+#define FOC_FILTER_SENSOR_ANGLE_LPF_ALPHA             0.80f
+
+/* ── CURRENT_LOOP_IQ ── */
+#define FOC_FILTER_CURRENT_LOOP_IQ_LPF_ALPHA          0.7f
+
+/* ── SVPWM ── */
+#define FOC_FILTER_SVPWM_LPF_ALPHA                    0.60f
+
+/* ── ENCODER_SPEED ── */
+#define FOC_FILTER_ENCODER_SPEED_LPF_ALPHA            0.8f
+
+#endif /* FOC_CFG_FILTER_H */

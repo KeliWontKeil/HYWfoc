@@ -160,7 +160,7 @@ L1 主循环（`FOC_App_Loop`）编排三个独立任务段，顺序无关：
 
 ```batch
 set DOTNET_ROLL_FORWARD=Major
-"C:\Users\MSI-NB\.vscode\extensions\cl.eide-3.26.9\res\tools\win32\unify_builder\unify_builder.exe" --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
+"C:\Users\MSI-NB\.vscode\extensions\cl.eide-3.27.2\res\tools\win32\unify_builder\unify_builder.exe" --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
 ```
 
 - `--rebuild`：强制全量重建

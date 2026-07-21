@@ -25,7 +25,7 @@ void FOC_EstimEncoder_Step(foc_motor_t *motor, foc_est_state_t *out, float dt_se
 
     if ((motor == 0) || (out == 0)) return;
 
-    angle_rad = motor->sensor.mech_angle_rad.raw_value;
+    angle_rad = motor->sensor.mech_angle_rad.output_value;
 
     out->mech_angle_rad = angle_rad;
     out->elec_angle_rad  = angle_rad * (float)motor->pole_pairs;

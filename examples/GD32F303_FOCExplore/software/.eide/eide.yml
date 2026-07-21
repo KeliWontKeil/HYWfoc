@@ -6,8 +6,7 @@ packDir: .pack/GigaDevice/GD32F30x_DFP.2.0.0
 srcDirs: []
 virtualFolder:
   name: <virtual_root>
-  files:
-    - path: ../../../foc_core/src/L1_Orchestration/foc_init.c
+  files: []
   folders:
     - name: Application
       files:
@@ -101,6 +100,8 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_queue.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_app.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_indicator.c
+        - path: ../../../foc_core/src/L1_Orchestration/foc_init.c
+        - path: ../../../foc_core/src/L3_Hal/foc_filter_math.c
       folders: []
 dependenceList: []
 outDir: build
@@ -150,6 +151,7 @@ targets:
       - <virtual_root>/FOC_CORE/foc_init_check.c
       - <virtual_root>/FOC_CORE/foc_ctrl_cogging_calib.c
       - <virtual_root>/FOC_CORE/foc_ctrl_reinit.c
+      - <virtual_root>/foc_init.c
     settings:
       debugger: cortex-debug
     toolchain: AC5

@@ -102,7 +102,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 
         /* 阶段3：角度同步 + 估计器 */
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-        motor->sensor.mech_angle_rad.raw_value = motor->sensor_fast.mech_angle_rad.raw_value;
+        motor->sensor.mech_angle_rad.output_value = motor->sensor_fast.mech_angle_rad.output_value;
         motor->sensor.encoder_valid = motor->sensor_fast.encoder_valid;
 #endif
 

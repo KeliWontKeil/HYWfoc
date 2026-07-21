@@ -2,70 +2,72 @@
 
 #include <math.h>
 
+#include "L3_Hal/foc_filter_gate.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-/* Forward declarations for internal helpers. */
-static void Kalman_Init(kalman_filter_t* filter,
-                        float measurement_error,
-                        float estimate_error,
-                        float process_noise,
-                        float initial_value);
-#if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
-static void Kalman_Update(kalman_filter_t* filter, float measurement);
-#endif
-#if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
-static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement);
-#endif
-#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
-static float Sensor_UpdateAngleLpf(foc_motor_t *motor, float measurement);
-#endif
 static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor);
 
-/*
- * Sensor_InitSnapshot: initialize Kalman/state fields in a caller-provided sensor_data_t.
- * Must be called once per snapshot buffer before first use.
- */
 void Sensor_InitSnapshot(sensor_data_t *out)
 {
     if (out == 0) return;
 
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
-    Kalman_Init(&out->current_a,
-                FOC_SENSOR_KALMAN_CURRENT_A_MEAS_ERR,
-                FOC_SENSOR_KALMAN_CURRENT_A_EST_ERR,
-                FOC_SENSOR_KALMAN_CURRENT_A_PROC_NOISE,
-                FOC_SENSOR_KALMAN_CURRENT_A_INIT);
-    Kalman_Init(&out->current_b,
-                FOC_SENSOR_KALMAN_CURRENT_B_MEAS_ERR,
-                FOC_SENSOR_KALMAN_CURRENT_B_EST_ERR,
-                FOC_SENSOR_KALMAN_CURRENT_B_PROC_NOISE,
-                FOC_SENSOR_KALMAN_CURRENT_B_INIT);
+#if (FOC_FILTER_SENSOR_CURRENT_A == FOC_FILTER_TYPE_KALMAN)
+    FOC_FilterMath_KalmanInit(&out->current_a,
+                              FOC_FILTER_SENSOR_CURRENT_A_KALMAN_MEAS_ERR,
+                              FOC_FILTER_SENSOR_CURRENT_A_KALMAN_EST_ERR,
+                              FOC_FILTER_SENSOR_CURRENT_A_KALMAN_PROC_NOISE,
+                              FOC_FILTER_SENSOR_CURRENT_A_KALMAN_INIT);
+#elif (FOC_FILTER_SENSOR_CURRENT_A == FOC_FILTER_TYPE_LPF1)
+    FOC_FilterMath_Lpf1Init(&out->current_a, 0.0f);
+#else
+    out->current_a.output_value = 0.0f;
+#endif
+
+#if (FOC_FILTER_SENSOR_CURRENT_B == FOC_FILTER_TYPE_KALMAN)
+    FOC_FilterMath_KalmanInit(&out->current_b,
+                              FOC_FILTER_SENSOR_CURRENT_B_KALMAN_MEAS_ERR,
+                              FOC_FILTER_SENSOR_CURRENT_B_KALMAN_EST_ERR,
+                              FOC_FILTER_SENSOR_CURRENT_B_KALMAN_PROC_NOISE,
+                              FOC_FILTER_SENSOR_CURRENT_B_KALMAN_INIT);
+#elif (FOC_FILTER_SENSOR_CURRENT_B == FOC_FILTER_TYPE_LPF1)
+    FOC_FilterMath_Lpf1Init(&out->current_b, 0.0f);
+#else
+    out->current_b.output_value = 0.0f;
+#endif
+
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-    Kalman_Init(&out->current_c,
-                FOC_SENSOR_KALMAN_CURRENT_A_MEAS_ERR,
-                FOC_SENSOR_KALMAN_CURRENT_A_EST_ERR,
-                FOC_SENSOR_KALMAN_CURRENT_A_PROC_NOISE,
-                FOC_SENSOR_KALMAN_CURRENT_A_INIT);
+#if (FOC_FILTER_SENSOR_CURRENT_C == FOC_FILTER_TYPE_KALMAN)
+    FOC_FilterMath_KalmanInit(&out->current_c,
+                              FOC_FILTER_SENSOR_CURRENT_C_KALMAN_MEAS_ERR,
+                              FOC_FILTER_SENSOR_CURRENT_C_KALMAN_EST_ERR,
+                              FOC_FILTER_SENSOR_CURRENT_C_KALMAN_PROC_NOISE,
+                              FOC_FILTER_SENSOR_CURRENT_C_KALMAN_INIT);
+#elif (FOC_FILTER_SENSOR_CURRENT_C == FOC_FILTER_TYPE_LPF1)
+    FOC_FilterMath_Lpf1Init(&out->current_c, 0.0f);
+#else
+    out->current_c.output_value = 0.0f;
+#endif
 #endif
 #else
-    out->current_a.raw_value = 0.0f;
-    out->current_a.filtered_value = 0.0f;
     out->current_a.output_value = 0.0f;
-    out->current_b.raw_value = 0.0f;
-    out->current_b.filtered_value = 0.0f;
     out->current_b.output_value = 0.0f;
-    out->current_c.raw_value = 0.0f;
-    out->current_c.filtered_value = 0.0f;
     out->current_c.output_value = 0.0f;
 #endif
 
-    Kalman_Init(&out->mech_angle_rad,
-                FOC_SENSOR_KALMAN_ANGLE_MEAS_ERR,
-                FOC_SENSOR_KALMAN_ANGLE_EST_ERR,
-                FOC_SENSOR_KALMAN_ANGLE_PROC_NOISE,
-                FOC_SENSOR_KALMAN_ANGLE_INIT);
+#if (FOC_FILTER_SENSOR_ANGLE == FOC_FILTER_TYPE_KALMAN)
+    FOC_FilterMath_KalmanAngleInit(&out->mech_angle_rad,
+                                   FOC_FILTER_SENSOR_ANGLE_KALMAN_MEAS_ERR,
+                                   FOC_FILTER_SENSOR_ANGLE_KALMAN_EST_ERR,
+                                   FOC_FILTER_SENSOR_ANGLE_KALMAN_PROC_NOISE,
+                                   FOC_FILTER_SENSOR_ANGLE_KALMAN_INIT);
+#elif (FOC_FILTER_SENSOR_ANGLE == FOC_FILTER_TYPE_LPF1)
+    FOC_FilterMath_Lpf1Init(&out->mech_angle_rad, 0.0f);
+#else
+    out->mech_angle_rad.output_value = 0.0f;
+#endif
 
     out->adc_valid = 0;
     out->encoder_valid = 0;
@@ -76,21 +78,12 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->current_b_raw = 0.0f;
 }
 
-/*
- * Sensor_Init: configure PWM frequency and sample timing.
- * Zero offset and angle LPF state live in the motor struct, not here.
- */
 void Sensor_Init(uint8_t pwm_freq_kHz, float adc_sample_offset_percent)
 {
     FOC_Platform_SensorInputInit(pwm_freq_kHz);
     Sensor_ADCSampleTimeOffset(adc_sample_offset_percent);
 }
 
-/*
- * Sensor_SetZeroOffset: sample stationary phase currents to obtain DC offset.
- * Result stored in motor->sensor_zero_offset_*.
- * When FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE, this is a no-op.
- */
 void Sensor_SetZeroOffset(foc_motor_t *motor)
 {
     uint16_t i;
@@ -180,7 +173,6 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
 #endif
 }
 
-/* Apply zero offsets from motor to a snapshot's current output_value fields. */
 static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor)
 {
     out->current_a.output_value -= motor->sensor_zero_offset_a;
@@ -192,12 +184,6 @@ static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor)
 #endif
 }
 
-/*
- * Sensor_ReadCurrent: read phase currents from ADC, write to motor->sensor_fast.
- * Single entry point — called only from PWM ISR.
- * When FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE, sets adc_valid = 1
- * but leaves currents at zero (no hardware read).
- */
 void Sensor_ReadCurrent(foc_motor_t *motor)
 {
     float current_a = 0.0f;
@@ -224,32 +210,15 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     {
         sensor_data_t *out = &motor->sensor_fast;
 
-        /* 捕获原始 ADC 值（过采样后，未零偏/电周期补偿） */
         out->current_a_raw = current_a;
         out->current_b_raw = current_b;
 
-#if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
-        Kalman_Update(&out->current_a, current_a);
-        Kalman_Update(&out->current_b, current_b);
+        out->current_a.output_value = FOC_FilterGate_CurrentA(&out->current_a, current_a);
+        out->current_b.output_value = FOC_FilterGate_CurrentB(&out->current_b, current_b);
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-        Kalman_Update(&out->current_c, current_c);
-#endif
-#else
-        out->current_a.raw_value = current_a;
-        out->current_a.filtered_value = current_a;
-        out->current_b.raw_value = current_b;
-        out->current_b.filtered_value = current_b;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-        out->current_c.raw_value = current_c;
-        out->current_c.filtered_value = current_c;
-#endif
+        out->current_c.output_value = FOC_FilterGate_CurrentC(&out->current_c, current_c);
 #endif
 
-        out->current_a.output_value = out->current_a.filtered_value;
-        out->current_b.output_value = out->current_b.filtered_value;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-        out->current_c.output_value = out->current_c.filtered_value;
-#endif
         ApplyZeroOffsets(out, motor);
 
         out->adc_valid = 1;
@@ -260,7 +229,6 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     }
 }
 
-/* Read encoder mechanical angle, apply Kalman and LPF. */
 void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out)
 {
     float angle_rad;
@@ -270,19 +238,7 @@ void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out)
 
     if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
     {
-#if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
-        Kalman_Update_Angle(&out->mech_angle_rad, angle_rad);
-        angle_for_output = out->mech_angle_rad.filtered_value;
-#else
-        out->mech_angle_rad.raw_value = angle_rad;
-        out->mech_angle_rad.filtered_value = Math_WrapRad(angle_rad);
-        angle_for_output = out->mech_angle_rad.filtered_value;
-#endif
-
-#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
-        angle_for_output = Sensor_UpdateAngleLpf(motor, angle_for_output);
-#endif
-
+        angle_for_output = FOC_FilterGate_Angle(&out->mech_angle_rad, angle_rad);
         out->mech_angle_rad.output_value = angle_for_output;
         out->encoder_valid = 1;
     }
@@ -292,7 +248,6 @@ void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out)
     }
 }
 
-/* Read VBUS voltage, first-order LPF. */
 void Sensor_ReadVBUS(sensor_data_t *out)
 {
     float vbus_raw;
@@ -309,18 +264,12 @@ void Sensor_ReadVBUS(sensor_data_t *out)
         }
 
         out->vbus_voltage_filtered = Math_FirstOrderLpf(vbus_raw,
-                                                         &out->vbus_voltage_filtered,
-                                                         0.1F,
-                                                         &out->vbus_valid);
+                                                          &out->vbus_voltage_filtered,
+                                                          0.1F,
+                                                          &out->vbus_valid);
     }
 }
 
-/*
- * Sensor_SyncCurrentSnapshot: copy sensor_fast current values to motor->sensor.
- * Direct copy only — no filtering or averaging.
- * Only copies when sensor_fast.adc_valid is set (first PWM ISR must have run);
- * otherwise preserves the last known-valid state in motor->sensor.
- */
 void Sensor_SyncCurrentSnapshot(foc_motor_t *motor)
 {
     if (motor == 0) return;
@@ -336,7 +285,6 @@ void Sensor_SyncCurrentSnapshot(foc_motor_t *motor)
     }
 }
 
-/* Set ADC sample time offset percentage. */
 void Sensor_ADCSampleTimeOffset(float percent)
 {
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
@@ -346,142 +294,12 @@ void Sensor_ADCSampleTimeOffset(float percent)
 #endif
 }
 
-/* Kalman filter initialization. */
-static void Kalman_Init(kalman_filter_t* filter,
-                        float measurement_error,
-                        float estimate_error,
-                        float process_noise,
-                        float initial_value)
-{
-    filter->raw_value = initial_value;
-    filter->filtered_value = initial_value;
-    filter->kalman_gain = 0.9f;
-    filter->estimate_error = estimate_error;
-    filter->measurement_error = measurement_error;
-    filter->process_noise = process_noise;
-    filter->zero_offset = 0.0f;
-    filter->output_value = initial_value;
-}
-
-/* Kalman filter update (standard 1-D Kalman). */
-#if (FOC_SENSOR_KALMAN_CURRENT_ENABLE == FOC_CFG_ENABLE)
-static void Kalman_Update(kalman_filter_t* filter, float measurement)
-{
-    float denominator;
-
-    filter->raw_value = measurement;
-    filter->estimate_error += filter->process_noise;
-
-    denominator = filter->estimate_error + filter->measurement_error;
-    if (denominator < 1e-6f)
-    {
-        filter->filtered_value = measurement;
-        filter->kalman_gain = 1.0f;
-        filter->estimate_error = 0.0f;
-        filter->output_value = filter->filtered_value;
-        return;
-    }
-
-    filter->kalman_gain = filter->estimate_error / denominator;
-    filter->filtered_value = filter->filtered_value + filter->kalman_gain * (measurement - filter->filtered_value);
-    filter->estimate_error = (1.0f - filter->kalman_gain) * filter->estimate_error;
-    filter->output_value = filter->filtered_value;
-}
-#endif
-
-/* Kalman filter update for angle (handles 0/2pi wrap). */
-#if (FOC_SENSOR_KALMAN_ANGLE_ENABLE == FOC_CFG_ENABLE)
-static void Kalman_Update_Angle(kalman_filter_t* filter, float measurement)
-{
-    float denominator;
-    float err_direct;
-    float err_plus_turn;
-    float err_minus_turn;
-    float selected_measurement;
-
-    if (filter == 0)
-    {
-        return;
-    }
-
-    err_direct = fabsf(measurement - filter->filtered_value);
-    err_plus_turn = fabsf((measurement + FOC_MATH_TWO_PI) - filter->filtered_value);
-    err_minus_turn = fabsf((measurement - FOC_MATH_TWO_PI) - filter->filtered_value);
-
-    selected_measurement = measurement;
-    if ((err_plus_turn < err_direct) && (err_plus_turn <= err_minus_turn))
-    {
-        selected_measurement = measurement + FOC_MATH_TWO_PI;
-    }
-    else if ((err_minus_turn < err_direct) && (err_minus_turn < err_plus_turn))
-    {
-        selected_measurement = measurement - FOC_MATH_TWO_PI;
-    }
-
-    filter->estimate_error += filter->process_noise;
-    denominator = filter->estimate_error + filter->measurement_error;
-
-    if (denominator < 1e-6f)
-    {
-        filter->filtered_value = selected_measurement;
-        filter->kalman_gain = 1.0f;
-        filter->estimate_error = 0.0f;
-    }
-    else
-    {
-        filter->kalman_gain = filter->estimate_error / denominator;
-        filter->filtered_value = filter->filtered_value +
-                                 filter->kalman_gain * (selected_measurement - filter->filtered_value);
-        filter->estimate_error = (1.0f - filter->kalman_gain) * filter->estimate_error;
-    }
-
-    filter->filtered_value = Math_WrapRad(filter->filtered_value);
-    filter->output_value = filter->filtered_value;
-}
-#endif
-
-/* Angle first-order LPF, state in motor struct (per-motor). */
-#if (FOC_SENSOR_ANGLE_LPF_ENABLE == FOC_CFG_ENABLE)
-static float Sensor_UpdateAngleLpf(foc_motor_t *motor, float measurement)
-{
-    float alpha;
-    float wrapped_measurement;
-    float delta;
-
-    alpha = Math_ClampFloat(FOC_SENSOR_ANGLE_LPF_ALPHA, 0.0f, 1.0f);
-    wrapped_measurement = Math_WrapRad(measurement);
-
-    if (motor->sensor_angle_lpf_valid == 0U)
-    {
-        motor->sensor_angle_lpf_state = wrapped_measurement;
-        motor->sensor_angle_lpf_valid = 1U;
-        return motor->sensor_angle_lpf_state;
-    }
-
-    delta = Math_WrapRadDelta(wrapped_measurement - motor->sensor_angle_lpf_state);
-    motor->sensor_angle_lpf_state = Math_WrapRad(motor->sensor_angle_lpf_state + alpha * delta);
-
-    return motor->sensor_angle_lpf_state;
-}
-#endif
-
-/* ========== Electrical-cycle drift offset accumulation (reserved) ========== */
-
-#if (FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_ENABLE)
-/* 
- * 两相/三相分离骨架已预留。两相使用 Sensor_EcycleUpdateTwoPhase，
- * 三相使用 Sensor_EcycleUpdateThreePhase，未来实现可按需扩展。
- */
-#else /* FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE == FOC_CFG_DISABLE */
 void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_snapshot)
 {
     (void)motor;
     (void)current_snapshot;
 }
 
-#endif /* FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE */
-
-/* Get filtered VBUS voltage from a snapshot. */
 float Sensor_GetVBUSVoltage(const sensor_data_t *snapshot)
 {
     if (snapshot == 0) return 0.0f;

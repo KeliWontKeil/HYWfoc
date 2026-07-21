@@ -129,7 +129,7 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
             break;
         case 3U:
             if ((motor != 0) && (motor->ctrl_input.valid != 0U))
-                elem_out->value = motor->sensor.mech_angle_rad.raw_value;
+elem_out->value = motor->sensor.mech_angle_rad.output_value;
             else
                 elem_out->aux = 0U;
             break;
