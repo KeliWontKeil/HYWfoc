@@ -168,6 +168,20 @@ typedef struct {
     float    ibeta_est;
     float    bemf_alpha;
     float    bemf_beta;
+    float    z_alpha;
+    float    z_beta;
+    float    pll_angle_rad;
+    float    pll_speed_rad_s;
+    float    pll_integral;
+    float    k_slide;
+    float    phase_comp_rad;
+    float    prev_z_alpha;
+    float    prev_z_beta;
+    uint16_t converge_counter;
+    uint16_t lock_counter;
+    uint16_t rot_dir_counter;
+    uint8_t  initialized;
+    uint8_t  rot_dir_last;
 } foc_estim_smo_state_t;
 #endif
 
@@ -184,6 +198,7 @@ typedef struct {
 typedef struct {
     uint8_t  phase;
     float    virtual_angle_rad;
+    float    virtual_speed_rad_s;
     float    current_ref_a;
     float    ramp_rate_rad_s2;
     float    target_speed_rad_s;
@@ -193,10 +208,14 @@ typedef struct {
 /* ========== 过渡管理私有状态 ========== */
 #if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
 typedef struct {
-    float    blend_factor;
-    float    blend_rate;
     uint8_t  active;
-    uint8_t  target_source;
+    uint8_t  low_source;
+    uint8_t  high_source;
+    uint8_t  current_source;
+    float    speed_threshold_high_rad_s;
+    float    speed_threshold_low_rad_s;
+    uint16_t settle_counter;
+    uint8_t  settle_target;
 } foc_transition_state_t;
 #endif
 
@@ -294,6 +313,7 @@ typedef struct foc_motor_t {
 
     /* Motor physical parameters and calibration outputs. */
     float phase_resistance;
+    float stator_inductance;
     uint8_t pole_pairs;
     float mech_angle_at_elec_zero_rad;
     int8_t direction;

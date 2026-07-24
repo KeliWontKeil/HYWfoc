@@ -8,6 +8,7 @@
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
+#include "L2_Core/Control/foc_ctrl_transition.h"
 #include "L3_Hal/foc_sensor.h"
 #include "L3_Hal/foc_svpwm.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -64,7 +65,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     /* 阶段1：插值与采样 */
     SVPWM_InterpolationISR(motor);
 
-    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
+    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL
+        && motor->state.control_phase != FOC_CONTROL_PHASE_STARTUP) return;
     if (motor->state.system_running == 0U) return;
     if (motor->state.motor_enabled == 0U) return;
     if (motor->state.current_loop_ready == 0U) return;
@@ -163,6 +165,10 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
     }
 
     FOC_ControlExecutor_RunOuterLoop(motor, dt_sec);
+
+#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Transition_RunStep(motor, dt_sec);
+#endif
 
     motor->state.current_loop_ready = 1U;
 

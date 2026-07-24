@@ -9,6 +9,7 @@ void FOC_MotorInit(foc_motor_t *motor,
                    float vbus_voltage,
                    float max_phase_voltage,
                    float phase_resistance,
+                   float stator_inductance,
                    uint8_t pole_pairs,
                    float mech_angle_at_elec_zero_rad,
                    int8_t direction);

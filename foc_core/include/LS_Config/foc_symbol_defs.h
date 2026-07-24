@@ -43,6 +43,19 @@
 
 #define FOC_POLE_PAIRS_UNDEFINED 0U
 
+/* Motor parameter measurement type */
+#define FOC_MOTOR_MEASUREMENT_TYPE_Y_LINE         0U
+#define FOC_MOTOR_MEASUREMENT_TYPE_DELTA_LINE     1U
+#define FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT   2U
+
+/* Control strategy source identifiers. */
+#define FOC_CONTROL_SRC_NONE        0U
+#define FOC_CONTROL_SRC_ENCODER     1U
+#define FOC_CONTROL_SRC_SMO         2U
+#define FOC_CONTROL_SRC_HFI         3U
+#define FOC_CONTROL_SRC_OPENLOOP    4U
+#define FOC_CONTROL_SRC_FLUX        5U
+
 /* Current soft-switch mode options. */
 #define FOC_CURRENT_SOFT_SWITCH_MODE_OPEN 0U
 #define FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED 1U

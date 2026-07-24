@@ -116,6 +116,7 @@ void FOC_MotorInit(foc_motor_t *motor,
                    float vbus_voltage,
                    float max_phase_voltage,
                    float phase_resistance,
+                   float stator_inductance,
                    uint8_t pole_pairs,
                    float mech_angle_at_elec_zero_rad,
                    int8_t direction)
@@ -143,7 +144,17 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mech_angle_accum_rad = 0.0f;
     motor->mech_angle_prev_rad = 0.0f;
     motor->mech_angle_prev_valid = 0U;
-    motor->phase_resistance = phase_resistance;
+
+#if (FOC_MOTOR_MEASUREMENT_TYPE == FOC_MOTOR_MEASUREMENT_TYPE_Y_LINE)
+    motor->phase_resistance  = phase_resistance / 2.0f;
+    motor->stator_inductance = stator_inductance / 2.0f;
+#elif (FOC_MOTOR_MEASUREMENT_TYPE == FOC_MOTOR_MEASUREMENT_TYPE_DELTA_LINE)
+    motor->phase_resistance  = phase_resistance * 1.5f;
+    motor->stator_inductance = stator_inductance * 1.5f;
+#else
+    motor->phase_resistance  = phase_resistance;
+    motor->stator_inductance = stator_inductance;
+#endif
     motor->pole_pairs = pole_pairs;
     motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
     motor->mech_angle_accum_rad = mech_angle_at_elec_zero_rad;

@@ -17,13 +17,7 @@ void FOC_Bridge_CopyInput(foc_motor_t *motor)
 
     if (motor->est_state.source == FOC_ESTIMATOR_TYPE_BLEND)
     {
-#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
-        float w = motor->transition_state.blend_factor;
-        motor->ctrl_input.mech_angle_rad = (1.0f - w) * motor->est_state.mech_angle_rad
-                                         + w * motor->est_state_alt.mech_angle_rad;
-#else
         motor->ctrl_input.mech_angle_rad = motor->est_state.mech_angle_rad;
-#endif
     }
     else
     {

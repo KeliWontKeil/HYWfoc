@@ -17,6 +17,7 @@
 #include "L2_Core/Control/foc_ctrl_estim.h"
 #include "L2_Core/Control/foc_ctrl_bridge.h"
 #include "L2_Core/Control/foc_ctrl_startup.h"
+#include "L2_Core/Control/foc_ctrl_transition.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -85,6 +86,22 @@ void FOC_App_Init(void)
                      FOC_App_MonitorTrigger,
                      FOC_App_OnPwmUpdateISR);
     FOC_Init_MotorAndCalib(&motor);
+
+    /* 根据策略宏确定初始 control_phase */
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
+    motor.state.control_phase = FOC_CONTROL_PHASE_STARTUP;
+    FOC_Startup_Init(&motor);
+#else
+    motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+#endif
+
+    /* 初始化迁移管理 */
+#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Transition_Init(&motor,
+                        (uint8_t)FOC_CONTROL_LOW_SOURCE,
+                        (uint8_t)FOC_CONTROL_HIGH_SOURCE);
+#endif
+
     FOC_Init_Verify(&motor, &motor.sensor);
     FOC_OutputMgr_WriteStartupInfo(&motor);
     FOC_Indicator_Update(&motor, &g_sys.runtime);
@@ -243,8 +260,11 @@ void FOC_App_ControlTrigger(void)
     Sensor_ReadVBUS(&motor.sensor);
     Sensor_SyncCurrentSnapshot(&motor);
 
-    /* 传感器有效性检查 */
-#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    /* 传感器有效性检查：
+     *   adc_valid 无条件检测（电流传感器必须有）；
+     *   encoder_valid 仅在编码器作为反馈源时检测（FOC_ESTIMATOR_ENCODER_ENABLE）。
+     *   硬件存在（FOC_SENSOR_ENCODER_ENABLE）≠ 算法使用。 */
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     if ((motor.sensor.adc_valid == 0U) || (motor.sensor.encoder_valid == 0U))
 #else
     if (motor.sensor.adc_valid == 0U)
@@ -271,18 +291,10 @@ void FOC_App_ControlTrigger(void)
     }
 #endif
 
-    /* 阶段2：估计器更新 */
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE) || \
-    (FOC_ESTIMATOR_SMO_ENABLE   == FOC_CFG_ENABLE) || \
-    (FOC_ESTIMATOR_HFI_ENABLE   == FOC_CFG_ENABLE)
-    if (motor.estimator_step_fn != 0)
-        motor.estimator_step_fn(&motor, &motor.est_state, FOC_CONTROL_DT_SEC);
-#endif
-
-    /* 阶段3：桥接 */
+    /* 阶段2：桥接 */
     FOC_Bridge_CopyInput(&motor);
 
-    /* 阶段4：控制执行 */
+    /* 阶段3：控制执行 */
     switch (phase)
     {
     case FOC_CONTROL_PHASE_NORMAL:
@@ -296,8 +308,28 @@ void FOC_App_ControlTrigger(void)
         if (FOC_Startup_IsComplete(&motor) != 0U)
         {
             motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+
+            /* 启动完成：设置 primary=SMO，清空 secondary */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
             FOC_Estimator_Select(&motor, FOC_ESTIMATOR_TYPE_SMO);
+            motor.estimator_step_fn_alt = 0;
+#endif
+
+            /* 如果 HIGH!=NONE && HIGH!=SMO，重新初始化 Transition */
+#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+            if ((FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_NONE) &&
+                (FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_SMO))
+            {
+                FOC_Transition_Init(&motor,
+                                    (uint8_t)FOC_ESTIMATOR_TYPE_SMO,
+                                    (uint8_t)FOC_CONTROL_HIGH_SOURCE);
+            }
+            else
+            {
+                FOC_Transition_Init(&motor,
+                                    (uint8_t)FOC_ESTIMATOR_TYPE_SMO,
+                                    (uint8_t)FOC_ESTIMATOR_TYPE_SMO);
+            }
 #endif
         }
         break;

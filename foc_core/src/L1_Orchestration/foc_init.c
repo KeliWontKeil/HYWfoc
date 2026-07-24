@@ -64,21 +64,79 @@ void FOC_Init_MotorAndCalib(foc_motor_t *motor)
     FOC_MotorInit(motor,
                   FOC_MOTOR_INIT_VBUS_DEFAULT,
                   FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT,
-                  FOC_MOTOR_INIT_PHASE_RES_DEFAULT,
+                  FOC_MOTOR_INIT_RESISTANCE_OHM,
+                  FOC_MOTOR_INIT_STATOR_INDUCTANCE_HENRY,
                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
     FOC_Control_ApplyConfig(motor);
 
+    /* ── 策略驱动初始化：初始化所有使能的估计器 ── */
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     FOC_EstimEncoder_Init(motor);
-    FOC_Estimator_Select(motor, FOC_ESTIMATOR_TYPE_ENCODER);
-#elif (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE) || \
-      (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
-    motor->est_state.source = FOC_ESTIMATOR_TYPE_NONE;
-#else
-    motor->est_state.source = FOC_ESTIMATOR_TYPE_NONE;
 #endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    FOC_EstimSMO_Init(motor);
+#endif
+#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
+    FOC_EstimHFI_Init(motor);
+#endif
+
+    /* ── 根据策略宏分配 primary/secondary ── */
+    motor->estimator_step_fn = 0;
+    motor->estimator_step_fn_alt = 0;
+
+    /*
+     * Primary source 选择策略：
+     *   LOW_SOURCE 是有效估计器类型（ENCODER/SMO/HFI）→ 用它
+     *   LOW_SOURCE 不是有效估计器类型（OPENLOOP/NONE）→ 用 HIGH_SOURCE
+     */
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_ENCODER) || \
+    (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_SMO) || \
+    (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_HFI)
+    #define FOC_INIT_PRIMARY_SRC  FOC_CONTROL_LOW_SOURCE
+#else
+    #define FOC_INIT_PRIMARY_SRC  FOC_CONTROL_HIGH_SOURCE
+#endif
+
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    if (FOC_INIT_PRIMARY_SRC == FOC_CONTROL_SRC_ENCODER)
+        motor->estimator_step_fn = FOC_EstimEncoder_Step;
+#endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    if (FOC_INIT_PRIMARY_SRC == FOC_CONTROL_SRC_SMO)
+        motor->estimator_step_fn = FOC_EstimSMO_Step;
+#endif
+#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
+    if (FOC_INIT_PRIMARY_SRC == FOC_CONTROL_SRC_HFI)
+        motor->estimator_step_fn = FOC_EstimHFI_Step;
+#endif
+
+#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+    if ((FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_NONE) &&
+        (FOC_CONTROL_HIGH_SOURCE != FOC_INIT_PRIMARY_SRC))
+    {
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+        if (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_ENCODER)
+            motor->estimator_step_fn_alt = FOC_EstimEncoder_Step;
+#endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        if (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_SMO)
+            motor->estimator_step_fn_alt = FOC_EstimSMO_Step;
+#endif
+#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
+        if (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_HFI)
+            motor->estimator_step_fn_alt = FOC_EstimHFI_Step;
+#endif
+    }
+#endif
+
+    if (motor->estimator_step_fn != 0)
+        motor->est_state.source = (uint8_t)FOC_INIT_PRIMARY_SRC;
+    else
+        motor->est_state.source = FOC_ESTIMATOR_TYPE_NONE;
+
+#undef FOC_INIT_PRIMARY_SRC
 }
 
 void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
