@@ -122,10 +122,17 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
                 return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
             break;
         case 2U:
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
             if ((motor != 0) && (motor->sensor.adc_valid != 0U))
                 elem_out->value = motor->sensor.current_c.output_value;
             else
                 return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+#else
+            if ((motor != 0) && (motor->sensor.adc_valid != 0U))
+                elem_out->value = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value);
+            else
+                return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+#endif
             break;
         case 3U:
             if ((motor != 0) && (motor->sensor.encoder_valid != 0U))
@@ -245,7 +252,11 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                     {
                     case 0U: elem_out->value = motor->sensor.current_a.output_value; break;
                     case 1U: elem_out->value = motor->sensor.current_b.output_value; break;
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
                     case 2U: elem_out->value = motor->sensor.current_c.output_value; break;
+#else
+                    case 2U: elem_out->value = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value); break;
+#endif
                     case 3U: elem_out->value = motor->active_source_state.mech_angle_rad; break;
                     case 4U: elem_out->value = motor->mech_angle_accum_rad; break;
                     case 5U: elem_out->value = (float)ds->last_exec_cycles / 120.0f; break;

@@ -162,9 +162,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_IDLE;
     motor->phase_output_state.valid = 0U;
     motor->phase_output_state.state_id = 0U;
-    motor->phase_output_state.electrical_angle_rad = 0.0f;
-    motor->phase_output_state.ud = 0.0f;
-    motor->phase_output_state.uq = 0.0f;
     motor->phase_output_state.duty_a = 0.0f;
     motor->phase_output_state.duty_b = 0.0f;
     motor->phase_output_state.duty_c = 0.0f;
@@ -279,10 +276,12 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->outer_loop_state.speed_err_accum_rad = 0.0f;
     motor->outer_loop_state.prev_mech_signed_rad = 0.0f;
     motor->outer_loop_state.speed_state_valid = 0U;
+#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
     motor->svpwm_lpf.valid = 0U;
     motor->svpwm_lpf.phase_a = 0.0f;
     motor->svpwm_lpf.phase_b = 0.0f;
     motor->svpwm_lpf.phase_c = 0.0f;
+#endif
 
     FOC_ControlExecutor_Init(motor);
 
@@ -331,7 +330,6 @@ void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
     if (motor == 0) return;
 
     Sensor_InitSnapshot(&motor->sensor);
-    Sensor_InitSnapshot(&motor->sensor_fast);
     Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     Sensor_SetZeroOffset(motor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */

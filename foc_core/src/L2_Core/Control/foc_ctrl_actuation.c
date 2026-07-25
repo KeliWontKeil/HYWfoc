@@ -159,9 +159,9 @@ void FOC_ControlRecordPhaseOutputDqAngle(foc_motor_t *motor,
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE;
     motor->phase_output_state.valid = 1U;
     motor->phase_output_state.state_id = state_id;
-    motor->phase_output_state.electrical_angle_rad = Math_WrapRad(electrical_angle);
-    motor->phase_output_state.ud = ud;
-    motor->phase_output_state.uq = uq;
+    motor->electrical_phase_angle = Math_WrapRad(electrical_angle);
+    motor->ud = ud;
+    motor->uq = uq;
     motor->phase_output_state.duty_a = 0.0f;
     motor->phase_output_state.duty_b = 0.0f;
     motor->phase_output_state.duty_c = 0.0f;
@@ -178,9 +178,8 @@ void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_ZERO;
     motor->phase_output_state.valid = 1U;
     motor->phase_output_state.state_id = state_id;
-    motor->phase_output_state.electrical_angle_rad = motor->electrical_phase_angle;
-    motor->phase_output_state.ud = 0.0f;
-    motor->phase_output_state.uq = 0.0f;
+    motor->ud = 0.0f;
+    motor->uq = 0.0f;
     motor->phase_output_state.duty_a = 0.0f;
     motor->phase_output_state.duty_b = 0.0f;
     motor->phase_output_state.duty_c = 0.0f;
@@ -205,10 +204,7 @@ void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
         break;
 
     case FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE:
-        motor->ud = motor->phase_output_state.ud;
-        motor->uq = motor->phase_output_state.uq;
-        FOC_ControlApplyElectricalAngleRuntime(motor,
-                                               motor->phase_output_state.electrical_angle_rad);
+        FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
         break;
 
     case FOC_PHASE_OUTPUT_DIRECT_DUTY:

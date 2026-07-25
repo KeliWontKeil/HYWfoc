@@ -54,7 +54,6 @@ void Sensor_InitSnapshot(sensor_data_t *out)
 #else
     out->current_a.output_value = 0.0f;
     out->current_b.output_value = 0.0f;
-    out->current_c.output_value = 0.0f;
 #endif
 
 #if (FOC_FILTER_SENSOR_ANGLE == FOC_FILTER_TYPE_KALMAN)
@@ -177,9 +176,7 @@ static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor)
 {
     out->current_a.output_value -= motor->sensor_zero_offset_a;
     out->current_b.output_value -= motor->sensor_zero_offset_b;
-#if (FOC_CURRENT_SENSE_PHASES == 2U)
-    out->current_c.output_value = -(out->current_a.output_value + out->current_b.output_value);
-#else
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
     out->current_c.output_value -= motor->sensor_zero_offset_c;
 #endif
 }
@@ -196,7 +193,7 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     if (motor == 0) return;
 
 #if (FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE)
-    motor->sensor_fast.adc_valid = 1;
+    motor->sensor.adc_valid = 1;
     return;
 #endif
 
@@ -208,7 +205,7 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
 
     if (read_ok != 0U)
     {
-        sensor_data_t *out = &motor->sensor_fast;
+        sensor_data_t *out = &motor->sensor;
 
         out->current_a_raw = current_a;
         out->current_b_raw = current_b;
@@ -225,7 +222,7 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     }
     else
     {
-        motor->sensor_fast.adc_valid = 0;
+        motor->sensor.adc_valid = 0;
     }
 }
 
@@ -267,21 +264,6 @@ void Sensor_ReadVBUS(sensor_data_t *out)
                                                           &out->vbus_voltage_filtered,
                                                           0.1F,
                                                           &out->vbus_valid);
-    }
-}
-
-void Sensor_SyncCurrentSnapshot(foc_motor_t *motor)
-{
-    if (motor == 0) return;
-
-    if (motor->sensor_fast.adc_valid != 0U)
-    {
-        motor->sensor.current_a = motor->sensor_fast.current_a;
-        motor->sensor.current_b = motor->sensor_fast.current_b;
-        motor->sensor.current_c = motor->sensor_fast.current_c;
-        motor->sensor.current_a_raw = motor->sensor_fast.current_a_raw;
-        motor->sensor.current_b_raw = motor->sensor_fast.current_b_raw;
-        motor->sensor.adc_valid = 1U;
     }
 }
 

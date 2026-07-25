@@ -79,9 +79,9 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
         ? motor->electrical_phase_angle
         : motor->estim_smo_state.pll_angle_rad;
 
-    Math_ClarkeTransform(motor->sensor_fast.current_a.output_value,
-                         motor->sensor_fast.current_b.output_value,
-                         motor->sensor_fast.current_c.output_value,
+    Math_ClarkeTransform(motor->sensor.current_a.output_value,
+                         motor->sensor.current_b.output_value,
+                         motor->sensor.current_c.output_value,
                          &i_alpha_meas, &i_beta_meas);
 
     u_alpha = motor->ud * cosf(theta_bemf) - motor->uq * sinf(theta_bemf);

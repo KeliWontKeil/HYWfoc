@@ -92,7 +92,7 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
     {
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_ENCODER:
-        speed_abs = fabsf(motor->sensor_fast.mech_angle_rad.output_value);
+        speed_abs = fabsf(motor->sensor.mech_angle_rad.output_value);
         break;
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)

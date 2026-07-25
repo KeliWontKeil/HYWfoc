@@ -96,13 +96,13 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 
     /* 阶段1：硬件采样 */
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-    Sensor_ReadEncoder(motor, &motor->sensor_fast);
-    Sensor_AccumulateEcycle(motor, &motor->sensor_fast);
+    Sensor_ReadEncoder(motor, &motor->sensor);
+    Sensor_AccumulateEcycle(motor, &motor->sensor);
 #endif
     if (FOC_ControlRequiresCurrentSample() != 0U)
     {
         Sensor_ReadCurrent(motor);
-        if (motor->sensor_fast.adc_valid == 0U) return;
+        if (motor->sensor.adc_valid == 0U) return;
     }
 
     /* 阶段2：各 Estimator 数值迭代（读 sensor_fast，只写内部状态） */
@@ -118,16 +118,11 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     FOC_SourceMgr_Publish(motor);
     
     /* 阶段4：电流环 */
-    FOC_CurrentControlStep(motor, &motor->sensor_fast,
+    FOC_CurrentControlStep(motor, &motor->sensor,
                            motor->electrical_phase_angle,
                            current_loop_dt_sec);
 
-    /* 阶段5：角度同步 + SVPWM */
-#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-    motor->sensor.mech_angle_rad.output_value = motor->sensor_fast.mech_angle_rad.output_value;
-    motor->sensor.encoder_valid = motor->sensor_fast.encoder_valid;
-#endif
-    
+    /* 阶段5：SVPWM */
     FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
 
     motor->current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;

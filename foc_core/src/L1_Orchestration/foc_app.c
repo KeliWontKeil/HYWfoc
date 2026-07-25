@@ -22,16 +22,8 @@
 #include "L3_Hal/foc_sensor.h"
 #include "LS_Config/foc_config.h"
 
-/* ================================================================
- * 全局实例
- * ================================================================ */
-
 static foc_system_t g_sys;
 static foc_motor_t motor;
-
-/* ================================================================
- * 内部工具
- * ================================================================ */
 
 static void FOC_App_HandleResult(uint8_t cycle_result)
 {
@@ -63,10 +55,6 @@ static void FOC_App_SchedTickBridge(void)
     DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
         ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
 }
-
-/* ================================================================
- * 初始化
- * ================================================================ */
 
 void FOC_App_Init(void)
 {
@@ -105,13 +93,8 @@ void FOC_App_Start(void)
     FOC_Platform_SetControlRuntimeInterrupts(1U);
 }
 
-/* ================================================================
- * 主循环
- * ================================================================ */
-
 void FOC_App_Loop(void)
 {
-    /* ---- Monitor 段 ---- */
     if (g_sys.runtime.monitor_task_pending != 0U)
     {
         g_sys.runtime.monitor_task_pending = 0U;
@@ -125,7 +108,6 @@ void FOC_App_Loop(void)
         FOC_OutputMgr_ProcessMonitorElements(&g_sys);
     }
 
-    /* ---- Service 段 ---- */
     if (g_sys.runtime.service_task_pending != 0U)
     {
         uint8_t needs_param_dump   = 0U;
@@ -187,10 +169,6 @@ void FOC_App_Loop(void)
     FOC_OutputMgr_FlushQueue(&g_sys);
 }
 
-/* ================================================================
- * 回调桥接
- * ================================================================ */
-
 void FOC_App_ServiceTrigger(void)
 {
     FOC_Indicator_Update(&motor, &g_sys.runtime);
@@ -236,20 +214,11 @@ void FOC_App_ControlTrigger(void)
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
 
-    /* 阶段1：传感器读取 */
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
     Sensor_ReadEncoder(&motor, &motor.sensor);
-#else
-    motor.sensor.mech_angle_rad = motor.sensor_fast.mech_angle_rad;
-    motor.sensor.encoder_valid = motor.sensor_fast.encoder_valid;
 #endif
     Sensor_ReadVBUS(&motor.sensor);
-    Sensor_SyncCurrentSnapshot(&motor);
 
-    /* 传感器有效性检查：
-     *   adc_valid 无条件检测（电流传感器必须有）；
-     *   encoder_valid 仅在编码器作为反馈源时检测（FOC_ESTIMATOR_ENCODER_ENABLE）。
-     *   硬件存在（FOC_SENSOR_ENCODER_ENABLE）≠ 算法使用。 */
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     if ((motor.sensor.adc_valid == 0U) || (motor.sensor.encoder_valid == 0U))
 #else
@@ -277,7 +246,6 @@ void FOC_App_ControlTrigger(void)
     }
 #endif
 
-    /* 阶段2：控制执行 */
     switch (phase)
     {
     case FOC_CONTROL_PHASE_NORMAL:
