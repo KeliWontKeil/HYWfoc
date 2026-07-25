@@ -7,7 +7,7 @@
 #define FOC_MATH_SQRT3      1.7320508f
 #define FOC_MATH_SQRT3_BY_2 0.8660254f
 #define FOC_MATH_PI_BY_3    1.0471975f
-#define FOC_MATH_EPSILON    1e-6f
+#define FOC_MATH_EPSILON    0.0f
 
 /* ========== 滤波器类型枚举值 ========== */
 #define FOC_FILTER_TYPE_NONE    0

@@ -6,6 +6,16 @@
 #include "L2_Core/foc_ctrl_types.h"
 
 float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad);
+void FOC_ControlRecordPhaseOutputDqAngle(foc_motor_t *motor,
+                                         uint8_t phase,
+                                         uint8_t state_id,
+                                         float electrical_angle,
+                                         float ud,
+                                         float uq);
+void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
+                                      uint8_t phase,
+                                      uint8_t state_id);
+void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor);
 void FOC_ControlApplyElectricalAngleRuntime(foc_motor_t *motor, float electrical_angle);
 void FOC_ControlApplyElectricalAngleDirect(foc_motor_t *motor, float electrical_angle);
 uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,

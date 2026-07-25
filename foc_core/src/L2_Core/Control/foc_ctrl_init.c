@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "L2_Core/Control/foc_ctrl_current_loop.h"
+#include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_param_learn.h"
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
@@ -76,7 +76,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     }
     else
     {
-        FOC_CurrentControlApplyElectricalAngleDirect(motor, 0.0f);
+        FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
         FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
     }
 
@@ -109,7 +109,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     motor->ud = backup_ud;
     motor->uq = backup_uq;
-    FOC_CurrentControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
 }
 
 void FOC_MotorInit(foc_motor_t *motor,
@@ -136,6 +136,57 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ud = 0.0f;
     motor->uq = 0.0f;
     motor->max_phase_voltage = max_phase_voltage;
+    motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
+    motor->active_source_state.state = FOC_SOURCE_STATE_INIT;
+    motor->active_source_state.valid = 0U;
+    motor->active_source_state.confidence = 0.0f;
+    motor->active_source_state.elec_angle_rad = 0.0f;
+    motor->active_source_state.elec_speed_rad_s = 0.0f;
+    motor->active_source_state.mech_angle_rad = 0.0f;
+    motor->active_source_state.mech_angle_accum_rad = 0.0f;
+    motor->active_source_state.mech_speed_rad_s = 0.0f;
+    motor->source_mgr_state.active_source = FOC_SOURCE_TYPE_NONE;
+    motor->source_mgr_state.standby_source = FOC_SOURCE_TYPE_NONE;
+    motor->source_mgr_state.control_region = FOC_CONTROL_REGION_FULL;
+    motor->source_mgr_state.switch_in_progress = 0U;
+    motor->source_mgr_state.switch_counter = 0U;
+    motor->encoder_services.comp_available = 0U;
+    motor->encoder_services.comp_active = 0U;
+    motor->encoder_services.calib_available = 0U;
+    motor->encoder_services.reinit_available = 0U;
+    motor->applied_output.valid = 0U;
+    motor->applied_output.electrical_angle_rad = 0.0f;
+    motor->applied_output.ud = 0.0f;
+    motor->applied_output.uq = 0.0f;
+    motor->phase_output_state.phase = FOC_CONTROL_PHASE_NORMAL;
+    motor->phase_output_state.type = FOC_PHASE_OUTPUT_IDLE;
+    motor->phase_output_state.valid = 0U;
+    motor->phase_output_state.state_id = 0U;
+    motor->phase_output_state.electrical_angle_rad = 0.0f;
+    motor->phase_output_state.ud = 0.0f;
+    motor->phase_output_state.uq = 0.0f;
+    motor->phase_output_state.duty_a = 0.0f;
+    motor->phase_output_state.duty_b = 0.0f;
+    motor->phase_output_state.duty_c = 0.0f;
+    motor->phase_output_state.sector = 0U;
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    motor->openloop_angle_source_state.phase = FOC_OPENLOOP_STATE_IDLE;
+    motor->openloop_angle_source_state.virtual_angle_rad = 0.0f;
+    motor->openloop_angle_source_state.virtual_speed_rad_s = 0.0f;
+    motor->openloop_angle_source_state.ramp_rate_rad_s2 = 0.0f;
+    motor->openloop_angle_source_state.target_speed_rad_s = 0.0f;
+    motor->openloop_low_speed_policy_state.phase = FOC_OPENLOOP_STATE_IDLE;
+    motor->openloop_low_speed_policy_state.current_ref_a = 0.0f;
+    motor->openloop_source_snapshot.source = FOC_SOURCE_TYPE_OPENLOOP;
+    motor->openloop_source_snapshot.state = FOC_SOURCE_STATE_INIT;
+    motor->openloop_source_snapshot.valid = 0U;
+    motor->openloop_source_snapshot.confidence = 0.0f;
+    motor->openloop_source_snapshot.elec_angle_rad = 0.0f;
+    motor->openloop_source_snapshot.elec_speed_rad_s = 0.0f;
+    motor->openloop_source_snapshot.mech_angle_rad = 0.0f;
+    motor->openloop_source_snapshot.mech_angle_accum_rad = 0.0f;
+    motor->openloop_source_snapshot.mech_speed_rad_s = 0.0f;
+#endif
     motor->vbus_voltage = vbus_voltage;
     motor->iq_target = 0.0f;
 

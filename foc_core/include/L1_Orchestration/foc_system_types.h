@@ -9,7 +9,7 @@
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Protocol/foc_snapshot_types.h"
 #include "L2_Core/foc_ctrl_types.h"
-#include "L1_Orchestration/foc_monitor_queue_types.h"
+#include "L2_Core/Runtime/foc_monitor_queue_types.h"
 
 /*
  * ================================================================
@@ -22,18 +22,6 @@ typedef struct foc_system_cfg {
     telemetry_policy_snapshot_t telemetry;  /* 遥测策略（协议设置） */
     uint8_t report_mode;                    /* 报告模式 */
 } foc_system_cfg_t;
-
-/*
- * ================================================================
- * 调度器运行状态
- * ================================================================
- */
-typedef struct {
-    uint16_t tick_counter;
-    uint32_t execution_cycles;
-    void (*callbacks[FOC_TASK_RATE_COUNT])(void);
-    uint8_t dwt_enabled;
-} control_scheduler_t;
 
 /*
  * ================================================================

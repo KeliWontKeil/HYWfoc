@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-#include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L3_Hal/foc_filter_gate.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
@@ -183,23 +182,14 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
 
 static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
                                               const sensor_data_t *sensor,
+                                              float electrical_angle,
                                               float dt_sec)
 {
     float iq_measured;
     float uq_cmd;
-    float local_angle;
-
-#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-    if ((sensor != 0) && (sensor->encoder_valid != 0U))
-        local_angle = FOC_ControlMechanicalToElectricalAngle(motor, sensor->mech_angle_rad.output_value);
-    else
-        local_angle = motor->electrical_phase_angle;
-#else
-    local_angle = motor->electrical_phase_angle;
-#endif
 
     FOC_CurrentLoopComputeIqMeasured(sensor,
-                                     local_angle,
+                                     electrical_angle,
                                      &iq_measured,
                                      motor);
 
@@ -257,6 +247,7 @@ static uint8_t FOC_CurrentSoftSwitchResolveActiveMode(foc_current_soft_switch_st
 
 static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
                                              const sensor_data_t *sensor,
+                                             float electrical_angle,
                                              float dt_sec)
 {
     foc_current_soft_switch_status_t *soft_switch_status;
@@ -288,6 +279,7 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
         /* CLOSED: run PID closed-loop current control. */
         FOC_CurrentControlClosedLoopStep(motor,
                                          sensor,
+                                         electrical_angle,
                                          dt_sec);
         closed_ud = motor->ud;
         closed_uq = motor->uq;
@@ -303,7 +295,7 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
         if (sensor->adc_valid != 0U)
         {
             FOC_CurrentLoopComputeIqMeasured(sensor,
-                                             motor->electrical_phase_angle,
+                                             electrical_angle,
                                              &closed_iq,
                                              motor);
         }
@@ -355,7 +347,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
                             float electrical_angle,
                             float dt_sec)
 {
-    float    local_angle;
+    float local_angle;
 
     if (motor == 0)
     {
@@ -363,7 +355,6 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     }
 
     local_angle = Math_WrapRad(electrical_angle);
-    motor->electrical_phase_angle = local_angle;
     dt_sec = FOC_NormalizeDt(dt_sec);
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
@@ -377,6 +368,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     {
         FOC_CurrentControlSoftSwitchStep(motor,
                                          sensor,
+                                         local_angle,
                                          dt_sec);
     }
     else
@@ -387,7 +379,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
         {
             motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
             motor->current_soft_switch_status.blend_factor = 1.0f;
-            FOC_CurrentControlClosedLoopStep(motor, sensor, dt_sec);
+            FOC_CurrentControlClosedLoopStep(motor, sensor, local_angle, dt_sec);
         }
         else
         {
@@ -396,7 +388,7 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
             FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
             FOC_CurrentLoopComputeIqMeasured(sensor,
-                                             motor->electrical_phase_angle,
+                                             local_angle,
                                              &motor->iq_measured,
                                              motor);
 #endif
@@ -405,42 +397,12 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
 #else
     /* FOC_CURRENT_SOFT_SWITCH_ENABLE == DISABLE: always run closed-loop PID */
     if (sensor->adc_valid == 0U) return;
-    FOC_CurrentControlClosedLoopStep(motor, sensor, dt_sec);
+    FOC_CurrentControlClosedLoopStep(motor, sensor, local_angle, dt_sec);
 #endif
 #else
     (void)sensor;
     FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->iq_target, 0.0f);
 #endif
-}
-
-void FOC_CurrentControlApplyElectricalAngleDirect(foc_motor_t *motor, float electrical_angle)
-{
-    if (motor == 0)
-    {
-        return;
-    }
-
-    FOC_ControlApplyElectricalAngleDirect(motor, electrical_angle);
-}
-
-void FOC_CurrentControlOpenLoopStep(foc_motor_t *motor,
-                                    float voltage,
-                                    float turn_speed,
-                                    float dt_sec)
-{
-    if (motor == 0)
-    {
-        return;
-    }
-
-    dt_sec = FOC_NormalizeDt(dt_sec);
-    motor->electrical_phase_angle = Math_WrapRad(
-        motor->electrical_phase_angle +
-        FOC_MATH_TWO_PI * turn_speed * motor->pole_pairs * dt_sec * motor->direction);
-
-    motor->ud = 0.0f;
-    motor->uq = Math_ClampFloat(voltage, -motor->max_phase_voltage, motor->max_phase_voltage);
-    FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
 }
 
 uint8_t FOC_ControlRequiresCurrentSample(void)

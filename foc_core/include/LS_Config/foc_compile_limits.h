@@ -297,11 +297,11 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 #if ((FOC_ESTIMATOR_FLUX_ENABLE != FOC_CFG_DISABLE) && (FOC_ESTIMATOR_FLUX_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_ESTIMATOR_FLUX_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
-#if ((FOC_STARTUP_OPENLOOP_ENABLE != FOC_CFG_DISABLE) && (FOC_STARTUP_OPENLOOP_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_STARTUP_OPENLOOP_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
+#if ((FOC_OPENLOOP_SOURCE_ENABLE != FOC_CFG_DISABLE) && (FOC_OPENLOOP_SOURCE_ENABLE != FOC_CFG_ENABLE))
+#error "FOC_OPENLOOP_SOURCE_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
-#if ((FOC_TRANSITION_ENABLE != FOC_CFG_DISABLE) && (FOC_TRANSITION_ENABLE != FOC_CFG_ENABLE))
-#error "FOC_TRANSITION_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
+#if ((FOC_SOURCE_SWITCH_ENABLE != FOC_CFG_DISABLE) && (FOC_SOURCE_SWITCH_ENABLE != FOC_CFG_ENABLE))
+#error "FOC_SOURCE_SWITCH_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
 
 /* 编码器估计器依赖编码器硬件 */
@@ -327,37 +327,34 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 #error "Sensorless estimators require current sensing"
 #endif
 
-/* SMO 需要至少一种启动策略（当编码器不可用时） */
+/* SMO needs at least one low-speed angle source when encoder is unavailable. */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE) && \
     (FOC_ESTIMATOR_ENCODER_ENABLE != FOC_CFG_ENABLE) && \
-    (FOC_STARTUP_OPENLOOP_ENABLE != FOC_CFG_ENABLE) && \
+    (FOC_OPENLOOP_SOURCE_ENABLE != FOC_CFG_ENABLE) && \
     (FOC_ESTIMATOR_HFI_ENABLE != FOC_CFG_ENABLE)
-#error "SMO requires at least one startup strategy (HFI or OPENLOOP) when encoder not available"
+#error "SMO requires at least one low-speed angle source (HFI or OPENLOOP) when encoder not available"
 #endif
 
-/* 无感启动模式必须提供极对数（标定不可用） */
-#if (FOC_STARTUP_OPENLOOP_ENABLE == FOC_CFG_ENABLE) && \
+/* OpenLoop angle source must have pole pairs when encoder calibration is unavailable. */
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE) && \
     (FOC_ESTIMATOR_ENCODER_ENABLE != FOC_CFG_ENABLE) && \
     (FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT == FOC_POLE_PAIRS_UNDEFINED)
-#error "Sensorless startup (STARTUP_OPENLOOP) requires a known pole count: set FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT"
+#error "OpenLoop source requires a known pole count: set FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT"
 #endif
 
-#if (FOC_STARTUP_OPENLOOP_ENABLE == FOC_CFG_ENABLE) && \
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE) && \
     (FOC_ESTIMATOR_ENCODER_ENABLE != FOC_CFG_ENABLE) && \
     (FOC_MOTOR_INIT_DIRECTION_DEFAULT == FOC_DIR_UNDEFINED)
-#error "Sensorless startup (STARTUP_OPENLOOP) requires a known direction: set FOC_MOTOR_INIT_DIRECTION_DEFAULT"
+#error "OpenLoop source requires a known direction: set FOC_MOTOR_INIT_DIRECTION_DEFAULT"
 #endif
 
-/* 过渡管理启用条件：至少两个估计器同时使能（单估计器场景允许，仅作消抖提示） */
-#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
-#if ((FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE) + \
-     (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE) + \
-     (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE) < 2)
-#if defined(__CC_ARM) && !defined(__clang__)
-#warning FOC_CFG_HINT_TRANSITION_SINGLE transition enabled but only one estimator active; will operate in debounce-only mode.
-#else
-FOC_CFG_HINT("FOC_CFG_HINT_TRANSITION_SINGLE: transition enabled but only one estimator active; will operate in debounce-only mode.")
+/* Source switch is derived from distinct low/high source configuration. */
+#if (FOC_SOURCE_SWITCH_ENABLE == FOC_CFG_ENABLE)
+#if (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_NONE)
+#error "FOC_SOURCE_SWITCH_ENABLE requires a configured high source"
 #endif
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_HIGH_SOURCE)
+#error "FOC_SOURCE_SWITCH_ENABLE requires distinct low/high sources"
 #endif
 #endif
 

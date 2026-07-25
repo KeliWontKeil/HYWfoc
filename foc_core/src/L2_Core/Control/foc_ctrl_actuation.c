@@ -56,7 +56,6 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     float uq_applied;
 
     electrical_angle = Math_WrapRad(electrical_angle);
-    motor->electrical_phase_angle = electrical_angle;
 
     voltage_limit = Math_ClampFloat(motor->max_phase_voltage, 0.0f, motor->vbus_voltage);
 
@@ -79,6 +78,11 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
         uq_applied *= scale;
         dq_magnitude = voltage_limit;
     }
+
+    motor->applied_output.valid = 1U;
+    motor->applied_output.electrical_angle_rad = electrical_angle;
+    motor->applied_output.ud = ud_applied;
+    motor->applied_output.uq = uq_applied;
 
     /* 逆Park变换：dq -> alpha-beta */
     Math_InverseParkTransform(ud_applied,
@@ -133,23 +137,94 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
 #endif
 
     /* 正常SVPWM输出 */
-    if (direct_output != 0U)
+    SVPWM_Update(motor,
+                 motor->alpha_beta.phase_a,
+                 motor->alpha_beta.phase_b,
+                 motor->alpha_beta.phase_c,
+                 voltage_command,
+                 motor->vbus_voltage,
+                 direct_output);
+}
+
+void FOC_ControlRecordPhaseOutputDqAngle(foc_motor_t *motor,
+                                         uint8_t phase,
+                                         uint8_t state_id,
+                                         float electrical_angle,
+                                         float ud,
+                                         float uq)
+{
+    if (motor == 0) return;
+
+    motor->phase_output_state.phase = phase;
+    motor->phase_output_state.type = FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE;
+    motor->phase_output_state.valid = 1U;
+    motor->phase_output_state.state_id = state_id;
+    motor->phase_output_state.electrical_angle_rad = Math_WrapRad(electrical_angle);
+    motor->phase_output_state.ud = ud;
+    motor->phase_output_state.uq = uq;
+    motor->phase_output_state.duty_a = 0.0f;
+    motor->phase_output_state.duty_b = 0.0f;
+    motor->phase_output_state.duty_c = 0.0f;
+    motor->phase_output_state.sector = 0U;
+}
+
+void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
+                                      uint8_t phase,
+                                      uint8_t state_id)
+{
+    if (motor == 0) return;
+
+    motor->phase_output_state.phase = phase;
+    motor->phase_output_state.type = FOC_PHASE_OUTPUT_ZERO;
+    motor->phase_output_state.valid = 1U;
+    motor->phase_output_state.state_id = state_id;
+    motor->phase_output_state.electrical_angle_rad = motor->electrical_phase_angle;
+    motor->phase_output_state.ud = 0.0f;
+    motor->phase_output_state.uq = 0.0f;
+    motor->phase_output_state.duty_a = 0.0f;
+    motor->phase_output_state.duty_b = 0.0f;
+    motor->phase_output_state.duty_c = 0.0f;
+    motor->phase_output_state.sector = 0U;
+}
+
+void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+    if (motor->phase_output_state.valid == 0U) return;
+
+    switch (motor->phase_output_state.type)
     {
-        SVPWM_UpdateDirect(motor,
-                           motor->alpha_beta.phase_a,
-                           motor->alpha_beta.phase_b,
-                           motor->alpha_beta.phase_c,
-                           voltage_command,
-                           motor->vbus_voltage);
-    }
-    else
-    {
-        SVPWM_UpdateRuntime(motor,
-                            motor->alpha_beta.phase_a,
-                            motor->alpha_beta.phase_b,
-                            motor->alpha_beta.phase_c,
-                            voltage_command,
-                            motor->vbus_voltage);
+    case FOC_PHASE_OUTPUT_ZERO:
+        motor->ud = 0.0f;
+        motor->uq = 0.0f;
+        motor->applied_output.valid = 1U;
+        motor->applied_output.electrical_angle_rad = motor->electrical_phase_angle;
+        motor->applied_output.ud = 0.0f;
+        motor->applied_output.uq = 0.0f;
+        SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
+        break;
+
+    case FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE:
+        motor->ud = motor->phase_output_state.ud;
+        motor->uq = motor->phase_output_state.uq;
+        FOC_ControlApplyElectricalAngleRuntime(motor,
+                                               motor->phase_output_state.electrical_angle_rad);
+        break;
+
+    case FOC_PHASE_OUTPUT_DIRECT_DUTY:
+        motor->applied_output.valid = 1U;
+        motor->applied_output.electrical_angle_rad = motor->electrical_phase_angle;
+        motor->applied_output.ud = motor->ud;
+        motor->applied_output.uq = motor->uq;
+        SVPWM_ApplyDirectDuty(motor,
+                              motor->phase_output_state.sector,
+                              motor->phase_output_state.duty_a,
+                              motor->phase_output_state.duty_b,
+                              motor->phase_output_state.duty_c);
+        break;
+
+    default:
+        break;
     }
 }
 

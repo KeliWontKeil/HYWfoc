@@ -5,7 +5,7 @@
 
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
-#include "L1_Orchestration/foc_monitor_queue_types.h"
+#include "L2_Core/Runtime/foc_monitor_queue_types.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 

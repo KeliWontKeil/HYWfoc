@@ -318,6 +318,18 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 - `S` 组状态输出：`state.<name>=ENABLE/DISABLE`
 - `Y:X` 系统信息输出：`system.<name>=<value>`
 
+`Y:X` 额外暴露当前 Source/Control 架构状态，均为只读：
+
+| 字段 | 说明 |
+|------|------|
+| `system.source.active` | Source Manager 当前 active source id |
+| `system.source.standby` | Source Manager 当前 standby source id |
+| `system.source.region` | 当前 low/high/full control region |
+| `system.source.switching` | Source Manager 是否处于切换消抖窗口 |
+| `system.active_source.valid` | 当前 active source snapshot 是否有效 |
+| `system.openloop.source_state` | OpenLoop angle source 私有状态 |
+| `system.openloop.policy_state` | OpenLoop low-speed policy 私有状态 |
+
 格式化规则：
 
 - 浮点参数：3 位小数

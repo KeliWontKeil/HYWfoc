@@ -10,6 +10,7 @@
       <TargetName>GD32F30X_CL</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      <pArmCC>5060750::V5.06 update 6 (build 750)::ARMCC</pArmCC>
       <pCCUsed>5060750::V5.06 update 6 (build 750)::ARMCC</pCCUsed>
       <uAC6>0</uAC6>
       <TargetOption>
@@ -275,7 +276,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0x40000</Size>
+                <Size>0x30000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -312,7 +313,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>3</Optim>
+            <Optim>4</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -713,16 +714,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_bridge.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_bridge.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_estim.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_estim_encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_encoder.c</FilePath>
@@ -738,6 +729,21 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_smo.c</FilePath>
             </File>
             <File>
+              <FileName>foc_ctrl_source_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_source_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_openloop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_ctrl_sens_cogging_calib.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
@@ -746,21 +752,6 @@
               <FileName>foc_ctrl_sens_reinit.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_startup.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_startup.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_startup_openloop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_startup_openloop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_transition.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
             <File>
               <FileName>foc_filter_math.c</FileName>
@@ -1481,16 +1472,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_bridge.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_bridge.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_estim.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_estim_encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_encoder.c</FilePath>
@@ -1506,6 +1487,21 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_smo.c</FilePath>
             </File>
             <File>
+              <FileName>foc_ctrl_source_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_source_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_openloop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_ctrl_sens_cogging_calib.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
@@ -1514,21 +1510,6 @@
               <FileName>foc_ctrl_sens_reinit.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_startup.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_startup.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_startup_openloop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_startup_openloop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_transition.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
             <File>
               <FileName>foc_filter_math.c</FileName>
@@ -2249,16 +2230,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_bridge.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_bridge.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_estim.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_estim_encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_encoder.c</FilePath>
@@ -2274,6 +2245,21 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_smo.c</FilePath>
             </File>
             <File>
+              <FileName>foc_ctrl_source_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_source_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_openloop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
+            </File>
+            <File>
               <FileName>foc_ctrl_sens_cogging_calib.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
@@ -2282,21 +2268,6 @@
               <FileName>foc_ctrl_sens_reinit.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_startup.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_startup.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_startup_openloop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_startup_openloop.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_transition.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
             <File>
               <FileName>foc_filter_math.c</FileName>

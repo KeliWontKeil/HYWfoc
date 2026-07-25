@@ -6,13 +6,12 @@
 #include <stdio.h>
 
 #include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L3_Hal/foc_svpwm.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
-#include "L2_Core/Control/foc_ctrl_current_loop.h"
 #include "L3_Hal/foc_math_lut.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
-#include "L3_Hal/foc_svpwm.h"
 #include "L3_Hal/foc_sensor.h"
 #include "LS_Config/foc_config.h"
 
@@ -42,14 +41,21 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 {
     motor->uq = 0.0f;
     motor->ud = calib_uq;
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                        FOC_CONTROL_PHASE_REINIT,
+                                        motor->reinit_state.phase,
+                                        0.0f,
+                                        motor->ud,
+                                        motor->uq);
 }
 
 /* 归零输出 */
 static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
 {
-    FOC_CurrentControlOpenLoopStep(motor, 0.0f, 0.0f, dt_sec);
-    SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
+    (void)dt_sec;
+    FOC_ControlRecordPhaseOutputZero(motor,
+                                     FOC_CONTROL_PHASE_REINIT,
+                                     motor->reinit_state.phase);
 }
 
 /* sin/cos 矢量平均采样机械角度 */
@@ -249,7 +255,9 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             /* 退磁 */
             motor->uq = 0.0f;
             motor->ud = 0.0f;
-            FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+            FOC_ControlRecordPhaseOutputZero(motor,
+                                             FOC_CONTROL_PHASE_REINIT,
+                                             rs->phase);
 
             /* 进入方向/极对数粗步进 */
             rs->phase = FOC_REINIT_PHASE_DIR_STEP;
@@ -274,7 +282,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         /* 应用 D 轴对齐电压在目标电角度 */
         motor->uq = 0.0f;
         motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ud,
+                                            motor->uq);
 
         rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
         rs->sin_sum = 0.0f;
@@ -291,7 +304,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         motor->uq = 0.0f;
         motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ud,
+                                            motor->uq);
 
         if (rs->settle_cycles > 0U)
         {
@@ -379,7 +397,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         motor->uq = 0.0f;
         motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ud,
+                                            motor->uq);
 
         rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
         rs->sin_sum = 0.0f;
@@ -396,7 +419,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         motor->uq = 0.0f;
         motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ud,
+                                            motor->uq);
 
         if (rs->settle_cycles > 0U)
         {
@@ -419,6 +447,9 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         /* 归零输出 */
         ReInit_ZeroOutput(motor, dt_sec);
+
+        /* 强制 PWM 输出 50% 中点（零电压），绕过 ISR 延迟 */
+        SVPWM_ApplyDirectDuty(motor, 0U, 0.5f, 0.5f, 0.5f);
 
         /* 应用配置 */
         FOC_Control_ApplyConfig(motor);

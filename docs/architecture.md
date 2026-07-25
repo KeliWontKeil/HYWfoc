@@ -19,7 +19,7 @@ FOC_VSCODE/
 │   │   ├── LS_Config/           ← 符号定义、功能开关、默认值、编译期约束、类型定义、数据表
 │   │   ├── L1_Orchestration/    ← 应用编排（主循环、输出管理器、service handler、monitor queue types）
 │   │   ├── L2/
-│   │   │   ├── Control/         ← 控制算法（20 模块：含估计器/桥接/启动/过渡/有感标定）
+│   │   │   ├── Control/         ← 控制算法（Source Manager、Source、Control Policy、外环/电流环、特殊模式）
 │   │   │   ├── Protocol/        ← 协议帧解析、命令执行、输出适配
 │   │   │   └── Runtime/         ← 调度器、环形队列、调试流生成器
 │   │   └── L3/                  ← 数学变换、平台抽象API、传感器采样、SVPWM
@@ -44,7 +44,7 @@ FOC_VSCODE/
 |---|---|---|---|
 | `LS` 配置层 | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
 | `L1` 编排层 | `foc_core/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（RX/TX FIFO、monitor_elem_q）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
-| `L2/Control` | `foc_ctrl_*.c`（20 模块） | 控制算法：执行器/配置/初始化/外环/电流环/参数学习/补偿/估计器/桥接/启动策略/过渡管理/有感齿槽标定/有感重初始/执行输出 | 不持实例，操作传入的 `foc_motor_t` 指针 |
+| `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source、OpenLoop low-speed policy、估计器 source、桥接、外环、电流环、参数学习、补偿、有感齿槽标定、有感重初始化、执行输出 | 不持实例，操作传入的 `foc_motor_t` 指针 |
 | `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **单帧处理**：解析一帧 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（遥测策略配置） |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（提供 PollNextValue + 格式化接口，由 L1 双上下文调用） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
 | `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM | 无实例（纯函数或操作 motor 中的字段） |
@@ -68,56 +68,48 @@ FOC_VSCODE/
 
 系统以两个顶层结构体为数据中枢：
 
-- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`est_state`）、控制输入快照（`ctrl_input`）、各估计器私有状态、启动/过渡状态、各外环状态等。L1 实例化，L2 各块通过指针读/写。
+- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、active source snapshot、Source Manager 状态、Control Policy 状态、特殊输出状态、各 source 私有状态和外环状态等。L1 实例化，L2 各块通过指针读/写。
 - **`foc_system_t`**（定义于 `foc_system_types.h`）— 系统级数据结构，包含：
   - `cfg`：系统配置（遥测策略、报告模式，不随 reinit 重置）
   - `runtime`：运行时状态（调度器、调试流、RX/TX 队列缓冲区、monitor_elem_q 队列、指示器状态）
 
-### 估计器数据流（采样与控制解耦）
+### Source/Control 数据流（采样、角度来源与控制量生成解耦）
 
 ```
-┌─────────────────── 数据源层 ───────────────────┐
-│  Sensor_ReadCurrent → sensor_fast (电流)        │
-│  Sensor_ReadEncoder → sensor.mech_angle_rad     │
-│  Sensor_ReadVBUS    → sensor.vbus_*             │
-│                                                 │
-│  foc_ctrl_estim_* → 读原始角度/电流             │
-│     → 私有状态 → est_state.mech_angle_rad       │
-└───────────────────┬─────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────── 桥接层 ──────────────────────┐
-│  FOC_Bridge_CopyInput(motor)                    │
-│    est_state → ctrl_input (瞬时角度 + 电流)     │
-└───────────────────┬─────────────────────────────┘
-                    │
-                    ▼  (Control ISR)
-┌─────────────────── 控制算法层 ──────────────────┐
-│  外环: ctrl_input.mech_angle_rad                │
-│        → 累积角度维护 → electrical_phase_angle  │
-│  齿槽补偿: ctrl_input.mech_angle_rad            │
-│  下一周期 PWM ISR: 电流环 + SVPWM               │
-└─────────────────────────────────────────────────┘
+┌──────────────── PWM ISR：Source / 电流快线 ────────────────┐
+│  电流采样：Sensor_ReadCurrent → sensor_fast → 电流环         │
+│  Source 更新：OpenLoop / Encoder / SMO / HFI snapshot       │
+│  Source Manager：选择唯一 active_source_state               │
+│  发布：active_source_state → electrical_phase_angle          │
+│  输出：电流环消费 iq_target + electrical_phase_angle → SVPWM │
+└───────────────────────┬────────────────────────────────────┘
+                        │
+                        ▼
+┌──────────────── Control ISR：Control 慢线 ─────────────────┐
+│  慢速 sensor/VBUS/current snapshot 同步                      │
+│  Control Policy / 外环：读取 active_source_state 生成 iq_target │
+│  特殊 phase：推进状态机并记录 phase_output_state             │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **关键约束**：
-- 控制算法只读 `ctrl_input`，不直接接触任何估计器的内部状态
-- 估计器只写 `est_state`，桥接层统一拷贝到 `ctrl_input`
+- 控制算法只读 `active_source_state` 和控制状态，不直接接触任何 source 的私有状态
+- Source Manager 在 PWM ISR 中发布唯一 `active_source_state`，不再复制第二份控制输入快照
 - `Sensor_ReadEncoder` 作为 L3 硬件抽象层函数保留不变
 
-### 估计器体系
+### Source 体系
 
-所有反馈源（编码器、SMO、HFI）通过统一接口写入 `motor->est_state`：
+角度/速度来源统一称为 Source。Encoder、SMO、HFI、FLUX 是观测或传感估计 source，OpenLoop 是开环角度 source。
 
-| 估计器 | 类型宏 | 需要启动策略 | 运行节拍 |
-|--------|--------|------------|---------|
-| ENCODER | `FOC_ESTIMATOR_TYPE_ENCODER` | 否 | PWM ISR (FAST) 或 Control ISR (SLOW) |
-| SMO | `FOC_ESTIMATOR_TYPE_SMO` | 是（强拖或 HFI） | PWM ISR |
-| HFI | `FOC_ESTIMATOR_TYPE_HFI` | 否 | PWM ISR |
-| FLUX | `FOC_ESTIMATOR_TYPE_FLUX` | 预留 | — |
+| Source | 类型宏 | 私有状态 | 运行/发布位置 |
+|--------|--------|----------|---------------|
+| ENCODER | `FOC_SOURCE_TYPE_ENCODER` | `estim_encoder_state` / `est_state` snapshot | PWM ISR Source Manager 发布；硬件采样可在 FAST PWM 或 SLOW Control 线 |
+| OPENLOOP | `FOC_SOURCE_TYPE_OPENLOOP` | `openloop_angle_source_state` / `openloop_source_snapshot` | PWM ISR Source Manager 运行并发布 |
+| SMO | `FOC_SOURCE_TYPE_SMO` | `estim_smo_state` / `est_state` snapshot | PWM ISR Source Manager 运行并发布 |
+| HFI | `FOC_SOURCE_TYPE_HFI` | `estim_hfi_state` / `est_state` snapshot | PWM ISR Source Manager 运行并发布 |
+| FLUX | `FOC_SOURCE_TYPE_FLUX` | 预留 | 预留 |
 
-双估计器过渡机制：过渡期同时运行主/副估计器（`estimator_step_fn` / `estimator_step_fn_alt`），
-桥接层按 `blend_factor` 加权混合两路角度。
+Source Manager 可同时运行 low/high source snapshot，但每个 PWM 周期只发布一个 active source。控制策略不得决定角度来源，Source Manager 也不得生成 `iq_target`。
 
 ## 数据流设计
 
@@ -130,9 +122,8 @@ FOC_VSCODE/
 │  Monitor ISR: 快照 sensor/motor 关键字段 →      │
 │               DebugStream_PollNextValue 逐元素   │
 │               入 monitor_elem_q                  │
-│  Control ISR: 4 阶段（传感器→估计器→桥接→控制） │
-│  PWM ISR: 4 阶段（插值采样→电流环→角度同步+     │
-│           估计器→SVPWM）                         │
+│  Control ISR: 传感器同步→active source bridge→控制策略 │
+│  PWM ISR: phase 路由→采样/电流环→Source Manager→SVPWM │
 └──────────────────────────────────────────────┘
                        │
                        ▼
@@ -215,7 +206,7 @@ MonitorTrigger ISR:
 2. **L2 层不碰队列操作**。协议处理只返回结果结构体，调试流提供 ISR 安全的 `PollNextValue` 接口和主循环格式化函数，入队/出队由 L1 编排。
 3. **L1 是唯一编排者**。ISR 读帧→入队、ISR 快照→入 monitor_elem_q、主循环出队→处理→入 TX 队列、TX 出队→发送，全由 L1 控制。
 4. **DebugStream 双接口**：`PollNextValue`（ISR 上下文调用，跑 state machine 取值）和 `Format*` 函数（主循环上下文调用，格式化字符串），两者分离确保采样时机正确。
-5. **DebugStream 数据源**：角度从 `ctrl_input.mech_angle_rad` 和 `motor->mech_angle_accum_rad` 读取，反映控制算法实际看到的状态，而非独立采集原始传感器数据。
+5. **DebugStream 数据源**：控制角度从 `active_source_state.mech_angle_rad` 和 `motor->mech_angle_accum_rad` 读取，原始编码器角度仍从 `sensor.mech_angle_rad` 读取。
 
 ## 控制算法链
 
@@ -228,53 +219,51 @@ L2/Control 按 `foc_ctrl_XX_name.c` 命名，模块划分：
 | C11 | `foc_ctrl_executor` | 算法入口：外环/内环/开环/补偿入口，ISR 路径与外环调度 |
 | C12 | `foc_ctrl_init` | 初始化与标定 |
 | C13 | `foc_ctrl_cfg` | 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter） |
-| C14 | `foc_ctrl_bridge` | 桥接层：est_state → ctrl_input 拷贝 |
-| C15 | `foc_ctrl_estim` | 估计器选择/注册中心 |
-| C16 | `foc_ctrl_estim_encoder` | 编码器估计器（从 sensor 读原始角度，写入 est_state） |
-| C17 | `foc_ctrl_estim_smo` | SMO 估计器 |
-| C18 | `foc_ctrl_estim_hfi` | HFI 估计器 |
-| C19 | `foc_ctrl_estim_flux` | FLUX 估计器（预留） |
+| C14 | `foc_ctrl_source_mgr` | Source Manager：在 PWM ISR 中运行/读取 source、选择 active source、发布唯一 source view 与 `electrical_phase_angle` |
+| C15 | `foc_ctrl_source_openloop` | OpenLoop angle source：维护虚拟角度/速度/ramp，输出 source snapshot |
+| C16 | `foc_ctrl_openloop` | OpenLoop low-speed policy：低速域控制策略，生成 `iq_target` |
+| C17 | `foc_ctrl_estim_encoder` | Encoder source 实现（从 sensor 读原始角度，写入 source snapshot） |
+| C18 | `foc_ctrl_estim_smo` | SMO source 实现 |
+| C19 | `foc_ctrl_estim_hfi` | HFI source 实现 |
+| C20 | `foc_ctrl_estim_flux` | FLUX source 实现（预留） |
 | C21 | `foc_ctrl_outer_loop` | 速度/位置外环 |
 | C22 | `foc_ctrl_current_loop` | 电流内环 |
 | C23 | `foc_ctrl_param_learn` | 电机参数学习 |
 | C24 | `foc_ctrl_compensation` | 齿槽补偿 |
 | C25 | `foc_ctrl_sens_cogging_calib` | 有感齿槽标定（非阻塞状态机，由 L1 通过 control_phase 路由调用） |
 | C26 | `foc_ctrl_sens_reinit` | 有感非阻塞重初始化（由 L1 通过 control_phase 路由调用） |
-| C27 | `foc_ctrl_startup` | 启动策略管理 |
-| C28 | `foc_ctrl_startup_openloop` | 强拖启动 |
-| C29 | `foc_ctrl_transition` | 估计器过渡管理（加权混合） |
-| C31 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
+| C27 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
 
 ### 控制运行链
 
 ```
 初始化链：FOC_MotorInit → FOC_ControlConfigResetDefault
-       → FOC_EstimEncoder_Init → FOC_Estimator_Select
+       → FOC_Estim* / OpenLoop source/policy 初始化
+       → FOC_SourceMgr_Init
        → FOC_ControlExecutor_Init → FOC_Control_ApplyConfig
 
-Control ISR（4 阶段，严格串行，不可调换）：
+Control ISR（低频控制线，严格不做 source 选择）：
   阶段1：传感器读取
     → Sensor_ReadEncoder / Sensor_ReadVBUS
     → Sensor_SyncCurrentSnapshot（将 ISR 电流同步到 motor->sensor）
     → 有效性检查（adc_valid + [encoder] encoder_valid）
-  阶段2：估计器更新
-    → motor->estimator_step_fn(motor, &motor->est_state, dt)
-  阶段3：桥接拷贝
-    → FOC_Bridge_CopyInput(motor)：est_state → ctrl_input
-  阶段4：控制执行
-    → 按 control_phase 路由：STARTUP/NORMAL/COGGING_CALIB/REINIT
-    → NORMAL: FOC_ControlExecutor_RunCycle → RunOuterLoop → 外环控制
+  阶段2：按 control_phase 运行状态机
+    → NORMAL：Control Policy/外环生成 `iq_target`
+    → COGGING_CALIB/REINIT：特殊状态机记录 `phase_output_state`
 
 PWM ISR（4 阶段，严格串行，不可调换）：
   阶段1：插值与采样
     → SVPWM_InterpolationISR → Sensor_ReadCurrent
     → [FAST] Sensor_ReadEncoder → Sensor_AccumulateEcycle
-  阶段2：电流环
+  阶段2：特殊 phase 输出门控
+    → COGGING_CALIB/REINIT：消费 `phase_output_state` 并直接输出，跳过 NORMAL 标准链路
+  阶段3：NORMAL 电流环
     → FOC_CurrentControlStep → Clarke/Park → PID → ud/uq
-  阶段3：角度同步 + 估计器
+  阶段4：NORMAL Source Manager
     → [FAST] sensor_fast → sensor 角度同步（仅拷贝 raw_value）
-    → motor->estimator_step_fn(motor, &motor->est_state, dt)
-  阶段4：SVPWM 输出
+    → 运行/读取 OpenLoop、Encoder、SMO、HFI 等 source snapshot
+    → 选择 active source 并发布唯一 `active_source_state` / `electrical_phase_angle`
+  阶段5：NORMAL SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime
 
 配置应用：
@@ -298,22 +287,26 @@ PWM ISR（4 阶段，严格串行，不可调换）：
 typedef enum {
     FOC_CONTROL_PHASE_NORMAL        = 0U,  // 正常控制
     FOC_CONTROL_PHASE_COGGING_CALIB = 1U,  // 有感齿槽标定
-    FOC_CONTROL_PHASE_REINIT        = 2U,  // 有感重初始化
-    FOC_CONTROL_PHASE_STARTUP       = 3U   // 无感启动策略
+    FOC_CONTROL_PHASE_REINIT        = 2U   // 有感重初始化
 } foc_control_phase_t;
 ```
+
+低速 OpenLoop 强拖不再作为独立 L1 `control_phase`。它在 `NORMAL`
+相位内由 Source Manager 发布 OpenLoop angle source，并由 OpenLoop low-speed
+policy 生成低速控制量；切到 SMO/HFI/Encoder 等高速或物理源由 PWM ISR 中的
+Source Manager 完成。
 
 ## 调度模型
 
 调度器位于 `L2/Runtime/foc_task_scheduler`，管理三种任务速率：
 
 - **服务任务（中速）**：ISR 中读帧入 RX 队列 + 更新指示器，主循环中出队解析、参数同步
-- **控制主循环（快速）**：Control ISR 4 阶段（传感器→估计器→桥接→控制）
+- **控制主循环（快速）**：Control ISR 同步慢速数据、消费 active source view、运行 Control Policy/特殊状态机
 - **监测任务（低速）**：ISR 中快照 sensor 数据 → 入 monitor_elem_q，主循环中出队格式化输出
 
 控制节拍源与 PWM 更新中断源分离：
 - 控制节拍源驱动调度器回调
-- PWM 更新中断源驱动高速电流环 + 估计器路径
+- PWM 更新中断源驱动高速电流环、Source Manager 和特殊输出路径
 - 采样触发与 PWM 对齐
 
 ## 宏裁剪口径
@@ -324,8 +317,8 @@ typedef enum {
 
 1. 传感器硬件：`FOC_SENSOR_ENCODER_ENABLE`
 2. 估计器：`FOC_ESTIMATOR_ENCODER_ENABLE`、`FOC_ESTIMATOR_SMO_ENABLE`、`FOC_ESTIMATOR_HFI_ENABLE`、`FOC_ESTIMATOR_FLUX_ENABLE`
-3. 启动策略：`FOC_STARTUP_OPENLOOP_ENABLE`
-4. 过渡管理：`FOC_TRANSITION_ENABLE`
+3. OpenLoop 角度源/低速策略：`FOC_OPENLOOP_SOURCE_ENABLE`
+4. Source 切换：`FOC_SOURCE_SWITCH_ENABLE`
 5. 齿槽补偿特性（`FOC_COGGING_COMP_ENABLE` + `FOC_COGGING_CALIB_ENABLE`）
 6. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
 
@@ -334,8 +327,8 @@ typedef enum {
 | 场景 | 配置 |
 |------|------|
 | 有感 FOC | `SENSOR_ENCODER=ENABLE`, `ESTIMATOR_ENCODER=ENABLE`, `SMO/HFI=DISABLE`, `COGGING=ENABLE` |
-| 强拖→SMO 无感 | `SENSOR_ENCODER=DISABLE`, `ESTIMATOR_ENCODER=DISABLE`, `SMO=ENABLE`, `STARTUP_OPENLOOP=ENABLE` |
-| HFI→SMO 无感 | `SENSOR_ENCODER=DISABLE`, `SMO=ENABLE`, `HFI=ENABLE`, `TRANSITION=ENABLE` |
+| 强拖→SMO 无感 | `SENSOR_ENCODER=DISABLE`, `ESTIMATOR_ENCODER=DISABLE`, `SMO=ENABLE`, `OPENLOOP_SOURCE=ENABLE` |
+| HFI→SMO 无感 | `SENSOR_ENCODER=DISABLE`, `SMO=ENABLE`, `HFI=ENABLE`, `SOURCE_SWITCH=ENABLE` |
 
 ### 协议裁剪开关
 
@@ -354,8 +347,8 @@ typedef enum {
    - 估计器依赖编码器硬件（`ESTIMATOR_ENCODER` → `SENSOR_ENCODER`）
    - 齿槽补偿/标定依赖编码器硬件
    - 无感估计器需电流采样
-   - SMO 需至少一种启动策略（当编码器不可用时）
-   - 过渡管理需至少两个估计器同时使能
+   - SMO 需至少一种低速角度 source（当编码器不可用时）
+   - Source 切换配置需满足 low/high source 组合约束
 
 ## 滤波器子系统
 

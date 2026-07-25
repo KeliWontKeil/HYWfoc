@@ -14,10 +14,8 @@
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
-#include "L2_Core/Control/foc_ctrl_estim.h"
-#include "L2_Core/Control/foc_ctrl_bridge.h"
-#include "L2_Core/Control/foc_ctrl_startup.h"
-#include "L2_Core/Control/foc_ctrl_transition.h"
+#include "L2_Core/Control/foc_ctrl_openloop.h"
+#include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -87,20 +85,14 @@ void FOC_App_Init(void)
                      FOC_App_OnPwmUpdateISR);
     FOC_Init_MotorAndCalib(&motor);
 
-    /* 根据策略宏确定初始 control_phase */
-#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
-    motor.state.control_phase = FOC_CONTROL_PHASE_STARTUP;
-    FOC_Startup_Init(&motor);
-#else
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
+    FOC_OpenLoopLowSpeedPolicy_Init(&motor);
 #endif
 
-    /* 初始化迁移管理 */
-#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
-    FOC_Transition_Init(&motor,
-                        (uint8_t)FOC_CONTROL_LOW_SOURCE,
-                        (uint8_t)FOC_CONTROL_HIGH_SOURCE);
-#endif
+    FOC_SourceMgr_Init(&motor,
+                       (uint8_t)FOC_CONTROL_LOW_SOURCE,
+                       (uint8_t)FOC_CONTROL_HIGH_SOURCE);
 
     FOC_Init_Verify(&motor, &motor.sensor);
     FOC_OutputMgr_WriteStartupInfo(&motor);
@@ -119,12 +111,6 @@ void FOC_App_Start(void)
 
 void FOC_App_Loop(void)
 {
-    if (motor.state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB)
-    {
-        FOC_OutputMgr_FlushQueue(&g_sys);
-        return;
-    }
-
     /* ---- Monitor 段 ---- */
     if (g_sys.runtime.monitor_task_pending != 0U)
     {
@@ -291,47 +277,13 @@ void FOC_App_ControlTrigger(void)
     }
 #endif
 
-    /* 阶段2：桥接 */
-    FOC_Bridge_CopyInput(&motor);
-
-    /* 阶段3：控制执行 */
+    /* 阶段2：控制执行 */
     switch (phase)
     {
     case FOC_CONTROL_PHASE_NORMAL:
         if (motor.state.motor_enabled == 0U) return;
         cycle_result = FOC_ControlExecutor_RunCycle(&motor, FOC_CONTROL_DT_SEC);
         FOC_App_HandleResult(cycle_result);
-        break;
-
-    case FOC_CONTROL_PHASE_STARTUP:
-        FOC_Startup_RunStep(&motor, FOC_CONTROL_DT_SEC);
-        if (FOC_Startup_IsComplete(&motor) != 0U)
-        {
-            motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
-
-            /* 启动完成：设置 primary=SMO，清空 secondary */
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-            FOC_Estimator_Select(&motor, FOC_ESTIMATOR_TYPE_SMO);
-            motor.estimator_step_fn_alt = 0;
-#endif
-
-            /* 如果 HIGH!=NONE && HIGH!=SMO，重新初始化 Transition */
-#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
-            if ((FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_NONE) &&
-                (FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_SMO))
-            {
-                FOC_Transition_Init(&motor,
-                                    (uint8_t)FOC_ESTIMATOR_TYPE_SMO,
-                                    (uint8_t)FOC_CONTROL_HIGH_SOURCE);
-            }
-            else
-            {
-                FOC_Transition_Init(&motor,
-                                    (uint8_t)FOC_ESTIMATOR_TYPE_SMO,
-                                    (uint8_t)FOC_ESTIMATOR_TYPE_SMO);
-            }
-#endif
-        }
         break;
 
     case FOC_CONTROL_PHASE_COGGING_CALIB:

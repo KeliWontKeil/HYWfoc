@@ -34,18 +34,18 @@
   #define FOC_ESTIMATOR_FLUX_ENABLE     FOC_CFG_DISABLE
 #endif
 
-/* 推导：是否需要 STARTUP（仅当低速=强拖） */
+/* 推导：是否需要 OpenLoop angle source / low-speed policy */
 #if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
-  #define FOC_STARTUP_OPENLOOP_ENABLE   FOC_CFG_ENABLE
+  #define FOC_OPENLOOP_SOURCE_ENABLE    FOC_CFG_ENABLE
 #else
-  #define FOC_STARTUP_OPENLOOP_ENABLE   FOC_CFG_DISABLE
+  #define FOC_OPENLOOP_SOURCE_ENABLE    FOC_CFG_DISABLE
 #endif
 
-/* 推导：是否需要 TRANSITION（低速≠高速 且有高速） */
+/* 推导：是否需要 Source Manager 低/高速 source 切换 */
 #if (FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_NONE) && (FOC_CONTROL_LOW_SOURCE != FOC_CONTROL_HIGH_SOURCE)
-  #define FOC_TRANSITION_ENABLE         FOC_CFG_ENABLE
+  #define FOC_SOURCE_SWITCH_ENABLE      FOC_CFG_ENABLE
 #else
-  #define FOC_TRANSITION_ENABLE         FOC_CFG_DISABLE
+  #define FOC_SOURCE_SWITCH_ENABLE      FOC_CFG_DISABLE
 #endif
 
 #include "LS_Config/foc_cfg_init_values.h"

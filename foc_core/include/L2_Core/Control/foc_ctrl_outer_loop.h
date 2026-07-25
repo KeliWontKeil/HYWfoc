@@ -1,4 +1,4 @@
-﻿#ifndef FOC_CONTROL_C21_OUTER_LOOP_H
+#ifndef FOC_CONTROL_C21_OUTER_LOOP_H
 #define FOC_CONTROL_C21_OUTER_LOOP_H
 
 #include <stdint.h>

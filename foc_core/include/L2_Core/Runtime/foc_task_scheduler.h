@@ -6,7 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "L1_Orchestration/foc_system_types.h"
 #include "L2_Core/Runtime/foc_scheduler_types.h"
 #include "LS_Config/foc_config.h"
 

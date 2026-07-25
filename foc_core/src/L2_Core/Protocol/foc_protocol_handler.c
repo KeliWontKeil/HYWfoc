@@ -958,6 +958,36 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
     snprintf(out, sizeof(out), "system.pole_pairs=%u\r\n", (unsigned int)motor->pole_pairs);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
+    snprintf(out, sizeof(out), "system.source.active=%u\r\n",
+             (unsigned int)motor->source_mgr_state.active_source);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.standby=%u\r\n",
+             (unsigned int)motor->source_mgr_state.standby_source);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.region=%u\r\n",
+             (unsigned int)motor->source_mgr_state.control_region);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.switching=%u\r\n",
+             (unsigned int)motor->source_mgr_state.switch_in_progress);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.active_source.valid=%u\r\n",
+             (unsigned int)motor->active_source_state.valid);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    snprintf(out, sizeof(out), "system.openloop.source_state=%u\r\n",
+             (unsigned int)motor->openloop_angle_source_state.phase);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.openloop.policy_state=%u\r\n",
+             (unsigned int)motor->openloop_low_speed_policy_state.phase);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+#endif
+
     snprintf(out, sizeof(out), "system.mech_zero_rad=%.3f\r\n", motor->mech_angle_at_elec_zero_rad);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 

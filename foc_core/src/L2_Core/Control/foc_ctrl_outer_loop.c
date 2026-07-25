@@ -159,13 +159,12 @@ void FOC_SpeedOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
     if ((motor == 0) || (speed_pid == 0)) return;
 
     dt_sec = FOC_NormalizeDt(dt_sec);
-    mech_angle_rad = motor->ctrl_input.mech_angle_rad;
+    mech_angle_rad = motor->active_source_state.mech_angle_rad;
 
     speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, mech_angle_rad,
                                                        speed_ref_rad_s, dt_sec);
     motor->iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
     motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
-    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor, mech_angle_rad);
 }
 
 void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
@@ -187,7 +186,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
     if ((motor == 0) || (speed_pid == 0) || (angle_hold_pid == 0)) return;
 
     dt_sec = FOC_NormalizeDt(dt_sec);
-    mech_angle_rad = motor->ctrl_input.mech_angle_rad;
+    mech_angle_rad = motor->active_source_state.mech_angle_rad;
     angle_ref_rad *= motor->direction;
 
     FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
@@ -225,5 +224,4 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
 
     motor->iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
     motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
-    motor->electrical_phase_angle = FOC_ControlMechanicalToElectricalAngle(motor, mech_angle_rad);
 }

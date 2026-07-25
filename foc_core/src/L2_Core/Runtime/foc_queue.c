@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Runtime/foc_queue.h"
+#include "L2_Core/Runtime/foc_queue.h"
 
 #include <string.h>
 

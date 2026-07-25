@@ -5,8 +5,8 @@
 
 #include "L2_Core/foc_ctrl_types.h"
 #include "L2_Core/Protocol/foc_snapshot_types.h"
+#include "L2_Core/Runtime/foc_monitor_queue_types.h"
 #include "L2_Core/Runtime/foc_scheduler_types.h"
-#include "L1_Orchestration/foc_monitor_queue_types.h"
 #include "LS_Config/foc_config.h"
 
 /*

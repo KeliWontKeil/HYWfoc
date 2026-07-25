@@ -8,7 +8,7 @@
 
 static float SVPWM_Sqrt(float value)
 {
-    return (float)sqrt((double)value);
+    return sqrtf(value);
 }
 
 static float SVPWM_Sin(float value)
@@ -291,12 +291,13 @@ void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
                                             sv->duty_c_current);
 }
 
-void SVPWM_UpdateRuntime(foc_motor_t *motor,
-                         float phase_a,
-                         float phase_b,
-                         float phase_c,
-                         float voltage_command,
-                         float vbus_voltage)
+void SVPWM_Update(foc_motor_t *motor,
+                  float phase_a,
+                  float phase_b,
+                  float phase_c,
+                  float voltage_command,
+                  float vbus_voltage,
+                  uint8_t direct_output)
 {
     uint8_t sector;
     float duty_a, duty_b, duty_c;
@@ -307,26 +308,14 @@ void SVPWM_UpdateRuntime(foc_motor_t *motor,
                         voltage_command, vbus_voltage,
                         &sector, &duty_a, &duty_b, &duty_c);
 
-    SVPWM_SetRuntimeDutyTarget(motor, sector, duty_a, duty_b, duty_c);
-}
-
-void SVPWM_UpdateDirect(foc_motor_t *motor,
-                        float phase_a,
-                        float phase_b,
-                        float phase_c,
-                        float voltage_command,
-                        float vbus_voltage)
-{
-    uint8_t sector;
-    float duty_a, duty_b, duty_c;
-
-    if (motor == 0) return;
-
-    SVPWM_CalculateDuty(phase_a, phase_b, phase_c,
-                        voltage_command, vbus_voltage,
-                        &sector, &duty_a, &duty_b, &duty_c);
-
-    SVPWM_ApplyDirectDuty(motor, sector, duty_a, duty_b, duty_c);
+    if (direct_output != 0U)
+    {
+        SVPWM_ApplyDirectDuty(motor, sector, duty_a, duty_b, duty_c);
+    }
+    else
+    {
+        SVPWM_SetRuntimeDutyTarget(motor, sector, duty_a, duty_b, duty_c);
+    }
 }
 
 void SVPWM_InterpolationISR(foc_motor_t *motor)

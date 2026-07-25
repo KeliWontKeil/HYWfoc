@@ -31,8 +31,8 @@
    - Monitor 段：调试流生成器逐行输出 → 入 TX 队列
    - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列、配置脏检查）
    - TX 消费段：TX 队列出队 → 平台发送
-5. L2/Control 模块命名：`foc_ctrl_executor/cfg/init/outer_loop/current_loop/param_learn/compensation/cogging_calib/reinit/actuation`。
-   齿槽标定（cogging_calib）和重初始化（reinit）以非阻塞状态机形式由 L1 控制任务通过 control_phase 路由调用，不嵌入 RunCycle。
+5. L2/Control 模块命名按职责分组：`foc_ctrl_source_mgr`、`foc_ctrl_source_*`、`foc_ctrl_policy_*`、`foc_ctrl_estim_*`、`foc_ctrl_executor/cfg/init/outer_loop/current_loop/param_learn/compensation/sens_cogging_calib/sens_reinit/actuation`。
+   Source Manager 只在 PWM ISR 的 NORMAL 标准流程中发布 active source；Control Policy / 外环在 Control ISR 中生成 `iq_target`。齿槽标定和重初始化以特殊 `control_phase` 状态机推进，由 PWM ISR 特殊输出流程应用输出。
 6. L2/Runtime 新增工具模块（如队列）需同步更新 `builder.params`。
 7. L2 层不持有任何队列实例，队列存储由 L1 在 `foc_runtime_ctx_t` 中分配。
 
@@ -48,7 +48,7 @@
 1. 结构、依赖、时序变化：更新 `docs/architecture.md`。
 2. 流程或协作变化：更新 `AI_INITIALIZATION.md` 与 `.github/*.md`。
 3. 版本基线与任务阶段变化：更新 `NEXT_MISSION.md` 与 `CHANGELOG.md`。
-4. 协议命令、裁剪开关、默认值变化：更新 `docs/protocol-parameters.md` 与实例协议文档。
+4. 协议命令、遥测输出、裁剪开关、默认值变化：更新 `docs/protocol-parameters.md` 与实例协议文档。
 5. 不新增"平行事实源"文档，优先更新已有主文档。
 
 ## P0 可维护性验收
