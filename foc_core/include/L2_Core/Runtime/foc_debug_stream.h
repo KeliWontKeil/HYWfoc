@@ -4,9 +4,8 @@
 #include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
-#include "L2_Core/Protocol/foc_snapshot_types.h"
+#include "L2_Core/Protocol/foc_protocol_types.h"
 #include "L2_Core/Runtime/foc_monitor_queue_types.h"
-#include "L2_Core/Runtime/foc_scheduler_types.h"
 #include "LS_Config/foc_config.h"
 
 /*
@@ -57,7 +56,7 @@ void DebugStream_SetExecutionCycles(debug_stream_state_t *ds, uint32_t exec_cycl
  */
 uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                                    const foc_motor_t *motor,
-                                   const telemetry_policy_snapshot_t *telemetry,
+                                   const foc_report_config_t *report,
                                    monitor_element_t *elem_out);
 
 /* ---- 主循环级接口 ---- */
@@ -80,7 +79,7 @@ uint16_t DebugStream_FormatOscLine(char *osc_buffer, uint16_t max_len);
 
 uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
                                   const foc_motor_t *motor,
-                                  const telemetry_policy_snapshot_t *telemetry,
+                                  const foc_report_config_t *report,
                                   char *line_out,
                                   uint16_t line_max);
 

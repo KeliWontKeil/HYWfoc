@@ -7,8 +7,8 @@
 - English Name：HYW FOC（想不到怎么翻译好，先这样用首字母吧）
 
 - 当前项目状态：单电机 FOC 驱动库（有感稳定，架构已扩展至无感）
-- 当前稳定基线：v2.0.1
-- 下一活跃目标版本：v2.x.x（无感算法开发）
+- 当前稳定基线：v2.0.2
+- 下一活跃目标版本：v2.1.0（待定）
 
 ## 何意味？（这个项目是什么）
 
@@ -84,7 +84,7 @@ B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库
 
 ```text
 FOC_VSCODE/
-├── foc_core/                       # 核心可复用库（LS + L1-L3 + L41 + L42）
+├── foc_core/                       # 核心可复用库（LS + L1-L3）
 │   ├── include/
 │   │   ├── LS_Config/         # 配置宏、类型定义、数据表
 │   │   ├── L1_Orchestration/  # 编排层头文件
@@ -122,7 +122,7 @@ FOC_VSCODE/
 1. 阅读 [docs/README.md](docs/README.md) 了解文档分层与阅读顺序。
 2. 阅读 [docs/architecture.md](docs/architecture.md) 理解分层架构与接口边界。
 3. 阅读 [docs/development.md](docs/development.md) 了解通用开发与验证流程。
-4. 阅读 [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md) 了解协议与参数语义。
+4. 阅读 [docs/protocol-parameters.md](docs/protocol-parameters.md) 了解协议与参数语义。
 5. 阅读完文档后，你就可以开始阅读代码了，然后慢慢的一步一步尝试把这玩意整到你自己的板子上面去......~~什么年代了还在搞传统开发~~
 
 #### 路径 B：从 GD32F303_FOCExplore 开始上手
@@ -190,7 +190,7 @@ https://github.com/KeliWontKeil/PortOSC
 ## 其他开发相关
 ### 开发计划
 
-下版本目标：v2.0.0 有感完全版（可能不会继续优化了，直接进入无感阶段）：
+下版本目标：v2.0.x 有感完全版：
 - 控制效果优化
 - 文档全面审计与补充
 
@@ -209,7 +209,7 @@ https://github.com/KeliWontKeil/PortOSC
 - [docs/README.md](docs/README.md)：库文档索引与边界规则
 - [docs/architecture.md](docs/architecture.md)：架构、数据流、依赖关系
 - [docs/development.md](docs/development.md)：通用开发流程与约束
-- [docs/protocol-parameters-bilingual.md](docs/protocol-parameters-bilingual.md)：协议与参数定义
+- [docs/protocol-parameters.md](docs/protocol-parameters.md)：协议与参数定义
 
 #### 实例级文档（以具体项目为准的具体工程实例文档）
 - [examples/GD32F303_FOCExplore/README.md](examples/GD32F303_FOCExplore/README.md)：实例入口文档
@@ -240,4 +240,3 @@ MIT License，详见 [LICENSE](LICENSE)。
 第三方组件许可证声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ---
-

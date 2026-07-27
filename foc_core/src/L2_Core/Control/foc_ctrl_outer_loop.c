@@ -48,7 +48,7 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, const foc_motor_t *motor,
 
     dt_sec = FOC_NormalizeDt(dt_sec);
     error = target - measurement;
-    if (fabsf(error) <= motor->angle_hold_pid_deadband_rad)
+    if (fabsf(error) <= motor->cfg.angle_hold_pid_deadband_rad)
     {
         pid->integral = 0.0f;
         pid->prev_error = 0.0f;
@@ -56,7 +56,7 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, const foc_motor_t *motor,
     }
 
     pid->integral += error * dt_sec;
-    pid->integral = Math_ClampFloat(pid->integral, -motor->angle_hold_integral_limit, motor->angle_hold_integral_limit);
+    pid->integral = Math_ClampFloat(pid->integral, -motor->cfg.angle_hold_integral_limit, motor->cfg.angle_hold_integral_limit);
     derivative = (error - pid->prev_error) / dt_sec;
     output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
     output = Math_ClampFloat(output, pid->out_min, pid->out_max);
@@ -66,7 +66,7 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid, const foc_motor_t *motor,
         float i_min = (pid->out_min - pid->kp * error - pid->kd * derivative) / pid->ki;
         float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;
         pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
-        pid->integral = Math_ClampFloat(pid->integral, -motor->angle_hold_integral_limit, motor->angle_hold_integral_limit);
+        pid->integral = Math_ClampFloat(pid->integral, -motor->cfg.angle_hold_integral_limit, motor->cfg.angle_hold_integral_limit);
     }
     pid->prev_error = error;
     return output;
@@ -81,9 +81,9 @@ static void FOC_ResetPIDState(foc_pid_t *pid)
 
 static void FOC_ResetSpeedState(foc_motor_t *motor)
 {
-    motor->outer_loop_state.speed_err_accum_rad = 0.0f;
-    motor->outer_loop_state.prev_mech_signed_rad = 0.0f;
-    motor->outer_loop_state.speed_state_valid = 0U;
+    motor->outer_loop.speed_err_accum_rad = 0.0f;
+    motor->outer_loop.prev_mech_signed_rad = 0.0f;
+    motor->outer_loop.speed_state_valid = 0U;
 }
 
 static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_angle_rad)
@@ -91,20 +91,20 @@ static void FOC_UpdateAccumulatedMechanicalAngle(foc_motor_t *motor, float mech_
     float delta;
     if (motor == 0) return;
 
-    if (motor->mech_angle_prev_valid == 0U)
+    if (motor->outer_loop.prev_valid == 0U)
     {
-        motor->mech_angle_prev_rad = mech_angle_rad;
-        motor->mech_angle_accum_rad = mech_angle_rad;
-        motor->mech_angle_prev_valid = 1U;
+        motor->outer_loop.prev_rad = mech_angle_rad;
+        motor->outer_loop.accum_rad = mech_angle_rad;
+        motor->outer_loop.prev_valid = 1U;
         return;
     }
 
-    delta = Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_prev_rad);
-    if (fabsf(delta) >= motor->min_mech_angle_accum_delta_rad)
+    delta = Math_WrapRadDelta(mech_angle_rad - motor->outer_loop.prev_rad);
+    if (fabsf(delta) >= motor->cfg.min_mech_angle_accum_delta_rad)
     {
-        motor->mech_angle_accum_rad += delta;
+        motor->outer_loop.accum_rad += delta;
     }
-    motor->mech_angle_prev_rad = mech_angle_rad;
+    motor->outer_loop.prev_rad = mech_angle_rad;
 }
 
 static float FOC_UpdateSpeedAngleError(foc_motor_t *motor, float mech_angle_rad,
@@ -116,32 +116,32 @@ static float FOC_UpdateSpeedAngleError(foc_motor_t *motor, float mech_angle_rad,
 
     if (motor == 0) return 0.0f;
     dt_sec = FOC_NormalizeDt(dt_sec);
-    mech_signed_rad = motor->direction * mech_angle_rad;
+    mech_signed_rad = motor->params.direction * mech_angle_rad;
 
-    if (motor->outer_loop_state.speed_state_valid == 0U)
+    if (motor->outer_loop.speed_state_valid == 0U)
     {
-        motor->outer_loop_state.prev_mech_signed_rad = mech_signed_rad;
-        motor->outer_loop_state.speed_err_accum_rad = 0.0f;
-        motor->outer_loop_state.speed_state_valid = 1U;
+        motor->outer_loop.prev_mech_signed_rad = mech_signed_rad;
+        motor->outer_loop.speed_err_accum_rad = 0.0f;
+        motor->outer_loop.speed_state_valid = 1U;
         return 0.0f;
     }
 
-    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - motor->outer_loop_state.prev_mech_signed_rad);
-    motor->outer_loop_state.prev_mech_signed_rad = mech_signed_rad;
+    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - motor->outer_loop.prev_mech_signed_rad);
+    motor->outer_loop.prev_mech_signed_rad = mech_signed_rad;
     speed_cmd_delta_rad = speed_ref_rad_s * dt_sec;
-    motor->outer_loop_state.speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
-    motor->outer_loop_state.speed_err_accum_rad = Math_ClampFloat(motor->outer_loop_state.speed_err_accum_rad,
+    motor->outer_loop.speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
+    motor->outer_loop.speed_err_accum_rad = Math_ClampFloat(motor->outer_loop.speed_err_accum_rad,
                                                                     -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
                                                                     FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
-    return motor->outer_loop_state.speed_err_accum_rad;
+    return motor->outer_loop.speed_err_accum_rad;
 }
 
 void FOC_ControlRebaseMechanicalAngleAccum(foc_motor_t *motor, float mech_angle_rad)
 {
     if (motor == 0) return;
-    motor->mech_angle_accum_rad = mech_angle_rad;
-    motor->mech_angle_prev_rad = mech_angle_rad;
-    motor->mech_angle_prev_valid = 1U;
+    motor->outer_loop.accum_rad = mech_angle_rad;
+    motor->outer_loop.prev_rad = mech_angle_rad;
+    motor->outer_loop.prev_valid = 1U;
 }
 
 void FOC_ControlResetSpeedLoopState(foc_motor_t *motor)
@@ -163,8 +163,8 @@ void FOC_SpeedOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
 
     speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, mech_angle_rad,
                                                        speed_ref_rad_s, dt_sec);
-    motor->iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
-    motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
+    motor->ctrl.iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
+    motor->cogging_comp_status.speed_ref_rad_s = speed_ref_rad_s;
 }
 
 void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
@@ -187,22 +187,22 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
 
     dt_sec = FOC_NormalizeDt(dt_sec);
     mech_angle_rad = motor->active_source_state.mech_angle_rad;
-    angle_ref_rad *= motor->direction;
+    angle_ref_rad *= motor->params.direction;
 
     FOC_UpdateAccumulatedMechanicalAngle(motor, mech_angle_rad);
-    mech_signed_total_rad = motor->direction * motor->mech_angle_accum_rad;
+    mech_signed_total_rad = motor->params.direction * motor->outer_loop.accum_rad;
     angle_error_rad = angle_ref_rad - mech_signed_total_rad;
     abs_angle_error_rad = fabsf(angle_error_rad);
 
-    transition_span_rad = motor->speed_angle_transition_end_rad - motor->speed_angle_transition_start_rad;
+    transition_span_rad = motor->cfg.speed_angle_transition_end_rad - motor->cfg.speed_angle_transition_start_rad;
     if (transition_span_rad < 1e-6f) transition_span_rad = 1e-6f;
 
-    if (abs_angle_error_rad <= motor->speed_angle_transition_start_rad)
+    if (abs_angle_error_rad <= motor->cfg.speed_angle_transition_start_rad)
         speed_blend = 0.0f;
-    else if (abs_angle_error_rad >= motor->speed_angle_transition_end_rad)
+    else if (abs_angle_error_rad >= motor->cfg.speed_angle_transition_end_rad)
         speed_blend = 1.0f;
     else
-        speed_blend = (abs_angle_error_rad - motor->speed_angle_transition_start_rad) / transition_span_rad;
+        speed_blend = (abs_angle_error_rad - motor->cfg.speed_angle_transition_start_rad) / transition_span_rad;
 
     speed_ref_rad_s = ((angle_error_rad >= 0.0f) ? fabsf(angle_position_speed_rad_s) : -fabsf(angle_position_speed_rad_s)) * speed_blend;
 
@@ -222,6 +222,6 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
     torque_ref_hold = FOC_AngleHoldPIDRun(angle_hold_pid, motor,
                                           angle_ref_rad, mech_signed_total_rad, dt_sec);
 
-    motor->iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
-    motor->cogging_speed_ref_rad_s = speed_ref_rad_s;
+    motor->ctrl.iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
+    motor->cogging_comp_status.speed_ref_rad_s = speed_ref_rad_s;
 }

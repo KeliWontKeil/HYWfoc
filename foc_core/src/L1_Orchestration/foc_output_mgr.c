@@ -14,14 +14,14 @@ void FOC_OutputMgr_Init(foc_system_t *sys)
     if (sys == 0) return;
 
     /* 初始化 TX 队列（L2/Runtime FIFO） */
-    FIFO_Init(&sys->runtime.tx_fifo,
-              (uint8_t *)sys->runtime.tx_fifo_buffer,
+    FIFO_Init(&sys->runtime.output.tx_fifo,
+              (uint8_t *)sys->runtime.output.tx_buffer,
               FOC_OUTPUT_FRAME_MAX_LEN,
               FOC_OUTPUT_QUEUE_DEPTH);
 
     /* 初始化 RX 队列（L2/Runtime FIFO） */
-    FIFO_Init(&sys->runtime.rx_fifo,
-              (uint8_t *)sys->runtime.rx_fifo_buffer,
+    FIFO_Init(&sys->runtime.comm.rx_fifo,
+              (uint8_t *)sys->runtime.comm.rx_buffer,
               PROTOCOL_PARSER_RX_MAX_LEN,
               FOC_RX_QUEUE_DEPTH);
 }
@@ -47,9 +47,9 @@ void FOC_OutputMgr_FlushQueue(foc_system_t *sys)
     {
         char buf[FOC_OUTPUT_FRAME_MAX_LEN];
 
-        if (FIFO_Count(&sys->runtime.tx_fifo) == 0U) break;
+        if (FIFO_Count(&sys->runtime.output.tx_fifo) == 0U) break;
 
-        (void)FIFO_Dequeue(&sys->runtime.tx_fifo, (uint8_t *)buf);
+        (void)FIFO_Dequeue(&sys->runtime.output.tx_fifo, (uint8_t *)buf);
         FOC_Platform_WriteDebugText(buf);
         sent++;
     }
@@ -58,7 +58,7 @@ void FOC_OutputMgr_FlushQueue(foc_system_t *sys)
 uint8_t FOC_OutputMgr_GetOverflowCount(const foc_system_t *sys)
 {
     if (sys == 0) return 0U;
-    return sys->runtime.tx_fifo.overflow_count;
+    return sys->runtime.output.tx_fifo.overflow_count;
 }
 
 static uint8_t FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx)
@@ -85,9 +85,9 @@ static uint8_t FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx
 
         if (len == 0U) continue;
 
-        if (FIFO_Enqueue(&sys->runtime.rx_fifo, frame) != 0U)
+        if (FIFO_Enqueue(&sys->runtime.comm.rx_fifo, frame) != 0U)
         {
-            sys->runtime.comm_source_rr = (uint8_t)((idx + 1U) % 4U);
+            sys->runtime.comm.source_rr = (uint8_t)((idx + 1U) % 4U);
         }
 
         if (i >= (max_frames - 1U)) break;
@@ -98,7 +98,7 @@ static uint8_t FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx
 void FOC_OutputMgr_PollSources(foc_system_t *sys)
 {
     if (sys == 0) return;
-    FOC_OutputMgr_PollOneSource(sys, sys->runtime.comm_source_rr);
+    FOC_OutputMgr_PollOneSource(sys, sys->runtime.comm.source_rr);
 }
 
 void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
@@ -109,18 +109,20 @@ void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
 
     snprintf(buf, sizeof(buf),
              "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, max_phase_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
-             (double)motor->mech_angle_at_elec_zero_rad,
-             (int)motor->direction,
-             (int)motor->pole_pairs,
-             (double)motor->vbus_voltage,
-             (double)motor->max_phase_voltage,
-             (double)(motor->vbus_voltage > 0.0f ? motor->max_phase_voltage / motor->vbus_voltage : 0.0f),
-             (double)motor->sensor.vbus_voltage_filtered);
+             (double)motor->params.mech_angle_at_elec_zero_rad,
+             (int)motor->params.direction,
+             (int)motor->params.pole_pairs,
+             (double)motor->params.vbus_voltage,
+             (double)motor->ctrl.max_phase_voltage,
+             (double)(motor->params.vbus_voltage > 0.0f ? motor->ctrl.max_phase_voltage / motor->params.vbus_voltage : 0.0f),
+               (double)motor->sensor.vbus.filtered);
     FOC_OutputMgr_WriteDirect(buf);
 }
 
 void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
 {
+#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
     uint8_t consumed = 0U;
     uint8_t in_frame = 0U;
     uint8_t collecting_osc = 0U;
@@ -131,7 +133,7 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
     {
         monitor_element_t elem;
 
-        if (FIFO_Dequeue(&sys->runtime.monitor_elem_q, (uint8_t *)&elem) == 0U)
+        if (FIFO_Dequeue(&sys->runtime.monitor.elem_fifo, (uint8_t *)&elem) == 0U)
             break;
         consumed++;
 
@@ -157,7 +159,7 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
             {
                 DebugStream_FormatSemanticLine(elem.tag, elem.value, line, sizeof(line));
             }
-            (void)FIFO_Enqueue(&sys->runtime.tx_fifo, (uint8_t *)line);
+            (void)FIFO_Enqueue(&sys->runtime.output.tx_fifo, (uint8_t *)line);
             continue;
         }
 
@@ -172,12 +174,12 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
         {
             if (collecting_osc == 0U)
             {
-                sys->runtime.osc.collect_offset = 0U;
-                sys->runtime.osc.collect_buf[0] = '\0';
+                sys->runtime.monitor.osc_collect_offset = 0U;
+                sys->runtime.monitor.osc_collect_buf[0] = '\0';
                 collecting_osc = 1U;
             }
-            DebugStream_AppendOscValue(sys->runtime.osc.collect_buf,
-                                        &sys->runtime.osc.collect_offset,
+            DebugStream_AppendOscValue(sys->runtime.monitor.osc_collect_buf,
+                                        &sys->runtime.monitor.osc_collect_offset,
                                         elem.value);
             continue;
         }
@@ -194,11 +196,11 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
             if ((int)(sizeof(line)) > (int)(off + 1))
             {
                 uint16_t copy_len = (uint16_t)(sizeof(line) - off - 1);
-                uint16_t src_len = (uint16_t)strlen(sys->runtime.osc.collect_buf);
+                uint16_t src_len = (uint16_t)strlen(sys->runtime.monitor.osc_collect_buf);
                 if (copy_len > src_len) copy_len = src_len;
                 if (copy_len > 0U)
                 {
-                    (void)memcpy(line + off, sys->runtime.osc.collect_buf, copy_len);
+                    (void)memcpy(line + off, sys->runtime.monitor.osc_collect_buf, copy_len);
                     off += copy_len;
                     line[off] = '\0';
                 }
@@ -210,11 +212,14 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
                                    " %c ", (char)DEBUG_STREAM_OSC_TAIL_BYTE);
                 if (written > 0) off += (uint16_t)written;
             }
-            (void)FIFO_Enqueue(&sys->runtime.tx_fifo, (uint8_t *)line);
+            (void)FIFO_Enqueue(&sys->runtime.output.tx_fifo, (uint8_t *)line);
             collecting_osc = 0U;
             in_frame = 0U;
             continue;
         }
     }
+#else
+    (void)sys;
+#endif
 }
 

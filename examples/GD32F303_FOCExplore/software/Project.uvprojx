@@ -734,11 +734,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_source_openloop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_openloop.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_openloop.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
@@ -1492,11 +1487,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_source_openloop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_openloop.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_openloop.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
@@ -2248,11 +2238,6 @@
               <FileName>foc_ctrl_source_mgr.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_source_openloop.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_openloop.c</FilePath>
             </File>
             <File>
               <FileName>foc_ctrl_openloop.c</FileName>

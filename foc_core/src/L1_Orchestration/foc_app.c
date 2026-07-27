@@ -52,8 +52,11 @@ static void FOC_App_HandleResult(uint8_t cycle_result)
 static void FOC_App_SchedTickBridge(void)
 {
     ControlScheduler_RunTick(&g_sys.runtime.scheduler);
-    DebugStream_SetExecutionCycles(&g_sys.runtime.debug_stream,
+#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
+    DebugStream_SetExecutionCycles(&g_sys.runtime.monitor.stream,
         ControlScheduler_GetExecutionCycles(&g_sys.runtime.scheduler));
+#endif
 }
 
 void FOC_App_Init(void)
@@ -95,34 +98,34 @@ void FOC_App_Start(void)
 
 void FOC_App_Loop(void)
 {
-    if (g_sys.runtime.monitor_task_pending != 0U)
+    if (g_sys.runtime.tasks.monitor_pending != 0U)
     {
-        g_sys.runtime.monitor_task_pending = 0U;
+        g_sys.runtime.tasks.monitor_pending = 0U;
 
-        if (g_sys.runtime.monitor_frame_active != 0U)
+        if (g_sys.runtime.monitor.frame_active != 0U)
         {
-            g_sys.runtime.monitor_task_pending = 1U;
+            g_sys.runtime.tasks.monitor_pending = 1U;
             return;
         }
 
         FOC_OutputMgr_ProcessMonitorElements(&g_sys);
     }
 
-    if (g_sys.runtime.service_task_pending != 0U)
+    if (g_sys.runtime.tasks.service_pending != 0U)
     {
         uint8_t needs_param_dump   = 0U;
         uint8_t needs_config_dump  = 0U;
         uint8_t needs_state_dump   = 0U;
         uint8_t needs_system_info  = 0U;
 
-        g_sys.runtime.service_task_pending = 0U;
+        g_sys.runtime.tasks.service_pending = 0U;
 
-        while (FIFO_Count(&g_sys.runtime.rx_fifo) > 0U)
+        while (FIFO_Count(&g_sys.runtime.comm.rx_fifo) > 0U)
         {
             uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
             foc_protocol_frame_result_t result;
 
-            (void)FIFO_Dequeue(&g_sys.runtime.rx_fifo, frame);
+            (void)FIFO_Dequeue(&g_sys.runtime.comm.rx_fifo, frame);
             result = FOC_Protocol_ProcessSingle(&motor, frame, PROTOCOL_PARSER_RX_MAX_LEN);
 
             if (result.comm_active != 0U)
@@ -132,7 +135,7 @@ void FOC_App_Loop(void)
             {
                 char summary_line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
                 FOC_Protocol_FormatSummaryLine(&motor, summary_line, sizeof(summary_line));
-                (void)FIFO_Enqueue(&g_sys.runtime.tx_fifo, (uint8_t *)summary_line);
+                (void)FIFO_Enqueue(&g_sys.runtime.output.tx_fifo, (uint8_t *)summary_line);
             }
 
             needs_param_dump   |= result.needs_param_dump;
@@ -147,10 +150,10 @@ void FOC_App_Loop(void)
             motor.state.cfg_dirty = 0U;
         }
 
-        if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.runtime.tx_fifo);
-        if (needs_config_dump  != 0U) FOC_Protocol_QueueConfigs(&motor, &g_sys.runtime.tx_fifo);
-        if (needs_state_dump   != 0U) FOC_Protocol_QueueStates(&motor, &g_sys.runtime.tx_fifo);
-        if (needs_system_info  != 0U) FOC_Protocol_QueueSystemInfo(&motor, &g_sys.runtime.tx_fifo);
+        if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.runtime.output.tx_fifo);
+        if (needs_config_dump  != 0U) FOC_Protocol_QueueConfigs(&motor, &g_sys.runtime.output.tx_fifo);
+        if (needs_state_dump   != 0U) FOC_Protocol_QueueStates(&motor, &g_sys.runtime.output.tx_fifo);
+        if (needs_system_info  != 0U) FOC_Protocol_QueueSystemInfo(&motor, &g_sys.runtime.output.tx_fifo);
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
         if (FOC_CoggingCalibIsDumpPending(&motor) != 0U)
@@ -173,36 +176,36 @@ void FOC_App_ServiceTrigger(void)
 {
     FOC_Indicator_Update(&motor, &g_sys.runtime);
     FOC_OutputMgr_PollSources(&g_sys);
-    g_sys.runtime.service_task_pending = 1U;
+    g_sys.runtime.tasks.service_pending = 1U;
 }
 
 void FOC_App_MonitorTrigger(void)
 {
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
      (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
-    g_sys.runtime.monitor_frame_active = 1U;
+    g_sys.runtime.monitor.frame_active = 1U;
 
     {
         monitor_element_t start_elem;
         start_elem.tag   = MONITOR_ELEM_FRAME_START;
         start_elem.aux   = 0U;
         start_elem.value = 0.0f;
-        (void)FIFO_Enqueue(&g_sys.runtime.monitor_elem_q, (uint8_t *)&start_elem);
+        (void)FIFO_Enqueue(&g_sys.runtime.monitor.elem_fifo, (uint8_t *)&start_elem);
     }
 
     {
         monitor_element_t elem;
-        while (DebugStream_PollNextValue(&g_sys.runtime.debug_stream,
+        while (DebugStream_PollNextValue(&g_sys.runtime.monitor.stream,
                                           &motor,
-                                          FOC_Protocol_GetTelemetry(),
+                                          FOC_Protocol_GetReportConfig(),
                                           &elem) != 0U)
         {
-            (void)FIFO_Enqueue(&g_sys.runtime.monitor_elem_q, (uint8_t *)&elem);
+            (void)FIFO_Enqueue(&g_sys.runtime.monitor.elem_fifo, (uint8_t *)&elem);
         }
     }
 
-    g_sys.runtime.monitor_frame_active = 0U;
-    g_sys.runtime.monitor_task_pending = 1U;
+    g_sys.runtime.monitor.frame_active = 0U;
+    g_sys.runtime.tasks.monitor_pending = 1U;
 #endif
 }
 
@@ -238,7 +241,7 @@ void FOC_App_ControlTrigger(void)
     motor.state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
 
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
-    if (motor.sensor.vbus_voltage_filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
+      if (motor.sensor.vbus.filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
         motor.state.last_fault_code = (uint8_t)FOC_FAULT_UNDERVOLTAGE;
         FOC_App_HandleResult((uint8_t)FOC_CYCLE_FAULT_UVLO);

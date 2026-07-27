@@ -34,23 +34,23 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
         return;
     }
 
-    need_zero = (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) ? 1U : 0U;
-    need_direction = (motor->direction == FOC_DIR_UNDEFINED) ? 1U : 0U;
-    need_pole_pairs = (motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ? 1U : 0U;
+    need_zero = (motor->params.mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) ? 1U : 0U;
+    need_direction = (motor->params.direction == FOC_DIR_UNDEFINED) ? 1U : 0U;
+    need_pole_pairs = (motor->params.pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ? 1U : 0U;
 
     if ((need_zero == 0U) && (need_direction == 0U) && (need_pole_pairs == 0U))
     {
         return;
     }
 
-    backup_ud = motor->ud;
-    backup_uq = motor->uq;
+    backup_ud = motor->ctrl.ud;
+    backup_uq = motor->ctrl.uq;
 
-    calib_uq = motor->max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
-    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->max_phase_voltage);
+    calib_uq = motor->ctrl.max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
+    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->ctrl.max_phase_voltage);
 
-    motor->uq = 0.0f;
-    motor->ud = calib_uq;
+    motor->ctrl.uq = 0.0f;
+    motor->ctrl.ud = calib_uq;
 
     if (need_zero != 0U)
     {
@@ -60,17 +60,17 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
                                             FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT,
                                             &mech_zero_rad_est) != 0U)
         {
-            motor->mech_angle_at_elec_zero_rad = mech_zero_rad_est;
-            motor->mech_angle_accum_rad = mech_zero_rad_est;
-            motor->mech_angle_prev_rad = mech_zero_rad_est;
-            motor->mech_angle_prev_valid = 1U;
+            motor->params.mech_angle_at_elec_zero_rad = mech_zero_rad_est;
+            motor->outer_loop.accum_rad = mech_zero_rad_est;
+            motor->outer_loop.prev_rad = mech_zero_rad_est;
+            motor->outer_loop.prev_valid = 1U;
         }
         else
         {
-            motor->mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
-            motor->mech_angle_accum_rad = 0.0f;
-            motor->mech_angle_prev_rad = 0.0f;
-            motor->mech_angle_prev_valid = 0U;
+            motor->params.mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
+            motor->outer_loop.accum_rad = 0.0f;
+            motor->outer_loop.prev_rad = 0.0f;
+            motor->outer_loop.prev_valid = 0U;
             FOC_Platform_WriteDebugText("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
         }
     }
@@ -86,29 +86,29 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
         {
             if (need_direction != 0U)
             {
-                motor->direction = direction_est;
+                motor->params.direction = direction_est;
             }
             if (need_pole_pairs != 0U)
             {
-                motor->pole_pairs = pole_pairs_est;
+                motor->params.pole_pairs = pole_pairs_est;
             }
         }
         else
         {
             if (need_direction != 0U)
             {
-                motor->direction = FOC_DIR_UNDEFINED;
+                motor->params.direction = FOC_DIR_UNDEFINED;
             }
             if (need_pole_pairs != 0U)
             {
-                motor->pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
+                motor->params.pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
             }
             FOC_Platform_WriteDebugText("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
         }
     }
 
-    motor->ud = backup_ud;
-    motor->uq = backup_uq;
+    motor->ctrl.ud = backup_ud;
+    motor->ctrl.uq = backup_uq;
     FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
 }
 
@@ -132,10 +132,10 @@ void FOC_MotorInit(foc_motor_t *motor,
     }
     max_phase_voltage = Math_ClampFloat(max_phase_voltage, 0.0f, vbus_voltage);
 
-    motor->electrical_phase_angle = 0.0f;
-    motor->ud = 0.0f;
-    motor->uq = 0.0f;
-    motor->max_phase_voltage = max_phase_voltage;
+    motor->ctrl.electrical_angle_rad = 0.0f;
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = 0.0f;
+    motor->ctrl.max_phase_voltage = max_phase_voltage;
     motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
     motor->active_source_state.state = FOC_SOURCE_STATE_INIT;
     motor->active_source_state.valid = 0U;
@@ -155,7 +155,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->encoder_services.calib_available = 0U;
     motor->encoder_services.reinit_available = 0U;
     motor->applied_output.valid = 0U;
-    motor->applied_output.electrical_angle_rad = 0.0f;
+    motor->applied_output.valid = 0U;
     motor->applied_output.ud = 0.0f;
     motor->applied_output.uq = 0.0f;
     motor->phase_output_state.phase = FOC_CONTROL_PHASE_NORMAL;
@@ -184,31 +184,31 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->openloop_source_snapshot.mech_angle_accum_rad = 0.0f;
     motor->openloop_source_snapshot.mech_speed_rad_s = 0.0f;
 #endif
-    motor->vbus_voltage = vbus_voltage;
-    motor->iq_target = 0.0f;
+    motor->params.vbus_voltage = vbus_voltage;
+    motor->ctrl.iq_target = 0.0f;
 
-    motor->iq_measured = 0.0f;
-    motor->cogging_speed_ref_rad_s = 0.0f;
-    motor->mech_angle_accum_rad = 0.0f;
-    motor->mech_angle_prev_rad = 0.0f;
-    motor->mech_angle_prev_valid = 0U;
+    motor->ctrl.iq_measured = 0.0f;
+    motor->cogging_comp_status.speed_ref_rad_s = 0.0f;
+    motor->outer_loop.accum_rad = 0.0f;
+    motor->outer_loop.prev_rad = 0.0f;
+    motor->outer_loop.prev_valid = 0U;
 
 #if (FOC_MOTOR_MEASUREMENT_TYPE == FOC_MOTOR_MEASUREMENT_TYPE_Y_LINE)
-    motor->phase_resistance  = phase_resistance / 2.0f;
-    motor->stator_inductance = stator_inductance / 2.0f;
+    motor->params.phase_resistance  = phase_resistance / 2.0f;
+    motor->params.stator_inductance = stator_inductance / 2.0f;
 #elif (FOC_MOTOR_MEASUREMENT_TYPE == FOC_MOTOR_MEASUREMENT_TYPE_DELTA_LINE)
-    motor->phase_resistance  = phase_resistance * 1.5f;
-    motor->stator_inductance = stator_inductance * 1.5f;
+    motor->params.phase_resistance  = phase_resistance * 1.5f;
+    motor->params.stator_inductance = stator_inductance * 1.5f;
 #else
-    motor->phase_resistance  = phase_resistance;
-    motor->stator_inductance = stator_inductance;
+    motor->params.phase_resistance  = phase_resistance;
+    motor->params.stator_inductance = stator_inductance;
 #endif
-    motor->pole_pairs = pole_pairs;
-    motor->mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
-    motor->mech_angle_accum_rad = mech_angle_at_elec_zero_rad;
-    motor->mech_angle_prev_rad = mech_angle_at_elec_zero_rad;
-    motor->mech_angle_prev_valid = 1U;
-    motor->direction = direction;
+    motor->params.pole_pairs = pole_pairs;
+    motor->params.mech_angle_at_elec_zero_rad = mech_angle_at_elec_zero_rad;
+    motor->outer_loop.accum_rad = mech_angle_at_elec_zero_rad;
+    motor->outer_loop.prev_rad = mech_angle_at_elec_zero_rad;
+    motor->outer_loop.prev_valid = 1U;
+    motor->params.direction = direction;
 
     motor->alpha_beta.alpha = 0.0f;
     motor->alpha_beta.beta = 0.0f;
@@ -237,10 +237,10 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->state.current_loop_ready = 0U;
 
     /* init control config defaults (write top-level fields directly) */
-    motor->target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
-    motor->angle_position_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
-    motor->speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
-    motor->sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
+    motor->cfg.target_angle_rad = COMMAND_MANAGER_DEFAULT_TARGET_ANGLE_RAD;
+    motor->cfg.angle_position_speed_rad_s = COMMAND_MANAGER_DEFAULT_ANGLE_SPEED_RAD_S;
+    motor->cfg.speed_only_rad_s = COMMAND_MANAGER_DEFAULT_SPEED_ONLY_RAD_S;
+    motor->cfg.sensor_sample_offset_percent = FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT;
     motor->torque_current_pid.kp = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KP;
     motor->torque_current_pid.ki = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KI;
     motor->torque_current_pid.kd = COMMAND_MANAGER_DEFAULT_PID_CURRENT_KD;
@@ -250,11 +250,11 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->speed_pid.kp = COMMAND_MANAGER_DEFAULT_PID_SPEED_KP;
     motor->speed_pid.ki = COMMAND_MANAGER_DEFAULT_PID_SPEED_KI;
     motor->speed_pid.kd = COMMAND_MANAGER_DEFAULT_PID_SPEED_KD;
-    motor->min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
-    motor->angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
-    motor->angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
-    motor->speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
-    motor->speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+    motor->cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
+    motor->cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
+    motor->cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
+    motor->cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
+    motor->cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.enabled = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
     motor->current_soft_switch_status.configured_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_MODE;
@@ -273,9 +273,9 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mode_transition.prev_control_mode = 0U;
     motor->mode_transition.prev_control_mode_valid = 0U;
     motor->mode_transition.prev_control_mode_check = 0xFFU;
-    motor->outer_loop_state.speed_err_accum_rad = 0.0f;
-    motor->outer_loop_state.prev_mech_signed_rad = 0.0f;
-    motor->outer_loop_state.speed_state_valid = 0U;
+    motor->outer_loop.speed_err_accum_rad = 0.0f;
+    motor->outer_loop.prev_mech_signed_rad = 0.0f;
+    motor->outer_loop.speed_state_valid = 0U;
 #if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
     motor->svpwm_lpf.valid = 0U;
     motor->svpwm_lpf.phase_a = 0.0f;

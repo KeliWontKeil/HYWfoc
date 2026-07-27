@@ -60,7 +60,6 @@
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_cogging_calib.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_reinit.c",
         "../../../foc_core/src/L2_Core/Control/foc_ctrl_source_mgr.c",
-        "../../../foc_core/src/L2_Core/Control/foc_ctrl_source_openloop.c",
         "../../../foc_core/src/L2_Core/Protocol/foc_protocol_handler.c",
         "../../../foc_core/src/L2_Core/Protocol/foc_protocol_output.c",
         "../../../foc_core/src/L2_Core/Protocol/foc_protocol_parser.c",

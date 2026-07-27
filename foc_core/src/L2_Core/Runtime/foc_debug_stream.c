@@ -18,7 +18,7 @@ static uint16_t DebugStream_ComputePeriodTicks(uint16_t report_freq_hz);
 static uint8_t  DebugStream_IsOscInputValid(const foc_motor_t *motor);
 static uint8_t  DebugStream_PollSemantic(debug_stream_state_t *ds,
                                           const foc_motor_t *motor,
-                                          const telemetry_policy_snapshot_t *telemetry,
+                                          const foc_report_config_t *report,
                                           monitor_element_t *elem_out);
 
 /* ========== 初始化 ========== */
@@ -72,16 +72,16 @@ static uint16_t DebugStream_ComputePeriodTicks(uint16_t report_freq_hz)
 
 static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
                                          const foc_motor_t *motor,
-                                         const telemetry_policy_snapshot_t *telemetry,
+                                         const foc_report_config_t *report,
                                          monitor_element_t *elem_out)
 {
 #if (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE)
     uint16_t semantic_freq_hz;
 
-    if ((telemetry == 0) || (telemetry->semantic_report_enabled == 0U))
+    if ((report == 0) || (report->semantic_enabled == 0U))
         return 0U;
 
-    semantic_freq_hz = telemetry->semantic_report_freq_hz;
+    semantic_freq_hz = report->semantic_freq_hz;
 
     if (semantic_freq_hz != ds->semantic_last_freq_hz)
     {
@@ -119,19 +119,19 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
             if ((motor != 0) && (motor->sensor.adc_valid != 0U))
                 elem_out->value = motor->sensor.current_b.output_value;
             else
-                return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+                return DebugStream_PollSemantic(ds, motor, report, elem_out);
             break;
         case 2U:
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
             if ((motor != 0) && (motor->sensor.adc_valid != 0U))
                 elem_out->value = motor->sensor.current_c.output_value;
             else
-                return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+                return DebugStream_PollSemantic(ds, motor, report, elem_out);
 #else
             if ((motor != 0) && (motor->sensor.adc_valid != 0U))
                 elem_out->value = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value);
             else
-                return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+                return DebugStream_PollSemantic(ds, motor, report, elem_out);
 #endif
             break;
         case 3U:
@@ -144,19 +144,19 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
             if ((motor != 0) && (motor->active_source_state.valid != 0U))
                 elem_out->value = motor->active_source_state.mech_angle_rad;
             else
-                return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+                return DebugStream_PollSemantic(ds, motor, report, elem_out);
             break;
         case 5U:
             if ((motor != 0) && (motor->sensor.vbus_valid != 0U))
-                elem_out->value = motor->sensor.vbus_voltage_raw;
+                elem_out->value = motor->sensor.vbus.raw;
             else
                 elem_out->aux = 0U;
             break;
         case 6U:
             if ((motor != 0) && (motor->sensor.vbus_valid != 0U))
-                elem_out->value = motor->sensor.vbus_voltage_filtered;
+                elem_out->value = motor->sensor.vbus.filtered;
             else
-                return DebugStream_PollSemantic(ds, motor, telemetry, elem_out);
+                return DebugStream_PollSemantic(ds, motor, report, elem_out);
             break;
         case 7U:
             elem_out->value = (float)ds->last_exec_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
@@ -164,7 +164,7 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
             break;
         case 8U:
             if (motor != 0)
-                elem_out->value = (float)motor->current_loop_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
+                elem_out->value = (float)motor->isr_timing.current_loop_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
             else
                 elem_out->value = 0.0f;
             elem_out->aux = 2U;
@@ -197,28 +197,28 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
 
 uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                                    const foc_motor_t *motor,
-                                   const telemetry_policy_snapshot_t *telemetry,
+                                   const foc_report_config_t *report,
                                    monitor_element_t *elem_out)
 {
     if ((ds == 0) || (elem_out == 0)) return 0U;
     if ((motor != 0) && (motor->state.system_fault != 0U)) return 0U;
 
     /* 语义遥测 */
-    if (DebugStream_PollSemantic(ds, motor, telemetry, elem_out) != 0U)
+    if (DebugStream_PollSemantic(ds, motor, report, elem_out) != 0U)
     {
         return 1U;
     }
 
     /* ---- 示波器值 ---- */
 #if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE)
-    if ((telemetry != 0) && (telemetry->osc_report_enabled != 0U) &&
+    if ((report != 0) && (report->osc_enabled != 0U) &&
         (DebugStream_IsOscInputValid(motor) != 0U))
     {
         uint16_t osc_freq_hz;
 
         if (ds->line_index == 0U)
         {
-            osc_freq_hz = telemetry->osc_report_freq_hz;
+            osc_freq_hz = report->osc_freq_hz;
             if (osc_freq_hz != ds->osc_last_freq_hz)
             {
                 ds->osc_last_freq_hz = osc_freq_hz;
@@ -236,7 +236,7 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
 
         if (ds->osc_param_bit_idx < 16U)
         {
-            uint16_t mask = telemetry->osc_parameter_mask;
+            uint16_t mask = report->osc_param_mask;
 
             while (ds->osc_param_bit_idx < 16U)
             {
@@ -258,14 +258,12 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                     case 2U: elem_out->value = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value); break;
 #endif
                     case 3U: elem_out->value = motor->active_source_state.mech_angle_rad; break;
-                    case 4U: elem_out->value = motor->mech_angle_accum_rad; break;
+                      case 4U: elem_out->value = motor->outer_loop.accum_rad; break;
                     case 5U: elem_out->value = (float)ds->last_exec_cycles / 120.0f; break;
                     case 6U: elem_out->value = (motor->sensor.vbus_valid != 0U) ?
-                                                motor->sensor.vbus_voltage_filtered : 0.0f; break;
-                    case 7U: elem_out->value = motor->iq_target; break;
-                    case 8U: elem_out->value = motor->iq_measured; break;
-                    case 9U: elem_out->value = motor->sensor.current_a_raw; break;
-                    case 10U: elem_out->value = motor->sensor.current_b_raw; break;
+                                                motor->sensor.vbus.filtered : 0.0f; break;
+                    case 7U: elem_out->value = motor->ctrl.iq_target; break;
+                    case 8U: elem_out->value = motor->ctrl.iq_measured; break;
                     default: elem_out->value = 0.0f; break;
                     }
 
@@ -428,7 +426,7 @@ uint16_t DebugStream_FormatOscLine(char *osc_buffer, uint16_t max_len)
 
 uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
                                   const foc_motor_t *motor,
-                                  const telemetry_policy_snapshot_t *telemetry,
+                                  const foc_report_config_t *report,
                                   char *line_out,
                                   uint16_t line_max)
 {
@@ -439,11 +437,11 @@ uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
 
     if ((ds == 0) || (line_out == 0) || (line_max == 0U)) return 0U;
 
-    if (DebugStream_PollNextValue(ds, motor, telemetry, &elem) == 0U) return 0U;
+    if (DebugStream_PollNextValue(ds, motor, report, &elem) == 0U) return 0U;
 
     if (elem.tag == MONITOR_ELEM_FRAME_START)
     {
-        return DebugStream_GenerateLine(ds, motor, telemetry,
+        return DebugStream_GenerateLine(ds, motor, report,
                                          line_out, line_max);
     }
 
@@ -467,7 +465,7 @@ uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
                     "measurement.vbus.status=invalid\r\n");
                 break;
             default:
-                return DebugStream_GenerateLine(ds, motor, telemetry,
+                return DebugStream_GenerateLine(ds, motor, report,
                                                  line_out, line_max);
             }
             return 1U;
@@ -479,7 +477,7 @@ uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
 
     if (elem.tag == MONITOR_ELEM_SEMANTIC_END)
     {
-        return DebugStream_GenerateLine(ds, motor, telemetry,
+        return DebugStream_GenerateLine(ds, motor, report,
                                          line_out, line_max);
     }
 
@@ -495,7 +493,7 @@ uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
 
         DebugStream_AppendOscValue(compat_osc_buf, &compat_osc_off, elem.value);
 
-        return DebugStream_GenerateLine(ds, motor, telemetry,
+        return DebugStream_GenerateLine(ds, motor, report,
                                          line_out, line_max);
     }
 

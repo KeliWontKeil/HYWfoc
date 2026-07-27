@@ -64,7 +64,6 @@
 ".\output\foc_ctrl_estim_hfi.o"
 ".\output\foc_ctrl_estim_smo.o"
 ".\output\foc_ctrl_source_mgr.o"
-".\output\foc_ctrl_source_openloop.o"
 ".\output\foc_ctrl_openloop.o"
 ".\output\foc_ctrl_sens_cogging_calib.o"
 ".\output\foc_ctrl_sens_reinit.o"

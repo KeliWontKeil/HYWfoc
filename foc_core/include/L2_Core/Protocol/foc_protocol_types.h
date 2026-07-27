@@ -46,4 +46,19 @@ typedef struct {
     uint8_t needs_system_info: 1;
 } foc_protocol_frame_result_t;
 
+/* ========== 报告配置（系统级配置，非 per-motor） ========== */
+typedef struct {
+#if ((FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
+    uint8_t semantic_enabled;
+    uint8_t osc_enabled;
+    uint16_t semantic_freq_hz;
+    uint16_t osc_freq_hz;
+    uint16_t osc_param_mask;
+#else
+    uint8_t reserved;
+#endif
+} foc_report_config_t;
+
 #endif /* FOC_PROTOCOL_TYPES_H */

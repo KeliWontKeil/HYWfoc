@@ -35,9 +35,6 @@
 /* LPF1 parameter (used when type == LPF1) */
 #define FOC_FILTER_SENSOR_ANGLE_LPF_ALPHA             0.80f
 
-/* ── CURRENT_LOOP_IQ ── */
-#define FOC_FILTER_CURRENT_LOOP_IQ_LPF_ALPHA          0.7f
-
 /* ── SVPWM ── */
 #define FOC_FILTER_SVPWM_LPF_ALPHA                    0.60f
 

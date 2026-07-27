@@ -111,19 +111,19 @@ static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
         return;
     }
 
-    mech_for_elec = motor->cogging_calib_state.pred_mech_angle + motor->mech_angle_at_elec_zero_rad;
-    elec_angle = Math_WrapRad(mech_for_elec * (float)motor->pole_pairs * (float)motor->direction);
+    mech_for_elec = motor->cogging_calib_state.pred_mech_angle + motor->params.mech_angle_at_elec_zero_rad;
+    elec_angle = Math_WrapRad(mech_for_elec * (float)motor->params.pole_pairs * (float)motor->params.direction);
 
-    motor->ud = 0.0f;
-    motor->uq = FOC_COGGING_CALIB_IQ_A * motor->phase_resistance * (float)motor->direction;
-    motor->iq_target = 0.0f;
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = FOC_COGGING_CALIB_IQ_A * motor->params.phase_resistance * (float)motor->params.direction;
+    motor->ctrl.iq_target = 0.0f;
 
     FOC_ControlRecordPhaseOutputDqAngle(motor,
                                         FOC_CONTROL_PHASE_COGGING_CALIB,
                                         motor->cogging_calib_state.pass_num,
                                         elec_angle,
-                                        motor->ud,
-                                        motor->uq);
+                                        motor->ctrl.ud,
+                                        motor->ctrl.uq);
 }
 
 static uint16_t CoggingCalib_AngleToBin(float mech_angle_rad)
@@ -313,7 +313,7 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     CoggingCalib_FixBoundaryDiscontinuityQ15(table, FOC_COGGING_LUT_POINT_COUNT);
 
     /* Flip sign for reversed direction */
-    if (motor->direction == FOC_DIR_REVERSED)
+    if (motor->params.direction == FOC_DIR_REVERSED)
     {
         for (i = 0U; i < FOC_COGGING_LUT_POINT_COUNT; i++)
         {
@@ -494,7 +494,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 {
                     accept = 1U;
                 }
-                else if (motor->direction == FOC_DIR_NORMAL)
+                else if (motor->params.direction == FOC_DIR_NORMAL)
                 {
                     if ((lut_index > motor->cogging_calib_state.last_lut_index) ||
                         (motor->cogging_calib_state.last_lut_index >= (uint16_t)(FOC_COGGING_LUT_POINT_COUNT * 3U / 4U) &&
@@ -517,7 +517,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 {
                     float iq_comp  = -dtheta * FOC_COGGING_CALIB_DTHETA_SCALE;
                     /* 反向时补偿也需反向 */
-                    if (motor->direction == FOC_DIR_REVERSED)
+                    if (motor->params.direction == FOC_DIR_REVERSED)
                     {
                         iq_comp = -iq_comp;
                     }
@@ -541,7 +541,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
             }
 
             motor->cogging_calib_state.pred_mech_angle += FOC_COGGING_CALIB_SPEED_RAD_S *
-                                       (float)motor->direction *
+                                       (float)motor->params.direction *
                                        dt_sec;
 
             CoggingCalib_OpenLoopDriveStep(motor, dt_sec);

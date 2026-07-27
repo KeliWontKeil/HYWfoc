@@ -38,16 +38,16 @@ void FOC_EstimSMO_Init(foc_motor_t *motor)
     motor->estim_smo_state.rot_dir_counter = 0U;
     motor->estim_smo_state.rot_dir_last   = 0U;
 
-    if ((motor->direction != FOC_DIR_UNDEFINED) &&
-        (motor->mech_angle_at_elec_zero_rad != FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) &&
-        (motor->pole_pairs > 0U))
+    if ((motor->params.direction != FOC_DIR_UNDEFINED) &&
+        (motor->params.mech_angle_at_elec_zero_rad != FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) &&
+        (motor->params.pole_pairs > 0U))
     {
-        float mech_zero = motor->mech_angle_at_elec_zero_rad;
-        if (motor->direction == FOC_DIR_REVERSED)
+        float mech_zero = motor->params.mech_angle_at_elec_zero_rad;
+        if (motor->params.direction == FOC_DIR_REVERSED)
         {
             mech_zero = FOC_MATH_TWO_PI - mech_zero;
         }
-        motor->estim_smo_state.pll_angle_rad = mech_zero * (float)motor->pole_pairs;
+        motor->estim_smo_state.pll_angle_rad = mech_zero * (float)motor->params.pole_pairs;
         motor->estim_smo_state.pll_angle_rad = wrap_2pi(motor->estim_smo_state.pll_angle_rad);
         motor->estim_smo_state.initialized   = 1U;
     }
@@ -76,7 +76,7 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     snapshot = &motor->source_smo_snapshot;
 
     theta_bemf = (motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP)
-        ? motor->electrical_phase_angle
+        ? motor->ctrl.electrical_angle_rad
         : motor->estim_smo_state.pll_angle_rad;
 
     Math_ClarkeTransform(motor->sensor.current_a.output_value,
@@ -84,11 +84,11 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
                          motor->sensor.current_c.output_value,
                          &i_alpha_meas, &i_beta_meas);
 
-    u_alpha = motor->ud * cosf(theta_bemf) - motor->uq * sinf(theta_bemf);
-    u_beta  = motor->ud * sinf(theta_bemf) + motor->uq * cosf(theta_bemf);
+    u_alpha = motor->ctrl.ud * cosf(theta_bemf) - motor->ctrl.uq * sinf(theta_bemf);
+    u_beta  = motor->ctrl.ud * sinf(theta_bemf) + motor->ctrl.uq * cosf(theta_bemf);
 
-    Rs    = fabsf(motor->phase_resistance);
-    Ls    = fabsf(motor->stator_inductance);
+    Rs    = fabsf(motor->params.phase_resistance);
+    Ls    = fabsf(motor->params.stator_inductance);
     if (Ls < 1e-9f) Ls = 1e-9f;
     inv_L = 1.0f / Ls;
 
@@ -186,10 +186,10 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     snapshot->elec_angle_rad   = motor->estim_smo_state.pll_angle_rad;
     snapshot->elec_speed_rad_s = motor->estim_smo_state.pll_speed_rad_s;
 
-    if (motor->pole_pairs > 0U)
+    if (motor->params.pole_pairs > 0U)
     {
-        snapshot->mech_angle_rad  = motor->estim_smo_state.pll_angle_rad / (float)motor->pole_pairs;
-        snapshot->mech_speed_rad_s = motor->estim_smo_state.pll_speed_rad_s / (float)motor->pole_pairs;
+        snapshot->mech_angle_rad  = motor->estim_smo_state.pll_angle_rad / (float)motor->params.pole_pairs;
+        snapshot->mech_speed_rad_s = motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs;
     }
     else
     {

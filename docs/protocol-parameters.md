@@ -262,8 +262,8 @@ aaPA3.14b
 | 0 | current_a | `measurement.phase_current_a_ampere=0.123` | A 相电流 |
 | 1 | current_b | `measurement.phase_current_b_ampere=-0.456` | B 相电流 |
 | 2 | current_c | `measurement.phase_current_c_ampere=-0.333` | C 相电流 |
-| 3 | angle_raw | `measurement.encoder_angle_raw_rad=1.570` | 编码器原始角度 |
-| 4 | angle_filtered | `measurement.encoder_angle_filtered_rad=1.571` | 编码器滤波后角度 |
+| 3 | angle_raw | `measurement.mech_angle_raw_rad=1.570` | 机械角度原始值 |
+| 4 | angle_filtered | `measurement.mech_angle_filtered_rad=1.571` | 机械角度滤波后值 |
 | 5 | vbus_raw | `measurement.vbus_voltage_raw_v=23.800` | VBUS 原始电压 |
 | 6 | vbus_filtered | `measurement.vbus_voltage_filtered_v=23.900` | VBUS 滤波后电压 |
 | 7 | exec_time | `control.execution_time_us=15.200` | 调度器 tick 执行时间 |

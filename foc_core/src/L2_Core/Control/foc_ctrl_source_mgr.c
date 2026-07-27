@@ -97,14 +97,14 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_SMO:
-        if (motor->pole_pairs > 0U)
-            speed_abs = fabsf(motor->estim_smo_state.pll_speed_rad_s / (float)motor->pole_pairs);
+        if (motor->params.pole_pairs > 0U)
+            speed_abs = fabsf(motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs);
         break;
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
-        if (motor->pole_pairs > 0U)
-            speed_abs = fabsf(motor->openloop_angle_source_state.virtual_speed_rad_s / (float)motor->pole_pairs);
+        if (motor->params.pole_pairs > 0U)
+            speed_abs = fabsf(motor->openloop_angle_source_state.virtual_speed_rad_s / (float)motor->params.pole_pairs);
         break;
 #endif
     default:
@@ -213,7 +213,7 @@ void FOC_SourceMgr_Publish(foc_motor_t *motor)
         motor->active_source_state.valid = 1U;
         motor->active_source_state.confidence = 1.0f;
         motor->active_source_state.mech_angle_rad = motor->sensor.mech_angle_rad.output_value;
-        motor->active_source_state.elec_angle_rad = motor->sensor.mech_angle_rad.output_value * (float)motor->pole_pairs;
+        motor->active_source_state.elec_angle_rad = motor->sensor.mech_angle_rad.output_value * (float)motor->params.pole_pairs;
         motor->active_source_state.mech_speed_rad_s = 0.0f;
         motor->active_source_state.elec_speed_rad_s = 0.0f;
         break;
@@ -235,12 +235,12 @@ void FOC_SourceMgr_Publish(foc_motor_t *motor)
         motor->active_source_state.valid =
             (motor->active_source_state.state >= FOC_SOURCE_STATE_CONVERGING) ? 1U : 0U;
         motor->active_source_state.confidence = (motor->active_source_state.state == FOC_SOURCE_STATE_LOCKED) ? 0.9f : 0.0f;
-        if (motor->pole_pairs > 0U)
+        if (motor->params.pole_pairs > 0U)
         {
             motor->active_source_state.mech_angle_rad =
-                motor->estim_smo_state.pll_angle_rad / (float)motor->pole_pairs;
+                motor->estim_smo_state.pll_angle_rad / (float)motor->params.pole_pairs;
             motor->active_source_state.mech_speed_rad_s =
-                motor->estim_smo_state.pll_speed_rad_s / (float)motor->pole_pairs;
+                motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs;
         }
         else
         {
@@ -258,12 +258,12 @@ void FOC_SourceMgr_Publish(foc_motor_t *motor)
         motor->active_source_state.confidence = 0.5f;
         motor->active_source_state.elec_angle_rad = motor->openloop_angle_source_state.virtual_angle_rad;
         motor->active_source_state.elec_speed_rad_s = motor->openloop_angle_source_state.virtual_speed_rad_s;
-        if (motor->pole_pairs > 0U)
+        if (motor->params.pole_pairs > 0U)
         {
             motor->active_source_state.mech_angle_rad =
-                motor->openloop_angle_source_state.virtual_angle_rad / (float)motor->pole_pairs;
+                motor->openloop_angle_source_state.virtual_angle_rad / (float)motor->params.pole_pairs;
             motor->active_source_state.mech_speed_rad_s =
-                motor->openloop_angle_source_state.virtual_speed_rad_s / (float)motor->pole_pairs;
+                motor->openloop_angle_source_state.virtual_speed_rad_s / (float)motor->params.pole_pairs;
         }
         break;
     }
@@ -282,7 +282,7 @@ void FOC_SourceMgr_Publish(foc_motor_t *motor)
 
     if (motor->active_source_state.valid != 0U)
     {
-        motor->electrical_phase_angle = motor->active_source_state.elec_angle_rad;
+        motor->ctrl.electrical_angle_rad = motor->active_source_state.elec_angle_rad;
     }
 
     SourceMgr_UpdateEncoderServices(motor);

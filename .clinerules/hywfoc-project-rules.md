@@ -46,18 +46,24 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 
 ## L2 Control module naming
 
-L2/Control 控制链模块统一按 `foc_ctrl_XX_name.c/.h` 命名：
+L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功能分组列出：
 
-- `C11` — 算法入口（外环/内环/开环/补偿入口）
-- `C12` — 初始化与标定
-- `C13` — 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter）
-- `C21` — 速度/位置外环
-- `C22` — 电流内环
-- `C23` — 电机参数学习
-- `C24` — 齿槽补偿
-- `C31` — 执行输出（SVPWM 驱动）
-
-**注**：C13 是从旧 C25 提升而来，因为它无 L3 内部模块依赖，仅操作结构体字段和宏配置。
+- `foc_ctrl_executor` — 算法入口（外环/内环/开环/补偿入口）
+- `foc_ctrl_init` — 初始化与标定
+- `foc_ctrl_cfg` — 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter）
+- `foc_ctrl_source_mgr` — Source Manager：在 PWM ISR 中运行/读取 source、选择 active source
+- `foc_ctrl_openloop` — OpenLoop angle source 实现 + OpenLoop low-speed policy
+- `foc_ctrl_estim` — 估计器选择/注册中心
+- `foc_ctrl_estim_encoder` — Encoder source 实现
+- `foc_ctrl_estim_smo` — SMO source 实现
+- `foc_ctrl_estim_hfi` — HFI source 实现
+- `foc_ctrl_outer_loop` — 速度/位置外环
+- `foc_ctrl_current_loop` — 电流内环
+- `foc_ctrl_param_learn` — 电机参数学习
+- `foc_ctrl_compensation` — 齿槽补偿
+- `foc_ctrl_sens_cogging_calib` — 有感齿槽标定（非阻塞状态机）
+- `foc_ctrl_sens_reinit` — 有感非阻塞重初始化
+- `foc_ctrl_actuation` — 执行输出（SVPWM 驱动）
 
 ## Configuration macro & type management
 
@@ -116,7 +122,7 @@ L1 主循环（`FOC_App_Loop`）编排三个独立任务段，顺序无关：
 
 ## Version control practices
 
-- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v1.10.0`）
+- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v2.0.2`）
 - 默认在 `main` 直接开发，不创建新分支
 - 每次完整修改后仅做本地 `git commit`
 - 默认不 `git push`，仅在用户明确要求时执行

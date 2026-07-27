@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\output\Project.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\output\Project.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Sat Jul 25 22:52:03 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Mon Jul 27 17:35:26 2026
 <BR><P>
 <H3>Maximum Stack Usage =        536 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -494,19 +494,19 @@ Global Symbols
 <P><STRONG><a name="[77]"></a>_printf_pre_padding</STRONG> (Thumb, 44 bytes, Stack size 16 bytes, _printf_pad.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = _printf_pre_padding
 </UL>
-<BR>[Called By]<UL><LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_dec_real
+<BR>[Called By]<UL><LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_infnan
+<LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_dec_real
 <LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_int_common
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_str
-<LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_infnan
 </UL>
 
 <P><STRONG><a name="[78]"></a>_printf_post_padding</STRONG> (Thumb, 34 bytes, Stack size 16 bytes, _printf_pad.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = _printf_post_padding
 </UL>
-<BR>[Called By]<UL><LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_dec_real
+<BR>[Called By]<UL><LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_infnan
+<LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_dec_real
 <LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_int_common
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_str
-<LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_infnan
 </UL>
 
 <P><STRONG><a name="[76]"></a>_printf_str</STRONG> (Thumb, 82 bytes, Stack size 16 bytes, _printf_str.o(.text))
@@ -615,12 +615,12 @@ Global Symbols
 <P><STRONG><a name="[8a]"></a>_printf_fp_dec_real</STRONG> (Thumb, 620 bytes, Stack size 104 bytes, _printf_fp_dec.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 324<LI>Call Chain = _printf_fp_dec_real &rArr; _fp_digits &rArr; _btod_etento &rArr; _btod_emul &rArr; _e2e
 </UL>
-<BR>[Calls]<UL><LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_locale
+<BR>[Calls]<UL><LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_infnan
+<LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_locale
 <LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
 <LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_post_padding
 <LI><a href="#[77]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_pre_padding
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__ARM_fpclassify
-<LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_infnan
 </UL>
 <BR>[Called By]<UL><LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_dec
 </UL>
@@ -799,8 +799,8 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_e2e
 <LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__btod_div_common
 </UL>
-<BR>[Called By]<UL><LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
-<LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_etento
+<BR>[Called By]<UL><LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_etento
+<LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
 </UL>
 
 <P><STRONG><a name="[88]"></a>_btod_emul</STRONG> (Thumb, 42 bytes, Stack size 28 bytes, btod.o(CL$$btod_emul))
@@ -809,8 +809,8 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__btod_mult_common
 <LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_e2e
 </UL>
-<BR>[Called By]<UL><LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
-<LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_etento
+<BR>[Called By]<UL><LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_etento
+<LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
 </UL>
 
 <P><STRONG><a name="[95]"></a>__btod_mult_common</STRONG> (Thumb, 580 bytes, Stack size 16 bytes, btod.o(CL$$btod_mult_common))
@@ -1054,7 +1054,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[10a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
-<P><STRONG><a name="[e5]"></a>DebugStream_PollNextValue</STRONG> (Thumb, 332 bytes, Stack size 40 bytes, foc_debug_stream.o(i.DebugStream_PollNextValue))
+<P><STRONG><a name="[e5]"></a>DebugStream_PollNextValue</STRONG> (Thumb, 314 bytes, Stack size 40 bytes, foc_debug_stream.o(i.DebugStream_PollNextValue))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = DebugStream_PollNextValue &rArr; DebugStream_PollSemantic
 </UL>
 <BR>[Calls]<UL><LI><a href="#[e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_PollSemantic
@@ -1161,7 +1161,7 @@ Global Symbols
 <P><STRONG><a name="[4e]"></a>FOC_App_MonitorTrigger</STRONG> (Thumb, 90 bytes, Stack size 32 bytes, foc_app.o(i.FOC_App_MonitorTrigger))
 <BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = FOC_App_MonitorTrigger &rArr; DebugStream_PollNextValue &rArr; DebugStream_PollSemantic
 </UL>
-<BR>[Calls]<UL><LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_GetTelemetry
+<BR>[Calls]<UL><LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_GetReportConfig
 <LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Enqueue
 <LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_PollNextValue
 </UL>
@@ -1296,7 +1296,7 @@ Global Symbols
 <LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlApplyPhaseOutputRuntime
 </UL>
 
-<P><STRONG><a name="[f7]"></a>FOC_ControlApplyPhaseOutputRuntime</STRONG> (Thumb, 130 bytes, Stack size 0 bytes, foc_ctrl_actuation.o(i.FOC_ControlApplyPhaseOutputRuntime))
+<P><STRONG><a name="[f7]"></a>FOC_ControlApplyPhaseOutputRuntime</STRONG> (Thumb, 114 bytes, Stack size 0 bytes, foc_ctrl_actuation.o(i.FOC_ControlApplyPhaseOutputRuntime))
 <BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = FOC_ControlApplyPhaseOutputRuntime &rArr; FOC_ControlApplyElectricalAngleRuntime &rArr; FOC_ControlApplyElectricalAngleCore &rArr; SVPWM_Update &rArr; SVPWM_CalculateDuty &rArr; FOC_MathLut_Atan2 &rArr; FOC_MathLut_AtanRatio
 </UL>
 <BR>[Calls]<UL><LI><a href="#[13a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SVPWM_ApplyDirectDuty
@@ -1328,7 +1328,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[101]"></a>FOC_ControlExecutor_RunCycle</STRONG> (Thumb, 60 bytes, Stack size 16 bytes, foc_ctrl_executor.o(i.FOC_ControlExecutor_RunCycle))
-<BR><BR>[Stack]<UL><LI>Max Depth = 128<LI>Call Chain = FOC_ControlExecutor_RunCycle &rArr; FOC_ControlExecutor_RunOuterLoop &rArr; FOC_SpeedAngleOuterLoopStep &rArr; FOC_UpdateSpeedAngleError
+<BR><BR>[Stack]<UL><LI>Max Depth = 128<LI>Call Chain = FOC_ControlExecutor_RunCycle &rArr; FOC_ControlExecutor_RunOuterLoop &rArr; FOC_SpeedAngleOuterLoopStep &rArr; FOC_AngleHoldPIDRun
 </UL>
 <BR>[Calls]<UL><LI><a href="#[13e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunOuterLoop
 </UL>
@@ -1354,7 +1354,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[13e]"></a>FOC_ControlExecutor_RunOuterLoop</STRONG> (Thumb, 204 bytes, Stack size 32 bytes, foc_ctrl_executor.o(i.FOC_ControlExecutor_RunOuterLoop))
-<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = FOC_ControlExecutor_RunOuterLoop &rArr; FOC_SpeedAngleOuterLoopStep &rArr; FOC_UpdateSpeedAngleError
+<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = FOC_ControlExecutor_RunOuterLoop &rArr; FOC_SpeedAngleOuterLoopStep &rArr; FOC_AngleHoldPIDRun
 </UL>
 <BR>[Calls]<UL><LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SpeedOuterLoopStep
 <LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SpeedAngleOuterLoopStep
@@ -1392,7 +1392,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[13e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunOuterLoop
 </UL>
 
-<P><STRONG><a name="[d9]"></a>FOC_ControlRecordPhaseOutputDqAngle</STRONG> (Thumb, 84 bytes, Stack size 16 bytes, foc_ctrl_actuation.o(i.FOC_ControlRecordPhaseOutputDqAngle))
+<P><STRONG><a name="[d9]"></a>FOC_ControlRecordPhaseOutputDqAngle</STRONG> (Thumb, 82 bytes, Stack size 16 bytes, foc_ctrl_actuation.o(i.FOC_ControlRecordPhaseOutputDqAngle))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = FOC_ControlRecordPhaseOutputDqAngle
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_WrapRad
@@ -1430,7 +1430,7 @@ Global Symbols
 <LI><a href="#[10b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
 </UL>
 
-<P><STRONG><a name="[144]"></a>FOC_CurrentControlStep</STRONG> (Thumb, 226 bytes, Stack size 32 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlStep))
+<P><STRONG><a name="[144]"></a>FOC_CurrentControlStep</STRONG> (Thumb, 224 bytes, Stack size 32 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlStep))
 <BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = FOC_CurrentControlStep &rArr; FOC_CurrentControlSoftSwitchStep &rArr; FOC_CurrentControlClosedLoopStep &rArr; FOC_CurrentLoopComputeIqMeasured &rArr; Math_ParkTransform
 </UL>
 <BR>[Calls]<UL><LI><a href="#[15a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_NormalizeDt
@@ -1479,7 +1479,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[14b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_InitSnapshot
 </UL>
 
-<P><STRONG><a name="[10f]"></a>FOC_Indicator_Update</STRONG> (Thumb, 100 bytes, Stack size 16 bytes, foc_indicator.o(i.FOC_Indicator_Update))
+<P><STRONG><a name="[10f]"></a>FOC_Indicator_Update</STRONG> (Thumb, 114 bytes, Stack size 16 bytes, foc_indicator.o(i.FOC_Indicator_Update))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = FOC_Indicator_Update
 </UL>
 <BR>[Calls]<UL><LI><a href="#[109]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
@@ -1498,7 +1498,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[106]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
-<P><STRONG><a name="[10a]"></a>FOC_Init_Runtime</STRONG> (Thumb, 174 bytes, Stack size 40 bytes, foc_init.o(i.FOC_Init_Runtime))
+<P><STRONG><a name="[10a]"></a>FOC_Init_Runtime</STRONG> (Thumb, 176 bytes, Stack size 40 bytes, foc_init.o(i.FOC_Init_Runtime))
 <BR><BR>[Stack]<UL><LI>Max Depth = 272 + Unknown Stack Size
 <LI>Call Chain = FOC_Init_Runtime &rArr; FOC_Protocol_Init &rArr; FOC_Protocol_OutputDiag &rArr; __2snprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
@@ -1831,7 +1831,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[110]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Loop
 </UL>
 
-<P><STRONG><a name="[121]"></a>FOC_Protocol_GetTelemetry</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, foc_protocol_handler.o(i.FOC_Protocol_GetTelemetry))
+<P><STRONG><a name="[121]"></a>FOC_Protocol_GetReportConfig</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, foc_protocol_handler.o(i.FOC_Protocol_GetReportConfig))
 <BR><BR>[Called By]<UL><LI><a href="#[4e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_MonitorTrigger
 </UL>
 
@@ -1927,7 +1927,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[110]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Loop
 </UL>
 
-<P><STRONG><a name="[119]"></a>FOC_Protocol_QueueSystemInfo</STRONG> (Thumb, 462 bytes, Stack size 96 bytes, foc_protocol_handler.o(i.FOC_Protocol_QueueSystemInfo))
+<P><STRONG><a name="[119]"></a>FOC_Protocol_QueueSystemInfo</STRONG> (Thumb, 458 bytes, Stack size 96 bytes, foc_protocol_handler.o(i.FOC_Protocol_QueueSystemInfo))
 <BR><BR>[Stack]<UL><LI>Max Depth = 240 + Unknown Stack Size
 <LI>Call Chain = FOC_Protocol_QueueSystemInfo &rArr; __2snprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
@@ -1961,7 +1961,7 @@ Global Symbols
 <LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_OutputConfigParam
 </UL>
 
-<P><STRONG><a name="[100]"></a>FOC_ReInit_RunStep</STRONG> (Thumb, 1482 bytes, Stack size 192 bytes, foc_ctrl_sens_reinit.o(i.FOC_ReInit_RunStep))
+<P><STRONG><a name="[100]"></a>FOC_ReInit_RunStep</STRONG> (Thumb, 1480 bytes, Stack size 192 bytes, foc_ctrl_sens_reinit.o(i.FOC_ReInit_RunStep))
 <BR><BR>[Stack]<UL><LI>Max Depth = 408 + Unknown Stack Size
 <LI>Call Chain = FOC_ReInit_RunStep &rArr; ReInit_SampleMechanicalAngle &rArr; FOC_Platform_ReadMechanicalAngleRad &rArr; AS5600_ReadAngleRadOk &rArr; AS5600_ReadAngleOk &rArr; AS5600_ReadAngle &rArr; AS5600_ReadRegister16 &rArr; I2C0_ReadBytes &rArr; I2C0_SendAddress &rArr; I2C0_WaitFlag &rArr; I2C0_Config &rArr; i2c_clock_config &rArr; rcu_clock_freq_get
 </UL>
@@ -2019,7 +2019,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[148]"></a>FOC_SpeedAngleOuterLoopStep</STRONG> (Thumb, 384 bytes, Stack size 48 bytes, foc_ctrl_outer_loop.o(i.FOC_SpeedAngleOuterLoopStep))
-<BR><BR>[Stack]<UL><LI>Max Depth = 80<LI>Call Chain = FOC_SpeedAngleOuterLoopStep &rArr; FOC_UpdateSpeedAngleError
+<BR><BR>[Stack]<UL><LI>Max Depth = 80<LI>Call Chain = FOC_SpeedAngleOuterLoopStep &rArr; FOC_AngleHoldPIDRun
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_UpdateSpeedAngleError
 <LI><a href="#[150]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ResetSpeedState
@@ -2032,7 +2032,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[149]"></a>FOC_SpeedOuterLoopStep</STRONG> (Thumb, 78 bytes, Stack size 24 bytes, foc_ctrl_outer_loop.o(i.FOC_SpeedOuterLoopStep))
-<BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = FOC_SpeedOuterLoopStep &rArr; FOC_UpdateSpeedAngleError
+<BR><BR>[Stack]<UL><LI>Max Depth = 48<LI>Call Chain = FOC_SpeedOuterLoopStep &rArr; FOC_UpdateSpeedAngleError
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_UpdateSpeedAngleError
 <LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_PIDRunCore
@@ -2135,8 +2135,8 @@ Global Symbols
 <P><STRONG><a name="[136]"></a>Math_InverseParkTransform</STRONG> (Thumb, 76 bytes, Stack size 32 bytes, foc_math_transforms.o(i.Math_InverseParkTransform))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = Math_InverseParkTransform
 </UL>
-<BR>[Calls]<UL><LI><a href="#[1c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_CosLut
-<LI><a href="#[1c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MathLut_Sin
+<BR>[Calls]<UL><LI><a href="#[1c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MathLut_Sin
+<LI><a href="#[1c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_CosLut
 </UL>
 <BR>[Called By]<UL><LI><a href="#[134]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlApplyElectricalAngleCore
 </UL>
@@ -2144,8 +2144,8 @@ Global Symbols
 <P><STRONG><a name="[15c]"></a>Math_ParkTransform</STRONG> (Thumb, 76 bytes, Stack size 32 bytes, foc_math_transforms.o(i.Math_ParkTransform))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = Math_ParkTransform
 </UL>
-<BR>[Calls]<UL><LI><a href="#[1c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_CosLut
-<LI><a href="#[1c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MathLut_Sin
+<BR>[Calls]<UL><LI><a href="#[1c5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MathLut_Sin
+<LI><a href="#[1c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_CosLut
 </UL>
 <BR>[Called By]<UL><LI><a href="#[154]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentLoopComputeIqMeasured
 </UL>
@@ -2429,7 +2429,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlPlatform_InitHardware
 </UL>
 
-<P><STRONG><a name="[141]"></a>Sensor_ReadCurrent</STRONG> (Thumb, 112 bytes, Stack size 16 bytes, foc_sensor.o(i.Sensor_ReadCurrent))
+<P><STRONG><a name="[141]"></a>Sensor_ReadCurrent</STRONG> (Thumb, 100 bytes, Stack size 16 bytes, foc_sensor.o(i.Sensor_ReadCurrent))
 <BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = Sensor_ReadCurrent &rArr; FOC_Platform_ReadPhaseCurrent &rArr; ADC_ReadPhaseCurrentABOk &rArr; ADC_ReadPhaseCurrentAB &rArr; ADC_GetAverageSample &rArr; dma_transfer_number_get
 </UL>
 <BR>[Calls]<UL><LI><a href="#[187]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_ReadPhaseCurrent
@@ -3777,7 +3777,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_ControlTrigger
 </UL>
 
-<P><STRONG><a name="[51]"></a>FOC_App_SchedTickBridge</STRONG> (Thumb, 30 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_SchedTickBridge))
+<P><STRONG><a name="[51]"></a>FOC_App_SchedTickBridge</STRONG> (Thumb, 28 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_SchedTickBridge))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = FOC_App_SchedTickBridge &rArr; ControlScheduler_RunTick &rArr; ControlScheduler_EnableDWT
 </UL>
 <BR>[Calls]<UL><LI><a href="#[124]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_SetExecutionCycles
@@ -3803,7 +3803,7 @@ Local Symbols
 <LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_PollNextValue
 </UL>
 
-<P><STRONG><a name="[e6]"></a>DebugStream_PollSemantic</STRONG> (Thumb, 318 bytes, Stack size 24 bytes, foc_debug_stream.o(i.DebugStream_PollSemantic))
+<P><STRONG><a name="[e6]"></a>DebugStream_PollSemantic</STRONG> (Thumb, 314 bytes, Stack size 24 bytes, foc_debug_stream.o(i.DebugStream_PollSemantic))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = DebugStream_PollSemantic
 </UL>
 <BR>[Calls]<UL><LI><a href="#[e7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_ComputePeriodTicks
@@ -3962,7 +3962,7 @@ Local Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[133]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlCoggingLookupIq
 </UL>
 
-<P><STRONG><a name="[153]"></a>FOC_CurrentControlClosedLoopStep</STRONG> (Thumb, 74 bytes, Stack size 24 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlClosedLoopStep))
+<P><STRONG><a name="[153]"></a>FOC_CurrentControlClosedLoopStep</STRONG> (Thumb, 72 bytes, Stack size 24 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlClosedLoopStep))
 <BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = FOC_CurrentControlClosedLoopStep &rArr; FOC_CurrentLoopComputeIqMeasured &rArr; Math_ParkTransform
 </UL>
 <BR>[Calls]<UL><LI><a href="#[155]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentLoopPIDRun
@@ -3972,7 +3972,7 @@ Local Symbols
 <LI><a href="#[156]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentControlSoftSwitchStep
 </UL>
 
-<P><STRONG><a name="[156]"></a>FOC_CurrentControlSoftSwitchStep</STRONG> (Thumb, 266 bytes, Stack size 64 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlSoftSwitchStep))
+<P><STRONG><a name="[156]"></a>FOC_CurrentControlSoftSwitchStep</STRONG> (Thumb, 264 bytes, Stack size 64 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlSoftSwitchStep))
 <BR><BR>[Stack]<UL><LI>Max Depth = 152<LI>Call Chain = FOC_CurrentControlSoftSwitchStep &rArr; FOC_CurrentControlClosedLoopStep &rArr; FOC_CurrentLoopComputeIqMeasured &rArr; Math_ParkTransform
 </UL>
 <BR>[Calls]<UL><LI><a href="#[159]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentSoftSwitchUpdateBlend
@@ -3984,7 +3984,7 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[144]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentControlStep
 </UL>
 
-<P><STRONG><a name="[154]"></a>FOC_CurrentLoopComputeIqMeasured</STRONG> (Thumb, 74 bytes, Stack size 32 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentLoopComputeIqMeasured))
+<P><STRONG><a name="[154]"></a>FOC_CurrentLoopComputeIqMeasured</STRONG> (Thumb, 70 bytes, Stack size 32 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentLoopComputeIqMeasured))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = FOC_CurrentLoopComputeIqMeasured &rArr; Math_ParkTransform
 </UL>
 <BR>[Calls]<UL><LI><a href="#[15c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_ParkTransform
@@ -4075,13 +4075,13 @@ Local Symbols
 <LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SpeedAngleOuterLoopStep
 </UL>
 
-<P><STRONG><a name="[150]"></a>FOC_ResetSpeedState</STRONG> (Thumb, 24 bytes, Stack size 0 bytes, foc_ctrl_outer_loop.o(i.FOC_ResetSpeedState))
+<P><STRONG><a name="[150]"></a>FOC_ResetSpeedState</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, foc_ctrl_outer_loop.o(i.FOC_ResetSpeedState))
 <BR><BR>[Called By]<UL><LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SpeedAngleOuterLoopStep
 <LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlResetSpeedLoopState
 </UL>
 
-<P><STRONG><a name="[1a7]"></a>FOC_UpdateSpeedAngleError</STRONG> (Thumb, 144 bytes, Stack size 32 bytes, foc_ctrl_outer_loop.o(i.FOC_UpdateSpeedAngleError))
-<BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = FOC_UpdateSpeedAngleError
+<P><STRONG><a name="[1a7]"></a>FOC_UpdateSpeedAngleError</STRONG> (Thumb, 140 bytes, Stack size 24 bytes, foc_ctrl_outer_loop.o(i.FOC_UpdateSpeedAngleError))
+<BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = FOC_UpdateSpeedAngleError
 </UL>
 <BR>[Calls]<UL><LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_NormalizeDt
 <LI><a href="#[131]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_WrapRadDelta
@@ -4270,11 +4270,11 @@ Local Symbols
 <P><STRONG><a name="[84]"></a>_fp_digits</STRONG> (Thumb, 432 bytes, Stack size 96 bytes, _printf_fp_dec.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 220<LI>Call Chain = _fp_digits &rArr; _btod_etento &rArr; _btod_emul &rArr; _e2e
 </UL>
-<BR>[Calls]<UL><LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_ll_udiv10
+<BR>[Calls]<UL><LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_etento
+<LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_ll_udiv10
 <LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_emul
 <LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_ediv
 <LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_d2e
-<LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_btod_etento
 </UL>
 <BR>[Called By]<UL><LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_fp_dec_real
 </UL>

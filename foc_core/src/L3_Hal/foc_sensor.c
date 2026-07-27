@@ -71,10 +71,10 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->adc_valid = 0;
     out->encoder_valid = 0;
     out->vbus_valid = 0;
-    out->vbus_voltage_raw = 0.0f;
-    out->vbus_voltage_filtered = 0.0f;
-    out->current_a_raw = 0.0f;
-    out->current_b_raw = 0.0f;
+    out->vbus.raw = 0.0f;
+    out->vbus.filtered = 0.0f;
+    out->current_a_zero_offset = 0.0f;
+    out->current_b_zero_offset = 0.0f;
 }
 
 void Sensor_Init(uint8_t pwm_freq_kHz, float adc_sample_offset_percent)
@@ -106,8 +106,8 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
     if (motor == 0) return;
 
 #if (FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE)
-    motor->sensor_zero_offset_a = 0.0f;
-    motor->sensor_zero_offset_b = 0.0f;
+    motor->sensor.current_a_zero_offset = 0.0f;
+    motor->sensor.current_b_zero_offset = 0.0f;
     return;
 #endif
 
@@ -134,10 +134,10 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
 
     if (valid_samples < SENSOR_ZERO_CALIB_MIN_VALID_SAMPLES)
     {
-        motor->sensor_zero_offset_a = 0.0f;
-        motor->sensor_zero_offset_b = 0.0f;
+        motor->sensor.current_a_zero_offset = 0.0f;
+        motor->sensor.current_b_zero_offset = 0.0f;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-        motor->sensor_zero_offset_c = 0.0f;
+        motor->sensor.current_c_zero_offset = 0.0f;
 #endif
         return;
     }
@@ -151,33 +151,33 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
     if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
         (fabsf(avg_b) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT))
     {
-        motor->sensor_zero_offset_a = avg_a;
-        motor->sensor_zero_offset_b = avg_b;
+        motor->sensor.current_a_zero_offset = avg_a;
+        motor->sensor.current_b_zero_offset = avg_b;
     }
     else
     {
-        motor->sensor_zero_offset_a = 0.0f;
-        motor->sensor_zero_offset_b = 0.0f;
+        motor->sensor.current_a_zero_offset = 0.0f;
+        motor->sensor.current_b_zero_offset = 0.0f;
     }
 
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
     if (fabsf(avg_c) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
     {
-        motor->sensor_zero_offset_c = avg_c;
+        motor->sensor.current_c_zero_offset = avg_c;
     }
     else
     {
-        motor->sensor_zero_offset_c = 0.0f;
+        motor->sensor.current_c_zero_offset = 0.0f;
     }
 #endif
 }
 
 static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor)
 {
-    out->current_a.output_value -= motor->sensor_zero_offset_a;
-    out->current_b.output_value -= motor->sensor_zero_offset_b;
+    out->current_a.output_value -= motor->sensor.current_a_zero_offset;
+    out->current_b.output_value -= motor->sensor.current_b_zero_offset;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-    out->current_c.output_value -= motor->sensor_zero_offset_c;
+    out->current_c.output_value -= motor->sensor.current_c_zero_offset;
 #endif
 }
 
@@ -206,9 +206,6 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     if (read_ok != 0U)
     {
         sensor_data_t *out = &motor->sensor;
-
-        out->current_a_raw = current_a;
-        out->current_b_raw = current_b;
 
         out->current_a.output_value = FOC_FilterGate_CurrentA(&out->current_a, current_a);
         out->current_b.output_value = FOC_FilterGate_CurrentB(&out->current_b, current_b);
@@ -253,17 +250,17 @@ void Sensor_ReadVBUS(sensor_data_t *out)
 
     if (FOC_Platform_ReadVbusVoltage(&vbus_raw) != 0U)
     {
-        out->vbus_voltage_raw = vbus_raw;
+        out->vbus.raw = vbus_raw;
         if (out->vbus_valid == 0U)
         {
-            out->vbus_voltage_filtered = vbus_raw;
+            out->vbus.filtered = vbus_raw;
             out->vbus_valid = 1U;
         }
 
-        out->vbus_voltage_filtered = Math_FirstOrderLpf(vbus_raw,
-                                                          &out->vbus_voltage_filtered,
-                                                          0.1F,
-                                                          &out->vbus_valid);
+        out->vbus.filtered = Math_FirstOrderLpf(vbus_raw,
+                                                  &out->vbus.filtered,
+                                                  0.1F,
+                                                  &out->vbus_valid);
     }
 }
 
@@ -285,7 +282,7 @@ void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_sn
 float Sensor_GetVBUSVoltage(const sensor_data_t *snapshot)
 {
     if (snapshot == 0) return 0.0f;
-    return snapshot->vbus_voltage_filtered;
+    return snapshot->vbus.filtered;
 }
 
 uint8_t Sensor_IsVBUSValid(const sensor_data_t *snapshot)

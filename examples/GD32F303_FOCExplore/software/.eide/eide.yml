@@ -97,7 +97,6 @@ virtualFolder:
         - path: ../../../foc_core/src/L3_Hal/foc_filter_math.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_openloop.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_source_mgr.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_source_openloop.c
       folders: []
 dependenceList: []
 outDir: build
@@ -148,6 +147,7 @@ targets:
       - <virtual_root>/FOC_CORE/foc_ctrl_cogging_calib.c
       - <virtual_root>/FOC_CORE/foc_ctrl_reinit.c
       - <virtual_root>/foc_init.c
+      - <virtual_root>/FOC_CORE/foc_ctrl_source_openloop.c
     settings:
       debugger: cortex-debug
     toolchain: AC5

@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "L2_Core/Runtime/foc_scheduler_types.h"
+#include "L2_Core/Runtime/foc_runtime_types.h"
 #include "LS_Config/foc_config.h"
 
 void ControlScheduler_Init(control_scheduler_t *sched);

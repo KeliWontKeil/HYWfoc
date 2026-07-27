@@ -11,7 +11,7 @@ static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
     if (motor == 0) return;
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    motor->current_soft_switch_blend_initialized = 0U;
+    motor->current_soft_switch_status.blend_initialized = 0U;
 #else
     (void)motor;
 #endif
@@ -21,11 +21,11 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
 {
     if (motor == 0) return;
 
-    motor->min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
-    motor->angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
-    motor->angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
-    motor->speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
-    motor->speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
+    motor->cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
+    motor->cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
+    motor->cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
+    motor->cfg.speed_angle_transition_start_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_START_RAD;
+    motor->cfg.speed_angle_transition_end_rad = FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD;
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.enabled = COMMAND_MANAGER_DEFAULT_CURRENT_SOFT_SWITCH_ENABLE;
@@ -58,31 +58,31 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
 void FOC_ControlSetMinMechAngleAccumDeltaRad(foc_motor_t *motor, float value)
 {
     if (motor == 0) return;
-    motor->min_mech_angle_accum_delta_rad = (value < 0.0f) ? 0.0f : value;
+    motor->cfg.min_mech_angle_accum_delta_rad = (value < 0.0f) ? 0.0f : value;
 }
 
 void FOC_ControlSetAngleHoldIntegralLimit(foc_motor_t *motor, float value)
 {
     if (motor == 0) return;
-    motor->angle_hold_integral_limit = (value < 0.0f) ? 0.0f : value;
+    motor->cfg.angle_hold_integral_limit = (value < 0.0f) ? 0.0f : value;
 }
 
 void FOC_ControlSetAngleHoldPidDeadbandRad(foc_motor_t *motor, float value)
 {
     if (motor == 0) return;
-    motor->angle_hold_pid_deadband_rad = (value < 0.0f) ? 0.0f : value;
+    motor->cfg.angle_hold_pid_deadband_rad = (value < 0.0f) ? 0.0f : value;
 }
 
 void FOC_ControlSetSpeedAngleTransitionStartRad(foc_motor_t *motor, float value)
 {
     if (motor == 0) return;
-    motor->speed_angle_transition_start_rad = (value < 0.0f) ? 0.0f : value;
+    motor->cfg.speed_angle_transition_start_rad = (value < 0.0f) ? 0.0f : value;
 }
 
 void FOC_ControlSetSpeedAngleTransitionEndRad(foc_motor_t *motor, float value)
 {
     if (motor == 0) return;
-    motor->speed_angle_transition_end_rad = (value < 0.0f) ? 0.0f : value;
+    motor->cfg.speed_angle_transition_end_rad = (value < 0.0f) ? 0.0f : value;
 }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
@@ -227,20 +227,20 @@ void FOC_Control_ApplyConfig(foc_motor_t *motor)
 
     if (motor == 0) return;
 
-    phase_res = (fabsf(motor->phase_resistance) > 1e-6f) ? fabsf(motor->phase_resistance) : 1e-6f;
-    i_max = motor->max_phase_voltage / phase_res;
+    phase_res = (fabsf(motor->params.phase_resistance) > 1e-6f) ? fabsf(motor->params.phase_resistance) : 1e-6f;
+    i_max = motor->ctrl.max_phase_voltage / phase_res;
     if (i_max < 0.0f) i_max = 0.0f;
 
     FOC_PIDInit(&motor->torque_current_pid,
                 motor->torque_current_pid.kp,
                 motor->torque_current_pid.ki,
                 motor->torque_current_pid.kd,
-                -motor->max_phase_voltage, motor->max_phase_voltage);
+                -motor->ctrl.max_phase_voltage, motor->ctrl.max_phase_voltage);
     FOC_PIDInit(&motor->angle_pid,
                 motor->angle_pid.kp, motor->angle_pid.ki, motor->angle_pid.kd,
                 -i_max, i_max);
     FOC_PIDInit(&motor->speed_pid,
                 motor->speed_pid.kp, motor->speed_pid.ki, motor->speed_pid.kd,
                 -i_max, i_max);
-    Sensor_ADCSampleTimeOffset(motor->sensor_sample_offset_percent);
+    Sensor_ADCSampleTimeOffset(motor->cfg.sensor_sample_offset_percent);
 }

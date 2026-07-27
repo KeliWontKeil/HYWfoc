@@ -92,7 +92,7 @@ void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
                                           mech_angle_rad,
                                           speed_ref_rad_s);
 
-    motor->iq_target += iq_comp * motor->cogging_comp_status.calib_gain_k;
+    motor->ctrl.iq_target += iq_comp * motor->cogging_comp_status.calib_gain_k;
 }
 
 uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,

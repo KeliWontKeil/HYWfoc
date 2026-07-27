@@ -37,7 +37,7 @@ static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip)
 void FOC_ControlExecutor_Init(foc_motor_t *motor)
 {
     if (motor == 0) return;
-    motor->fast_current_div_counter = 0U;
+    motor->isr_timing.fast_current_div_counter = 0U;
 }
 
 void FOC_ControlExecutor_Stop(foc_motor_t *motor)
@@ -85,9 +85,9 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     }
 
     divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
-    motor->fast_current_div_counter++;
-    if (motor->fast_current_div_counter < divider) return;
-    motor->fast_current_div_counter = 0U;
+    motor->isr_timing.fast_current_div_counter++;
+    if (motor->isr_timing.fast_current_div_counter < divider) return;
+    motor->isr_timing.fast_current_div_counter = 0U;
 
     current_loop_dt_sec = (FOC_PWM_FREQ_KHZ == 0U) ? FOC_CONTROL_DT_SEC
                           : ((float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f));
@@ -119,13 +119,13 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     
     /* 阶段4：电流环 */
     FOC_CurrentControlStep(motor, &motor->sensor,
-                           motor->electrical_phase_angle,
+                           motor->ctrl.electrical_angle_rad,
                            current_loop_dt_sec);
 
     /* 阶段5：SVPWM */
-    FOC_ControlApplyElectricalAngleRuntime(motor, motor->electrical_phase_angle);
+    FOC_ControlApplyElectricalAngleRuntime(motor, motor->ctrl.electrical_angle_rad);
 
-    motor->current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
+    motor->isr_timing.current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
     
     }
 }
@@ -204,7 +204,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
         motor->current_soft_switch_status.enabled = 0U;
         motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-        motor->current_soft_switch_blend_initialized = 0U;
+        motor->current_soft_switch_status.blend_initialized = 0U;
 #endif
 
         motor->mode_transition.prev_control_mode = cur_mode;
@@ -214,7 +214,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 
     FOC_SpeedOuterLoopStep(motor,
                            &motor->speed_pid,
-                           motor->speed_only_rad_s,
+                           motor->cfg.speed_only_rad_s,
                            dt_sec);
 
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
@@ -222,8 +222,8 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
     FOC_SpeedAngleOuterLoopStep(motor,
                                 &motor->speed_pid,
                                 &motor->angle_pid,
-                                motor->target_angle_rad,
-                                motor->angle_position_speed_rad_s,
+                                motor->cfg.target_angle_rad,
+                                motor->cfg.angle_position_speed_rad_s,
                                 dt_sec);
 
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
@@ -232,7 +232,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
     {
         FOC_SpeedOuterLoopStep(motor,
                                &motor->speed_pid,
-                               motor->speed_only_rad_s,
+                               motor->cfg.speed_only_rad_s,
                                dt_sec);
     }
     else if (cur_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
@@ -240,8 +240,8 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
         FOC_SpeedAngleOuterLoopStep(motor,
                                     &motor->speed_pid,
                                     &motor->angle_pid,
-                                    motor->target_angle_rad,
-                                    motor->angle_position_speed_rad_s,
+                                    motor->cfg.target_angle_rad,
+                                    motor->cfg.angle_position_speed_rad_s,
                                     dt_sec);
     }
     else
@@ -258,7 +258,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
     {
         FOC_ControlApplyCoggingCompensation(motor,
                                             motor->active_source_state.mech_angle_rad,
-                                            motor->cogging_speed_ref_rad_s);
+                                            motor->cogging_comp_status.speed_ref_rad_s);
     }
 #endif
 }

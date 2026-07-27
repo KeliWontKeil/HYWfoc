@@ -5,6 +5,21 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-07-27
+
+### Changed
+- **文档全面同步**：全量文档审计，版本基线统一更新至 v2.0.2。
+- **架构文档同步**：`docs/architecture.md` 目录路径修正（`L2/` → `L2_Core/`）、L2 Control 模块列表去 CXX 编号改用实际文件名、数据流图同步（消除 `ctrl_input` 桥接残余，改用 `active_source_state` + `motor->ctrl.iq_target`）、ISR 阶段描述修正（PWM ISR 5 阶段实际执行顺序：采样→Estimator→Select/Publish→电流环→SVPWM；Control ISR 按 source 类型路由 OpenLoop/外环）。
+- **架构文档扩展**：新增 `control_region`（LOW/HIGH/FULL）描述；新增独立 "Source Manager 体系" 章节，详述两步分离设计（Select/Publish）、预收敛机制（所有 Estimator 后台迭代）、切换策略三分支（阈值/收敛/消抖）和 encoder_services 绑定。
+- **开发文档同步**：`docs/development.md` 模块命名列表去 CXX 编号，使用实际文件名。
+- **规则文件同步**：`.clinerules/hywfoc-project-rules.md` L2 Control 模块命名段去 CXX 编号，版本基线同步。
+- **README 基线**：`README.md`、`docs/README.md` 版本基线更新至 v2.0.2，协议文档链接从双语版修正为单语版。
+- **协议文档修正**：`docs/protocol-parameters.md` 语义调试行标签 `encoder_angle` → `mech_angle`（v2.0.0 重构后数据源变更）。
+
+### Documentation
+- 版本基线统一更新至 v2.0.2
+- 全量文档审计：8 个文件更新
+
 ## [2.0.1] - 2026-07-21
 
 ### Added

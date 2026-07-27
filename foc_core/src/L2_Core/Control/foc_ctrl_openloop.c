@@ -35,12 +35,12 @@ void FOC_OpenLoopLowSpeedPolicy_RunStep(foc_motor_t *motor, float dt_sec)
 
     if (motor == 0) return;
     if (motor->openloop_low_speed_policy_state.phase == FOC_OPENLOOP_STATE_FAILED) return;
-    if ((motor->pole_pairs == 0U) || (dt_sec <= 0.0f)) return;
+    if ((motor->params.pole_pairs == 0U) || (dt_sec <= 0.0f)) return;
 
     if (motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP)
     {
         motor->openloop_low_speed_policy_state.phase = FOC_OPENLOOP_STATE_RUNNING;
-        motor->iq_target = motor->openloop_low_speed_policy_state.current_ref_a;
+        motor->ctrl.iq_target = motor->openloop_low_speed_policy_state.current_ref_a;
 
         /* 更新虚拟角度 ramp */
         motor->openloop_angle_source_state.virtual_speed_rad_s +=
@@ -63,9 +63,9 @@ void FOC_OpenLoopLowSpeedPolicy_RunStep(foc_motor_t *motor, float dt_sec)
         motor->source_openloop_snapshot.confidence = 0.5f;
         motor->source_openloop_snapshot.elec_angle_rad = virtual_angle;
         motor->source_openloop_snapshot.elec_speed_rad_s = virtual_speed;
-        motor->source_openloop_snapshot.mech_angle_rad = virtual_angle / (float)motor->pole_pairs;
+        motor->source_openloop_snapshot.mech_angle_rad = virtual_angle / (float)motor->params.pole_pairs;
         motor->source_openloop_snapshot.mech_angle_accum_rad = motor->source_openloop_snapshot.mech_angle_rad;
-        motor->source_openloop_snapshot.mech_speed_rad_s = virtual_speed / (float)motor->pole_pairs;
+        motor->source_openloop_snapshot.mech_speed_rad_s = virtual_speed / (float)motor->params.pole_pairs;
     }
     else if (motor->openloop_low_speed_policy_state.phase == FOC_OPENLOOP_STATE_RUNNING)
     {
