@@ -97,6 +97,7 @@ virtualFolder:
         - path: ../../../foc_core/src/L3_Hal/foc_filter_math.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_openloop.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_source_mgr.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_transition.c
       folders: []
 dependenceList: []
 outDir: build

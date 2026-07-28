@@ -145,11 +145,14 @@ float FOC_FilterMath_Lpf1Step(foc_filter_lpf1_t *f, float input, float alpha)
     return f->output_value;
 }
 
-/* ====== First-order LPF for angle (handles 0/2pi wrap via shortest-path delta) ====== */
+/* ====== First-order LPF for angle (handles 0/2pi wrap via three-way measurement unwrap) ====== */
 
 float FOC_FilterMath_Lpf1AngleStep(foc_filter_lpf1_t *f, float input, float alpha)
 {
-    float delta;
+    float best_input;
+    float err_direct;
+    float err_plus;
+    float err_minus;
 
     if (f == 0) return input;
 
@@ -163,11 +166,19 @@ float FOC_FilterMath_Lpf1AngleStep(foc_filter_lpf1_t *f, float input, float alph
         return f->output_value;
     }
 
-    /* Compute shortest-path angular delta in [-PI, +PI) */
-    delta = Math_WrapRadDelta(input - f->state);
+    /* 三路测量展开：选择离当前状态最近的 input 投影，消除 0/2π 边界双稳态 */
+    err_direct = fabsf(input - f->state);
+    err_plus   = fabsf((input + FOC_MATH_TWO_PI) - f->state);
+    err_minus  = fabsf((input - FOC_MATH_TWO_PI) - f->state);
 
-    /* LPF on the delta, then wrap back to [0, 2PI) */
-    f->state = Math_WrapRad(f->state + alpha * delta);
+    best_input = input;
+    if (err_plus < err_direct && err_plus <= err_minus)
+        best_input = input + FOC_MATH_TWO_PI;
+    else if (err_minus < err_direct && err_minus < err_plus)
+        best_input = input - FOC_MATH_TWO_PI;
+
+    /* 标准一阶 LPF，然后卷回 [0, 2π) */
+    f->state = Math_WrapRad(f->state + alpha * (best_input - f->state));
     f->output_value = f->state;
 
     return f->output_value;

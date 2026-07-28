@@ -81,9 +81,6 @@ void FOC_Init_MotorAndCalib(foc_motor_t *motor)
     FOC_Control_ApplyConfig(motor);
 
     /* 初始化所有编译启用的 Source 私有状态 */
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimEncoder_Init(motor);
-#endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     FOC_EstimSMO_Init(motor);
 #endif

@@ -231,16 +231,11 @@ void FOC_Control_ApplyConfig(foc_motor_t *motor)
     i_max = motor->ctrl.max_phase_voltage / phase_res;
     if (i_max < 0.0f) i_max = 0.0f;
 
-    FOC_PIDInit(&motor->torque_current_pid,
-                motor->torque_current_pid.kp,
-                motor->torque_current_pid.ki,
-                motor->torque_current_pid.kd,
-                -motor->ctrl.max_phase_voltage, motor->ctrl.max_phase_voltage);
-    FOC_PIDInit(&motor->angle_pid,
-                motor->angle_pid.kp, motor->angle_pid.ki, motor->angle_pid.kd,
-                -i_max, i_max);
-    FOC_PIDInit(&motor->speed_pid,
-                motor->speed_pid.kp, motor->speed_pid.ki, motor->speed_pid.kd,
-                -i_max, i_max);
+    motor->torque_current_pid.out_min = -motor->ctrl.max_phase_voltage;
+    motor->torque_current_pid.out_max = motor->ctrl.max_phase_voltage;
+    motor->angle_pid.out_min = -i_max;
+    motor->angle_pid.out_max = i_max;
+    motor->speed_pid.out_min = -i_max;
+    motor->speed_pid.out_max = i_max;
     Sensor_ADCSampleTimeOffset(motor->cfg.sensor_sample_offset_percent);
 }

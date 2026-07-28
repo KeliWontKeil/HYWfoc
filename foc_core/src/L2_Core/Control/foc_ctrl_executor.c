@@ -9,19 +9,13 @@
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
+#include "L2_Core/Control/foc_ctrl_transition.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
 #include "L3_Hal/foc_sensor.h"
 #include "L3_Hal/foc_svpwm.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "L3_Hal/foc_math_types.h"
 #include "LS_Config/foc_config.h"
-
-static void ResetPIDState(foc_pid_t *pid)
-{
-    if (pid == 0) return;
-    pid->integral = 0.0f;
-    pid->prev_error = 0.0f;
-}
 
 static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip)
 {
@@ -96,7 +90,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 
     /* 阶段1：硬件采样 */
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-    Sensor_ReadEncoder(motor, &motor->sensor);
+    Sensor_ReadEncoder(motor, &motor->sensor, current_loop_dt_sec);
     Sensor_AccumulateEcycle(motor, &motor->sensor);
 #endif
     if (FOC_ControlRequiresCurrentSample() != 0U)
@@ -162,7 +156,7 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     if (motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP)
     {
-        FOC_OpenLoopLowSpeedPolicy_RunStep(motor, dt_sec);
+        FOC_OpenLoop_RunStep(motor, dt_sec);
     }
     else
 #endif
@@ -179,8 +173,6 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 {
     uint8_t cur_mode;
 
-    if (motor == 0) return;
-
     cur_mode = motor->state.control_mode;
 
     if (motor->mode_transition.prev_control_mode_valid == 0U)
@@ -191,22 +183,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 
     if (cur_mode != motor->mode_transition.prev_control_mode)
     {
-        if (cur_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
-        {
-            FOC_ControlRebaseMechanicalAngleAccum(motor, motor->active_source_state.mech_angle_rad);
-        }
-
-        ResetPIDState(&motor->torque_current_pid);
-        ResetPIDState(&motor->speed_pid);
-        ResetPIDState(&motor->angle_pid);
-        FOC_ControlResetSpeedLoopState(motor);
-
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        motor->current_soft_switch_status.enabled = 0U;
-        motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-        motor->current_soft_switch_status.blend_initialized = 0U;
-#endif
-
+        FOC_Transition_OnModeSwitch(motor, cur_mode, motor->mode_transition.prev_control_mode);
         motor->mode_transition.prev_control_mode = cur_mode;
     }
 

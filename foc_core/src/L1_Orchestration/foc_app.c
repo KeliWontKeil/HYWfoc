@@ -66,7 +66,7 @@ void FOC_App_Init(void)
     FOC_Platform_IndicatorInit();
     FOC_Platform_SetIndicator(FOC_LED_RUN_INDEX, 1U);
     FOC_Platform_SetIndicator(FOC_LED_COMM_INDEX, 1U);
-    FOC_Platform_SetIndicator(FOC_LED_FAULT_INDEX, 1U);
+    FOC_Platform_SetIndicator(FOC_LED_ERROR_INDEX, 1U);
 
     FOC_Init_Runtime(&g_sys, &motor,
                      FOC_App_SchedTickBridge,
@@ -78,7 +78,7 @@ void FOC_App_Init(void)
 
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
 #if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
-    FOC_OpenLoopLowSpeedPolicy_Init(&motor);
+    FOC_OpenLoop_Init(&motor);
 #endif
 
     FOC_SourceMgr_Init(&motor,
@@ -218,9 +218,10 @@ void FOC_App_ControlTrigger(void)
     if (motor.state.system_fault != 0U) return;
 
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
-    Sensor_ReadEncoder(&motor, &motor.sensor);
+    Sensor_ReadEncoder(&motor, &motor.sensor, FOC_CONTROL_DT_SEC);
 #endif
     Sensor_ReadVBUS(&motor.sensor);
+
 
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     if ((motor.sensor.adc_valid == 0U) || (motor.sensor.encoder_valid == 0U))
@@ -240,6 +241,7 @@ void FOC_App_ControlTrigger(void)
     motor.state.sensor_invalid_consecutive = 0U;
     motor.state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
 
+
 #if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
       if (motor.sensor.vbus.filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
@@ -248,6 +250,7 @@ void FOC_App_ControlTrigger(void)
         return;
     }
 #endif
+
 
     switch (phase)
     {

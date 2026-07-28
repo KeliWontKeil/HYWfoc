@@ -18,15 +18,10 @@ void FOC_EstimHFI_Step(foc_motor_t *motor, float dt_sec)
 
     if (motor == 0) return;
 
-    motor->source_hfi_snapshot.source = FOC_SOURCE_TYPE_HFI;
-    motor->source_hfi_snapshot.state = FOC_SOURCE_STATE_INIT;
-    motor->source_hfi_snapshot.valid = 0U;
-    motor->source_hfi_snapshot.confidence = 0.0f;
-    motor->source_hfi_snapshot.elec_angle_rad = 0.0f;
-    motor->source_hfi_snapshot.elec_speed_rad_s = 0.0f;
-    motor->source_hfi_snapshot.mech_angle_rad = 0.0f;
-    motor->source_hfi_snapshot.mech_angle_accum_rad = 0.0f;
-    motor->source_hfi_snapshot.mech_speed_rad_s = 0.0f;
+    /*
+     * TODO: 预收敛速度门限检查（参考 SMO 实现），在支持收敛状态机后引入。
+     *   FOC_HFI_ACCEL_PRECONV_SPEED_THRESHOLD_RAD_S
+     */
 }
 
 #endif /* FOC_ESTIMATOR_HFI_ENABLE */

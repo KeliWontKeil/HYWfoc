@@ -71,6 +71,9 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->adc_valid = 0;
     out->encoder_valid = 0;
     out->vbus_valid = 0;
+    out->prev_mech_angle_rad = 0.0f;
+    out->mech_speed_rad_s = 0.0f;
+    out->mech_speed_valid = 0U;
     out->vbus.raw = 0.0f;
     out->vbus.filtered = 0.0f;
     out->current_a_zero_offset = 0.0f;
@@ -223,16 +226,27 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
     }
 }
 
-void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out)
+void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out, float dt_sec)
 {
     float angle_rad;
     float angle_for_output;
+    float delta;
 
     if ((motor == 0) || (out == 0)) return;
 
     if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
     {
         angle_for_output = FOC_FilterGate_Angle(&out->mech_angle_rad, angle_rad);
+        if ((out->mech_speed_valid != 0U) && (dt_sec > 0.0f))
+        {
+            delta = Math_WrapRadDelta(angle_for_output - out->prev_mech_angle_rad);
+            if (fabsf(delta) > FOC_MATH_EPSILON)
+            {
+                out->mech_speed_rad_s = delta / dt_sec;
+            }
+        }
+        out->prev_mech_angle_rad = angle_for_output;
+        out->mech_speed_valid = 1U;
         out->mech_angle_rad.output_value = angle_for_output;
         out->encoder_valid = 1;
     }

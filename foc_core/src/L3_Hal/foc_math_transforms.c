@@ -32,6 +32,14 @@ float Math_WrapRadDelta(float angle)
     return angle;
 }
 
+float Math_WrapNearest(float reference, float target)
+{
+    float two_pi = FOC_MATH_TWO_PI;
+    float offset = target - reference;
+    float cycles = floorf((offset + FOC_MATH_PI) / two_pi);
+    return target - cycles * two_pi;
+}
+
 float Math_ClampFloat(float value, float min_val, float max_val)
 {
     if (value < min_val)

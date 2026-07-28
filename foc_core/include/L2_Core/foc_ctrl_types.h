@@ -48,11 +48,7 @@ typedef struct {
     float    confidence;
 
     float    elec_angle_rad;
-    float    elec_speed_rad_s;
-
     float    mech_angle_rad;
-    float    mech_angle_accum_rad;
-    float    mech_speed_rad_s;
 } foc_active_source_state_t;
 
 typedef enum {
@@ -109,6 +105,8 @@ typedef struct {
     float  accum_rad;
     float  prev_rad;
     uint8_t prev_valid;
+
+    float  ramped_speed_rad_s;      /* 加速器当前限幅后速度 */
 } foc_outer_loop_private_t;
 
 /* ========== Control mode transition tracking ========== */
@@ -207,15 +205,6 @@ typedef struct {
     uint8_t request_export;
 } foc_cogging_calib_state_t;
 
-/* ========== 编码器估计器私有状态 ========== */
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-typedef struct {
-    foc_filter_kalman_t mech_angle_kalman;
-    uint8_t         lpf_valid;
-    float           lpf_state;
-} foc_estim_encoder_state_t;
-#endif
-
 /* ========== SMO 估计器私有状态 ========== */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 typedef struct {
@@ -232,6 +221,7 @@ typedef struct {
     float    phase_comp_rad;
     float    prev_z_alpha;
     float    prev_z_beta;
+    float    mech_speed_rad_s;
     uint16_t converge_counter;
     uint16_t lock_counter;
     uint16_t rot_dir_counter;
@@ -248,7 +238,7 @@ typedef struct {
 } foc_estim_hfi_state_t;
 #endif
 
-/* ========== OpenLoop angle source and low-speed policy private state ========== */
+/* ========== OpenLoop angle source private state ========== */
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
 #define FOC_OPENLOOP_STATE_IDLE      0U
 #define FOC_OPENLOOP_STATE_RUNNING   1U
@@ -261,12 +251,8 @@ typedef struct {
     float    virtual_speed_rad_s;
     float    ramp_rate_rad_s2;
     float    target_speed_rad_s;
-} foc_openloop_angle_source_state_t;
-
-typedef struct {
-    uint8_t  phase;
-    float    current_ref_a;
-} foc_openloop_low_speed_policy_state_t;
+    float    mech_speed_rad_s;
+} foc_openloop_state_t;
 #endif
 
 /* ========== Source Manager low/high source switch private state ========== */
@@ -343,6 +329,9 @@ typedef struct {
     float current_c_zero_offset;
 #endif
     FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_ANGLE)     mech_angle_rad;
+    float prev_mech_angle_rad;
+    float mech_speed_rad_s;
+    uint8_t mech_speed_valid;
     struct {
         float raw;
         float filtered;
@@ -439,9 +428,6 @@ typedef struct foc_motor_t {
     foc_mode_transition_t       mode_transition;
 
     /* ─── 条件编译区 ─── */
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    foc_estim_encoder_state_t estim_encoder_state;
-#endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     foc_estim_smo_state_t estim_smo_state;
 #endif
@@ -449,8 +435,7 @@ typedef struct foc_motor_t {
     foc_estim_hfi_state_t estim_hfi_state;
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-    foc_openloop_angle_source_state_t openloop_angle_source_state;
-    foc_openloop_low_speed_policy_state_t openloop_low_speed_policy_state;
+    foc_openloop_state_t openloop_state;
 #endif
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     foc_current_soft_switch_status_t current_soft_switch_status;

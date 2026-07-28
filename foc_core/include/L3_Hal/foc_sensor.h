@@ -10,7 +10,7 @@
 void Sensor_Init(uint8_t pwm_freq_kHz, float adc_sample_offset_percent);
 void Sensor_InitSnapshot(sensor_data_t *out);
 void Sensor_ReadCurrent(foc_motor_t *motor);
-void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out);
+void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out, float dt_sec);
 void Sensor_ReadVBUS(sensor_data_t *out);
 void Sensor_SetZeroOffset(foc_motor_t *motor);
 void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_snapshot);

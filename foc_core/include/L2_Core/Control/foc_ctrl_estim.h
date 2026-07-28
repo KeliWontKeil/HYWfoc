@@ -10,11 +10,6 @@
 #define FOC_ESTIMATOR_STATE_LOCKED      FOC_SOURCE_STATE_LOCKED
 #define FOC_ESTIMATOR_STATE_DIVERGED    FOC_SOURCE_STATE_DIVERGED
 
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-void FOC_EstimEncoder_Step(foc_motor_t *motor, float dt_sec);
-void FOC_EstimEncoder_Init(foc_motor_t *motor);
-#endif
-
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec);
 void FOC_EstimSMO_Init(foc_motor_t *motor);

@@ -141,10 +141,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->active_source_state.valid = 0U;
     motor->active_source_state.confidence = 0.0f;
     motor->active_source_state.elec_angle_rad = 0.0f;
-    motor->active_source_state.elec_speed_rad_s = 0.0f;
     motor->active_source_state.mech_angle_rad = 0.0f;
-    motor->active_source_state.mech_angle_accum_rad = 0.0f;
-    motor->active_source_state.mech_speed_rad_s = 0.0f;
     motor->source_mgr_state.active_source = FOC_SOURCE_TYPE_NONE;
     motor->source_mgr_state.standby_source = FOC_SOURCE_TYPE_NONE;
     motor->source_mgr_state.control_region = FOC_CONTROL_REGION_FULL;
@@ -167,22 +164,12 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->phase_output_state.duty_c = 0.0f;
     motor->phase_output_state.sector = 0U;
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-    motor->openloop_angle_source_state.phase = FOC_OPENLOOP_STATE_IDLE;
-    motor->openloop_angle_source_state.virtual_angle_rad = 0.0f;
-    motor->openloop_angle_source_state.virtual_speed_rad_s = 0.0f;
-    motor->openloop_angle_source_state.ramp_rate_rad_s2 = 0.0f;
-    motor->openloop_angle_source_state.target_speed_rad_s = 0.0f;
-    motor->openloop_low_speed_policy_state.phase = FOC_OPENLOOP_STATE_IDLE;
-    motor->openloop_low_speed_policy_state.current_ref_a = 0.0f;
-    motor->openloop_source_snapshot.source = FOC_SOURCE_TYPE_OPENLOOP;
-    motor->openloop_source_snapshot.state = FOC_SOURCE_STATE_INIT;
-    motor->openloop_source_snapshot.valid = 0U;
-    motor->openloop_source_snapshot.confidence = 0.0f;
-    motor->openloop_source_snapshot.elec_angle_rad = 0.0f;
-    motor->openloop_source_snapshot.elec_speed_rad_s = 0.0f;
-    motor->openloop_source_snapshot.mech_angle_rad = 0.0f;
-    motor->openloop_source_snapshot.mech_angle_accum_rad = 0.0f;
-    motor->openloop_source_snapshot.mech_speed_rad_s = 0.0f;
+    motor->openloop_state.phase = FOC_OPENLOOP_STATE_IDLE;
+    motor->openloop_state.virtual_angle_rad = 0.0f;
+    motor->openloop_state.virtual_speed_rad_s = 0.0f;
+    motor->openloop_state.ramp_rate_rad_s2 = 0.0f;
+    motor->openloop_state.target_speed_rad_s = 0.0f;
+    motor->openloop_state.mech_speed_rad_s = 0.0f;
 #endif
     motor->params.vbus_voltage = vbus_voltage;
     motor->ctrl.iq_target = 0.0f;
@@ -333,7 +320,7 @@ void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
     Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     Sensor_SetZeroOffset(motor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */
-    Sensor_ReadEncoder(motor, &motor->sensor);
+    Sensor_ReadEncoder(motor, &motor->sensor, FOC_CONTROL_DT_SEC);
     Sensor_ReadVBUS(&motor->sensor);
     motor->sensor.adc_valid = 1U;
 

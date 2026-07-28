@@ -313,7 +313,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>3</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -714,11 +714,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_estim_encoder.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_encoder.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_estim_hfi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_hfi.c</FilePath>
@@ -752,6 +747,11 @@
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_transition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1467,11 +1467,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_estim_encoder.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_encoder.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_estim_hfi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_hfi.c</FilePath>
@@ -1505,6 +1500,11 @@
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_transition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2220,11 +2220,6 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_estim_encoder.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_encoder.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_estim_hfi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_hfi.c</FilePath>
@@ -2258,6 +2253,11 @@
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_transition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>

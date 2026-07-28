@@ -32,11 +32,9 @@
 #define FOC_FILTER_SENSOR_ANGLE_KALMAN_EST_ERR        0.0f
 #define FOC_FILTER_SENSOR_ANGLE_KALMAN_PROC_NOISE     0.001f
 #define FOC_FILTER_SENSOR_ANGLE_KALMAN_INIT           0.0f
+
 /* LPF1 parameter (used when type == LPF1) */
 #define FOC_FILTER_SENSOR_ANGLE_LPF_ALPHA             0.80f
-
-/* ── SVPWM ── */
-#define FOC_FILTER_SVPWM_LPF_ALPHA                    0.60f
 
 /* ── ENCODER_SPEED ── */
 #define FOC_FILTER_ENCODER_SPEED_LPF_ALPHA            0.8f

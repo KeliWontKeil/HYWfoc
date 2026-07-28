@@ -5,9 +5,6 @@
 
 #include "L2_Core/foc_ctrl_types.h"  /* for foc_motor_t */
 
-/* 通过调试端口写入文本 */
-void FOC_Protocol_WriteText(const char *text);
-
 /* 写入单字节状态码 */
 void FOC_Protocol_WriteStatus(uint8_t status);
 

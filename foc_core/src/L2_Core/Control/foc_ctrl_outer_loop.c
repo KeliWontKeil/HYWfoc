@@ -6,6 +6,47 @@
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
+/* ================================================================
+ * 加速器：全速域速度参考斜率限制 + 区域上限钳位
+ * ================================================================ */
+
+float FOC_Accel_ApplySpeedLimit(foc_motor_t *motor, float target_mech_speed_rad_s,
+                                float ramp_rate_rad_s2, float speed_limit_rad_s, float dt_sec)
+{
+    float current;
+    float max_step;
+
+    if (motor == 0) return 0.0f;
+
+    current = motor->outer_loop.ramped_speed_rad_s;
+
+    max_step = ramp_rate_rad_s2 * fmaxf(dt_sec, 0.0f);
+    if (target_mech_speed_rad_s > current + max_step)
+    {
+        current += max_step;
+    }
+    else if (target_mech_speed_rad_s < current - max_step)
+    {
+        current -= max_step;
+    }
+    else
+    {
+        current = target_mech_speed_rad_s;
+    }
+
+    if (current > speed_limit_rad_s)  current = speed_limit_rad_s;
+    if (current < -speed_limit_rad_s) current = -speed_limit_rad_s;
+
+    motor->outer_loop.ramped_speed_rad_s = current;
+    return current;
+}
+
+void FOC_Accel_ResetState(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+    motor->outer_loop.ramped_speed_rad_s = 0.0f;
+}
+
 static float FOC_NormalizeDt(float dt_sec)
 {
     return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_SEC;
@@ -148,6 +189,7 @@ void FOC_ControlResetSpeedLoopState(foc_motor_t *motor)
 {
     if (motor == 0) return;
     FOC_ResetSpeedState(motor);
+    FOC_Accel_ResetState(motor);
 }
 
 void FOC_SpeedOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
@@ -158,9 +200,26 @@ void FOC_SpeedOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
 
     if ((motor == 0) || (speed_pid == 0)) return;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
-    mech_angle_rad = motor->active_source_state.mech_angle_rad;
+    float ramp_rate;
+    float speed_limit;
 
+    dt_sec = FOC_NormalizeDt(dt_sec);
+
+    /* 加速器：斜坡限幅 + 区域上限钳位 */
+    if (motor->source_mgr_state.control_region == FOC_CONTROL_REGION_LOW)
+    {
+        ramp_rate   = FOC_ACCEL_RAMP_RATE_LOW_RAD_S2;
+        speed_limit = FOC_ACCEL_SPEED_LIMIT_LOW_RAD_S;
+    }
+    else
+    {
+        ramp_rate   = FOC_ACCEL_RAMP_RATE_HIGH_RAD_S2;
+        speed_limit = FOC_ACCEL_SPEED_LIMIT_HIGH_RAD_S;
+    }
+    speed_ref_rad_s = FOC_Accel_ApplySpeedLimit(motor, speed_ref_rad_s,
+                                                ramp_rate, speed_limit, dt_sec);
+
+    mech_angle_rad = motor->active_source_state.mech_angle_rad;
     speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, mech_angle_rad,
                                                        speed_ref_rad_s, dt_sec);
     motor->ctrl.iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);

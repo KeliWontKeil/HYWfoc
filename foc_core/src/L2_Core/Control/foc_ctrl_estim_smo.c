@@ -69,11 +69,8 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     float cross_z;
     float theta_bemf;
     uint8_t valid_dt;
-    foc_active_source_state_t *snapshot;
 
     if (motor == 0) return;
-
-    snapshot = &motor->source_smo_snapshot;
 
     theta_bemf = (motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP)
         ? motor->ctrl.electrical_angle_rad
@@ -148,7 +145,24 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
         }
     }
 
-    if ((bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V) &&
+    /*
+     * 预收敛速度门限：LOW 区域且机械速度低于门限时不累计收敛计数，
+     * 避免停转或低速时 SMO 误收敛。核心观测器/PLL 始终运行，
+     * 仅收敛状态机被门控。
+     */
+    uint8_t allow_converge = 1U;
+    if (motor->source_mgr_state.control_region == FOC_CONTROL_REGION_LOW)
+    {
+        float mech_speed = (motor->params.pole_pairs > 0U) ?
+            fabsf(motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs) : 0.0f;
+        if (mech_speed < FOC_SMO_ACCEL_PRECONV_SPEED_THRESHOLD_RAD_S)
+        {
+            allow_converge = 0U;
+        }
+    }
+
+    if ((allow_converge != 0U) &&
+        (bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V) &&
         (motor->estim_smo_state.rot_dir_counter >= FOC_ESTIM_SMO_ROT_DIR_CONSECUTIVE))
     {
         motor->estim_smo_state.converge_counter++;
@@ -158,47 +172,17 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     {
         motor->estim_smo_state.converge_counter = 0U;
         motor->estim_smo_state.lock_counter++;
-        if (motor->estim_smo_state.lock_counter > FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
-        {
-            snapshot->state = FOC_ESTIMATOR_STATE_DIVERGED;
-        }
-        else
-        {
-            snapshot->state = FOC_ESTIMATOR_STATE_INIT;
-        }
-
-        goto output;
     }
 
-    if (motor->estim_smo_state.converge_counter > FOC_ESTIM_SMO_LOCK_CONSECUTIVE)
-    {
-        snapshot->state = FOC_ESTIMATOR_STATE_LOCKED;
-    }
-    else if (motor->estim_smo_state.converge_counter > FOC_ESTIM_SMO_CONVERGE_CONSECUTIVE)
-    {
-        snapshot->state = FOC_ESTIMATOR_STATE_CONVERGING;
-    }
-    else
-    {
-        snapshot->state = FOC_ESTIMATOR_STATE_INIT;
-    }
-
-    snapshot->elec_angle_rad   = motor->estim_smo_state.pll_angle_rad;
-    snapshot->elec_speed_rad_s = motor->estim_smo_state.pll_speed_rad_s;
-
+    /* 机械速度（Source Manager Select 使用） */
     if (motor->params.pole_pairs > 0U)
     {
-        snapshot->mech_angle_rad  = motor->estim_smo_state.pll_angle_rad / (float)motor->params.pole_pairs;
-        snapshot->mech_speed_rad_s = motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs;
+        motor->estim_smo_state.mech_speed_rad_s = motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs;
     }
     else
     {
-        snapshot->mech_angle_rad  = 0.0f;
-        snapshot->mech_speed_rad_s = 0.0f;
+        motor->estim_smo_state.mech_speed_rad_s = 0.0f;
     }
-
-    snapshot->valid  = (snapshot->state >= FOC_ESTIMATOR_STATE_CONVERGING) ? 1U : 0U;
-    snapshot->source = FOC_SOURCE_TYPE_SMO;
 }
 
 #endif

@@ -39,6 +39,16 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
         if (IsInRange(value, COMMAND_MANAGER_PARAM_SPEED_ONLY_MIN_RAD_S, COMMAND_MANAGER_PARAM_SPEED_ONLY_MAX_RAD_S) == 0U) return 0U;
+        {
+            float abs_speed = (value < 0.0f) ? -value : value;
+            if ((motor->source_switch_state.active != 0U) &&
+                (motor->source_switch_state.low_source != motor->source_switch_state.high_source) &&
+                (abs_speed > motor->source_switch_state.speed_threshold_low_rad_s) &&
+                (abs_speed < motor->source_switch_state.speed_threshold_high_rad_s))
+            {
+                return 0U;
+            }
+        }
         motor->cfg.speed_only_rad_s = value;
         break;
 
@@ -113,6 +123,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U) return 0U;
         motor->torque_current_pid.kp = value;
+        motor->torque_current_pid.integral = 0.0f;
+        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -121,6 +133,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U) return 0U;
         motor->torque_current_pid.ki = value;
+        motor->torque_current_pid.integral = 0.0f;
+        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -129,6 +143,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U) return 0U;
         motor->torque_current_pid.kd = value;
+        motor->torque_current_pid.integral = 0.0f;
+        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -139,6 +155,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U) return 0U;
         motor->angle_pid.kp = value;
+        motor->angle_pid.integral = 0.0f;
+        motor->angle_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -165,6 +183,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U) return 0U;
         motor->speed_pid.kp = value;
+        motor->speed_pid.integral = 0.0f;
+        motor->speed_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -985,12 +1005,8 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-    snprintf(out, sizeof(out), "system.openloop.source_state=%u\r\n",
-             (unsigned int)motor->openloop_angle_source_state.phase);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
-
-    snprintf(out, sizeof(out), "system.openloop.policy_state=%u\r\n",
-             (unsigned int)motor->openloop_low_speed_policy_state.phase);
+    snprintf(out, sizeof(out), "system.openloop.state=%u\r\n",
+             (unsigned int)motor->openloop_state.phase);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 #endif
 

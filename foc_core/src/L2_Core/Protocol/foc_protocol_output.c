@@ -8,17 +8,6 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-/* 通过调试端口写入文本 */
-void FOC_Protocol_WriteText(const char *text)
-{
-    if (text == 0)
-    {
-        return;
-    }
-
-    FOC_Platform_WriteDebugText(text);
-}
-
 /* 写入单字节状态码 */
 void FOC_Protocol_WriteStatus(uint8_t status)
 {
@@ -61,7 +50,7 @@ void FOC_Protocol_OutputDiag(const char *level, const char *module, const char *
              (level != 0) ? level : "INFO",
              (module != 0) ? module : "general",
              (detail != 0) ? detail : "none");
-    FOC_Protocol_WriteText(out);
+    FOC_Platform_WriteDebugText(out);
 #else
     (void)level;
     (void)module;
@@ -79,10 +68,10 @@ void FOC_Protocol_OutputParam(char subcommand, float value)
                                  subcommand,
                                  value);
 
-    FOC_Protocol_WriteText(out);
+    FOC_Platform_WriteDebugText(out);
 }
 
-/* 格式化并输出 C 组配置参数（subcommand+value） */
+/* 格式化并输出配置参数（subcommand+value） */
 void FOC_Protocol_OutputConfigParam(char subcommand, float value)
 {
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
@@ -92,7 +81,7 @@ void FOC_Protocol_OutputConfigParam(char subcommand, float value)
                                   subcommand,
                                   value);
 
-    FOC_Protocol_WriteText(out);
+    FOC_Platform_WriteDebugText(out);
 }
 
 /* 格式化并输出状态（subcommand+value） */
@@ -104,7 +93,7 @@ void FOC_Protocol_OutputState(char subcommand, uint8_t value)
                                  (uint16_t)sizeof(out),
                                  subcommand,
                                  value);
-    FOC_Protocol_WriteText(out);
+    FOC_Platform_WriteDebugText(out);
 }
 
 void FOC_Protocol_FormatSummaryLine(const foc_motor_t *motor,
