@@ -1,43 +1,39 @@
 #include "L2_Core/Control/foc_ctrl_transition.h"
 
-#if (FOC_TRANSITION_ENABLE == FOC_CFG_ENABLE)
+#include <math.h>
 
-void FOC_Transition_Init(foc_motor_t *motor)
+#include "L3_Hal/foc_math_transforms.h"
+#include "L3_Hal/foc_math_types.h"
+#include "LS_Config/foc_config.h"
+
+static void Transition_ResetPID(foc_pid_t *pid)
 {
-    (void)motor;
+    if (pid == 0) return;
+    pid->integral = 0.0f;
+    pid->prev_error = 0.0f;
 }
 
-void FOC_Transition_RunStep(foc_motor_t *motor, float dt_sec)
+void FOC_Transition_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t old_mode)
 {
-    (void)motor;
-    (void)dt_sec;
-}
+    if (motor == 0) return;
 
-uint8_t FOC_Transition_Request(foc_motor_t *motor, uint8_t target_estimator_type)
-{
-    (void)motor;
-    (void)target_estimator_type;
-    return 0U;
-}
+    motor->outer_loop.accum_rad = motor->active_source_state.mech_angle_rad;
+    motor->outer_loop.prev_rad = motor->active_source_state.mech_angle_rad;
+    motor->outer_loop.prev_valid = 1U;
 
-#else
+    motor->outer_loop.ramped_speed_rad_s = 0.0f;
 
-void FOC_Transition_Init(foc_motor_t *motor)
-{
-    (void)motor;
-}
+    motor->outer_loop.speed_state_valid = 0U;
+    motor->outer_loop.speed_err_accum_rad = 0.0f;
 
-void FOC_Transition_RunStep(foc_motor_t *motor, float dt_sec)
-{
-    (void)motor;
-    (void)dt_sec;
-}
+    Transition_ResetPID(&motor->speed_pid);
+    Transition_ResetPID(&motor->angle_pid);
 
-uint8_t FOC_Transition_Request(foc_motor_t *motor, uint8_t target_estimator_type)
-{
-    (void)motor;
-    (void)target_estimator_type;
-    return 0U;
-}
-
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    motor->current_soft_switch_status.enabled = 0U;
+    motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+    motor->current_soft_switch_status.blend_initialized = 0U;
 #endif
+
+    (void)old_mode;
+}

@@ -14,7 +14,7 @@
  * 所有函数在 FOC_App_Init 中按序调用。
  */
 
-/* 初始化 runtime 子系统（调度器/队列/通信/协议/调试流/硬件） */
+/* 初始化 runtime 子系统（调度器/任务标志/通信/输出/监控/协议/硬件） */
 void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
                       FOC_Platform_TickCallback_t tick_cb,
                       FOC_Platform_TickCallback_t service_cb,

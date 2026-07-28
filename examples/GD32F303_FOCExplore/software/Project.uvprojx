@@ -10,6 +10,7 @@
       <TargetName>GD32F30X_CL</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      <pArmCC>5060750::V5.06 update 6 (build 750)::ARMCC</pArmCC>
       <pCCUsed>5060750::V5.06 update 6 (build 750)::ARMCC</pCCUsed>
       <uAC6>0</uAC6>
       <TargetOption>
@@ -275,7 +276,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0x40000</Size>
+                <Size>0x30000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -658,11 +659,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cfg.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_cogging_calib.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cogging_calib.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_compensation.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_compensation.c</FilePath>
@@ -693,11 +689,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_reinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_reinit.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
@@ -721,6 +712,46 @@
               <FileName>foc_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_estim_hfi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_hfi.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_estim_smo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_smo.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_source_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_sens_cogging_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_sens_reinit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_filter_math.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_transition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1381,11 +1412,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cfg.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_cogging_calib.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cogging_calib.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_compensation.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_compensation.c</FilePath>
@@ -1416,11 +1442,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_reinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_reinit.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
@@ -1444,6 +1465,46 @@
               <FileName>foc_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_estim_hfi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_hfi.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_estim_smo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_smo.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_source_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_sens_cogging_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_sens_reinit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_filter_math.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_transition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2104,11 +2165,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cfg.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_cogging_calib.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_cogging_calib.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_ctrl_compensation.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_compensation.c</FilePath>
@@ -2139,11 +2195,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_reinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_reinit.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
@@ -2167,6 +2218,46 @@
               <FileName>foc_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_estim_hfi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_hfi.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_estim_smo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_estim_smo.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_source_mgr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_source_mgr.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_openloop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_openloop.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_sens_cogging_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_sens_reinit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_filter_math.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_transition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>

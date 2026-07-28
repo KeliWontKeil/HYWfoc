@@ -7,7 +7,22 @@
 #define FOC_MATH_SQRT3      1.7320508f
 #define FOC_MATH_SQRT3_BY_2 0.8660254f
 #define FOC_MATH_PI_BY_3    1.0471975f
-#define FOC_MATH_EPSILON    1e-6f
+#define FOC_MATH_EPSILON    0.0f
+
+/* ========== 滤波器类型枚举值 ========== */
+#define FOC_FILTER_TYPE_NONE    0
+#define FOC_FILTER_TYPE_KALMAN  1
+#define FOC_FILTER_TYPE_LPF1    2
+#define FOC_FILTER_TYPE_BIQUAD  3
+
+/* ========== 从类型值推导类型名（二次展开） ========== */
+#define FOC_FILTER_TYPEDEF_0    uint8_t
+#define FOC_FILTER_TYPEDEF_1    foc_filter_kalman_t
+#define FOC_FILTER_TYPEDEF_2    foc_filter_lpf1_t
+#define FOC_FILTER_TYPEDEF_3    foc_filter_biquad_t
+
+#define FOC_FILTER_TYPEDEF_CONCAT_(x)  FOC_FILTER_TYPEDEF_##x
+#define FOC_FILTER_TYPEDEF(id)         FOC_FILTER_TYPEDEF_CONCAT_(id)
 
 /* Unified binary semantics for all enable or disable style macros. */
 #define FOC_CFG_DISABLE 0U
@@ -27,6 +42,19 @@
 #define FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED (-1.0f)
 
 #define FOC_POLE_PAIRS_UNDEFINED 0U
+
+/* Motor parameter measurement type */
+#define FOC_MOTOR_MEASUREMENT_TYPE_Y_LINE         0U
+#define FOC_MOTOR_MEASUREMENT_TYPE_DELTA_LINE     1U
+#define FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT   2U
+
+/* Control strategy source identifiers. */
+#define FOC_CONTROL_SRC_NONE        0U
+#define FOC_CONTROL_SRC_ENCODER     1U
+#define FOC_CONTROL_SRC_SMO         2U
+#define FOC_CONTROL_SRC_HFI         3U
+#define FOC_CONTROL_SRC_OPENLOOP    4U
+#define FOC_CONTROL_SRC_FLUX        5U
 
 /* Current soft-switch mode options. */
 #define FOC_CURRENT_SOFT_SWITCH_MODE_OPEN 0U

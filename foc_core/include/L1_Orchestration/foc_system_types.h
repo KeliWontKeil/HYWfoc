@@ -4,84 +4,74 @@
 #include <stdint.h>
 
 #include "LS_Config/foc_config.h"
-#include "L2_Core/Runtime/foc_scheduler_types.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
-#include "L2_Core/Protocol/foc_snapshot_types.h"
+#include "L2_Core/Runtime/foc_runtime_types.h"
+#include "L2_Core/Protocol/foc_protocol_types.h"
 #include "L2_Core/foc_ctrl_types.h"
-#include "L1_Orchestration/foc_monitor_queue_types.h"
+#include "L2_Core/Runtime/foc_monitor_queue_types.h"
 
 /*
  * ================================================================
  * 系统配置（不随 reinit 重置）
  *
- * 协议遥测策略、报告模式等配置跨越电机 reinit 保持。
+ * 报告配置等系统级设置跨越电机 reinit 保持。
  * ================================================================
  */
 typedef struct foc_system_cfg {
-    telemetry_policy_snapshot_t telemetry;  /* 遥测策略（协议设置） */
-    uint8_t report_mode;                    /* 报告模式 */
+    foc_report_config_t report;
 } foc_system_cfg_t;
 
-/*
- * ================================================================
- * 调度器运行状态
- * ================================================================
- */
 typedef struct {
-    uint16_t tick_counter;
-    uint32_t execution_cycles;
-    void (*callbacks[FOC_TASK_RATE_COUNT])(void);
-    uint8_t dwt_enabled;
-} control_scheduler_t;
+    volatile uint8_t service_pending;
+    volatile uint8_t monitor_pending;
+} foc_system_task_flags_t;
+
+typedef struct {
+    uint8_t source_rr;
+    fifo_queue_t rx_fifo;
+    uint8_t rx_buffer[FOC_RX_QUEUE_DEPTH][PROTOCOL_PARSER_RX_MAX_LEN];
+} foc_comm_runtime_t;
+
+typedef struct {
+    fifo_queue_t tx_fifo;
+    uint8_t tx_buffer[FOC_OUTPUT_QUEUE_DEPTH][FOC_OUTPUT_FRAME_MAX_LEN];
+} foc_output_runtime_t;
+
+typedef struct {
+#if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
+    debug_stream_state_t stream;
+    volatile uint8_t frame_active;
+    fifo_queue_t elem_fifo;
+    uint8_t elem_buffer[FOC_MONITOR_ELEM_QUEUE_DEPTH][sizeof(monitor_element_t)];
+    char osc_collect_buf[DEBUG_STREAM_OSC_PAYLOAD_LEN];
+    uint16_t osc_collect_offset;
+#else
+    uint8_t reserved;
+#endif
+} foc_monitor_runtime_t;
+
+typedef struct {
+    uint16_t comm_pulse_counter;
+    uint16_t run_blink_counter;
+} foc_indicator_runtime_t;
 
 /*
  * ================================================================
  * 系统运行时状态（每次 reinit 重置）
  *
- * 调度器、调试流、指示器等运行时可变状态。
+ * 调度器、任务触发标志、通信输入、输出队列、监控输出、指示器等
+ * 系统级运行时可变状态。
  * ================================================================
  */
 typedef struct {
-    /* 调度器 */
     control_scheduler_t scheduler;
-
-    /* 调试流 */
-    debug_stream_state_t debug_stream;
-
-    /* 任务触发标志 */
-    volatile uint8_t service_task_pending;
-    volatile uint8_t monitor_task_pending;
-
-    /* 指示器 */
-    struct {
-        uint16_t comm_pulse_counter;
-        uint16_t led_run_blink_counter;
-    } indicator;
-
-    /* 示波器行累积状态（主循环跨轮收集用） */
-    struct {
-        char collect_buf[DEBUG_STREAM_OSC_PAYLOAD_LEN];
-        uint16_t collect_offset;
-    } osc;
-
-    /* 通信轮询公平调度：下一次轮询起始源索引（round-robin 偏移） */
-    uint8_t comm_source_rr;
-
-    /* Monitor 帧写入标志：ISR 写入帧时置 1，写完清 0；主循环检查此标志避免读半帧 */
-    volatile uint8_t monitor_frame_active;
-
-    /* RX 帧队列：ISR 入队帧数据，主循环出队解析 */
-    fifo_queue_t rx_fifo;
-    uint8_t rx_fifo_buffer[FOC_RX_QUEUE_DEPTH][PROTOCOL_PARSER_RX_MAX_LEN];
-
-    /* TX 文本队列：主循环入队调试/协议行，主循环同周期出队发送 */
-    fifo_queue_t tx_fifo;
-    uint8_t tx_fifo_buffer[FOC_OUTPUT_QUEUE_DEPTH][FOC_OUTPUT_FRAME_MAX_LEN];
-
-    /* Monitor 元素队列：ISR 采样入队 → 主循环出队格式化 */
-    fifo_queue_t monitor_elem_q;
-    uint8_t monitor_elem_buffer[FOC_MONITOR_ELEM_QUEUE_DEPTH][sizeof(monitor_element_t)];
+    foc_system_task_flags_t tasks;
+    foc_comm_runtime_t comm;
+    foc_output_runtime_t output;
+    foc_monitor_runtime_t monitor;
+    foc_indicator_runtime_t indicator;
 } foc_runtime_ctx_t;
 
 /*

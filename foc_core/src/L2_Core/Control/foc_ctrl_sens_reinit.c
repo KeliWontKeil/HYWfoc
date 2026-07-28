@@ -6,13 +6,12 @@
 #include <stdio.h>
 
 #include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L3_Hal/foc_svpwm.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
-#include "L2_Core/Control/foc_ctrl_current_loop.h"
 #include "L3_Hal/foc_math_lut.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
-#include "L3_Hal/foc_svpwm.h"
 #include "L3_Hal/foc_sensor.h"
 #include "LS_Config/foc_config.h"
 
@@ -40,16 +39,23 @@ static void ReInit_WriteLog(const char *msg)
 /* D 轴对齐电压：与阻塞标定 FOC_CalibrateElectricalAngleAndDirection 一致 */
 static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 {
-    motor->uq = 0.0f;
-    motor->ud = calib_uq;
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    motor->ctrl.uq = 0.0f;
+    motor->ctrl.ud = calib_uq;
+    FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                        FOC_CONTROL_PHASE_REINIT,
+                                        motor->reinit_state.phase,
+                                        0.0f,
+                                        motor->ctrl.ud,
+                                        motor->ctrl.uq);
 }
 
 /* 归零输出 */
 static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
 {
-    FOC_CurrentControlOpenLoopStep(motor, 0.0f, 0.0f, dt_sec);
-    SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
+    (void)dt_sec;
+    FOC_ControlRecordPhaseOutputZero(motor,
+                                     FOC_CONTROL_PHASE_REINIT,
+                                     motor->reinit_state.phase);
 }
 
 /* sin/cos 矢量平均采样机械角度 */
@@ -129,10 +135,10 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         rs->phase = FOC_REINIT_PHASE_ZERO_SAMPLE;
         rs->sample_count = 0U;
         rs->sample_target = SENSOR_ZERO_CALIB_SAMPLES;
-        motor->sensor_zero_offset_a = 0.0f;
-        motor->sensor_zero_offset_b = 0.0f;
+          motor->sensor.current_a_zero_offset = 0.0f;
+          motor->sensor.current_b_zero_offset = 0.0f;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-        motor->sensor_zero_offset_c = 0.0f;
+        motor->sensor.current_c_zero_offset = 0.0f;
 #endif
         ReInit_WriteLog("ReInit: zero offset sampling\r\n");
         return 1U;
@@ -151,10 +157,10 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         if (FOC_Platform_ReadPhaseCurrent(&cur_a, &cur_b, 0) != 0U)
 #endif
         {
-            motor->sensor_zero_offset_a += cur_a;
-            motor->sensor_zero_offset_b += cur_b;
+              motor->sensor.current_a_zero_offset += cur_a;
+              motor->sensor.current_b_zero_offset += cur_b;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-            motor->sensor_zero_offset_c += cur_c;
+            motor->sensor.current_c_zero_offset += cur_c;
 #endif
             rs->sample_count++;
         }
@@ -168,26 +174,26 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             float count_f = (float)rs->sample_count;
             if (count_f > 1.0f)
             {
-                motor->sensor_zero_offset_a /= count_f;
-                motor->sensor_zero_offset_b /= count_f;
+                  motor->sensor.current_a_zero_offset /= count_f;
+                  motor->sensor.current_b_zero_offset /= count_f;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-                motor->sensor_zero_offset_c /= count_f;
+                motor->sensor.current_c_zero_offset /= count_f;
 #endif
-                if (fabsf(motor->sensor_zero_offset_a) > SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
-                    motor->sensor_zero_offset_a = 0.0f;
-                if (fabsf(motor->sensor_zero_offset_b) > SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
-                    motor->sensor_zero_offset_b = 0.0f;
+                  if (fabsf(motor->sensor.current_a_zero_offset) > SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
+                      motor->sensor.current_a_zero_offset = 0.0f;
+                  if (fabsf(motor->sensor.current_b_zero_offset) > SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
+                      motor->sensor.current_b_zero_offset = 0.0f;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-                if (fabsf(motor->sensor_zero_offset_c) > SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
-                    motor->sensor_zero_offset_c = 0.0f;
+                if (fabsf(motor->sensor.current_c_zero_offset) > SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
+                    motor->sensor.current_c_zero_offset = 0.0f;
 #endif
             }
 #endif
             ReInit_WriteLog("ReInit: zero offset done\r\n");
 
             /* 计算对齐电压，与标定一致：ud = calib_uq, uq = 0 */
-            rs->calib_uq = motor->max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
-            rs->calib_uq = Math_ClampFloat(rs->calib_uq, 0.0f, motor->max_phase_voltage);
+            rs->calib_uq = motor->ctrl.max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
+            rs->calib_uq = Math_ClampFloat(rs->calib_uq, 0.0f, motor->ctrl.max_phase_voltage);
 
             /* 进入对齐 */
             rs->phase = FOC_REINIT_PHASE_ALIGN_SETTLE;
@@ -232,24 +238,26 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             float mech_zero = ReInit_AngleFromSum(rs);
             if (mech_zero >= -998.0f)
             {
-                motor->mech_angle_at_elec_zero_rad = mech_zero;
-                motor->mech_angle_accum_rad = mech_zero;
-                motor->mech_angle_prev_rad = mech_zero;
-                motor->mech_angle_prev_valid = 1U;
+                motor->params.mech_angle_at_elec_zero_rad = mech_zero;
+                  motor->outer_loop.accum_rad = mech_zero;
+                  motor->outer_loop.prev_rad = mech_zero;
+                  motor->outer_loop.prev_valid = 1U;
             }
             else
             {
-                motor->mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
-                motor->mech_angle_accum_rad = 0.0f;
-                motor->mech_angle_prev_rad = 0.0f;
-                motor->mech_angle_prev_valid = 0U;
+                motor->params.mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
+                  motor->outer_loop.accum_rad = 0.0f;
+                  motor->outer_loop.prev_rad = 0.0f;
+                  motor->outer_loop.prev_valid = 0U;
             }
             ReInit_WriteLog("ReInit: zero align done\r\n");
 
             /* 退磁 */
-            motor->uq = 0.0f;
-            motor->ud = 0.0f;
-            FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+            motor->ctrl.uq = 0.0f;
+            motor->ctrl.ud = 0.0f;
+            FOC_ControlRecordPhaseOutputZero(motor,
+                                             FOC_CONTROL_PHASE_REINIT,
+                                             rs->phase);
 
             /* 进入方向/极对数粗步进 */
             rs->phase = FOC_REINIT_PHASE_DIR_STEP;
@@ -272,9 +280,14 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         rs->elec_angle_rad = step_elec * (float)rs->step_index;
 
         /* 应用 D 轴对齐电压在目标电角度 */
-        motor->uq = 0.0f;
-        motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        motor->ctrl.uq = 0.0f;
+        motor->ctrl.ud = rs->calib_uq;
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ctrl.ud,
+                                            motor->ctrl.uq);
 
         rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
         rs->sin_sum = 0.0f;
@@ -289,9 +302,14 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     /* ========== DIR_SAMPLE: 在当前电角度位置采样机械角度 ========== */
     case FOC_REINIT_PHASE_DIR_SAMPLE:
     {
-        motor->uq = 0.0f;
-        motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        motor->ctrl.uq = 0.0f;
+        motor->ctrl.ud = rs->calib_uq;
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ctrl.ud,
+                                            motor->ctrl.uq);
 
         if (rs->settle_cycles > 0U)
         {
@@ -346,8 +364,8 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             if (poles < 1U) poles = 1U;
             if (poles > 32U) poles = 32U;
 
-            motor->direction = dir;
-            motor->pole_pairs = poles;
+            motor->params.direction = dir;
+            motor->params.pole_pairs = poles;
         }
 
         ReInit_WriteLog("ReInit: dir/pole estimated\r\n");
@@ -377,9 +395,14 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         rs->elec_angle_rad = FOC_CALIB_COARSE_STEP_ELEC_RAD * (float)rs->step_index;
 
-        motor->uq = 0.0f;
-        motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        motor->ctrl.uq = 0.0f;
+        motor->ctrl.ud = rs->calib_uq;
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ctrl.ud,
+                                            motor->ctrl.uq);
 
         rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
         rs->sin_sum = 0.0f;
@@ -394,9 +417,14 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     /* ========== DIR_REV_SAMPLE: 反向扫描采样 ========== */
     case FOC_REINIT_PHASE_DIR_REV_SAMPLE:
     {
-        motor->uq = 0.0f;
-        motor->ud = rs->calib_uq;
-        FOC_ControlApplyElectricalAngleDirect(motor, rs->elec_angle_rad);
+        motor->ctrl.uq = 0.0f;
+        motor->ctrl.ud = rs->calib_uq;
+        FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                            FOC_CONTROL_PHASE_REINIT,
+                                            rs->phase,
+                                            rs->elec_angle_rad,
+                                            motor->ctrl.ud,
+                                            motor->ctrl.uq);
 
         if (rs->settle_cycles > 0U)
         {
@@ -420,6 +448,9 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         /* 归零输出 */
         ReInit_ZeroOutput(motor, dt_sec);
 
+        /* 强制 PWM 输出 50% 中点（零电压），绕过 ISR 延迟 */
+        SVPWM_ApplyDirectDuty(motor, 0U, 0.5f, 0.5f, 0.5f);
+
         /* 应用配置 */
         FOC_Control_ApplyConfig(motor);
 
@@ -432,10 +463,10 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             char info[120];
             snprintf(info, sizeof(info),
                      "reinit done: mech_zero=%.4f rad, dir=%d, poles=%d, vbus=%.2fV\r\n",
-                     (double)motor->mech_angle_at_elec_zero_rad,
-                     (int)motor->direction,
-                     (int)motor->pole_pairs,
-                     (double)motor->vbus_voltage);
+                     (double)motor->params.mech_angle_at_elec_zero_rad,
+                     (int)motor->params.direction,
+                     (int)motor->params.pole_pairs,
+                     (double)motor->params.vbus_voltage);
             FOC_Platform_WriteDebugText(info);
         }
 

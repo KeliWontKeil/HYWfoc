@@ -5,6 +5,68 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-07-28
+
+### Added
+- **速域状态机显式化**：Source Manager 新增 `region_state` 与 `config_valid`，将低速、高速获取、高速就绪、高速运行和低速恢复拆成可观测状态。
+- **切换提交同步**：source/region 切换时同步外环机械角历史、速度误差状态、ramped speed，并预置速度 PID/电流 PID 状态，降低 open-loop 到 closed-loop 接管时的控制量断层。
+- **全局控制加速度机制**：将速度斜坡/速域上限作为外环通用策略处理，OpenLoop 及普通外环路径统一受速度限制与加速度约束管理。
+
+### Changed
+- **Source Manager 鲁棒性提升**：低速升高速改为低速侧运动授权 + 高速候选源有效性双条件；openloop 低速源不再仅因外部拖动 encoder 速度越过门限而触发升域。
+- **高速降级消抖**：`HIGH_ACTIVE` 中的失锁/低速降级由单拍触发改为连续确认，门限附近不再直接跳入降级状态。
+- **角度发布链路收口**：运行时电角度由 Source Manager Publish 统一发布，执行输出路径只消费已发布角度。
+- **电流软切换默认参数调整**：AUTO 模式说明更新，默认闭环运行；降低 blend 时间常数，并将 AUTO 开环阈值调整为 0，避免长期混合降低高速带宽。
+- **代码优化**：清理 source snapshot 和过期切换字段，简化 Source Manager 数据路径；移除旧的 source-switch transition 入口。
+
+### Fixed
+- 修复反向/测试配置下 source 状态乱跳、门限附近频繁切换的问题。
+- 修复电角度环绕写入导致 ISR 时间随运行逐渐上升的问题。
+- 修复 current soft-switch 内指针与整数比较 warning。
+
+### Documentation
+- 版本基线统一更新至 v2.0.3。
+- 架构文档同步 Source Manager 状态机、切换条件、切换同步和全局加速度策略。
+
+## [2.0.2] - 2026-07-27
+
+### Changed
+- **文档全面同步**：全量文档审计，版本基线统一更新至 v2.0.2。
+- **架构文档同步**：`docs/architecture.md` 目录路径修正（`L2/` → `L2_Core/`）、L2 Control 模块列表去 CXX 编号改用实际文件名、数据流图同步（消除 `ctrl_input` 桥接残余，改用 `active_source_state` + `motor->ctrl.iq_target`）、ISR 阶段描述修正（PWM ISR 5 阶段实际执行顺序：采样→Estimator→Select/Publish→电流环→SVPWM；Control ISR 按 source 类型路由 OpenLoop/外环）。
+- **架构文档扩展**：新增 `control_region`（LOW/HIGH/FULL）描述；新增独立 "Source Manager 体系" 章节，详述两步分离设计（Select/Publish）、预收敛机制（所有 Estimator 后台迭代）、切换策略三分支（阈值/收敛/消抖）和 encoder_services 绑定。
+- **开发文档同步**：`docs/development.md` 模块命名列表去 CXX 编号，使用实际文件名。
+- **规则文件同步**：`.clinerules/hywfoc-project-rules.md` L2 Control 模块命名段去 CXX 编号，版本基线同步。
+- **README 基线**：`README.md`、`docs/README.md` 版本基线更新至 v2.0.2，协议文档链接从双语版修正为单语版。
+- **协议文档修正**：`docs/protocol-parameters.md` 语义调试行标签 `encoder_angle` → `mech_angle`（v2.0.0 重构后数据源变更）。
+
+### Documentation
+- 版本基线统一更新至 v2.0.2
+- 全量文档审计：8 个文件更新
+
+## [2.0.1] - 2026-07-21
+
+### Added
+- **滤波器架构重构**：可替换滤波器系统，支持编译期切换 Kalman/LPF1/Biquad 滤波器类型。
+- 新增 `foc_filter_type_map.h`（LS_Config）— 滤波器类型枚举 + 类型推导宏表，用户每个位置只需修改一个整数值宏。
+- 新增 `foc_filter_types.h`（L3_Hal）— `foc_filter_kalman_t`、`foc_filter_lpf1_t`、`foc_filter_biquad_t` 统一滤波器类型。
+- 新增 `foc_filter_math.h/.c`（L3_Hal）— 纯数学函数：`KalmanStep`、`KalmanAngleStep`、`Lpf1Step`、`BiquadStep`（骨架），零状态依赖，可任意复用。
+- 新增 `foc_filter_gate.h`（L3_Hal）— 每个滤波位置一个 `static inline` 门控函数，编译期 `#if` 选择纯数学函数，调用方只需 `FOC_FilterGate_*()`。
+
+### Changed
+- **传感器滤波统一**：`sensor_data_t` 中 `kalman_filter_t` 替换为 `FOC_FILTER_TYPEDEF()` 推导宏，支持每个通道独立选择滤波器类型。
+- **电流Iq滤波统一**：`motor->iq_lpf` 替换为 `motor->iq_lpf_filter`（`FOC_FILTER_TYPEDEF` 推导）。
+- **角度数据流收口**：`mech_angle_rad` 滤波后统一通过 `output_value` 字段读取，消除 `raw_value`/`filtered_value` 旁路泄漏（`foc_ctrl_executor.c`、`foc_ctrl_estim_encoder.c`、`foc_debug_stream.c`）。
+- **Kalman 函数提升**：`foc_sensor.c` 中 `static` 的 `Kalman_Init/Update/Update_Angle` 提升为 L3 公开 API（`FOC_FilterMath_Kalman*`）。
+- **旧宏清理**：删除 `FOC_SENSOR_KALMAN_CURRENT_ENABLE`、`FOC_SENSOR_KALMAN_ANGLE_ENABLE`，统一为 `FOC_FILTER_*` 宏体系。
+- **构建入口同步**：`builder.params` 新增 `foc_filter_math.c`。
+
+### Fixed
+- 修复 `foc_filter_lpf1_t` 缺少 `raw_value`/`output_value` 字段导致切换 LPF 编译失败。
+- 修复 `Sensor_InitSnapshot` 初始化共用 `CURRENT_A` 条件导致 `CURRENT_B`/`CURRENT_C` 类型不匹配。
+- 修复 `foc_cfg_filter.h` 缺少 `FOC_FILTER_SENSOR_CURRENT_C_KALMAN_*` 参数宏（当前 `FOC_CURRENT_SENSE_PHASES=2U` 下被屏蔽）。
+- 修复 `Sensor_InitSnapshot` 中 C 相 Kalman Init 引用了 A 相参数宏（`FOC_FILTER_SENSOR_CURRENT_A_KALMAN_*`），应引用 C 相宏。
+- 修复角度 LPF（`FOC_FilterMath_Lpf1Step`）在 0/2PI 切换点的环绕振荡：新增 `FOC_FilterMath_Lpf1AngleStep`，使用 `Math_WrapRadDelta` 计算最短路径角度增量后平滑，Angle 门 LPF1 分支改为此函数（`foc_filter_gate.h`、`foc_filter_math.h/.c`）。
+
 ## [2.0.0] - 2026-07-20
 
 ### Added

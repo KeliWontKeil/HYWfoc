@@ -135,21 +135,11 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
     ADC_Start();
 }
 
-/*
- * Read phase currents from ADC.
- * Returns the latest single-cycle sample (硬件过采样已由DMA 8x完成).
- */
 uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
-    if (phase_current_c == 0)
-    {
-        /* Two-phase: read A/B only. avg_count=1 means latest single sample. */
-        return ADC_ReadPhaseCurrentABOk(phase_current_a,
-                                        phase_current_b,
-                                        1U);
-    }
-    /* Three-phase not supported on this hardware. */
-    return 0U;
+    return ADC_ReadPhaseCurrentABOk(phase_current_a,
+                                    phase_current_b,
+                                    1U);
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)

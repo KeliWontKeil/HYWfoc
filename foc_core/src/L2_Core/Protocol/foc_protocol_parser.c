@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Protocol/foc_protocol_parser.h"
+#include "L2_Core/Protocol/foc_protocol_parser.h"
 
 #include <stdio.h>
 #include <string.h>

@@ -95,9 +95,9 @@ void FOC_Platform_IndicatorInit(void) {}
 /**
  * @brief 设置指示灯状态
  * @param led_index 指示灯索引：
- *        FOC_LED_RUN_INDEX (0)  - 运行指示灯
- *        FOC_LED_FAULT_INDEX (1) - 故障指示灯
- *        FOC_LED_COMM_INDEX (2)  - 通讯指示灯
+ *        FOC_LED_RUN_INDEX (0)  - 运行指示灯（蓝）
+ *        FOC_LED_ERROR_INDEX (1) - 错误指示灯（红）
+ *        FOC_LED_COMM_INDEX (2)  - 通讯指示灯（绿）
  * @param on 0=灭, 1=亮
  */
 void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on) { (void)led_index; (void)on; }

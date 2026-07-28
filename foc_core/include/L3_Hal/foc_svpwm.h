@@ -12,18 +12,13 @@
  * interpolation state, eliminating static globals.
  */
 void SVPWM_Init(foc_motor_t *motor, uint16_t freq_kHz, uint8_t deadtime_percent);
-void SVPWM_UpdateRuntime(foc_motor_t *motor,
-                         float phase_a,
-                         float phase_b,
-                         float phase_c,
-                         float voltage_command,
-                         float vbus_voltage);
-void SVPWM_UpdateDirect(foc_motor_t *motor,
-                        float phase_a,
-                        float phase_b,
-                        float phase_c,
-                        float voltage_command,
-                        float vbus_voltage);
+void SVPWM_Update(foc_motor_t *motor,
+                  float phase_a,
+                  float phase_b,
+                  float phase_c,
+                  float voltage_command,
+                  float vbus_voltage,
+                  uint8_t direct_output);
 void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
                                 uint8_t sector,
                                 float duty_a,

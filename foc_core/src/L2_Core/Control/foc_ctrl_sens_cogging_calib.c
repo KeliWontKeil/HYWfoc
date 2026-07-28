@@ -7,6 +7,7 @@
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
+#include "L3_Hal/foc_sensor.h"
 #include "LS_Config/foc_config.h"
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
@@ -110,15 +111,19 @@ static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
         return;
     }
 
-    mech_for_elec = motor->cogging_calib_state.pred_mech_angle - motor->mech_angle_at_elec_zero_rad;
-    elec_angle = Math_WrapRad(mech_for_elec * (float)motor->pole_pairs * (float)motor->direction);
+    mech_for_elec = motor->cogging_calib_state.pred_mech_angle + motor->params.mech_angle_at_elec_zero_rad;
+    elec_angle = Math_WrapRad(mech_for_elec * (float)motor->params.pole_pairs * (float)motor->params.direction);
 
-    motor->ud = 0.0f;
-    motor->uq = FOC_COGGING_CALIB_IQ_A * motor->phase_resistance * (float)motor->direction;
-    motor->iq_target = 0.0f;
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = FOC_COGGING_CALIB_IQ_A * motor->params.phase_resistance * (float)motor->params.direction;
+    motor->ctrl.iq_target = 0.0f;
 
-    motor->electrical_phase_angle = elec_angle;
-    FOC_ControlApplyElectricalAngleRuntime(motor, elec_angle);
+    FOC_ControlRecordPhaseOutputDqAngle(motor,
+                                        FOC_CONTROL_PHASE_COGGING_CALIB,
+                                        motor->cogging_calib_state.pass_num,
+                                        elec_angle,
+                                        motor->ctrl.ud,
+                                        motor->ctrl.uq);
 }
 
 static uint16_t CoggingCalib_AngleToBin(float mech_angle_rad)
@@ -275,14 +280,12 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     int32_t  sum;
     int16_t *table;
     char     buf[64];
-    foc_cogging_calib_state_t *state;
 
     if (motor == 0)
     {
         return;
     }
 
-    state = &motor->cogging_calib_state;
     table = motor->cogging_comp_table_q15;
 
     sum = 0;
@@ -310,7 +313,7 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     CoggingCalib_FixBoundaryDiscontinuityQ15(table, FOC_COGGING_LUT_POINT_COUNT);
 
     /* Flip sign for reversed direction */
-    if (motor->direction == FOC_DIR_REVERSED)
+    if (motor->params.direction == FOC_DIR_REVERSED)
     {
         for (i = 0U; i < FOC_COGGING_LUT_POINT_COUNT; i++)
         {
@@ -325,18 +328,18 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     motor->cogging_comp_status.enabled     = 1U;
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    motor->current_soft_switch_status.enabled       = state->saved_softswitch_enabled;
-    motor->current_soft_switch_status.configured_mode = state->saved_softswitch_mode;
+    motor->current_soft_switch_status.enabled       = motor->cogging_calib_state.saved_softswitch_enabled;
+    motor->current_soft_switch_status.configured_mode = motor->cogging_calib_state.saved_softswitch_mode;
 #endif
 
-    state->in_progress       = 0U;
-    state->progress_percent  = 100U;
-    state->point_index       = CALIB_PHASE_DONE;
+    motor->cogging_calib_state.in_progress       = 0U;
+    motor->cogging_calib_state.progress_percent  = 100U;
+    motor->cogging_calib_state.point_index       = CALIB_PHASE_DONE;
 
     FOC_Platform_WriteDebugFast("COGGING CALIB FINISHED\r\n");
 
     /* 由主循环输出 dump 表（不阻塞 ISR） */
-    state->request_dump = 1U;
+    motor->cogging_calib_state.request_dump = 1U;
 }
 
 static uint8_t CoggingCalib_Start(foc_motor_t *motor)
@@ -387,14 +390,14 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                                  const sensor_data_t *sensor,
                                  float dt_sec)
 {
-    foc_cogging_calib_state_t *state;
 
     if ((motor == 0) || (sensor == 0))
     {
         return 0U;
     }
 
-    state = &motor->cogging_calib_state;
+    (void)sensor;  /* 直接读取硬件，不依赖缓存数据 */
+
 
     /* 检查启动请求 */
     if (motor->cogging_calib_state.request_start != 0U)
@@ -403,7 +406,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
         (void)CoggingCalib_Start(motor);
     }
 
-    if (state->in_progress == 0U)
+    if (motor->cogging_calib_state.in_progress == 0U)
     {
         return 0U;
     }
@@ -413,21 +416,21 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
         dt_sec = FOC_CONTROL_DT_SEC;
     }
 
-    switch (state->point_index)
+    switch (motor->cogging_calib_state.point_index)
     {
         case CALIB_PHASE_START:
         {
             float mech_actual;
 
-            mech_actual = sensor->mech_angle_rad.output_value;
-            state->pred_mech_angle = mech_actual;
+            (void)FOC_Platform_ReadMechanicalAngleRad(&mech_actual);
+            motor->cogging_calib_state.pred_mech_angle = mech_actual;
 
-            state->last_lut_index    = 0xFFFFU;
-            state->bins_collected    = 0U;
+            motor->cogging_calib_state.last_lut_index    = 0xFFFFU;
+            motor->cogging_calib_state.bins_collected    = 0U;
 
             CoggingCalib_OpenLoopDriveStep(motor, dt_sec);
 
-            state->point_index = CALIB_PHASE_SETTLE;
+            motor->cogging_calib_state.point_index = CALIB_PHASE_SETTLE;
 
             FOC_Platform_WriteDebugFast("entering settle\r\n");
 
@@ -442,19 +445,19 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
              * 使电流建立稳定。
              */
             CoggingCalib_OpenLoopDriveStep(motor, dt_sec);
-            state->settle_counter++;
+            motor->cogging_calib_state.settle_counter++;
 
-            state->progress_percent =
-                (uint8_t)((uint32_t)state->settle_counter * 10U /
+            motor->cogging_calib_state.progress_percent =
+                (uint8_t)((uint32_t)motor->cogging_calib_state.settle_counter * 10U /
                           (uint32_t)FOC_COGGING_CALIB_SETTLE_CYCLES);
 
-            if (state->settle_counter >= FOC_COGGING_CALIB_SETTLE_CYCLES)
+            if (motor->cogging_calib_state.settle_counter >= FOC_COGGING_CALIB_SETTLE_CYCLES)
             {
-                state->point_index       = CALIB_PHASE_SCAN;
-                state->settle_counter    = 0U;
-                state->last_lut_index    = 0xFFFFU;
-                state->bins_collected    = 0U;
-                state->last_reported_progress = 0U;
+                motor->cogging_calib_state.point_index       = CALIB_PHASE_SCAN;
+                motor->cogging_calib_state.settle_counter    = 0U;
+                motor->cogging_calib_state.last_lut_index    = 0xFFFFU;
+                motor->cogging_calib_state.bins_collected    = 0U;
+                motor->cogging_calib_state.last_reported_progress = 0U;
 
                 {
                     char buf[48];
@@ -475,10 +478,11 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
             int16_t *table;
 
             table = motor->cogging_comp_table_q15;
-            mech_actual = Math_WrapRad(sensor->mech_angle_rad.output_value);
+            (void)FOC_Platform_ReadMechanicalAngleRad(&mech_actual);
+            mech_actual = Math_WrapRad(mech_actual);
 
             /* pred_mech_angle 已包含方向符号（direction × dt），直接归约 */
-            pred_wrapped = Math_WrapRad(state->pred_mech_angle);
+            pred_wrapped = Math_WrapRad(motor->cogging_calib_state.pred_mech_angle);
 
             dtheta = Math_WrapRadDelta(mech_actual - pred_wrapped);
 
@@ -486,25 +490,24 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 uint16_t lut_index = CoggingCalib_AngleToBin(mech_actual);
                 uint8_t accept = 0U;
 
-                if (state->last_lut_index == 0xFFFFU)
+                if (motor->cogging_calib_state.last_lut_index == 0xFFFFU)
                 {
-                    /* 首次写入 */
                     accept = 1U;
                 }
-                else if (motor->direction == FOC_DIR_NORMAL)
+                else if (motor->params.direction == FOC_DIR_NORMAL)
                 {
-                    /* 正向：允许递增或 511→0 循环换行 */
-                    if ((lut_index > state->last_lut_index) ||
-                        (state->last_lut_index == (uint16_t)(FOC_COGGING_LUT_POINT_COUNT - 1U) && lut_index == 0U))
+                    if ((lut_index > motor->cogging_calib_state.last_lut_index) ||
+                        (motor->cogging_calib_state.last_lut_index >= (uint16_t)(FOC_COGGING_LUT_POINT_COUNT * 3U / 4U) &&
+                         lut_index < (uint16_t)(FOC_COGGING_LUT_POINT_COUNT / 4U)))
                     {
                         accept = 1U;
                     }
                 }
                 else
                 {
-                    /* 反向：允许递减或 0→511 循环换行 */
-                    if ((lut_index < state->last_lut_index) ||
-                        (state->last_lut_index == 0U && lut_index == (uint16_t)(FOC_COGGING_LUT_POINT_COUNT - 1U)))
+                    if ((lut_index < motor->cogging_calib_state.last_lut_index) ||
+                        (motor->cogging_calib_state.last_lut_index < (uint16_t)(FOC_COGGING_LUT_POINT_COUNT / 4U) &&
+                         lut_index >= (uint16_t)(FOC_COGGING_LUT_POINT_COUNT * 3U / 4U)))
                     {
                         accept = 1U;
                     }
@@ -514,12 +517,12 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 {
                     float iq_comp  = -dtheta * FOC_COGGING_CALIB_DTHETA_SCALE;
                     /* 反向时补偿也需反向 */
-                    if (motor->direction == FOC_DIR_REVERSED)
+                    if (motor->params.direction == FOC_DIR_REVERSED)
                     {
                         iq_comp = -iq_comp;
                     }
                     int16_t q15_val = FloatToQ15(iq_comp, FOC_COGGING_LUT_IQ_LSB_A);
-                    uint8_t pcnt    = state->completed_pass_count;
+                    uint8_t pcnt    = motor->cogging_calib_state.completed_pass_count;
 
                     if (pcnt == 0U)
                     {
@@ -532,13 +535,13 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                         table[lut_index] = (int16_t)(accum / (int32_t)(pcnt + 1U));
                     }
 
-                    state->last_lut_index = lut_index;
-                    state->bins_collected++;
+                    motor->cogging_calib_state.last_lut_index = lut_index;
+                    motor->cogging_calib_state.bins_collected++;
                 }
             }
 
-            state->pred_mech_angle += FOC_COGGING_CALIB_SPEED_RAD_S *
-                                       (float)motor->direction *
+            motor->cogging_calib_state.pred_mech_angle += FOC_COGGING_CALIB_SPEED_RAD_S *
+                                       (float)motor->params.direction *
                                        dt_sec;
 
             CoggingCalib_OpenLoopDriveStep(motor, dt_sec);
@@ -547,45 +550,45 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 float pass_progress_frac;
                 uint8_t pct;
 
-                pass_progress_frac = (float)state->bins_collected / (float)FOC_COGGING_LUT_POINT_COUNT;
+                pass_progress_frac = (float)motor->cogging_calib_state.bins_collected / (float)FOC_COGGING_LUT_POINT_COUNT;
 
                 if (pass_progress_frac > 1.0f)
                 {
                     pass_progress_frac = 1.0f;
                 }
 
-                pct = (uint8_t)(((float)state->pass_num + pass_progress_frac) *
+                pct = (uint8_t)(((float)motor->cogging_calib_state.pass_num + pass_progress_frac) *
                                 100.0f / (float)FOC_COGGING_CALIB_NUM_PASSES);
                 if (pct > 100U)
                 {
                     pct = 100U;
                 }
-                state->progress_percent = pct;
+                motor->cogging_calib_state.progress_percent = pct;
             }
 
             {
-                uint8_t tenth = (uint8_t)(((uint32_t)state->bins_collected * 10U) /
+                uint8_t tenth = (uint8_t)(((uint32_t)motor->cogging_calib_state.bins_collected * 10U) /
                                           (uint32_t)FOC_COGGING_LUT_POINT_COUNT);
-                if (tenth != state->last_reported_progress)
+                if (tenth != motor->cogging_calib_state.last_reported_progress)
                 {
-                    state->last_reported_progress = tenth;
+                    motor->cogging_calib_state.last_reported_progress = tenth;
                     {
                         char buf[48];
                         (void)snprintf(buf, sizeof(buf),
                                       "CALIB:%u/%u,%u%%\r\n",
-                                      (unsigned)(state->pass_num + 1U),
+                                      (unsigned)(motor->cogging_calib_state.pass_num + 1U),
                                       (unsigned)FOC_COGGING_CALIB_NUM_PASSES,
-                                      (unsigned)state->progress_percent);
+                                      (unsigned)motor->cogging_calib_state.progress_percent);
                         FOC_Platform_WriteDebugFast(buf);
                     }
                 }
             }
 
-            if (state->bins_collected >= FOC_COGGING_LUT_POINT_COUNT)
+            if (motor->cogging_calib_state.bins_collected >= FOC_COGGING_LUT_POINT_COUNT)
             {
-                state->completed_pass_count++;
-                state->pass_num++;
-                state->point_index = CALIB_PHASE_CHECK;
+                motor->cogging_calib_state.completed_pass_count++;
+                motor->cogging_calib_state.pass_num++;
+                motor->cogging_calib_state.point_index = CALIB_PHASE_CHECK;
                 return 1U;
             }
 
@@ -594,16 +597,16 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
 
         case CALIB_PHASE_CHECK:
         {
-            if (state->pass_num < FOC_COGGING_CALIB_NUM_PASSES)
+            if (motor->cogging_calib_state.pass_num < FOC_COGGING_CALIB_NUM_PASSES)
             {
-                state->point_index           = CALIB_PHASE_SCAN;
-                state->last_lut_index        = 0xFFFFU;
-                state->last_reported_progress = 0U;
-                state->bins_collected        = 0U;
+                motor->cogging_calib_state.point_index           = CALIB_PHASE_SCAN;
+                motor->cogging_calib_state.last_lut_index        = 0xFFFFU;
+                motor->cogging_calib_state.last_reported_progress = 0U;
+                motor->cogging_calib_state.bins_collected        = 0U;
             }
             else
             {
-                state->point_index = CALIB_PHASE_FINISH;
+                motor->cogging_calib_state.point_index = CALIB_PHASE_FINISH;
                 FOC_Platform_WriteDebugFast("CALIB: all passes done, computing table\r\n");
             }
 

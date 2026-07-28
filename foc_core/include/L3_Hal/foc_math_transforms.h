@@ -6,6 +6,7 @@
 
 float Math_WrapRad(float angle);
 float Math_WrapRadDelta(float angle);
+float Math_WrapNearest(float reference, float target);
 float Math_ClampFloat(float value, float min_val, float max_val);
 float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_valid);
 

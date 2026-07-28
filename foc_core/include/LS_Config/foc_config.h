@@ -3,7 +3,53 @@
 
 #include "LS_Config/foc_symbol_defs.h"
 #include "LS_Config/foc_cfg_feature_switches.h"
+
+/* ====== 自动推导：根据 FOC_CONTROL_LOW_SOURCE / FOC_CONTROL_HIGH_SOURCE 推导内部算法模块 ====== */
+
+#define FOC_CONTROL_SRC_SET_LOW  (1U)
+#define FOC_CONTROL_SRC_SET_HIGH (1U)
+
+/* 推导：编译哪些估计器 */
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_ENCODER) || (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_ENCODER)
+  #define FOC_ESTIMATOR_ENCODER_ENABLE  FOC_CFG_ENABLE
+#else
+  #define FOC_ESTIMATOR_ENCODER_ENABLE  FOC_CFG_DISABLE
+#endif
+
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_SMO) || (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_SMO)
+  #define FOC_ESTIMATOR_SMO_ENABLE      FOC_CFG_ENABLE
+#else
+  #define FOC_ESTIMATOR_SMO_ENABLE      FOC_CFG_DISABLE
+#endif
+
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_HFI) || (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_HFI)
+  #define FOC_ESTIMATOR_HFI_ENABLE      FOC_CFG_ENABLE
+#else
+  #define FOC_ESTIMATOR_HFI_ENABLE      FOC_CFG_DISABLE
+#endif
+
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_FLUX) || (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_FLUX)
+  #define FOC_ESTIMATOR_FLUX_ENABLE     FOC_CFG_ENABLE
+#else
+  #define FOC_ESTIMATOR_FLUX_ENABLE     FOC_CFG_DISABLE
+#endif
+
+/* 推导：是否需要 OpenLoop angle source / low-speed policy */
+#if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP) || (FOC_CONTROL_HIGH_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
+  #define FOC_OPENLOOP_SOURCE_ENABLE    FOC_CFG_ENABLE
+#else
+  #define FOC_OPENLOOP_SOURCE_ENABLE    FOC_CFG_DISABLE
+#endif
+
+/* 推导：是否需要 Source Manager 低/高速 source 切换 */
+#if (FOC_CONTROL_HIGH_SOURCE != FOC_CONTROL_SRC_NONE) && (FOC_CONTROL_LOW_SOURCE != FOC_CONTROL_HIGH_SOURCE)
+  #define FOC_SOURCE_SWITCH_ENABLE      FOC_CFG_ENABLE
+#else
+  #define FOC_SOURCE_SWITCH_ENABLE      FOC_CFG_DISABLE
+#endif
+
 #include "LS_Config/foc_cfg_init_values.h"
 #include "LS_Config/foc_compile_limits.h"
+#include "LS_Config/foc_cfg_filter.h"
 
 #endif /* FOC_CONFIG_H */

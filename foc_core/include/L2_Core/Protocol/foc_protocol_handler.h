@@ -5,7 +5,6 @@
 
 #include "L2_Core/foc_ctrl_types.h"
 #include "L2_Core/Protocol/foc_protocol_types.h"
-#include "L2_Core/Protocol/foc_snapshot_types.h"
 #include "L2_Core/Runtime/foc_queue.h"
 
 /*
@@ -30,16 +29,16 @@ foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
     uint16_t len);
 
 /* 初始化协议内部状态
- * telemetry — 遥测策略快照指针（L1 提供的不随 reinit 重置的配置空间）
- * 协议内部保存此指针用于访问遥测策略等系统配置。
+ * report — 报告配置指针（L1 提供的不随 reinit 重置的配置空间）
+ * 协议内部保存此指针用于访问报告策略等系统配置。
  */
-void FOC_Protocol_Init(telemetry_policy_snapshot_t *telemetry);
+void FOC_Protocol_Init(foc_report_config_t *report);
 
 /* 清除配置脏标志（L1 应用配置后调用） */
 void FOC_Protocol_Commit(foc_motor_t *motor);
 
-/* 获取遥测策略（供 L1/debug 流使用） */
-const telemetry_policy_snapshot_t *FOC_Protocol_GetTelemetry(void);
+/* 获取报告配置（供 L1/debug 流使用） */
+const foc_report_config_t *FOC_Protocol_GetReportConfig(void);
 
 /* 批量输出（入 TX FIFO，供 X 指令使用） */
 void FOC_Protocol_QueueParams(const foc_motor_t *motor, fifo_queue_t *tx_fifo);

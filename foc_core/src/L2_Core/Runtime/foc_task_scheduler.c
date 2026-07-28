@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Runtime/foc_task_scheduler.h"
+#include "L2_Core/Runtime/foc_task_scheduler.h"
 
 #include "L3_Hal/foc_platform_api.h"
 

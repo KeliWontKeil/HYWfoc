@@ -262,8 +262,8 @@ aaPA3.14b
 | 0 | current_a | `measurement.phase_current_a_ampere=0.123` | A 相电流 |
 | 1 | current_b | `measurement.phase_current_b_ampere=-0.456` | B 相电流 |
 | 2 | current_c | `measurement.phase_current_c_ampere=-0.333` | C 相电流 |
-| 3 | angle_raw | `measurement.encoder_angle_raw_rad=1.570` | 编码器原始角度 |
-| 4 | angle_filtered | `measurement.encoder_angle_filtered_rad=1.571` | 编码器滤波后角度 |
+| 3 | angle_raw | `measurement.mech_angle_raw_rad=1.570` | 机械角度原始值 |
+| 4 | angle_filtered | `measurement.mech_angle_filtered_rad=1.571` | 机械角度滤波后值 |
 | 5 | vbus_raw | `measurement.vbus_voltage_raw_v=23.800` | VBUS 原始电压 |
 | 6 | vbus_filtered | `measurement.vbus_voltage_filtered_v=23.900` | VBUS 滤波后电压 |
 | 7 | exec_time | `control.execution_time_us=15.200` | 调度器 tick 执行时间 |
@@ -317,6 +317,19 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 - `C` 组配置参数输出：`config.<name>=<value>`
 - `S` 组状态输出：`state.<name>=ENABLE/DISABLE`
 - `Y:X` 系统信息输出：`system.<name>=<value>`
+
+`Y:X` 额外暴露当前 Source/Control 架构状态，均为只读：
+
+| 字段 | 说明 |
+|------|------|
+| `system.source.active` | Source Manager 当前 active source id |
+| `system.source.standby` | Source Manager 当前 standby source id |
+| `system.source.region` | 当前 low/high/full control region |
+| `system.source.region_state` | 当前速域切换状态机状态 |
+| `system.source.config_valid` | 当前 low/high source 切换配置是否有效 |
+| `system.source.switching` | Source Manager 是否处于切换消抖窗口 |
+| `system.active_source.valid` | 当前 active source snapshot 是否有效 |
+| `system.openloop.state` | OpenLoop source 私有状态 |
 
 格式化规则：
 

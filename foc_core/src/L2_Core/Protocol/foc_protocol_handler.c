@@ -11,8 +11,8 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-/* ========== 内部状态（指向 L1 遥测策略） ========== */
-static telemetry_policy_snapshot_t *g_telemetry_ptr = 0;
+/* ========== 内部状态（指向 L1 系统 report 配置） ========== */
+static foc_report_config_t *g_report_config = 0;
 
 /* ========== 内部工具函数 ========== */
 
@@ -29,17 +29,27 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
     {
     case COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE:
         if (IsInRange(value, COMMAND_MANAGER_PARAM_TARGET_ANGLE_MIN_RAD, COMMAND_MANAGER_PARAM_TARGET_ANGLE_MAX_RAD) == 0U) return 0U;
-        motor->target_angle_rad = value;
+        motor->cfg.target_angle_rad = value;
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED:
         if (IsInRange(value, COMMAND_MANAGER_PARAM_ANGLE_SPEED_MIN_RAD_S, COMMAND_MANAGER_PARAM_ANGLE_SPEED_MAX_RAD_S) == 0U) return 0U;
-        motor->angle_position_speed_rad_s = value;
+        motor->cfg.angle_position_speed_rad_s = value;
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
         if (IsInRange(value, COMMAND_MANAGER_PARAM_SPEED_ONLY_MIN_RAD_S, COMMAND_MANAGER_PARAM_SPEED_ONLY_MAX_RAD_S) == 0U) return 0U;
-        motor->speed_only_rad_s = value;
+        {
+            float abs_speed = (value < 0.0f) ? -value : value;
+            if ((motor->source_mgr_state.config_valid != 0U) &&
+                (motor->source_switch_state.low_source != motor->source_switch_state.high_source) &&
+                (abs_speed > motor->source_switch_state.speed_threshold_low_rad_s) &&
+                (abs_speed < motor->source_switch_state.speed_threshold_high_rad_s))
+            {
+                return 0U;
+            }
+        }
+        motor->cfg.speed_only_rad_s = value;
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
@@ -48,15 +58,15 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
         if (value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ || value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ) return 0U;
-        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->semantic_report_freq_hz = (uint16_t)value; }
+        { foc_report_config_t *report = g_report_config; if (report != 0) report->semantic_freq_hz = (uint16_t)value; }
         break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV:
         if (value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ || value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ) return 0U;
-        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_report_freq_hz = (uint16_t)value; }
+        { foc_report_config_t *report = g_report_config; if (report != 0) report->osc_freq_hz = (uint16_t)value; }
         break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
         if (value < COMMAND_MANAGER_PARAM_OSC_MASK_MIN || value > COMMAND_MANAGER_PARAM_OSC_MASK_MAX) return 0U;
-        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_parameter_mask = (uint16_t)value; }
+        { foc_report_config_t *report = g_report_config; if (report != 0) report->osc_param_mask = (uint16_t)value; }
         break;
 #endif
 
@@ -79,20 +89,20 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
     switch (subcommand)
     {
     case COMMAND_MANAGER_PARAM_SUBCMD_TARGET_ANGLE:
-        *value_out = motor->target_angle_rad; break;
+        *value_out = motor->cfg.target_angle_rad; break;
     case COMMAND_MANAGER_PARAM_SUBCMD_ANGLE_SPEED:
-        *value_out = motor->angle_position_speed_rad_s; break;
+        *value_out = motor->cfg.angle_position_speed_rad_s; break;
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
-        *value_out = motor->speed_only_rad_s; break;
+        *value_out = motor->cfg.speed_only_rad_s; break;
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
         return 0U;
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
-        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->semantic_report_freq_hz : 0.0f; } break;
+        { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->semantic_freq_hz : 0.0f; } break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV:
-        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->osc_report_freq_hz : 0.0f; } break;
+        { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->osc_freq_hz : 0.0f; } break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
-        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *value_out = (t != 0) ? (float)t->osc_parameter_mask : 0.0f; } break;
+        { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->osc_param_mask : 0.0f; } break;
 #endif
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
         *value_out = (float)motor->state.control_mode; break;
@@ -113,6 +123,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U) return 0U;
         motor->torque_current_pid.kp = value;
+        motor->torque_current_pid.integral = 0.0f;
+        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -121,6 +133,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U) return 0U;
         motor->torque_current_pid.ki = value;
+        motor->torque_current_pid.integral = 0.0f;
+        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -129,6 +143,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U) return 0U;
         motor->torque_current_pid.kd = value;
+        motor->torque_current_pid.integral = 0.0f;
+        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -139,6 +155,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U) return 0U;
         motor->angle_pid.kp = value;
+        motor->angle_pid.integral = 0.0f;
+        motor->angle_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -165,6 +183,8 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U) return 0U;
         motor->speed_pid.kp = value;
+        motor->speed_pid.integral = 0.0f;
+        motor->speed_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -190,7 +210,7 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_MIN_MECH_DELTA:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
-        motor->min_mech_angle_accum_delta_rad = value;
+        motor->cfg.min_mech_angle_accum_delta_rad = value;
         break;
 #else
         return 0U;
@@ -198,7 +218,7 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_I_LIMIT:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
-        motor->angle_hold_integral_limit = value;
+        motor->cfg.angle_hold_integral_limit = value;
         break;
 #else
         return 0U;
@@ -206,7 +226,7 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_DEADBAND:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
-        motor->angle_hold_pid_deadband_rad = value;
+        motor->cfg.angle_hold_pid_deadband_rad = value;
         break;
 #else
         return 0U;
@@ -214,7 +234,7 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_START:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
-        motor->speed_angle_transition_start_rad = value;
+        motor->cfg.speed_angle_transition_start_rad = value;
         break;
 #else
         return 0U;
@@ -222,7 +242,7 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_END:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
         if (value < 0.0f) return 0U;
-        motor->speed_angle_transition_end_rad = value;
+        motor->cfg.speed_angle_transition_end_rad = value;
         break;
 #else
         return 0U;
@@ -349,31 +369,31 @@ static uint8_t ReadConfigParam(const foc_motor_t *motor, char subcommand, float 
 #endif
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_MIN_MECH_DELTA:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        *value_out = motor->min_mech_angle_accum_delta_rad; break;
+        *value_out = motor->cfg.min_mech_angle_accum_delta_rad; break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_I_LIMIT:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        *value_out = motor->angle_hold_integral_limit; break;
+        *value_out = motor->cfg.angle_hold_integral_limit; break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_HOLD_DEADBAND:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        *value_out = motor->angle_hold_pid_deadband_rad; break;
+        *value_out = motor->cfg.angle_hold_pid_deadband_rad; break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_START:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        *value_out = motor->speed_angle_transition_start_rad; break;
+        *value_out = motor->cfg.speed_angle_transition_start_rad; break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_CONFIG_SUBCMD_CFG_BLEND_END:
 #if (FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING == FOC_CFG_ENABLE)
-        *value_out = motor->speed_angle_transition_end_rad; break;
+        *value_out = motor->cfg.speed_angle_transition_end_rad; break;
 #else
         return 0U;
 #endif
@@ -430,13 +450,13 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
         motor->state.motor_enabled = normalized; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->semantic_report_enabled = normalized; } break;
+        { foc_report_config_t *report = g_report_config; if (report != 0) report->semantic_enabled = normalized; } break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { telemetry_policy_snapshot_t *t = (telemetry_policy_snapshot_t *)g_telemetry_ptr; if (t != 0) t->osc_report_enabled = normalized; } break;
+        { foc_report_config_t *report = g_report_config; if (report != 0) report->osc_enabled = normalized; } break;
 #else
         return 0U;
 #endif
@@ -463,13 +483,13 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
         *state_out = motor->state.motor_enabled; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *state_out = (t != 0) ? t->semantic_report_enabled : 0; } break;
+        { const foc_report_config_t *report = g_report_config; *state_out = (report != 0) ? report->semantic_enabled : 0; } break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { const telemetry_policy_snapshot_t *t = g_telemetry_ptr; *state_out = (t != 0) ? t->osc_report_enabled : 0; } break;
+        { const foc_report_config_t *report = g_report_config; *state_out = (report != 0) ? report->osc_enabled : 0; } break;
 #else
         return 0U;
 #endif
@@ -805,16 +825,22 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
  * 公开 API
  * ================================================================= */
 
-void FOC_Protocol_Init(telemetry_policy_snapshot_t *telemetry)
+void FOC_Protocol_Init(foc_report_config_t *report)
 {
-    g_telemetry_ptr = telemetry;
-    if (telemetry != 0)
+    g_report_config = report;
+    if (report != 0)
     {
-        telemetry->semantic_report_enabled = COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED;
-        telemetry->osc_report_enabled = COMMAND_MANAGER_DEFAULT_OSC_ENABLED;
-        telemetry->semantic_report_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
-        telemetry->osc_report_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
-        telemetry->osc_parameter_mask = COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK;
+#if ((FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
+     (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
+        report->semantic_enabled = COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED;
+        report->osc_enabled = COMMAND_MANAGER_DEFAULT_OSC_ENABLED;
+        report->semantic_freq_hz = COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ;
+        report->osc_freq_hz = COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ;
+        report->osc_param_mask = COMMAND_MANAGER_DEFAULT_OSC_PARAM_MASK;
+#else
+        report->reserved = 0U;
+#endif
     }
     FOC_Protocol_OutputDiag("INFO", "protocol", "READY");
 }
@@ -837,9 +863,9 @@ void FOC_Protocol_Commit(foc_motor_t *motor)
     motor->state.cfg_dirty = 0U;
 }
 
-const telemetry_policy_snapshot_t *FOC_Protocol_GetTelemetry(void)
+const foc_report_config_t *FOC_Protocol_GetReportConfig(void)
 {
-    return g_telemetry_ptr;
+    return g_report_config;
 }
 
 /* ========== 批量队列输出（供 X 指令使用） ========== */
@@ -952,35 +978,69 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
 
     if (motor == 0) return;
 
-    snprintf(out, sizeof(out), "system.phase_resistance=%.3f\r\n", motor->phase_resistance);
+    snprintf(out, sizeof(out), "system.phase_resistance=%.3f\r\n", motor->params.phase_resistance);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
-    snprintf(out, sizeof(out), "system.pole_pairs=%u\r\n", (unsigned int)motor->pole_pairs);
+    snprintf(out, sizeof(out), "system.pole_pairs=%u\r\n", (unsigned int)motor->params.pole_pairs);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
-    snprintf(out, sizeof(out), "system.mech_zero_rad=%.3f\r\n", motor->mech_angle_at_elec_zero_rad);
+    snprintf(out, sizeof(out), "system.source.active=%u\r\n",
+             (unsigned int)motor->source_mgr_state.active_source);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.standby=%u\r\n",
+             (unsigned int)motor->source_mgr_state.standby_source);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.region=%u\r\n",
+             (unsigned int)motor->source_mgr_state.control_region);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.region_state=%u\r\n",
+             (unsigned int)motor->source_mgr_state.region_state);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.config_valid=%u\r\n",
+             (unsigned int)motor->source_mgr_state.config_valid);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.switching=%u\r\n",
+             (unsigned int)motor->source_mgr_state.switch_in_progress);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.active_source.valid=%u\r\n",
+             (unsigned int)motor->active_source_state.valid);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    snprintf(out, sizeof(out), "system.openloop.state=%u\r\n",
+             (unsigned int)motor->openloop_state.phase);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+#endif
+
+    snprintf(out, sizeof(out), "system.mech_zero_rad=%.3f\r\n", motor->params.mech_angle_at_elec_zero_rad);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
     {
         const char *dir_str = "UNDEFINED";
-        if (motor->direction == FOC_DIR_NORMAL)
+        if (motor->params.direction == FOC_DIR_NORMAL)
             dir_str = "NORMAL";
-        else if (motor->direction == FOC_DIR_REVERSED)
+        else if (motor->params.direction == FOC_DIR_REVERSED)
             dir_str = "REVERSED";
         snprintf(out, sizeof(out), "system.direction=%s\r\n", dir_str);
         (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
     }
 
-    snprintf(out, sizeof(out), "system.vbus_voltage_v=%.3f\r\n", motor->vbus_voltage);
+    snprintf(out, sizeof(out), "system.vbus_voltage_v=%.3f\r\n", motor->params.vbus_voltage);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
-    snprintf(out, sizeof(out), "system.max_phase_voltage_v=%.3f\r\n", motor->max_phase_voltage);
+    snprintf(out, sizeof(out), "system.max_phase_voltage_v=%.3f\r\n", motor->ctrl.max_phase_voltage);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
-    snprintf(out, sizeof(out), "system.zero_offset_a=%.3f\r\n", motor->sensor_zero_offset_a);
+      snprintf(out, sizeof(out), "system.zero_offset_a=%.3f\r\n", motor->sensor.current_a_zero_offset);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
-    snprintf(out, sizeof(out), "system.zero_offset_b=%.3f\r\n", motor->sensor_zero_offset_b);
+      snprintf(out, sizeof(out), "system.zero_offset_b=%.3f\r\n", motor->sensor.current_b_zero_offset);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)

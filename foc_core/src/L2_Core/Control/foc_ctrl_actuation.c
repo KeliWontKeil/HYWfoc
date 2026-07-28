@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L2_Core/Control/foc_ctrl_actuation.h"
 
 #include <math.h>
 
@@ -31,16 +31,16 @@ static void FOC_ApplySvpwmPreLpf(foc_motor_t *motor,
 
     *phase_a = Math_FirstOrderLpf(*phase_a,
                                   &motor->svpwm_lpf.phase_a,
-                                  FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf.valid);
+                                   FOC_FILTER_SVPWM_LPF_ALPHA,
+                                   &motor->svpwm_lpf.valid);
     *phase_b = Math_FirstOrderLpf(*phase_b,
-                                  &motor->svpwm_lpf.phase_b,
-                                  FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf.valid);
+                                   &motor->svpwm_lpf.phase_b,
+                                   FOC_FILTER_SVPWM_LPF_ALPHA,
+                                   &motor->svpwm_lpf.valid);
     *phase_c = Math_FirstOrderLpf(*phase_c,
-                                  &motor->svpwm_lpf.phase_c,
-                                  FOC_SVPWM_PRE_LPF_ALPHA,
-                                  &motor->svpwm_lpf.valid);
+                                   &motor->svpwm_lpf.phase_c,
+                                   FOC_FILTER_SVPWM_LPF_ALPHA,
+                                   &motor->svpwm_lpf.valid);
 }
 #endif
 
@@ -56,20 +56,19 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     float uq_applied;
 
     electrical_angle = Math_WrapRad(electrical_angle);
-    motor->electrical_phase_angle = electrical_angle;
 
-    voltage_limit = Math_ClampFloat(motor->max_phase_voltage, 0.0f, motor->vbus_voltage);
+    voltage_limit = Math_ClampFloat(motor->ctrl.max_phase_voltage, 0.0f, motor->params.vbus_voltage);
 
     /* SVPWM 最大占空比限制，保护低侧电流采样 */
     {
-        float duty_limit_v = motor->vbus_voltage * (2.0f * FOC_SVPWM_MAX_DUTY_CYCLE - 1.0f);
+        float duty_limit_v = motor->params.vbus_voltage * (2.0f * FOC_SVPWM_MAX_DUTY_CYCLE - 1.0f);
         if (duty_limit_v < 0.0f) duty_limit_v = 0.0f;
         if (voltage_limit > duty_limit_v) voltage_limit = duty_limit_v;
     }
 
-    dq_magnitude = sqrtf(motor->ud * motor->ud + motor->uq * motor->uq);
-    ud_applied = motor->ud;
-    uq_applied = motor->uq;
+    dq_magnitude = sqrtf(motor->ctrl.ud * motor->ctrl.ud + motor->ctrl.uq * motor->ctrl.uq);
+    ud_applied = motor->ctrl.ud;
+    uq_applied = motor->ctrl.uq;
 
     /* SVPWM过调制限制：dq矢量幅度超过电压限制时等比缩放 */
     if ((dq_magnitude > voltage_limit) && (dq_magnitude > 1e-6f))
@@ -79,6 +78,14 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
         uq_applied *= scale;
         dq_magnitude = voltage_limit;
     }
+
+    motor->applied_output.valid = 1U;
+    if (direct_output != 0U)
+    {
+        motor->ctrl.electrical_angle_rad = electrical_angle;
+    }
+    motor->applied_output.ud = ud_applied;
+    motor->applied_output.uq = uq_applied;
 
     /* 逆Park变换：dq -> alpha-beta */
     Math_InverseParkTransform(ud_applied,
@@ -133,51 +140,109 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
 #endif
 
     /* 正常SVPWM输出 */
-    if (direct_output != 0U)
+    SVPWM_Update(motor,
+                 motor->alpha_beta.phase_a,
+                 motor->alpha_beta.phase_b,
+                 motor->alpha_beta.phase_c,
+                 voltage_command,
+                 motor->params.vbus_voltage,
+                 direct_output);
+}
+
+void FOC_ControlRecordPhaseOutputDqAngle(foc_motor_t *motor,
+                                         uint8_t phase,
+                                         uint8_t state_id,
+                                         float electrical_angle,
+                                         float ud,
+                                         float uq)
+{
+
+    motor->phase_output_state.phase = phase;
+    motor->phase_output_state.type = FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE;
+    motor->phase_output_state.valid = 1U;
+    motor->phase_output_state.state_id = state_id;
+    motor->ctrl.electrical_angle_rad = Math_WrapRad(electrical_angle);
+    motor->ctrl.ud = ud;
+    motor->ctrl.uq = uq;
+    motor->phase_output_state.duty_a = 0.0f;
+    motor->phase_output_state.duty_b = 0.0f;
+    motor->phase_output_state.duty_c = 0.0f;
+    motor->phase_output_state.sector = 0U;
+}
+
+void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
+                                      uint8_t phase,
+                                      uint8_t state_id)
+{
+    if (motor == 0) return;
+
+    motor->phase_output_state.phase = phase;
+    motor->phase_output_state.type = FOC_PHASE_OUTPUT_ZERO;
+    motor->phase_output_state.valid = 1U;
+    motor->phase_output_state.state_id = state_id;
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = 0.0f;
+    motor->phase_output_state.duty_a = 0.0f;
+    motor->phase_output_state.duty_b = 0.0f;
+    motor->phase_output_state.duty_c = 0.0f;
+    motor->phase_output_state.sector = 0U;
+}
+
+void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+    if (motor->phase_output_state.valid == 0U) return;
+
+    switch (motor->phase_output_state.type)
     {
-        SVPWM_UpdateDirect(motor,
-                           motor->alpha_beta.phase_a,
-                           motor->alpha_beta.phase_b,
-                           motor->alpha_beta.phase_c,
-                           voltage_command,
-                           motor->vbus_voltage);
-    }
-    else
-    {
-        SVPWM_UpdateRuntime(motor,
-                            motor->alpha_beta.phase_a,
-                            motor->alpha_beta.phase_b,
-                            motor->alpha_beta.phase_c,
-                            voltage_command,
-                            motor->vbus_voltage);
+    case FOC_PHASE_OUTPUT_ZERO:
+        motor->ctrl.ud = 0.0f;
+        motor->ctrl.uq = 0.0f;
+        motor->applied_output.valid = 1U;
+        motor->applied_output.valid = 1U;
+        motor->applied_output.ud = 0.0f;
+        motor->applied_output.uq = 0.0f;
+        SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
+        break;
+
+    case FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE:
+        FOC_ControlApplyElectricalAngleRuntime(motor, motor->ctrl.electrical_angle_rad);
+        break;
+
+    case FOC_PHASE_OUTPUT_DIRECT_DUTY:
+        motor->applied_output.valid = 1U;
+        motor->applied_output.ud = motor->ctrl.ud;
+        motor->applied_output.uq = motor->ctrl.uq;
+        SVPWM_ApplyDirectDuty(motor,
+                              motor->phase_output_state.sector,
+                              motor->phase_output_state.duty_a,
+                              motor->phase_output_state.duty_b,
+                              motor->phase_output_state.duty_c);
+        break;
+
+    default:
+        break;
     }
 }
 
 /* C31：将机械角度转换为电角度（基于极对数和机械零点） */
-float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad)
+float FOC_ControlMechanicalToElectricalAngle(const foc_motor_t *motor, float mech_angle_rad)
 {
-    float elec_period_rad;
-    float mech_delta_mod;
+    float mech_delta;
 
     if (motor == 0)
     {
         return 0.0f;
     }
 
-    if ((motor->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
-        (motor->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
+    if ((motor->params.pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
+        (motor->params.mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
     {
-        return motor->electrical_phase_angle;
+        return motor->ctrl.electrical_angle_rad;
     }
 
-    elec_period_rad = FOC_MATH_TWO_PI / (float)motor->pole_pairs;
-    mech_delta_mod = fmodf(Math_WrapRadDelta(mech_angle_rad - motor->mech_angle_at_elec_zero_rad), elec_period_rad);
-    if (mech_delta_mod < 0.0f)
-    {
-        mech_delta_mod += elec_period_rad;
-    }
-
-    return Math_WrapRad(motor->direction * mech_delta_mod * (float)motor->pole_pairs);
+    mech_delta = Math_WrapRadDelta(mech_angle_rad - motor->params.mech_angle_at_elec_zero_rad);
+    return Math_WrapRad((float)motor->params.direction * mech_delta * (float)motor->params.pole_pairs);
 }
 
 /* C31：采样锁定的机械角度（用于电机零点标定） */
