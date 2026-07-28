@@ -41,7 +41,7 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_SPEED_ONLY_MIN_RAD_S, COMMAND_MANAGER_PARAM_SPEED_ONLY_MAX_RAD_S) == 0U) return 0U;
         {
             float abs_speed = (value < 0.0f) ? -value : value;
-            if ((motor->source_switch_state.active != 0U) &&
+            if ((motor->source_mgr_state.config_valid != 0U) &&
                 (motor->source_switch_state.low_source != motor->source_switch_state.high_source) &&
                 (abs_speed > motor->source_switch_state.speed_threshold_low_rad_s) &&
                 (abs_speed < motor->source_switch_state.speed_threshold_high_rad_s))
@@ -994,6 +994,14 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
 
     snprintf(out, sizeof(out), "system.source.region=%u\r\n",
              (unsigned int)motor->source_mgr_state.control_region);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.region_state=%u\r\n",
+             (unsigned int)motor->source_mgr_state.region_state);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+
+    snprintf(out, sizeof(out), "system.source.config_valid=%u\r\n",
+             (unsigned int)motor->source_mgr_state.config_valid);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 
     snprintf(out, sizeof(out), "system.source.switching=%u\r\n",

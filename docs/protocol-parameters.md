@@ -325,10 +325,11 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 | `system.source.active` | Source Manager 当前 active source id |
 | `system.source.standby` | Source Manager 当前 standby source id |
 | `system.source.region` | 当前 low/high/full control region |
+| `system.source.region_state` | 当前速域切换状态机状态 |
+| `system.source.config_valid` | 当前 low/high source 切换配置是否有效 |
 | `system.source.switching` | Source Manager 是否处于切换消抖窗口 |
 | `system.active_source.valid` | 当前 active source snapshot 是否有效 |
-| `system.openloop.source_state` | OpenLoop angle source 私有状态 |
-| `system.openloop.policy_state` | OpenLoop low-speed policy 私有状态 |
+| `system.openloop.state` | OpenLoop source 私有状态 |
 
 格式化规则：
 

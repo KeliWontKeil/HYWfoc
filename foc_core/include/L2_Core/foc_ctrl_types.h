@@ -57,6 +57,16 @@ typedef enum {
     FOC_CONTROL_REGION_FULL = 2U
 } foc_control_region_t;
 
+typedef enum {
+    FOC_REGION_STATE_FULL_ACTIVE = 0U,
+    FOC_REGION_STATE_LOW_ACTIVE,
+    FOC_REGION_STATE_HIGH_ACQUIRE,
+    FOC_REGION_STATE_HIGH_READY,
+    FOC_REGION_STATE_HIGH_ACTIVE,
+    FOC_REGION_STATE_HIGH_SUSPECT,
+    FOC_REGION_STATE_LOW_RECOVERY
+} foc_region_state_t;
+
 typedef struct {
     uint8_t comp_available;
     uint8_t comp_active;
@@ -93,8 +103,10 @@ typedef struct {
     uint8_t active_source;
     uint8_t standby_source;
     uint8_t control_region;
+    uint8_t region_state;
     uint8_t switch_in_progress;
     uint32_t switch_counter;
+    uint8_t config_valid;
 } foc_source_mgr_state_t;
 
 /* ========== Outer-loop runtime state (private to outer_loop) ========== */
@@ -257,14 +269,10 @@ typedef struct {
 
 /* ========== Source Manager low/high source switch private state ========== */
 typedef struct {
-    uint8_t  active;
     uint8_t  low_source;
     uint8_t  high_source;
-    uint8_t  current_source;
     float    speed_threshold_high_rad_s;
     float    speed_threshold_low_rad_s;
-    uint16_t settle_counter;
-    uint8_t  settle_target;
 } foc_source_switch_state_t;
 
 /* ========== 非阻塞重初始化状态 ========== */

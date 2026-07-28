@@ -69,7 +69,7 @@ FOC_VSCODE/
 
 系统以两个顶层结构体为数据中枢：
 
-- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`estim_smo_state`、`estim_hfi_state`、`estim_encoder_state`）、Source Manager 状态（`active_source_state`、`source_mgr_state`、`source_switch_state`）、各 source 私有状态（`openloop_angle_source_state`、`openloop_low_speed_policy_state`）和控制运行时（`ctrl`: `iq_target`、`electrical_angle_rad`、`ud/uq`）、外环状态等。L1 实例化，L2 各块通过指针读/写。
+- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`estim_smo_state`、`estim_hfi_state`、`estim_encoder_state`）、Source Manager 状态（`active_source_state`、`source_mgr_state`、`source_switch_state`）、各 source 私有状态（如 `openloop_state`）和控制运行时（`ctrl`: `iq_target`、`electrical_angle_rad`、`ud/uq`）、外环状态等。L1 实例化，L2 各块通过指针读/写。
 - **`foc_system_t`**（定义于 `foc_system_types.h`）— 系统级数据结构，包含：
   - `cfg.report`：系统 report 配置，不随 reinit 重置
   - `runtime.scheduler`：系统任务调度器
@@ -344,22 +344,22 @@ Source Manager 在 PWM ISR 中分两步运行，决策与数据发布解耦：
 FOC_SourceMgr_Select(motor)
   └── 纯决策函数：
       ├── 读取低/高 source 配置、当前 active source、各 source 内部状态
-      ├── 检查速度阈值、收敛状态
+      ├── 检查速度阈值、低速侧升域授权、候选高速源收敛状态
       ├── 如果 single source（low=high）→ 直接返回，control_region = FULL
-      ├── 低→高判断：speed_abs > threshold_high 且 high_state >= CONVERGING
-      ├── 高→低判断：high_state == DIVERGED 或 speed_abs < threshold_low
-      ├── OpenLoop→SMO 特殊条件：额外校验 SMO 电速度与 OpenLoop 虚拟速度差值 < 阈值
-      ├── 消抖窗口：条件满足时启动 settle_counter，持续 FOC_SOURCE_SWITCH_SETTLE_CYCLES 周期后才执行切换
-      └── 切换执行：修改 active_source、standby_source、control_region
+      ├── 低→高判断：LowMotionAbove(high_th) + CandidateSpeedAbove(high_th) + high 可获取
+      ├── 高速获取：使用 low_th 作为取消门限，避免 high_th 附近反复清零
+      ├── 高→低判断：high 失效/发散或速度低于 low_th 后连续确认
+      ├── 消抖窗口：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交切换
+      └── 切换提交：修改 active_source、standby_source、control_region，并同步外环/电流环状态
 
 FOC_SourceMgr_Publish(motor)
   └── 纯发布函数：
       ├── 根据 active_source 类型读取对应 source 的私有状态
       │   ├── ENCODER → sensor.mech_angle_rad
       │   ├── SMO → estim_smo_state.pll_angle_rad / pll_speed_rad_s
-      │   └── OPENLOOP → openloop_angle_source_state.virtual_angle_rad / virtual_speed_rad_s
-      ├── 填入 motor->active_source_state（source、state、valid、confidence、角度、速度）
-      ├── 派生写 motor->ctrl.electrical_angle_rad（电流环快路径角度）
+      │   └── OPENLOOP → openloop_state.virtual_angle_rad / mech_speed_rad_s
+      ├── 填入 motor->active_source_state（source、state、valid、confidence、角度）
+      ├── 统一写 motor->ctrl.electrical_angle_rad（电流环快路径角度）
       └── 更新 motor->encoder_services（calib/reinit/comp 可用性）
 ```
 
@@ -369,7 +369,7 @@ FOC_SourceMgr_Publish(motor)
 
 | Source | 类型宏 | 私有状态 | 迭代位置 | 收敛跟踪 |
 |--------|--------|----------|----------|----------|
-| OPENLOOP | `FOC_SOURCE_TYPE_OPENLOOP` | `openloop_angle_source_state` | PWM ISR Source Manager（读取已积分的虚拟角度） | 始终 LOCKED |
+| OPENLOOP | `FOC_SOURCE_TYPE_OPENLOOP` | `openloop_state` | Control ISR 积分虚拟角度，PWM ISR Publish 读取 | 非 FAILED 即有效 |
 | ENCODER | `FOC_SOURCE_TYPE_ENCODER` | `estim_encoder_state` | Control ISR 或 PWM ISR（由 FAST 宏控制） | 硬件有效即 LOCKED |
 | SMO | `FOC_SOURCE_TYPE_SMO` | `estim_smo_state` | PWM ISR 阶段2（每周期迭代） | converge_counter / lock_counter 三段状态 |
 | HFI | `FOC_SOURCE_TYPE_HFI` | `estim_hfi_state` | PWM ISR 阶段2（每周期迭代） | 预留 |
@@ -384,40 +384,82 @@ SMO 收敛状态定义：
   - `converge_counter > LOCK_CONSECUTIVE(100)` → `LOCKED`
   - `lock_counter > DIVERGE_CONSECUTIVE(200)` → `DIVERGED`
 
-### Source Manager 切换策略
+### Source Manager 切换状态机
 
-Source Manager 在 `Select` 阶段执行三分支切换判断：
+Source Manager 在 `Select` 阶段维护显式 `region_state`。状态字段只描述速域/source 切换过程，不替代顶层 `control_phase`。
 
 ```
- 分支1（OpenLoop→SMO 特殊条件）：
-   条件：active=OPENLOOP 且 high_state≥CONVERGING
-         且 |SMO.pll_speed_rad_s - OpenLoop.virtual_speed_rad_s| < FOC_OPENLOOP_SWITCH_SPEED_THRESHOLD_RAD_S(5.0)
-   动作：切换到 high(SMO)
+FULL_ACTIVE
+  single-source 或非法切换配置；active=low，control_region=FULL
 
- 分支2（普通低→高切换）：
-   条件：active!=high 且 high_state≥CONVERGING 且 speed_abs > threshold_high(15.0 rad/s)
-   动作：切换到 high
+LOW_ACTIVE
+  active=low，control_region=LOW
+  -> HIGH_ACQUIRE 条件：
+       LowMotionAbove(low, high_th)
+       && CandidateSpeedAbove(high_speed, high_th)
+       && high_state >= CONVERGING
+       && high source valid
 
- 分支3（高→低回退）：
-   条件：active==high 且 (high_state==DIVERGED 或 speed_abs < threshold_low(12.0 rad/s))
-   动作：回退到 low
+HIGH_ACQUIRE
+  active 仍保持 low，switch_counter 连续累计
+  -> LOW_ACTIVE 条件：
+       LowMotionAbove(low, low_th) == false
+       || CandidateSpeedAbove(high_speed, low_th) == false
+       || high_state 不可获取
+       || high source invalid
+  -> HIGH_READY 条件：
+       switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES
 
- 消抖（所有分支）：
-   切换条件首次满足时，switch_in_progress=1，switch_counter 递增
-   只有 switch_counter ≥ SETTLE_CYCLES(50) 时切换才真正生效
-   条件消失则 counter 清零（防毛刺）
+HIGH_READY
+  -> HIGH_ACTIVE 条件：
+       high_state == LOCKED
+       && (active 是 OPENLOOP || active/high 电角度兼容)
+     动作：CommitSwitch(high)
+  -> LOW_ACTIVE：条件不满足
+
+HIGH_ACTIVE
+  active=high，control_region=HIGH
+  降级嫌疑条件：
+       high_state == DIVERGED
+       || high_state 不可保持
+       || high source invalid
+       || speed_abs < low_th
+  降级嫌疑必须连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES，
+  达标后进入 LOW_RECOVERY；条件恢复则 counter 清零。
+
+LOW_RECOVERY
+  low source valid 或 low=OPENLOOP 时 CommitSwitch(low) 并回到 LOW_ACTIVE
 ```
+
+低速侧升域授权规则：
+- `low=OPENLOOP`：只认 `openloop_state.mech_speed_rad_s`，外部拖动 encoder 速度不能单独触发升域。
+- `low` 有物理速度：使用该 source 的物理速度。
+- `low` 无物理速度：使用 `outer_loop.ramped_speed_rad_s` 作为控制意图。
+
+切换提交同步：
+- 重基准 `outer_loop.accum_rad / prev_rad / prev_mech_signed_rad`。
+- 清 `speed_err_accum_rad` 并同步 `speed_state_valid`。
+- 使用新源或旧源物理速度同步 `outer_loop.ramped_speed_rad_s`。
+- 按切换前 `iq_target/uq/iq_measured` 预置速度 PID 与电流 PID，避免闭环从零状态硬接管。
+
+### 全局控制加速度与速域上限
+
+速度斜坡由 `outer_loop.ramped_speed_rad_s` 统一承载：
+- OpenLoop 低速源使用 `openloop_state.ramp_rate_rad_s2` 积分虚拟电角速度，并受低速域速度上限约束。
+- 普通速度/位置外环通过 `FOC_Accel_ApplySpeedLimit()` 施加加速度斜率和 `control_region` 对应速度上限。
+- Source Manager 切换提交时同步 ramped speed，保证低速/高速域切换不会把速度斜坡状态清零或反向跳变。
 
 ### 初始化配置
 
 ```c
 FOC_SourceMgr_Init(motor, low_source, high_source):
   active_source = low_source
-  standby_source = high_source
+  standby_source = switchable ? high_source : NONE
   control_region = (high == NONE || high == low) ? FULL : LOW
+  region_state = switchable ? LOW_ACTIVE : FULL_ACTIVE
+  config_valid = switchable
   switch_state.low_source = low_source
   switch_state.high_source = high_source
-  switch_state.current_source = low_source
   active_source_state 所有字段清零（source=low_source, state=INIT, valid=0）
   UpdateEncoderServices：根据 active_source 是否为 ENCODER 设 calib/reinit/comp 可用性
 ```

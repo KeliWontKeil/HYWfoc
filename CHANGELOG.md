@@ -5,6 +5,29 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-07-28
+
+### Added
+- **速域状态机显式化**：Source Manager 新增 `region_state` 与 `config_valid`，将低速、高速获取、高速就绪、高速运行和低速恢复拆成可观测状态。
+- **切换提交同步**：source/region 切换时同步外环机械角历史、速度误差状态、ramped speed，并预置速度 PID/电流 PID 状态，降低 open-loop 到 closed-loop 接管时的控制量断层。
+- **全局控制加速度机制**：将速度斜坡/速域上限作为外环通用策略处理，OpenLoop 及普通外环路径统一受速度限制与加速度约束管理。
+
+### Changed
+- **Source Manager 鲁棒性提升**：低速升高速改为低速侧运动授权 + 高速候选源有效性双条件；openloop 低速源不再仅因外部拖动 encoder 速度越过门限而触发升域。
+- **高速降级消抖**：`HIGH_ACTIVE` 中的失锁/低速降级由单拍触发改为连续确认，门限附近不再直接跳入降级状态。
+- **角度发布链路收口**：运行时电角度由 Source Manager Publish 统一发布，执行输出路径只消费已发布角度。
+- **电流软切换默认参数调整**：AUTO 模式说明更新，默认闭环运行；降低 blend 时间常数，并将 AUTO 开环阈值调整为 0，避免长期混合降低高速带宽。
+- **代码优化**：清理 source snapshot 和过期切换字段，简化 Source Manager 数据路径；移除旧的 source-switch transition 入口。
+
+### Fixed
+- 修复反向/测试配置下 source 状态乱跳、门限附近频繁切换的问题。
+- 修复电角度环绕写入导致 ISR 时间随运行逐渐上升的问题。
+- 修复 current soft-switch 内指针与整数比较 warning。
+
+### Documentation
+- 版本基线统一更新至 v2.0.3。
+- 架构文档同步 Source Manager 状态机、切换条件、切换同步和全局加速度策略。
+
 ## [2.0.2] - 2026-07-27
 
 ### Changed

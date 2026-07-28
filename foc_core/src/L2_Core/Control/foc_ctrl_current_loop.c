@@ -19,7 +19,7 @@ static float FOC_CurrentSoftSwitchUpdateBlend(float current_blend,
     float alpha;
 
     target_blend = Math_ClampFloat(target_blend, 0.0f, 1.0f);
-    if ((blend_initialized != 0U) && (*blend_initialized == 0U))
+    if ((blend_initialized != 0) && (*blend_initialized == 0U))
     {
         *blend_initialized = 1U;
         return target_blend;

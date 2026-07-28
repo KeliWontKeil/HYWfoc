@@ -145,8 +145,10 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->source_mgr_state.active_source = FOC_SOURCE_TYPE_NONE;
     motor->source_mgr_state.standby_source = FOC_SOURCE_TYPE_NONE;
     motor->source_mgr_state.control_region = FOC_CONTROL_REGION_FULL;
+    motor->source_mgr_state.region_state = FOC_REGION_STATE_FULL_ACTIVE;
     motor->source_mgr_state.switch_in_progress = 0U;
     motor->source_mgr_state.switch_counter = 0U;
+    motor->source_mgr_state.config_valid = 0U;
     motor->encoder_services.comp_available = 0U;
     motor->encoder_services.comp_active = 0U;
     motor->encoder_services.calib_available = 0U;

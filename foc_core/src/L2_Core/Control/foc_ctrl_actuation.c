@@ -80,7 +80,10 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     }
 
     motor->applied_output.valid = 1U;
-    motor->ctrl.electrical_angle_rad = electrical_angle;
+    if (direct_output != 0U)
+    {
+        motor->ctrl.electrical_angle_rad = electrical_angle;
+    }
     motor->applied_output.ud = ud_applied;
     motor->applied_output.uq = uq_applied;
 
@@ -153,7 +156,6 @@ void FOC_ControlRecordPhaseOutputDqAngle(foc_motor_t *motor,
                                          float ud,
                                          float uq)
 {
-    if (motor == 0) return;
 
     motor->phase_output_state.phase = phase;
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_DQ_VOLTAGE_ANGLE;
@@ -224,10 +226,9 @@ void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
 }
 
 /* C31：将机械角度转换为电角度（基于极对数和机械零点） */
-float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angle_rad)
+float FOC_ControlMechanicalToElectricalAngle(const foc_motor_t *motor, float mech_angle_rad)
 {
-    float elec_period_rad;
-    float mech_delta_mod;
+    float mech_delta;
 
     if (motor == 0)
     {
@@ -240,14 +241,8 @@ float FOC_ControlMechanicalToElectricalAngle(foc_motor_t *motor, float mech_angl
         return motor->ctrl.electrical_angle_rad;
     }
 
-    elec_period_rad = FOC_MATH_TWO_PI / (float)motor->params.pole_pairs;
-    mech_delta_mod = fmodf(Math_WrapRadDelta(mech_angle_rad - motor->params.mech_angle_at_elec_zero_rad), elec_period_rad);
-    if (mech_delta_mod < 0.0f)
-    {
-        mech_delta_mod += elec_period_rad;
-    }
-
-    return Math_WrapRad(motor->params.direction * mech_delta_mod * (float)motor->params.pole_pairs);
+    mech_delta = Math_WrapRadDelta(mech_angle_rad - motor->params.mech_angle_at_elec_zero_rad);
+    return Math_WrapRad((float)motor->params.direction * mech_delta * (float)motor->params.pole_pairs);
 }
 
 /* C31：采样锁定的机械角度（用于电机零点标定） */

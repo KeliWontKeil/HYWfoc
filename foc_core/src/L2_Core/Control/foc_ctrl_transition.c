@@ -13,39 +13,6 @@ static void Transition_ResetPID(foc_pid_t *pid)
     pid->prev_error = 0.0f;
 }
 
-static float Transition_GetSourceMechSpeed(const foc_motor_t *motor, uint8_t source)
-{
-    switch (source)
-    {
-#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    case FOC_SOURCE_TYPE_ENCODER:
-        return motor->sensor.mech_speed_rad_s;
-#endif
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    case FOC_SOURCE_TYPE_SMO:
-        return motor->estim_smo_state.mech_speed_rad_s;
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-    case FOC_SOURCE_TYPE_OPENLOOP:
-        return motor->openloop_state.mech_speed_rad_s;
-#endif
-    default:
-        return 0.0f;
-    }
-}
-
-void FOC_Transition_OnSourceSwitch(foc_motor_t *motor, uint8_t new_source, uint8_t old_source)
-{
-    float new_mech_speed;
-
-    if (motor == 0) return;
-
-    new_mech_speed = Transition_GetSourceMechSpeed(motor, new_source);
-    motor->outer_loop.ramped_speed_rad_s = fabsf(new_mech_speed);
-
-    (void)old_source;
-}
-
 void FOC_Transition_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t old_mode)
 {
     if (motor == 0) return;
