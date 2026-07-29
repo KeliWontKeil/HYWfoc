@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "L1_Orchestration/foc_app.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
@@ -691,6 +692,17 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
         res.needs_status = 1U;
         return res;
     }
+
+#if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
+    if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_ABORT)
+    {
+        FOC_App_AbortSpecialPhase();
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+#endif
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_RUNTIME_SUMMARY)
     {

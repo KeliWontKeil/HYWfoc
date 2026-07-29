@@ -19,6 +19,11 @@ typedef struct {
     uint8_t valid;
 } foc_filter_biquad_t;
 
+/* NONE 配置下的占位类型，仅保留 output_value 供外部访问 */
+typedef struct {
+    float output_value;
+} foc_filter_none_t;
+
 /* 卡尔曼滤波器状态 */
 typedef struct {
     float raw_value;

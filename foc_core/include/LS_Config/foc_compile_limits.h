@@ -374,4 +374,25 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 #error "HFI configured as source requires FOC_ESTIMATOR_HFI_ENABLE"
 #endif
 #endif
+
+/* 角度控制模式需要编码器或 HFI 提供可靠绝对角度 */
+#define FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(src) \
+    ((src) == FOC_CONTROL_SRC_ENCODER || (src) == FOC_CONTROL_SRC_HFI)
+
+#if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
+    #if !FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(FOC_CONTROL_LOW_SOURCE)
+    #error "SPEED_ANGLE_ONLY requires ENCODER or HFI as low-speed source"
+    #endif
+    #if !FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(FOC_CONTROL_HIGH_SOURCE)
+    #error "SPEED_ANGLE_ONLY requires ENCODER or HFI as high-speed source"
+    #endif
+#elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
+    #if (COMMAND_MANAGER_DEFAULT_CONTROL_MODE == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
+        #if !FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(FOC_CONTROL_LOW_SOURCE) || \
+            !FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(FOC_CONTROL_HIGH_SOURCE)
+        #error "Default SPEED_ANGLE mode requires ENCODER or HFI as both sources"
+        #endif
+    #endif
+#endif
+
 #endif /* FOC_COMPILE_LIMITS_H */

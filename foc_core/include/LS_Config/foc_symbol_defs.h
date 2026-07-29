@@ -16,7 +16,7 @@
 #define FOC_FILTER_TYPE_BIQUAD  3
 
 /* ========== 从类型值推导类型名（二次展开） ========== */
-#define FOC_FILTER_TYPEDEF_0    uint8_t
+#define FOC_FILTER_TYPEDEF_0    foc_filter_none_t
 #define FOC_FILTER_TYPEDEF_1    foc_filter_kalman_t
 #define FOC_FILTER_TYPEDEF_2    foc_filter_lpf1_t
 #define FOC_FILTER_TYPEDEF_3    foc_filter_biquad_t
@@ -104,6 +104,7 @@
 #define COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT 'T'
 #define COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT 'I'
 #define COMMAND_MANAGER_SYSTEM_SUBCMD_INFO 'X'
+#define COMMAND_MANAGER_SYSTEM_SUBCMD_ABORT 'A'
 
 /* =================================================================
  * P 命令组（运行参数）—— 帧格式 a<P_driver><P><subcmd>[param]b

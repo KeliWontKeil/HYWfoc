@@ -49,6 +49,8 @@ static inline uint8_t FOC_ReInit_IsBusy(const foc_motor_t *motor)
  */
 uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec);
 
+void FOC_ReInit_Abort(foc_motor_t *motor);
+
 #else /* FOC_REINIT_ENABLE == FOC_CFG_DISABLE */
 
 static inline void FOC_ReInit_Request(foc_motor_t *motor) { (void)motor; }

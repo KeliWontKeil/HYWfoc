@@ -24,6 +24,10 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor);
  */
 uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec);
 
+/** @brief Full stop: reset all control state and zero PWM output.
+ *         Converges fault / disable / phase-switch stop paths. */
+void FOC_ControlExecutor_FullStop(foc_motor_t *motor);
+
 /** @brief Safe output: zero voltage, open-loop stop. */
 void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor);
 

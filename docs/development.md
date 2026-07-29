@@ -31,7 +31,7 @@
    - Monitor 段：调试流生成器逐行输出 → 入 TX 队列
    - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列、配置脏检查）
    - TX 消费段：TX 队列出队 → 平台发送
-5. L2/Control 模块命名按职责分组：`foc_ctrl_executor`（算法入口）、`foc_ctrl_init`（初始化与标定）、`foc_ctrl_cfg`（配置状态管理）、`foc_ctrl_source_mgr`（Source Manager）、`foc_ctrl_openloop`（OpenLoop 角度源/低速策略）、`foc_ctrl_estim`（估计器注册中心）、`foc_ctrl_estim_encoder`（编码器估计器）、`foc_ctrl_estim_smo`（SMO 估计器）、`foc_ctrl_estim_hfi`（HFI 估计器）、`foc_ctrl_outer_loop`（速度/位置外环）、`foc_ctrl_current_loop`（电流内环）、`foc_ctrl_param_learn`（参数学习）、`foc_ctrl_compensation`（齿槽补偿）、`foc_ctrl_sens_cogging_calib`（有感齿槽标定）、`foc_ctrl_sens_reinit`（有感重初始化）、`foc_ctrl_actuation`（执行输出）。
+5. L2/Control 模块命名按职责分组：`foc_ctrl_executor`（算法入口、外环调度、控制模式切换）、`foc_ctrl_init`（初始化与标定）、`foc_ctrl_cfg`（配置状态管理）、`foc_ctrl_source_mgr`（Source Manager）、`foc_ctrl_openloop`（OpenLoop 角度源/低速策略）、`foc_ctrl_estim`（估计器注册中心）、`foc_ctrl_estim_encoder`（编码器估计器）、`foc_ctrl_estim_smo`（SMO 估计器）、`foc_ctrl_estim_hfi`（HFI 估计器）、`foc_ctrl_outer_loop`（速度/位置外环）、`foc_ctrl_current_loop`（电流内环）、`foc_ctrl_param_learn`（参数学习）、`foc_ctrl_compensation`（齿槽补偿）、`foc_ctrl_sens_cogging_calib`（有感齿槽标定）、`foc_ctrl_sens_reinit`（有感重初始化）、`foc_ctrl_actuation`（执行输出）。
    Source Manager 只在 PWM ISR 的 NORMAL 标准流程中发布 active source；Control Policy / 外环在 Control ISR 中生成 `iq_target`。齿槽标定和重初始化以特殊 `control_phase` 状态机推进，由 PWM ISR 特殊输出流程应用输出。
 6. L2/Runtime 新增工具模块（如队列）需同步更新 `builder.params`。
 7. L2 层不持有任何队列实例，队列存储由 L1 在 `foc_runtime_ctx_t` 中分配。

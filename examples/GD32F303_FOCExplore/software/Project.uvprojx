@@ -748,11 +748,6 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
             </File>
-            <File>
-              <FileName>foc_ctrl_transition.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -1501,11 +1496,6 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
             </File>
-            <File>
-              <FileName>foc_ctrl_transition.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -2253,11 +2243,6 @@
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc_ctrl_transition.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_transition.c</FilePath>
             </File>
           </Files>
         </Group>

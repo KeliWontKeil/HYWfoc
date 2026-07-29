@@ -150,7 +150,6 @@
         }
     },
     "env": {
-        "KEIL_OUTPUT_DIR": "output",
         "workspaceFolder": "d:\\project\\GD32F3 project\\FOC_VSCODE\\examples\\GD32F303_FOCExplore\\software",
         "workspaceFolderBasename": "software",
         "OutDir": "d:\\project\\GD32F3 project\\FOC_VSCODE\\examples\\GD32F303_FOCExplore\\software\\build\\GD32F30X_CL",

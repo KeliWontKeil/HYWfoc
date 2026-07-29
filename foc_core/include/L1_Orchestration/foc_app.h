@@ -14,4 +14,7 @@ void FOC_App_MonitorTrigger(void);
 /* PWM ISR 桥接（注册到 FOC_Platform_SetPwmUpdateCallback） */
 void FOC_App_OnPwmUpdateISR(void);
 
+/* 特殊控制状态退出（由协议 Y:A 或自动退出守卫调用） */
+void FOC_App_AbortSpecialPhase(void);
+
 #endif /* FOC_APP_H */

@@ -56,19 +56,6 @@ static inline float FOC_FilterGate_Angle(
 #endif
 }
 
-static inline float FOC_FilterGate_Svpwm(
-    FOC_FILTER_TYPEDEF(FOC_FILTER_SVPWM) *f, float input)
-{
-#if (FOC_FILTER_SVPWM == FOC_FILTER_TYPE_LPF1)
-    return FOC_FilterMath_Lpf1Step(f, input, FOC_FILTER_SVPWM_LPF_ALPHA);
-#elif (FOC_FILTER_SVPWM == FOC_FILTER_TYPE_KALMAN)
-    return FOC_FilterMath_KalmanStep(f, input);
-#else
-    (void)f;
-    return input;
-#endif
-}
-
 static inline float FOC_FilterGate_EncoderSpeed(
     FOC_FILTER_TYPEDEF(FOC_FILTER_ENCODER_SPEED) *f, float input)
 {

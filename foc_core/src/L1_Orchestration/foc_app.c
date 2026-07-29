@@ -209,6 +209,36 @@ void FOC_App_MonitorTrigger(void)
 #endif
 }
 
+#if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
+void FOC_App_AbortSpecialPhase(void)
+{
+    const char *aborted_phase = "UNKNOWN";
+
+    switch (motor.state.control_phase)
+    {
+    case FOC_CONTROL_PHASE_COGGING_CALIB:
+        aborted_phase = "COGGING_CALIB";
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        FOC_CoggingCalib_Abort(&motor);
+#endif
+        break;
+    case FOC_CONTROL_PHASE_REINIT:
+        aborted_phase = "REINIT";
+#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
+        FOC_ReInit_Abort(&motor);
+#endif
+        break;
+    default:
+        break;
+    }
+
+    FOC_Protocol_OutputDiag("INFO", "abort", aborted_phase);
+    motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+    motor.mode_transition.prev_control_mode_check = motor.state.control_mode;
+    FOC_ControlExecutor_FullStop(&motor);
+}
+#endif
+
 void FOC_App_ControlTrigger(void)
 {
     uint8_t phase;
@@ -216,6 +246,18 @@ void FOC_App_ControlTrigger(void)
 
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
+
+#if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
+    if (phase != FOC_CONTROL_PHASE_NORMAL)
+    {
+        if ((motor.state.motor_enabled == 0U) ||
+            (motor.state.control_mode != motor.mode_transition.prev_control_mode_check))
+        {
+            FOC_App_AbortSpecialPhase();
+            phase = FOC_CONTROL_PHASE_NORMAL;
+        }
+    }
+#endif
 
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
     Sensor_ReadEncoder(&motor, &motor.sensor, FOC_CONTROL_DT_SEC);
@@ -279,5 +321,13 @@ void FOC_App_ControlTrigger(void)
 
 void FOC_App_OnPwmUpdateISR(void)
 {
+    if (motor.state.system_fault != 0U)
+    {
+        FOC_ControlExecutor_FullStop(&motor);
+        return;
+    }
+
+    if (motor.state.system_running == 0U) return;
+
     FOC_ControlExecutor_RunISR(&motor);
 }

@@ -340,6 +340,10 @@ typedef struct {
     float prev_mech_angle_rad;
     float mech_speed_rad_s;
     uint8_t mech_speed_valid;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_ENCODER_SPEED) encoder_speed_filter;
+    float speed_window[FOC_ENCODER_SPEED_WINDOW_SIZE];
+    uint8_t speed_window_pos;
+    uint8_t speed_window_count;
     struct {
         float raw;
         float filtered;

@@ -210,7 +210,7 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 
 | 文件名 | 职责 |
 |------|------|
-| `foc_ctrl_executor` | 算法入口：PWM ISR 与 Control ISR 路由，外环调度 |
+| `foc_ctrl_executor` | 算法入口：PWM ISR 与 Control ISR 路由，外环调度、控制模式切换 |
 | `foc_ctrl_init` | 初始化与标定 |
 | `foc_ctrl_cfg` | 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter） |
 | `foc_ctrl_source_mgr` | Source Manager：Select（切换决策）+ Publish（发布 active source view） |
@@ -236,21 +236,27 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
        → FOC_ControlExecutor_Init → FOC_Control_ApplyConfig
 
 Control ISR（低频控制线，严格不做 source 选择）：
+  阶段0：系统守卫（L1）
+    → system_fault 检查 → return
   阶段1：传感器读取
-    → Sensor_ReadEncoder / Sensor_ReadVBUS
-    → Sensor_SyncCurrentSnapshot（将 ISR 电流同步到 motor->sensor）
+    → [SLOW] Sensor_ReadEncoder、Sensor_ReadVBUS
     → 有效性检查（adc_valid + [encoder] encoder_valid）
+    → 欠压保护检查（FOC_FEATURE_UNDERVOLTAGE_PROTECTION）
   阶段2：按 control_phase 运行状态机
-    → NORMAL：Control Policy 路由
-      → OpenLoop active → FOC_OpenLoopLowSpeedPolicy_RunStep（写 motor->ctrl.iq_target）
+    → NORMAL：Control Policy 路由（FOC_ControlExecutor_RunCycle）
+      → OpenLoop active → FOC_OpenLoop_RunStep（写 motor->ctrl.iq_target）
       → 其他 source active → FOC_ControlExecutor_RunOuterLoop：
         根据 control_mode 选择外环 → FOC_SpeedOuterLoopStep / FOC_SpeedAngleOuterLoopStep
         → 齿槽补偿（FOC_ControlApplyCoggingCompensation，使用 active_source_state.mech_angle_rad）
     → COGGING_CALIB/REINIT：特殊状态机记录 `phase_output_state`
 
-PWM ISR（5 阶段，严格串行，不可调换）：
+PWM ISR（5 阶段管线，严格串行，不可调换）：
+  [L1 系统守卫]
+    → system_fault 检查 → SafeOutput + return
+    → system_running / motor_enabled 检查 → return
+
   [公共前导] SVPWM_InterpolationISR
-  [特殊 phase 路由]
+  [特殊 phase 路由]（管线内部行为）
     → COGGING_CALIB/REINIT：直接消费 phase_output_state → apply → return，跳过后续 NORMAL 流程
 
   [NORMAL 标准流程——电流分频控制]：
@@ -394,7 +400,7 @@ FULL_ACTIVE
 
 LOW_ACTIVE
   active=low，control_region=LOW
-  -> HIGH_ACQUIRE 条件：
+  -> HIGH_ACQUIRE 条件（四个全满足，使用 high_th）：
        LowMotionAbove(low, high_th)
        && CandidateSpeedAbove(high_speed, high_th)
        && high_state >= CONVERGING
@@ -402,30 +408,36 @@ LOW_ACTIVE
 
 HIGH_ACQUIRE
   active 仍保持 low，switch_counter 连续累计
-  -> LOW_ACTIVE 条件：
+  -> LOW_ACTIVE 条件（任一满足即回退，使用 low_th）：
        LowMotionAbove(low, low_th) == false
        || CandidateSpeedAbove(high_speed, low_th) == false
        || high_state 不可获取
        || high source invalid
-  -> HIGH_READY 条件：
+  -> HIGH_ACTIVE 条件（消抖达标后直接检查切入条件，无中间 HIGH_READY 状态）：
        switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES
-
-HIGH_READY
-  -> HIGH_ACTIVE 条件：
-       high_state == LOCKED
+       && high_state == LOCKED
        && (active 是 OPENLOOP || active/high 电角度兼容)
      动作：CommitSwitch(high)
-  -> LOW_ACTIVE：条件不满足
+  （若消抖达标但切入条件不满足，保持在 HIGH_ACQUIRE 中等待）
 
 HIGH_ACTIVE
   active=high，control_region=HIGH
-  降级嫌疑条件：
+  -> HIGH_SUSPECT 条件（降级嫌疑，任一满足即转入）：
        high_state == DIVERGED
        || high_state 不可保持
        || high source invalid
        || speed_abs < low_th
-  降级嫌疑必须连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES，
-  达标后进入 LOW_RECOVERY；条件恢复则 counter 清零。
+
+HIGH_SUSPECT
+  降级消抖状态
+  -> HIGH_ACTIVE 条件（嫌疑解除，使用 high_th 为恢复门限）：
+       high_state != DIVERGED
+       && high_state 可保持
+       && high source valid
+       && (speed 无效 || speed_abs >= high_th)
+  -> LOW_RECOVERY 条件：
+       high_state == DIVERGED（立即）
+       || switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES（消抖完成）
 
 LOW_RECOVERY
   low source valid 或 low=OPENLOOP 时 CommitSwitch(low) 并回到 LOW_ACTIVE
