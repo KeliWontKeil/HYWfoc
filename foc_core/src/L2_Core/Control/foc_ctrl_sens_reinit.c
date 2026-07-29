@@ -489,4 +489,10 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     }
 }
 
+void FOC_ReInit_Abort(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+    motor->reinit_state.phase = FOC_REINIT_PHASE_IDLE;
+}
+
 #endif /* FOC_REINIT_ENABLE */

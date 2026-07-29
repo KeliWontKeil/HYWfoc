@@ -68,12 +68,26 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->mech_angle_rad.output_value = 0.0f;
 #endif
 
+#if (FOC_FILTER_ENCODER_SPEED == FOC_FILTER_TYPE_KALMAN)
+    FOC_FilterMath_KalmanInit(&out->encoder_speed_filter,
+                              FOC_FILTER_ENCODER_SPEED_KALMAN_MEAS_ERR,
+                              FOC_FILTER_ENCODER_SPEED_KALMAN_EST_ERR,
+                              FOC_FILTER_ENCODER_SPEED_KALMAN_PROC_NOISE,
+                              FOC_FILTER_ENCODER_SPEED_KALMAN_INIT);
+#elif (FOC_FILTER_ENCODER_SPEED == FOC_FILTER_TYPE_LPF1)
+    FOC_FilterMath_Lpf1Init(&out->encoder_speed_filter, 0.0f);
+#else
+    out->encoder_speed_filter.output_value = 0.0f;
+#endif
+
     out->adc_valid = 0;
     out->encoder_valid = 0;
     out->vbus_valid = 0;
     out->prev_mech_angle_rad = 0.0f;
     out->mech_speed_rad_s = 0.0f;
     out->mech_speed_valid = 0U;
+    out->speed_window_pos = 0U;
+    out->speed_window_count = 0U;
     out->vbus.raw = 0.0f;
     out->vbus.filtered = 0.0f;
     out->current_a_zero_offset = 0.0f;
@@ -240,10 +254,33 @@ void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out, float dt_sec)
         if ((out->mech_speed_valid != 0U) && (dt_sec > 0.0f))
         {
             delta = Math_WrapRadDelta(angle_for_output - out->prev_mech_angle_rad);
-            if (fabsf(delta) > FOC_MATH_EPSILON)
+            out->speed_window[out->speed_window_pos] = delta;
+            out->speed_window_pos++;
+            if (out->speed_window_pos >= FOC_ENCODER_SPEED_WINDOW_SIZE)
             {
-                out->mech_speed_rad_s = delta / dt_sec;
+                out->speed_window_pos = 0U;
             }
+            if (out->speed_window_count < FOC_ENCODER_SPEED_WINDOW_SIZE)
+            {
+                out->speed_window_count++;
+            }
+
+            if (out->speed_window_count > 0U)
+            {
+                uint8_t i;
+                float sum = 0.0f;
+                for (i = 0U; i < out->speed_window_count; i++)
+                {
+                    sum += out->speed_window[i];
+                }
+                out->mech_speed_rad_s = sum / ((float)out->speed_window_count * dt_sec);
+                out->mech_speed_rad_s = FOC_FilterGate_EncoderSpeed(&out->encoder_speed_filter, out->mech_speed_rad_s);
+            }
+        }
+        else
+        {
+            out->speed_window_count = 0U;
+            out->speed_window_pos = 0U;
         }
         out->prev_mech_angle_rad = angle_for_output;
         out->mech_speed_valid = 1U;

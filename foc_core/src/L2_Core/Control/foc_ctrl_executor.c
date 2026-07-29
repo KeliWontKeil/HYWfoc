@@ -9,7 +9,6 @@
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
-#include "L2_Core/Control/foc_ctrl_transition.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
 #include "L3_Hal/foc_sensor.h"
 #include "L3_Hal/foc_svpwm.h"
@@ -17,15 +16,60 @@
 #include "L3_Hal/foc_math_types.h"
 #include "LS_Config/foc_config.h"
 
-static void Executor_SafeOutput(foc_motor_t *motor, uint8_t report_skip)
+static void ResetPID(foc_pid_t *pid)
 {
+    if (pid == 0) return;
+    pid->integral = 0.0f;
+    pid->prev_error = 0.0f;
+}
+
+void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+
+    /* 清零控制输出 */
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = 0.0f;
+    motor->ctrl.iq_target = 0.0f;
+
+    /* 清零 PID */
+    ResetPID(&motor->torque_current_pid);
+    ResetPID(&motor->speed_pid);
+    ResetPID(&motor->angle_pid);
+
+    /* 清零外环累积状态 */
+    motor->outer_loop.accum_rad = 0.0f;
+    motor->outer_loop.prev_rad = 0.0f;
+    motor->outer_loop.prev_valid = 0U;
+    motor->outer_loop.ramped_speed_rad_s = 0.0f;
+    motor->outer_loop.speed_state_valid = 0U;
+    motor->outer_loop.speed_err_accum_rad = 0.0f;
+
+    /* 复位模式切换状态，使下次 RunCycle 重新初始化 */
+    motor->mode_transition.prev_control_mode_valid = 0U;
+
+    /* 阻断 ISR 控制链 */
+    motor->state.current_loop_ready = 0U;
+
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    motor->current_soft_switch_status.enabled = 0U;
+    motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+    motor->current_soft_switch_status.blend_initialized = 0U;
+#endif
+
+    /* 归零 PWM */
     FOC_ControlRecordPhaseOutputZero(motor, motor->state.control_phase, 0U);
     FOC_ControlApplyPhaseOutputRuntime(motor);
+}
 
-    if (report_skip != 0U)
-    {
-        motor->state.control_skip_count++;
-    }
+void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor)
+{
+    FOC_ControlExecutor_FullStop(motor);
+}
+
+void FOC_ControlExecutor_Stop(foc_motor_t *motor)
+{
+    FOC_ControlExecutor_FullStop(motor);
 }
 
 void FOC_ControlExecutor_Init(foc_motor_t *motor)
@@ -34,15 +78,8 @@ void FOC_ControlExecutor_Init(foc_motor_t *motor)
     motor->isr_timing.fast_current_div_counter = 0U;
 }
 
-void FOC_ControlExecutor_Stop(foc_motor_t *motor)
-{
-    if (motor == 0) return;
-    FOC_ControlRecordPhaseOutputZero(motor, motor->state.control_phase, 0U);
-    FOC_ControlApplyPhaseOutputRuntime(motor);
-}
-
 /* ================================================================
- * PWM ISR：插值 → 硬件采样 → Estimator → Select → Publish → 电流环 → SVPWM。
+ * PWM ISR：插值 → 守卫检查 → 硬件采样 → Estimator → Select → Publish → 电流环 → SVPWM。
  * ================================================================ */
 void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 {
@@ -56,27 +93,23 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 
     SVPWM_InterpolationISR(motor);
 
+    if (motor->state.motor_enabled == 0U)
+    {
+        FOC_ControlExecutor_FullStop(motor);
+        return;
+    }
+
     if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
         (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
     {
-        if ((motor->phase_output_state.valid == 0U) ||
-            (motor->phase_output_state.phase != motor->state.control_phase))
-        {
-            FOC_ControlRecordPhaseOutputZero(motor, motor->state.control_phase, 0U);
-        }
+        if (motor->phase_output_state.valid == 0U) return;
         FOC_ControlApplyPhaseOutputRuntime(motor);
         return;
     }
 
     if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
-    if (motor->state.system_running == 0U) return;
-    if (motor->state.motor_enabled == 0U) return;
+
     if (motor->state.current_loop_ready == 0U) return;
-    if (motor->state.system_fault != 0U)
-    {
-        Executor_SafeOutput(motor, 0U);
-        return;
-    }
 
     divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
     motor->isr_timing.fast_current_div_counter++;
@@ -87,7 +120,6 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
                           : ((float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f));
 
     {
-
     /* 阶段1：硬件采样 */
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
     Sensor_ReadEncoder(motor, &motor->sensor, current_loop_dt_sec);
@@ -124,13 +156,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     }
 }
 
-void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor)
-{
-    Executor_SafeOutput(motor, 0U);
-}
-
 /* ================================================================
- * Control ISR 控制周期
+ * 控制周期（主循环调度）
  * ================================================================ */
 
 uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
@@ -169,6 +196,31 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
     return FOC_CYCLE_OK;
 }
 
+static void Executor_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t old_mode)
+{
+    if (motor == 0) return;
+
+    motor->outer_loop.accum_rad = motor->active_source_state.mech_angle_rad;
+    motor->outer_loop.prev_rad = motor->active_source_state.mech_angle_rad;
+    motor->outer_loop.prev_valid = 1U;
+
+    motor->outer_loop.ramped_speed_rad_s = 0.0f;
+
+    motor->outer_loop.speed_state_valid = 0U;
+    motor->outer_loop.speed_err_accum_rad = 0.0f;
+
+    ResetPID(&motor->speed_pid);
+    ResetPID(&motor->angle_pid);
+
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    motor->current_soft_switch_status.enabled = 0U;
+    motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+    motor->current_soft_switch_status.blend_initialized = 0U;
+#endif
+
+    (void)old_mode;
+}
+
 void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 {
     uint8_t cur_mode;
@@ -183,7 +235,7 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 
     if (cur_mode != motor->mode_transition.prev_control_mode)
     {
-        FOC_Transition_OnModeSwitch(motor, cur_mode, motor->mode_transition.prev_control_mode);
+        Executor_OnModeSwitch(motor, cur_mode, motor->mode_transition.prev_control_mode);
         motor->mode_transition.prev_control_mode = cur_mode;
     }
 

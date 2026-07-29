@@ -48,6 +48,15 @@ void FOC_CoggingCalib_RequestStart(foc_motor_t *motor)
     }
 }
 
+void FOC_CoggingCalib_Abort(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+    motor->cogging_calib_state.point_index = CALIB_PHASE_IDLE;
+    motor->cogging_calib_state.request_start = 0U;
+    motor->cogging_calib_state.pass_num = 0U;
+    motor->cogging_calib_state.in_progress = 0U;
+}
+
 void FOC_CoggingCalib_RequestDump(foc_motor_t *motor)
 {
     if (motor != 0)

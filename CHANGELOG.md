@@ -5,7 +5,38 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.3] - 2026-07-28
+## [2.0.4] - 2026-07-29
+
+### Added
+- **特殊控制状态退出机制**：新增 `Y:A` 系统命令（`FOC_SPECIAL_PHASE_ABORT_ENABLE`），可中断齿槽标定/重初始化等长流程非阻塞状态机，自动回退至 NORMAL 控制阶段。支持自动退出：禁能（`S:M=0`）或控制模式切换（`P:D`）时自动退出特殊状态。退出时统一走 `FOC_ControlExecutor_FullStop` 归零 PWM 和控制状态。
+- **齿槽标定/重初始化 Abort 函数**：`FOC_CoggingCalib_Abort` / `FOC_ReInit_Abort` 清理对应模块内部状态机。
+- **Abort 诊断输出**：退出时通过 `FOC_Protocol_OutputDiag("INFO", "abort", ...)` 输出被中断的 phase 名称。
+- **滤波器架构完善**：补齐 `FOC_FILTER_ENCODER_SPEED` Kalman 四参数宏；编码器速度后级滤波通路接通（滑动平均后追加 filter gate）。
+- **`foc_filter_none_t` 占位类型**：替代 `uint8_t` 作为 `FOC_FILTER_TYPE_NONE` 的统一中间状态类型，消除 NONE 配置下 `.output_value` 访问的编译失败。
+- **角度模式编译期约束**：新增 `FOC_CONTROL_SRC_IS_ANGLE_CAPABLE` 宏，`SPEED_ANGLE_ONLY` 构建或 `FULL` 构建下默认角度模式时，若 source 非 ENCODER/HFI 则 `#error`。
+
+### Changed
+- **安全输出统一化**：引入 `FOC_ControlExecutor_FullStop` 作为唯一停止入口，收敛 fault/disable/phase-switch 三条归零路径。清零 ud/uq/iq_target、全部 PID、外环累积状态、mode_transition 标记、current_loop_ready、软切换状态，最后归零 PWM。
+- **L1 守卫简化**：`FOC_App_OnPwmUpdateISR` 中删除 `motor_enabled` 拦截，该决策下沉到 L2 `RunISR`。
+- **`RunISR` 门控重排**：`motor_enabled==0` → FullStop；特殊 phase（COGGING_CALIB/REINIT）→ 仅 ApplyPhaseOutputRuntime（ControlTrigger 负责设置输出）；其余非 NORMAL → 跳过。
+- **SVPWM 滤波器删除**：`FOC_FILTER_SVPWM` 开关和 `FOC_FilterGate_Svpwm` 函数完整删除。
+- **`FOC_FILTER_TYPEDEF_0` 语义修正**：从 `uint8_t` 改为 `foc_filter_none_t`。
+
+### Documentation
+- 版本基线统一更新至 v2.0.4。
+
+## [2.0.3] - 2026-07-29
+
+### Changed
+- **PWM ISR 编排统一**：将 `system_fault`/`system_running`/`motor_enabled` 系统级守卫从 L2 `RunISR` 提升到 L1 `FOC_App_OnPwmUpdateISR`，与 Control ISR 编排风格对齐。L2 RunISR 仅保留管线内部守卫（`control_phase`/`current_loop_ready`）。
+- **模块精简**：删除 `foc_ctrl_transition.c/.h`（仅含 39 行的单函数模块），`OnModeSwitch` 合并到 `foc_ctrl_executor.c` 作为 static 函数，executor 职责扩展为"PWM ISR 与 Control ISR 路由，外环调度、控制模式切换"。
+- **Source Manager 状态机优化**：合并 `HIGH_READY` 到 `HIGH_ACQUIRE`（消抖完成后直接检查切入条件，消除中间状态），补齐 `HIGH_SUSPECT` 入边（HIGH_ACTIVE 降级嫌疑转为 HIGH_SUSPECT 而非原地消抖）。`RebaseSource` 切换回 OpenLoop 且旧源无物理速度时，使用 `ramped_speed_rad_s` 作为速度保底值。
+
+### Documentation
+- 版本基线统一更新至 v2.0.3。
+- 架构文档同步 Control ISR 欠压保护描述、删除 `Sensor_SyncCurrentSnapshot`、PWM ISR L1 系统守卫段。
+
+## [2.0.3-prev] - 2026-07-28
 
 ### Added
 - **速域状态机显式化**：Source Manager 新增 `region_state` 与 `config_valid`，将低速、高速获取、高速就绪、高速运行和低速恢复拆成可观测状态。

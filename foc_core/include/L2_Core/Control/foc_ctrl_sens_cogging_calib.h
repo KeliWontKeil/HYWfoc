@@ -64,6 +64,8 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                                  const sensor_data_t *sensor,
                                  float dt_sec);
 
+void FOC_CoggingCalib_Abort(foc_motor_t *motor);
+
 /* 标定表输出（dump / export） */
 void FOC_CoggingCalibDumpTable(const foc_motor_t *motor);
 void FOC_CoggingCalibExportTable(const foc_motor_t *motor);

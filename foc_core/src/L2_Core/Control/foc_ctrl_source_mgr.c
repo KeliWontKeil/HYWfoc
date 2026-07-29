@@ -284,6 +284,12 @@ static void SourceMgr_RebaseSource(foc_motor_t *motor, uint8_t new_source, uint8
             motor->openloop_state.virtual_speed_rad_s = old_speed * (float)motor->params.pole_pairs;
             motor->openloop_state.mech_speed_rad_s = old_speed;
         }
+        else
+        {
+            float fallback = fabsf(motor->outer_loop.ramped_speed_rad_s);
+            motor->openloop_state.virtual_speed_rad_s = fallback * (float)motor->params.pole_pairs;
+            motor->openloop_state.mech_speed_rad_s = fallback;
+        }
     }
 #endif
 
@@ -515,23 +521,13 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
         motor->source_mgr_state.switch_counter++;
         if (motor->source_mgr_state.switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES)
         {
-            motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_READY;
-        }
-        break;
-
-    case FOC_REGION_STATE_HIGH_READY:
-        if ((SourceMgr_StateEntryReady(high_state) != 0U) &&
-            ((motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP) ||
-             (SourceMgr_AngleCompatible(motor, motor->source_mgr_state.active_source, high) != 0U)))
-        {
-            SourceMgr_CommitSwitch(motor, high, FOC_CONTROL_REGION_HIGH);
-            motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_ACTIVE;
-        }
-        else
-        {
-            motor->source_mgr_state.region_state = FOC_REGION_STATE_LOW_ACTIVE;
-            motor->source_mgr_state.switch_in_progress = 0U;
-            motor->source_mgr_state.switch_counter = 0U;
+            if ((SourceMgr_StateEntryReady(high_state) != 0U) &&
+                ((motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP) ||
+                 (SourceMgr_AngleCompatible(motor, motor->source_mgr_state.active_source, high) != 0U)))
+            {
+                SourceMgr_CommitSwitch(motor, high, FOC_CONTROL_REGION_HIGH);
+                motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_ACTIVE;
+            }
         }
         break;
 
@@ -544,13 +540,9 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
             ((speed_valid != 0U) &&
              (speed_abs < motor->source_switch_state.speed_threshold_low_rad_s)))
         {
+            motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_SUSPECT;
             motor->source_mgr_state.switch_in_progress = 1U;
-            motor->source_mgr_state.switch_counter++;
-            if (motor->source_mgr_state.switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES)
-            {
-                motor->source_mgr_state.region_state = FOC_REGION_STATE_LOW_RECOVERY;
-                motor->source_mgr_state.switch_counter = 0U;
-            }
+            motor->source_mgr_state.switch_counter = 1U;
         }
         else
         {

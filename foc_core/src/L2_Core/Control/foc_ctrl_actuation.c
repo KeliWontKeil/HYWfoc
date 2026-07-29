@@ -1,4 +1,4 @@
-#include "L2_Core/Control/foc_ctrl_actuation.h"
+﻿#include "L2_Core/Control/foc_ctrl_actuation.h"
 
 #include <math.h>
 
@@ -180,12 +180,13 @@ void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_ZERO;
     motor->phase_output_state.valid = 1U;
     motor->phase_output_state.state_id = state_id;
-    motor->ctrl.ud = 0.0f;
-    motor->ctrl.uq = 0.0f;
     motor->phase_output_state.duty_a = 0.0f;
     motor->phase_output_state.duty_b = 0.0f;
     motor->phase_output_state.duty_c = 0.0f;
     motor->phase_output_state.sector = 0U;
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = 0.0f;
+    motor->outer_loop.ramped_speed_rad_s = 0.0f;
 }
 
 void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
