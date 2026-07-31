@@ -211,7 +211,7 @@ static uint8_t SourceMgr_LowMotionAbove(const foc_motor_t *motor, uint8_t low_so
 static uint8_t SourceMgr_CandidateSpeedAbove(uint8_t speed_valid, float speed_abs,
                                              float threshold_rad_s)
 {
-    return ((speed_valid != 0U) && (speed_abs > threshold_rad_s)) ? 1U : 0U;
+    return ((speed_valid != 0U) && (speed_abs > threshold_rad_s * FOC_SOURCE_SWITCH_SPEED_SCALE)) ? 1U : 0U;
 }
 
 static uint8_t SourceMgr_ReadSourceAngle(const foc_motor_t *motor, uint8_t source,

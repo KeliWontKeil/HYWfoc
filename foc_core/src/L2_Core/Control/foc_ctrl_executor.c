@@ -121,9 +121,11 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 
     {
     /* 阶段1：硬件采样 */
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
     Sensor_ReadEncoder(motor, &motor->sensor, current_loop_dt_sec);
     Sensor_AccumulateEcycle(motor, &motor->sensor);
+#endif
 #endif
     if (FOC_ControlRequiresCurrentSample() != 0U)
     {

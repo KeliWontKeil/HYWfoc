@@ -1,4 +1,4 @@
-﻿#include "L2_Core/Runtime/foc_debug_stream.h"
+#include "L2_Core/Runtime/foc_debug_stream.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -25,6 +25,8 @@ static uint8_t  DebugStream_PollSemantic(debug_stream_state_t *ds,
 
 void DebugStream_Init(debug_stream_state_t *ds)
 {
+    uint8_t i;
+
     if (ds == 0) return;
     ds->semantic_report_counter = 0U;
     ds->osc_report_counter = 0U;
@@ -35,6 +37,100 @@ void DebugStream_Init(debug_stream_state_t *ds)
     ds->last_exec_cycles = 0U;
     ds->line_index = 0U;
     ds->osc_param_bit_idx = 0U;
+    for (i = 0U; i < OSC_SNAPSHOT_CHANNEL_COUNT; i++)
+        ds->snapshot.channel[i] = 0.0f;
+    ds->snapshot.valid = 0U;
+}
+
+void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t *motor)
+{
+    if ((ds == 0) || (motor == 0)) return;
+
+    ds->snapshot.channel[0] = motor->sensor.current_a.output_value;
+    ds->snapshot.channel[1] = motor->sensor.current_b.output_value;
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
+    ds->snapshot.channel[2] = motor->sensor.current_c.output_value;
+#else
+    ds->snapshot.channel[2] = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value);
+#endif
+    ds->snapshot.channel[3] = motor->active_source_state.mech_angle_rad;
+
+    /* bit 4: standby angle */
+    {
+        uint8_t stby = motor->source_mgr_state.standby_source;
+        float angle = 0.0f;
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+        if (stby == FOC_SOURCE_TYPE_ENCODER && motor->sensor.encoder_valid != 0U)
+            angle = motor->sensor.mech_angle_rad.output_value;
+        else
+#endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        if (stby == FOC_SOURCE_TYPE_SMO && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE && motor->params.pole_pairs > 0U)
+            angle = motor->estim_smo_state.pll_angle_rad / (float)motor->params.pole_pairs;
+        else
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+        if (stby == FOC_SOURCE_TYPE_OPENLOOP && motor->openloop_state.phase != FOC_OPENLOOP_STATE_FAILED && motor->params.pole_pairs > 0U)
+            angle = motor->openloop_state.virtual_angle_rad / (float)motor->params.pole_pairs;
+#endif
+        ds->snapshot.channel[4] = angle;
+    }
+
+    ds->snapshot.channel[5] = (float)ds->last_exec_cycles / 120.0f;
+    ds->snapshot.channel[6] = (motor->sensor.vbus_valid != 0U) ? motor->sensor.vbus.filtered : 0.0f;
+    ds->snapshot.channel[7] = motor->ctrl.iq_target;
+    ds->snapshot.channel[8] = motor->ctrl.iq_measured;
+
+    /* bit 9, 10 unused */
+    ds->snapshot.channel[9] = 0.0f;
+    ds->snapshot.channel[10] = 0.0f;
+
+    /* bit 11: active speed */
+    {
+        uint8_t active = motor->source_mgr_state.active_source;
+        float speed = 0.0f;
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+        if (active == FOC_SOURCE_TYPE_ENCODER && motor->sensor.encoder_valid != 0U)
+            speed = motor->sensor.mech_speed_rad_s;
+        else
+#endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        if (active == FOC_SOURCE_TYPE_SMO && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
+            speed = motor->estim_smo_state.mech_speed_rad_s;
+        else
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+        if (active == FOC_SOURCE_TYPE_OPENLOOP && motor->openloop_state.phase != FOC_OPENLOOP_STATE_FAILED)
+            speed = motor->openloop_state.mech_speed_rad_s;
+#endif
+        ds->snapshot.channel[11] = speed;
+    }
+
+    /* bit 12: standby speed */
+    {
+        uint8_t stby = motor->source_mgr_state.standby_source;
+        float speed = 0.0f;
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+        if (stby == FOC_SOURCE_TYPE_ENCODER && motor->sensor.encoder_valid != 0U)
+            speed = motor->sensor.mech_speed_rad_s;
+        else
+#endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        if (stby == FOC_SOURCE_TYPE_SMO && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
+            speed = motor->estim_smo_state.mech_speed_rad_s;
+        else
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+        if (stby == FOC_SOURCE_TYPE_OPENLOOP && motor->openloop_state.phase != FOC_OPENLOOP_STATE_FAILED)
+            speed = motor->openloop_state.mech_speed_rad_s;
+#endif
+        ds->snapshot.channel[12] = speed;
+    }
+
+    ds->snapshot.channel[13] = 0.0f;
+    ds->snapshot.channel[14] = 0.0f;
+    ds->snapshot.channel[15] = 0.0f;
+    ds->snapshot.valid = 1U;
 }
 
 void DebugStream_SetExecutionCycles(debug_stream_state_t *ds, uint32_t exec_cycles)
@@ -135,11 +231,15 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
 #endif
             break;
         case 3U:
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
             if ((motor != 0) && (motor->sensor.encoder_valid != 0U))
                 elem_out->value = motor->sensor.mech_angle_rad.output_value;
             else
                 elem_out->aux = 0U;
             break;
+#else
+            return DebugStream_PollSemantic(ds, motor, report, elem_out);
+#endif
         case 4U:
             if ((motor != 0) && (motor->active_source_state.valid != 0U))
                 elem_out->value = motor->active_source_state.mech_angle_rad;
@@ -248,24 +348,10 @@ uint8_t DebugStream_PollNextValue(debug_stream_state_t *ds,
                     elem_out->tag = MONITOR_ELEM_OSC_VALUE;
                     elem_out->aux  = bit;
 
-                    switch (bit)
-                    {
-                    case 0U: elem_out->value = motor->sensor.current_a.output_value; break;
-                    case 1U: elem_out->value = motor->sensor.current_b.output_value; break;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-                    case 2U: elem_out->value = motor->sensor.current_c.output_value; break;
-#else
-                    case 2U: elem_out->value = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value); break;
-#endif
-                    case 3U: elem_out->value = motor->active_source_state.mech_angle_rad; break;
-                      case 4U: elem_out->value = motor->outer_loop.accum_rad; break;
-                    case 5U: elem_out->value = (float)ds->last_exec_cycles / 120.0f; break;
-                    case 6U: elem_out->value = (motor->sensor.vbus_valid != 0U) ?
-                                                motor->sensor.vbus.filtered : 0.0f; break;
-                    case 7U: elem_out->value = motor->ctrl.iq_target; break;
-                    case 8U: elem_out->value = motor->ctrl.iq_measured; break;
-                    default: elem_out->value = 0.0f; break;
-                    }
+                    if (ds->snapshot.valid != 0U && bit < OSC_SNAPSHOT_CHANNEL_COUNT)
+                        elem_out->value = ds->snapshot.channel[bit];
+                    else
+                        elem_out->value = 0.0f;
 
                     return 1U;
                 }

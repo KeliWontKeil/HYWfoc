@@ -259,7 +259,7 @@ void FOC_App_ControlTrigger(void)
     }
 #endif
 
-#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
     Sensor_ReadEncoder(&motor, &motor.sensor, FOC_CONTROL_DT_SEC);
 #endif
     Sensor_ReadVBUS(&motor.sensor);
@@ -330,4 +330,8 @@ void FOC_App_OnPwmUpdateISR(void)
     if (motor.state.system_running == 0U) return;
 
     FOC_ControlExecutor_RunISR(&motor);
+
+#if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE)
+    DebugStream_CaptureOscSnapshot(&g_sys.runtime.monitor.stream, &motor);
+#endif
 }

@@ -97,6 +97,7 @@ typedef struct {
     uint8_t valid;
     float ud;
     float uq;
+    float electrical_angle_rad;
 } foc_applied_output_state_t;
 
 typedef struct {
@@ -239,6 +240,13 @@ typedef struct {
     uint16_t rot_dir_counter;
     uint8_t  initialized;
     uint8_t  rot_dir_last;
+    uint8_t  converged_once;
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SMO_SPEED) smo_speed_filter;
+    float    pll_angle_history[FOC_SMO_ANGLE_HISTORY_SIZE];
+    uint8_t  angle_history_idx;
+    float    speed_window[FOC_SMO_SPEED_WINDOW_SIZE];
+    uint8_t  speed_window_pos;
+    uint8_t  speed_window_count;
 } foc_estim_smo_state_t;
 #endif
 

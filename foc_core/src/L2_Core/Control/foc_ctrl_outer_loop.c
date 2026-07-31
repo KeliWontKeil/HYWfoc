@@ -223,7 +223,9 @@ void FOC_SpeedOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
     speed_angle_error_rad = FOC_UpdateSpeedAngleError(motor, mech_angle_rad,
                                                        speed_ref_rad_s, dt_sec);
     motor->ctrl.iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_comp_status.speed_ref_rad_s = speed_ref_rad_s;
+#endif
 }
 
 void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
@@ -282,5 +284,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_motor_t *motor, foc_pid_t *speed_pid,
                                           angle_ref_rad, mech_signed_total_rad, dt_sec);
 
     motor->ctrl.iq_target = (1.0f - speed_blend) * torque_ref_hold + speed_blend * torque_ref_speed;
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_comp_status.speed_ref_rad_s = speed_ref_rad_s;
+#endif
 }

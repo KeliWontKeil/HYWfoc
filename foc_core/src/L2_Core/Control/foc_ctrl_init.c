@@ -157,6 +157,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->applied_output.valid = 0U;
     motor->applied_output.ud = 0.0f;
     motor->applied_output.uq = 0.0f;
+    motor->applied_output.electrical_angle_rad = 0.0f;
     motor->phase_output_state.phase = FOC_CONTROL_PHASE_NORMAL;
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_IDLE;
     motor->phase_output_state.valid = 0U;
@@ -177,7 +178,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ctrl.iq_target = 0.0f;
 
     motor->ctrl.iq_measured = 0.0f;
-    motor->cogging_comp_status.speed_ref_rad_s = 0.0f;
     motor->outer_loop.accum_rad = 0.0f;
     motor->outer_loop.prev_rad = 0.0f;
     motor->outer_loop.prev_valid = 0U;
@@ -252,6 +252,7 @@ void FOC_MotorInit(foc_motor_t *motor,
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_comp_status.enabled = (uint8_t)FOC_COGGING_COMP_ENABLE;
+    motor->cogging_comp_status.speed_ref_rad_s = 0.0f;
     motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
     motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
     motor->cogging_comp_status.calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
@@ -322,7 +323,9 @@ void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
     Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
     Sensor_SetZeroOffset(motor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     Sensor_ReadEncoder(motor, &motor->sensor, FOC_CONTROL_DT_SEC);
+#endif
     Sensor_ReadVBUS(&motor->sensor);
     motor->sensor.adc_valid = 1U;
 

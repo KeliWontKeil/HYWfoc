@@ -86,6 +86,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
     }
     motor->applied_output.ud = ud_applied;
     motor->applied_output.uq = uq_applied;
+    motor->applied_output.electrical_angle_rad = electrical_angle;
 
     /* 逆Park变换：dq -> alpha-beta */
     Math_InverseParkTransform(ud_applied,
@@ -203,6 +204,7 @@ void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
         motor->applied_output.valid = 1U;
         motor->applied_output.ud = 0.0f;
         motor->applied_output.uq = 0.0f;
+        motor->applied_output.electrical_angle_rad = motor->ctrl.electrical_angle_rad;
         SVPWM_ApplyDirectDuty(motor, 0U, 0.0f, 0.0f, 0.0f);
         break;
 
@@ -214,6 +216,7 @@ void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
         motor->applied_output.valid = 1U;
         motor->applied_output.ud = motor->ctrl.ud;
         motor->applied_output.uq = motor->ctrl.uq;
+        motor->applied_output.electrical_angle_rad = motor->ctrl.electrical_angle_rad;
         SVPWM_ApplyDirectDuty(motor,
                               motor->phase_output_state.sector,
                               motor->phase_output_state.duty_a,

@@ -54,7 +54,7 @@ void FOC_OpenLoop_RunStep(foc_motor_t *motor, float dt_sec)
     target_elec = motor->cfg.speed_only_rad_s * (float)motor->params.pole_pairs;
     elec_limit = FOC_ACCEL_SPEED_LIMIT_LOW_RAD_S * (float)motor->params.pole_pairs;
     if (target_elec > elec_limit) target_elec = elec_limit;
-    if (target_elec < 0.0f) target_elec = 0.0f;
+    if (target_elec < -elec_limit) target_elec = -elec_limit;
     motor->openloop_state.target_speed_rad_s = target_elec;
 
     motor->openloop_state.virtual_speed_rad_s +=
