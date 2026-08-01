@@ -73,7 +73,13 @@ void FOC_App_Init(void)
                      FOC_App_ServiceTrigger,
                      FOC_App_ControlTrigger,
                      FOC_App_MonitorTrigger,
-                     FOC_App_OnPwmUpdateISR);
+                     FOC_App_OnPwmUpdateISR,
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+                     FOC_App_OnCurrentLoopISR
+#else
+                     0
+#endif
+                     );
     FOC_Init_MotorAndCalib(&motor);
 
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
@@ -92,6 +98,9 @@ void FOC_App_Init(void)
 
 void FOC_App_Start(void)
 {
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    FOC_Platform_AuxTimerStart(FOC_AUX_TIMER_CURRENT_LOOP);
+#endif
     FOC_Platform_StartControlTickSource();
     FOC_Platform_SetControlRuntimeInterrupts(1U);
 }
@@ -174,7 +183,7 @@ void FOC_App_Loop(void)
 
 void FOC_App_ServiceTrigger(void)
 {
-    FOC_Indicator_Update(&motor, &g_sys.runtime);
+    
     FOC_OutputMgr_PollSources(&g_sys);
     g_sys.runtime.tasks.service_pending = 1U;
 }
@@ -243,7 +252,7 @@ void FOC_App_ControlTrigger(void)
 {
     uint8_t phase;
     uint8_t cycle_result = FOC_CYCLE_OK;
-
+    FOC_Indicator_Update(&motor, &g_sys.runtime);
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
 
@@ -329,9 +338,27 @@ void FOC_App_OnPwmUpdateISR(void)
 
     if (motor.state.system_running == 0U) return;
 
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    FOC_ControlExecutor_RunISR_PwmOnly(&motor);
+#else
     FOC_ControlExecutor_RunISR(&motor);
+#endif
+
+#if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_ISR_MODE != FOC_ISR_MODE_3ISR)
+    DebugStream_CaptureOscSnapshot(&g_sys.runtime.monitor.stream, &motor);
+#endif
+}
+
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+void FOC_App_OnCurrentLoopISR(void)
+{
+    if (motor.state.system_fault != 0U) return;
+    if (motor.state.system_running == 0U) return;
+
+    FOC_ControlExecutor_RunISR_CurrentLoop(&motor);
 
 #if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE)
     DebugStream_CaptureOscSnapshot(&g_sys.runtime.monitor.stream, &motor);
 #endif
 }
+#endif

@@ -251,9 +251,11 @@ Control ISR（低频控制线，严格不做 source 选择）：
         → 齿槽补偿（FOC_ControlApplyCoggingCompensation，使用 active_source_state.mech_angle_rad）
     → COGGING_CALIB/REINIT：特殊状态机记录 `phase_output_state`
 
-PWM ISR（5 阶段管线，严格串行，不可调换）：
+PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   [L2 公共前导]
-    → SVPWM_InterpolationISR（始终执行，任何阶段均需插值目标值）
+    → SVPWM_InterpolationISR（插值启用时执行）
+      （三 ISR + 插值：PWM ISR 入口原子取走电流环 ISR 的 pending 目标）
+      （插值禁用：PWM ISR 不执行插值，SVPWM 占空比由电流环/外环直接写入）
 
   [L2 守卫与路由]
     → motor_enabled==0：FOC_ControlExecutor_FullStop → return
@@ -298,6 +300,20 @@ PWM ISR（5 阶段管线，严格串行，不可调换）：
 - 电流环在发布之后，消费已发布的 `motor->ctrl.electrical_angle_rad`
 - 电流分频：`FOC_CURRENT_LOOP_ISR_DIVIDER` 控制每 N 个 PWM 周期执行一次完整电流环，中间的 PWM 周期只做插值和 Estimator 迭代
 
+### ISR 架构双模式（v2.0.5）
+
+由 `FOC_CURRENT_LOOP_ISR_MODE` 宏选择，硬件资源丰富 MCU 用三 ISR，资源紧张用双 ISR：
+
+| 模式 | PWM ISR 内容 | 电流环位置 | 电流环频率 |
+|------|-------------|-----------|-----------|
+| 双 ISR（默认） | 插值 + 守卫 + 电流环（分频） | PWM ISR | `PWM_FREQ / FOC_CURRENT_LOOP_ISR_DIVIDER` |
+| 三 ISR | 仅插值 + 守卫（~2us） | 独立辅助定时器 ISR | `FOC_CURRENT_LOOP_ISR_FREQ_HZ`（默认 8kHz，与 PWM 解耦） |
+
+- `FOC_SVPWM_INTERP_ENABLE` 插值开关两种模式可独立裁剪；禁用后 `FOC_ControlApplyElectricalAngleRuntime` 直接写占空比。
+- 三 ISR 模式 SVPWM 双写者保护：电流环 ISR 写 pending 字段 → `FOC_Platform_MemoryBarrier()` → commit 标志；PWM ISR 入口原子取走。
+- 辅助定时器通过 `FOC_Platform_AuxTimerInit/Start/Stop/SetCallback` 映射空闲硬件定时器（GD32 实例 TIMER4，优先级 (2,0) 低于 PWM ISR）。
+- OSC 快照在三 ISR 模式移入电流环 ISR（反映控制环实际看到的数据）。
+
 ### FOC_ControlExecutor_FullStop — 统一安全归零
 
 `FullStop` 收敛了 fault/disable/phase-switch 三条归零路径，确保一致的行为：
@@ -318,7 +334,7 @@ PWM ISR（5 阶段管线，严格串行，不可调换）：
 2. **编码器角度路径选择**：由 `FOC_SENSOR_ANGLE_FAST_ENABLE` 宏联动：
    - `DISABLE`（慢速编码器，如 I2C AS5600）：在 Control ISR 中读取（`Sensor_ReadEncoder`）。
    - `ENABLE`（快速编码器，如霍尔/QEI）：在 PWM ISR 中同步读取。
-3. **控制 ISR 电流数据来源**：通过 `Sensor_SyncCurrentSnapshot` 从 `motor->sensor_fast` 复制到 `motor->sensor`。
+3. **控制 ISR 电流数据来源**：电流采样在 PWM ISR/电流环 ISR 独占读取（`Sensor_ReadCurrent`），Control ISR 不再直接读 ADC。
 4. **PWM ISR 角度同步**：电流环之后仅拷贝 `raw_value` 和有效性标志到 `motor->sensor`，不完整拷贝滤波器完整状态。
 5. **L3 平台 API**：统一为单一 `FOC_Platform_ReadPhaseCurrent`，无 `Fast/Slow` 双入口。
 

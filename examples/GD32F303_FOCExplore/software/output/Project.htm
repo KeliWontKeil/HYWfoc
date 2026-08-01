@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\output\Project.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\output\Project.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Fri Jul 31 21:37:11 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Sat Aug 01 13:50:43 2026
 <BR><P>
 <H3>Maximum Stack Usage =        536 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -478,7 +478,7 @@ Global Symbols
 <LI><a href="#[d4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
 <LI><a href="#[109]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueSystemInfo
 <LI><a href="#[103]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_FormatSummaryLine
-<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
+<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
 <LI><a href="#[101]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_ProcessMonitorElements
 <LI><a href="#[17f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatStateLine
 <LI><a href="#[17e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatParamLine
@@ -960,7 +960,7 @@ Global Symbols
 <P><STRONG><a name="[d0]"></a>ControlScheduler_Init</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, foc_task_scheduler.o(i.ControlScheduler_Init))
 <BR><BR>[Calls]<UL><LI><a href="#[d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ControlScheduler_ClearAllCallbacks
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[d2]"></a>ControlScheduler_RunTick</STRONG> (Thumb, 110 bytes, Stack size 16 bytes, foc_task_scheduler.o(i.ControlScheduler_RunTick))
@@ -973,7 +973,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[149]"></a>ControlScheduler_SetCallback</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, foc_task_scheduler.o(i.ControlScheduler_SetCallback))
-<BR><BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR><BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[18]"></a>DMA0_Channel0_IRQHandler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gd32f30x_it.o(i.DMA0_Channel0_IRQHandler))
@@ -1020,7 +1020,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[14e]"></a>DebugStream_Init</STRONG> (Thumb, 54 bytes, Stack size 0 bytes, foc_debug_stream.o(i.DebugStream_Init))
-<BR><BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR><BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[d8]"></a>DebugStream_PollNextValue</STRONG> (Thumb, 220 bytes, Stack size 32 bytes, foc_debug_stream.o(i.DebugStream_PollNextValue))
@@ -1068,7 +1068,7 @@ Global Symbols
 
 <P><STRONG><a name="[14c]"></a>FIFO_Init</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, foc_queue.o(i.FIFO_Init))
 <BR><BR>[Called By]<UL><LI><a href="#[14b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_Init
-<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[eb]"></a>FOC_Accel_ApplySpeedLimit</STRONG> (Thumb, 126 bytes, Stack size 24 bytes, foc_ctrl_outer_loop.o(i.FOC_Accel_ApplySpeedLimit))
@@ -1079,30 +1079,29 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[12c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SpeedOuterLoopStep
 </UL>
 
-<P><STRONG><a name="[4f]"></a>FOC_App_ControlTrigger</STRONG> (Thumb, 138 bytes, Stack size 16 bytes, foc_app.o(i.FOC_App_ControlTrigger))
+<P><STRONG><a name="[4f]"></a>FOC_App_ControlTrigger</STRONG> (Thumb, 128 bytes, Stack size 16 bytes, foc_app.o(i.FOC_App_ControlTrigger))
 <BR><BR>[Stack]<UL><LI>Max Depth = 200<LI>Call Chain = FOC_App_ControlTrigger &rArr; FOC_App_HandleResult &rArr; FOC_ControlExecutor_SafeOutput &rArr; FOC_ControlExecutor_FullStop &rArr; FOC_ControlApplyPhaseOutputRuntime &rArr; FOC_ControlApplyElectricalAngleRuntime &rArr; FOC_ControlApplyElectricalAngleCore &rArr; SVPWM_Update &rArr; SVPWM_CalculateDuty &rArr; FOC_MathLut_Atan2 &rArr; FOC_MathLut_AtanRatio
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
-<LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Indicator_Update
-<LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunCycle
-<LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_HandleResult
+<BR>[Calls]<UL><LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
+<LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunCycle
+<LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_HandleResult
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> foc_app.o(i.FOC_App_Init)
 </UL>
-<P><STRONG><a name="[f6]"></a>FOC_App_Init</STRONG> (Thumb, 116 bytes, Stack size 16 bytes, foc_app.o(i.FOC_App_Init))
+<P><STRONG><a name="[f5]"></a>FOC_App_Init</STRONG> (Thumb, 116 bytes, Stack size 16 bytes, foc_app.o(i.FOC_App_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 408 + Unknown Stack Size
 <LI>Call Chain = FOC_App_Init &rArr; FOC_OutputMgr_WriteStartupInfo &rArr; __2snprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
-<LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_RuntimeInit
-<LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_IndicatorInit
-<LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SourceMgr_Init
-<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
-<LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OpenLoop_Init
-<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Verify
-<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
-<LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
-<LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Indicator_Update
+<BR>[Calls]<UL><LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
+<LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_RuntimeInit
+<LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_IndicatorInit
+<LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SourceMgr_Init
+<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
+<LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OpenLoop_Init
+<LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Verify
+<LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
+<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Indicator_Update
 </UL>
 <BR>[Called By]<UL><LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -1145,10 +1144,11 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> foc_app.o(i.FOC_App_Init)
 </UL>
-<P><STRONG><a name="[50]"></a>FOC_App_ServiceTrigger</STRONG> (Thumb, 18 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_ServiceTrigger))
+<P><STRONG><a name="[50]"></a>FOC_App_ServiceTrigger</STRONG> (Thumb, 32 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_ServiceTrigger))
 <BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = FOC_App_ServiceTrigger &rArr; FOC_OutputMgr_PollSources &rArr; FOC_OutputMgr_PollOneSource &rArr; FOC_Platform_CommSource2_ReadFrame &rArr; USART2_ReadFrame
 </UL>
 <BR>[Calls]<UL><LI><a href="#[111]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_PollSources
+<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Indicator_Update
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> foc_app.o(i.FOC_App_Init)
 </UL>
@@ -1193,7 +1193,7 @@ Global Symbols
 <LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlRecordPhaseOutputZero
 <LI><a href="#[11c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlApplyPhaseOutputRuntime
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_SafeOutput
+<BR>[Called By]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_SafeOutput
 <LI><a href="#[10d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunISR
 <LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_OnPwmUpdateISR
 </UL>
@@ -1203,7 +1203,7 @@ Global Symbols
 <LI><a href="#[12d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlPlatform_InitHardware
 </UL>
 
-<P><STRONG><a name="[f2]"></a>FOC_ControlExecutor_RunCycle</STRONG> (Thumb, 74 bytes, Stack size 16 bytes, foc_ctrl_executor.o(i.FOC_ControlExecutor_RunCycle))
+<P><STRONG><a name="[f1]"></a>FOC_ControlExecutor_RunCycle</STRONG> (Thumb, 74 bytes, Stack size 16 bytes, foc_ctrl_executor.o(i.FOC_ControlExecutor_RunCycle))
 <BR><BR>[Stack]<UL><LI>Max Depth = 128<LI>Call Chain = FOC_ControlExecutor_RunCycle &rArr; FOC_ControlExecutor_RunOuterLoop &rArr; FOC_SpeedOuterLoopStep &rArr; FOC_Accel_ApplySpeedLimit &rArr; __hardfp_fmaxf &rArr; __ARM_fcmp4
 </UL>
 <BR>[Calls]<UL><LI><a href="#[123]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OpenLoop_RunStep
@@ -1237,28 +1237,28 @@ Global Symbols
 <LI><a href="#[12b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SpeedAngleOuterLoopStep
 <LI><a href="#[120]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ResetPID
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunCycle
+<BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunCycle
 </UL>
 
-<P><STRONG><a name="[f5]"></a>FOC_ControlExecutor_SafeOutput</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_ctrl_executor.o(i.FOC_ControlExecutor_SafeOutput))
+<P><STRONG><a name="[f4]"></a>FOC_ControlExecutor_SafeOutput</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_ctrl_executor.o(i.FOC_ControlExecutor_SafeOutput))
 <BR><BR>[Stack]<UL><LI>Max Depth = 176<LI>Call Chain = FOC_ControlExecutor_SafeOutput &rArr; FOC_ControlExecutor_FullStop &rArr; FOC_ControlApplyPhaseOutputRuntime &rArr; FOC_ControlApplyElectricalAngleRuntime &rArr; FOC_ControlApplyElectricalAngleCore &rArr; SVPWM_Update &rArr; SVPWM_CalculateDuty &rArr; FOC_MathLut_Atan2 &rArr; FOC_MathLut_AtanRatio
 </UL>
 <BR>[Calls]<UL><LI><a href="#[10c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_FullStop
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_HandleResult
+<BR>[Called By]<UL><LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_HandleResult
 </UL>
 
 <P><STRONG><a name="[12d]"></a>FOC_ControlPlatform_InitHardware</STRONG> (Thumb, 60 bytes, Stack size 8 bytes, foc_ctrl_init.o(i.FOC_ControlPlatform_InitHardware))
 <BR><BR>[Stack]<UL><LI>Max Depth = 128<LI>Call Chain = FOC_ControlPlatform_InitHardware &rArr; Sensor_SetZeroOffset &rArr; FOC_Platform_ReadPhaseCurrent &rArr; ADC_ReadPhaseCurrentABOk &rArr; ADC_ReadPhaseCurrentAB &rArr; ADC_GetAverageSample &rArr; dma_transfer_number_get
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
+<BR>[Calls]<UL><LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
 <LI><a href="#[130]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_SetZeroOffset
 <LI><a href="#[12e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_InitSnapshot
 <LI><a href="#[12f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_Init
 <LI><a href="#[131]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SVPWM_Init
 <LI><a href="#[132]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[121]"></a>FOC_ControlRecordPhaseOutputZero</STRONG> (Thumb, 58 bytes, Stack size 0 bytes, foc_ctrl_actuation.o(i.FOC_ControlRecordPhaseOutputZero))
@@ -1273,7 +1273,7 @@ Global Symbols
 <BR><BR>[Calls]<UL><LI><a href="#[133]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ADCSampleTimeOffset
 </UL>
 <BR>[Called By]<UL><LI><a href="#[100]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Loop
-<LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
+<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
 </UL>
 
 <P><STRONG><a name="[12a]"></a>FOC_CurrentControlStep</STRONG> (Thumb, 228 bytes, Stack size 32 bytes, foc_ctrl_current_loop.o(i.FOC_CurrentControlStep))
@@ -1295,10 +1295,10 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[140]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wrap_2pi
 <LI><a href="#[13f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_Lpf1Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
+<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
 </UL>
 
-<P><STRONG><a name="[127]"></a>FOC_EstimSMO_Step</STRONG> (Thumb, 886 bytes, Stack size 72 bytes, foc_ctrl_estim_smo.o(i.FOC_EstimSMO_Step))
+<P><STRONG><a name="[127]"></a>FOC_EstimSMO_Step</STRONG> (Thumb, 1020 bytes, Stack size 72 bytes, foc_ctrl_estim_smo.o(i.FOC_EstimSMO_Step))
 <BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = FOC_EstimSMO_Step &rArr; __hardfp_sqrtf &rArr; __set_errno
 </UL>
 <BR>[Calls]<UL><LI><a href="#[13c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_ClarkeTransform
@@ -1334,26 +1334,26 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[127]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_EstimSMO_Step
 </UL>
 
-<P><STRONG><a name="[f0]"></a>FOC_Indicator_Update</STRONG> (Thumb, 120 bytes, Stack size 16 bytes, foc_indicator.o(i.FOC_Indicator_Update))
+<P><STRONG><a name="[ff]"></a>FOC_Indicator_Update</STRONG> (Thumb, 120 bytes, Stack size 16 bytes, foc_indicator.o(i.FOC_Indicator_Update))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = FOC_Indicator_Update
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
+<BR>[Calls]<UL><LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
-<LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_ControlTrigger
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<LI><a href="#[50]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_ServiceTrigger
 </UL>
 
-<P><STRONG><a name="[fb]"></a>FOC_Init_MotorAndCalib</STRONG> (Thumb, 52 bytes, Stack size 8 bytes, foc_init.o(i.FOC_Init_MotorAndCalib))
+<P><STRONG><a name="[fa]"></a>FOC_Init_MotorAndCalib</STRONG> (Thumb, 52 bytes, Stack size 8 bytes, foc_init.o(i.FOC_Init_MotorAndCalib))
 <BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = FOC_Init_MotorAndCalib &rArr; FOC_MotorInit
 </UL>
 <BR>[Calls]<UL><LI><a href="#[105]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Control_ApplyConfig
 <LI><a href="#[146]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MotorInit
 <LI><a href="#[13e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_EstimSMO_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
-<P><STRONG><a name="[fa]"></a>FOC_Init_Runtime</STRONG> (Thumb, 176 bytes, Stack size 40 bytes, foc_init.o(i.FOC_Init_Runtime))
+<P><STRONG><a name="[f9]"></a>FOC_Init_Runtime</STRONG> (Thumb, 176 bytes, Stack size 40 bytes, foc_init.o(i.FOC_Init_Runtime))
 <BR><BR>[Stack]<UL><LI>Max Depth = 272 + Unknown Stack Size
 <LI>Call Chain = FOC_Init_Runtime &rArr; FOC_Protocol_Init &rArr; FOC_Protocol_OutputDiag &rArr; __2snprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
@@ -1370,15 +1370,15 @@ Global Symbols
 <LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ControlScheduler_SetCallback
 <LI><a href="#[d0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ControlScheduler_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
-<P><STRONG><a name="[fe]"></a>FOC_Init_Verify</STRONG> (Thumb, 184 bytes, Stack size 8 bytes, foc_init.o(i.FOC_Init_Verify))
+<P><STRONG><a name="[fd]"></a>FOC_Init_Verify</STRONG> (Thumb, 184 bytes, Stack size 8 bytes, foc_init.o(i.FOC_Init_Verify))
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = FOC_Init_Verify &rArr; FOC_Platform_WriteDebugText &rArr; USART1_SlowWriter_SendData &rArr; dma_transfer_number_config
 </UL>
 <BR>[Calls]<UL><LI><a href="#[150]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_WriteDebugText
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
 <P><STRONG><a name="[146]"></a>FOC_MotorInit</STRONG> (Thumb, 578 bytes, Stack size 48 bytes, foc_ctrl_init.o(i.FOC_MotorInit))
@@ -1388,15 +1388,15 @@ Global Symbols
 <LI><a href="#[11e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlConfigResetDefault
 <LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_ClampFloat
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
+<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_MotorAndCalib
 </UL>
 
-<P><STRONG><a name="[fc]"></a>FOC_OpenLoop_Init</STRONG> (Thumb, 126 bytes, Stack size 0 bytes, foc_ctrl_openloop.o(i.FOC_OpenLoop_Init))
-<BR><BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<P><STRONG><a name="[fb]"></a>FOC_OpenLoop_Init</STRONG> (Thumb, 126 bytes, Stack size 0 bytes, foc_ctrl_openloop.o(i.FOC_OpenLoop_Init))
+<BR><BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
 <P><STRONG><a name="[123]"></a>FOC_OpenLoop_RunStep</STRONG> (Thumb, 210 bytes, Stack size 0 bytes, foc_ctrl_openloop.o(i.FOC_OpenLoop_RunStep))
-<BR><BR>[Called By]<UL><LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunCycle
+<BR><BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunCycle
 </UL>
 
 <P><STRONG><a name="[10a]"></a>FOC_OutputMgr_FlushQueue</STRONG> (Thumb, 50 bytes, Stack size 112 bytes, foc_output_mgr.o(i.FOC_OutputMgr_FlushQueue))
@@ -1414,7 +1414,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[111]"></a>FOC_OutputMgr_PollSources</STRONG> (Thumb, 14 bytes, Stack size 0 bytes, foc_output_mgr.o(i.FOC_OutputMgr_PollSources))
@@ -1441,24 +1441,24 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[100]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Loop
 </UL>
 
-<P><STRONG><a name="[f4]"></a>FOC_OutputMgr_WriteDirect</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, foc_output_mgr.o(i.FOC_OutputMgr_WriteDirect))
+<P><STRONG><a name="[f3]"></a>FOC_OutputMgr_WriteDirect</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, foc_output_mgr.o(i.FOC_OutputMgr_WriteDirect))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = FOC_OutputMgr_WriteDirect &rArr; FOC_Platform_WriteDebugText &rArr; USART1_SlowWriter_SendData &rArr; dma_transfer_number_config
 </UL>
 <BR>[Calls]<UL><LI><a href="#[150]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_WriteDebugText
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
-<LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_HandleResult
+<BR>[Called By]<UL><LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
+<LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_HandleResult
 </UL>
 
-<P><STRONG><a name="[ff]"></a>FOC_OutputMgr_WriteStartupInfo</STRONG> (Thumb, 160 bytes, Stack size 248 bytes, foc_output_mgr.o(i.FOC_OutputMgr_WriteStartupInfo))
+<P><STRONG><a name="[fe]"></a>FOC_OutputMgr_WriteStartupInfo</STRONG> (Thumb, 160 bytes, Stack size 248 bytes, foc_output_mgr.o(i.FOC_OutputMgr_WriteStartupInfo))
 <BR><BR>[Stack]<UL><LI>Max Depth = 392 + Unknown Stack Size
 <LI>Call Chain = FOC_OutputMgr_WriteStartupInfo &rArr; __2snprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
+<BR>[Calls]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
 <LI><a href="#[d5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_f2d
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
 <P><STRONG><a name="[14a]"></a>FOC_Platform_CommInit</STRONG> (Thumb, 14 bytes, Stack size 8 bytes, foc_platform_api.o(i.FOC_Platform_CommInit))
@@ -1467,7 +1467,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[15d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART2_Init
 <LI><a href="#[15c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART1_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[156]"></a>FOC_Platform_CommSource1_ReadFrame</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_CommSource1_ReadFrame))
@@ -1499,19 +1499,19 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[160]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[cf]"></a>FOC_Platform_EnableCycleCounter</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_EnableCycleCounter))
 <BR><BR>[Called By]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ControlScheduler_EnableDWT
 </UL>
 
-<P><STRONG><a name="[f8]"></a>FOC_Platform_IndicatorInit</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_IndicatorInit))
+<P><STRONG><a name="[f7]"></a>FOC_Platform_IndicatorInit</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_IndicatorInit))
 <BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = FOC_Platform_IndicatorInit &rArr; LED_Init &rArr; gpio_init
 </UL>
 <BR>[Calls]<UL><LI><a href="#[161]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LED_Init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
 <P><STRONG><a name="[162]"></a>FOC_Platform_PWMInit</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_PWMInit))
@@ -1557,15 +1557,15 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC2_ReadVbus
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
+<BR>[Called By]<UL><LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
 </UL>
 
-<P><STRONG><a name="[f7]"></a>FOC_Platform_RuntimeInit</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_RuntimeInit))
+<P><STRONG><a name="[f6]"></a>FOC_Platform_RuntimeInit</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_RuntimeInit))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = FOC_Platform_RuntimeInit &rArr; systick_config
 </UL>
 <BR>[Calls]<UL><LI><a href="#[16a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;systick_config
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
 <P><STRONG><a name="[16b]"></a>FOC_Platform_SensorInputInit</STRONG> (Thumb, 56 bytes, Stack size 8 bytes, foc_platform_api.o(i.FOC_Platform_SensorInputInit))
@@ -1589,26 +1589,26 @@ Global Symbols
 <LI><a href="#[171]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateInterruptEnabled
 </UL>
 <BR>[Called By]<UL><LI><a href="#[112]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Start
-<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[148]"></a>FOC_Platform_SetControlTickCallback</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_SetControlTickCallback))
 <BR><BR>[Calls]<UL><LI><a href="#[172]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetCallback
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
-<P><STRONG><a name="[f9]"></a>FOC_Platform_SetIndicator</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_SetIndicator))
+<P><STRONG><a name="[f8]"></a>FOC_Platform_SetIndicator</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_SetIndicator))
 <BR><BR>[Calls]<UL><LI><a href="#[173]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LED_SetState
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
-<LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Indicator_Update
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Indicator_Update
 </UL>
 
 <P><STRONG><a name="[14f]"></a>FOC_Platform_SetPwmUpdateCallback</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_SetPwmUpdateCallback))
 <BR><BR>[Calls]<UL><LI><a href="#[174]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateCallback
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[175]"></a>FOC_Platform_SetSensorSampleOffsetPercent</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_SetSensorSampleOffsetPercent))
@@ -1635,9 +1635,9 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[179]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART1_SlowWriter_SendData
 <LI><a href="#[15a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
+<BR>[Called By]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
 <LI><a href="#[10a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_FlushQueue
-<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Verify
+<LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Verify
 <LI><a href="#[e7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_OutputState
 <LI><a href="#[e3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_OutputParam
 <LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_OutputDiag
@@ -1671,7 +1671,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_OutputDiag
 </UL>
-<BR>[Called By]<UL><LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
+<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
 
 <P><STRONG><a name="[de]"></a>FOC_Protocol_OutputConfigParam</STRONG> (Thumb, 24 bytes, Stack size 80 bytes, foc_protocol_output.o(i.FOC_Protocol_OutputConfigParam))
@@ -1780,12 +1780,12 @@ Global Symbols
 <LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ExecuteCCommand
 </UL>
 
-<P><STRONG><a name="[fd]"></a>FOC_SourceMgr_Init</STRONG> (Thumb, 172 bytes, Stack size 8 bytes, foc_ctrl_source_mgr.o(i.FOC_SourceMgr_Init))
+<P><STRONG><a name="[fc]"></a>FOC_SourceMgr_Init</STRONG> (Thumb, 172 bytes, Stack size 8 bytes, foc_ctrl_source_mgr.o(i.FOC_SourceMgr_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = FOC_SourceMgr_Init
 </UL>
 <BR>[Calls]<UL><LI><a href="#[181]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SourceMgr_UpdateEncoderServices
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<BR>[Called By]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 
 <P><STRONG><a name="[129]"></a>FOC_SourceMgr_Publish</STRONG> (Thumb, 122 bytes, Stack size 24 bytes, foc_ctrl_source_mgr.o(i.FOC_SourceMgr_Publish))
@@ -1874,14 +1874,14 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_IndicatorInit
+<BR>[Called By]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_IndicatorInit
 </UL>
 
 <P><STRONG><a name="[173]"></a>LED_SetState</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, led.o(i.LED_SetState))
 <BR><BR>[Calls]<UL><LI><a href="#[199]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_LED
 <LI><a href="#[19a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Reset_LED
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
+<BR>[Called By]<UL><LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetIndicator
 </UL>
 
 <P><STRONG><a name="[ef]"></a>Math_ClampFloat</STRONG> (Thumb, 32 bytes, Stack size 0 bytes, foc_math_transforms.o(i.Math_ClampFloat))
@@ -1910,7 +1910,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_ClampFloat
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
+<BR>[Called By]<UL><LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Sensor_ReadVBUS
 <LI><a href="#[144]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_Lpf1Step
 </UL>
 
@@ -2223,7 +2223,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[10d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_RunISR
 </UL>
 
-<P><STRONG><a name="[f1]"></a>Sensor_ReadVBUS</STRONG> (Thumb, 60 bytes, Stack size 16 bytes, foc_sensor.o(i.Sensor_ReadVBUS))
+<P><STRONG><a name="[f0]"></a>Sensor_ReadVBUS</STRONG> (Thumb, 60 bytes, Stack size 16 bytes, foc_sensor.o(i.Sensor_ReadVBUS))
 <BR><BR>[Stack]<UL><LI>Max Depth = 68<LI>Call Chain = Sensor_ReadVBUS &rArr; FOC_Platform_ReadVbusVoltage &rArr; ADC2_ReadVbus &rArr; gpio_init
 </UL>
 <BR>[Calls]<UL><LI><a href="#[169]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_ReadVbusVoltage
@@ -2937,7 +2937,7 @@ Global Symbols
 <LI><a href="#[1f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_pin_remap_config
 <LI><a href="#[112]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Start
 <LI><a href="#[100]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Loop
-<LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
+<LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[6c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_entry_main
 </UL>
@@ -3013,7 +3013,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[1f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;NVIC_SetPriority
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_RuntimeInit
+<BR>[Called By]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_RuntimeInit
 </UL>
 
 <P><STRONG><a name="[1d3]"></a>timer_auto_reload_shadow_enable</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_auto_reload_shadow_enable))
@@ -3258,7 +3258,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
 <LI><a href="#[d4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
 <LI><a href="#[109]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueSystemInfo
-<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
+<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
 <LI><a href="#[17e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatParamLine
 <LI><a href="#[17d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatConfigLine
 </UL>
@@ -3469,11 +3469,11 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[15d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART2_Init
 </UL>
 
-<P><STRONG><a name="[f3]"></a>FOC_App_HandleResult</STRONG> (Thumb, 60 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_HandleResult))
+<P><STRONG><a name="[f2]"></a>FOC_App_HandleResult</STRONG> (Thumb, 60 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_HandleResult))
 <BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = FOC_App_HandleResult &rArr; FOC_ControlExecutor_SafeOutput &rArr; FOC_ControlExecutor_FullStop &rArr; FOC_ControlApplyPhaseOutputRuntime &rArr; FOC_ControlApplyElectricalAngleRuntime &rArr; FOC_ControlApplyElectricalAngleCore &rArr; SVPWM_Update &rArr; SVPWM_CalculateDuty &rArr; FOC_MathLut_Atan2 &rArr; FOC_MathLut_AtanRatio
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
-<LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_SafeOutput
+<BR>[Calls]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
+<LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_SafeOutput
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_ControlTrigger
 </UL>
@@ -3942,7 +3942,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[181]"></a>SourceMgr_UpdateEncoderServices</STRONG> (Thumb, 34 bytes, Stack size 0 bytes, foc_ctrl_source_mgr.o(i.SourceMgr_UpdateEncoderServices))
-<BR><BR>[Called By]<UL><LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SourceMgr_Init
+<BR><BR>[Called By]<UL><LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SourceMgr_Init
 <LI><a href="#[129]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SourceMgr_Publish
 </UL>
 

@@ -27,7 +27,8 @@
  * 6. 通信接口可选实现，建议至少实现一个UART接口以便调试和参数调整；帧就绪查询和读取接口必须在ISR上下文中安全调用
  * 7. 建议中断优先级: ADC采样 > PWM定时器 = 任务定时器 > 其他外设
  *    PWM定时器抢占优先级必须与任务定时器相等（子优先级不指定），否则相互抢占引发非预期行为
- * 8. 若使用RTOS，将中断回调改为任务回调即可，此时基本不存在抢占优先级问题，但仍需确保时间片足够
+ * 8. 若使用双ISR模式，电流环执行时间必须小于PWM周期，否则必须使用三ISR模式
+ * 9. 若使用RTOS，将中断回调改为任务回调即可，此时基本不存在抢占优先级问题，但仍需确保时间片足够
  */
 
 /* ===== Runtime / Clock (运行时/时钟) ===== */
@@ -83,6 +84,40 @@ void FOC_Platform_SetControlRuntimeInterrupts(uint8_t enable)
 {
 	(void)enable;
 }
+/* ===== Auxiliary Timer (辅助定时器) ===== */
+
+/**
+ * @brief 初始化辅助自由运行定时器
+ * @param id       辅助定时器用途 ID（FOC_AUX_TIMER_CURRENT_LOOP = 三 ISR 模式电流环）
+ * @param freq_hz  目标中断频率[Hz]
+ * @param callback 定时器更新中断回调
+ * @note  平台需在内部将 id 映射到空闲硬件定时器。
+ *        三 ISR 模式下必须实现。用于电流环独立 ISR（与 PWM 频率解耦）。
+ * 		  硬件资源丰富时使用，推荐使用该定时器
+ */
+void FOC_Platform_AuxTimerInit(FOC_Platform_AuxTimerId_t id,
+                               uint32_t freq_hz,
+                               FOC_Platform_PwmIsrCallback_t callback) { (void)id; (void)freq_hz; (void)callback; }
+
+/**
+ * @brief 启动辅助定时器中断
+ * @param id 辅助定时器用途 ID
+ */
+void FOC_Platform_AuxTimerStart(FOC_Platform_AuxTimerId_t id) { (void)id; }
+
+/**
+ * @brief 停止辅助定时器中断
+ * @param id 辅助定时器用途 ID
+ */
+void FOC_Platform_AuxTimerStop(FOC_Platform_AuxTimerId_t id) { (void)id; }
+
+/**
+ * @brief 设置辅助定时器回调
+ * @param id       辅助定时器用途 ID
+ * @param callback 定时器更新中断回调
+ */
+void FOC_Platform_SetAuxTimerCallback(FOC_Platform_AuxTimerId_t id,
+                                      FOC_Platform_PwmIsrCallback_t callback) { (void)id; (void)callback; }
 
 /* ===== Indicator (指示灯) ===== */
 
@@ -301,3 +336,12 @@ uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v) { (void)vbus_v; return 0U; }
  *        此函数在控制任务上下文（非ISR）中调用。
  */
 void FOC_Platform_UndervoltageProtect(float vbus_voltage) { (void)vbus_voltage; }
+
+/* ===== Memory Barrier (内存屏障) ===== */
+
+/**
+ * @brief 数据内存屏障（DMB）
+ * @note  用于多 ISR 共享数据的写序保证（如 SVPWM pending commit 模式）。
+ *        实现应调用目标平台的数据内存屏障指令（如 ARM 的 __DMB()）。
+ */
+void FOC_Platform_MemoryBarrier(void) {}

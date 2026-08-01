@@ -79,45 +79,16 @@ void FOC_ControlExecutor_Init(foc_motor_t *motor)
 }
 
 /* ================================================================
- * PWM ISR：插值 → 守卫检查 → 硬件采样 → Estimator → Select → Publish → 电流环 → SVPWM。
+ * 电流环核心阶段：采样 → Estimator → Select → Publish → 电流环 → SVPWM。
+ * 双 ISR 模式由 PWM ISR 调用；三 ISR 模式由独立电流环 ISR 调用。
  * ================================================================ */
-void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
+static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float current_loop_dt_sec)
 {
-    uint8_t divider;
-    float current_loop_dt_sec;
-
     uint32_t isr_start;
-    isr_start = FOC_Platform_ReadCycleCounter();
 
     if (motor == 0) return;
 
-    SVPWM_InterpolationISR(motor);
-
-    if (motor->state.motor_enabled == 0U)
-    {
-        FOC_ControlExecutor_FullStop(motor);
-        return;
-    }
-
-    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
-        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
-    {
-        if (motor->phase_output_state.valid == 0U) return;
-        FOC_ControlApplyPhaseOutputRuntime(motor);
-        return;
-    }
-
-    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
-
-    if (motor->state.current_loop_ready == 0U) return;
-
-    divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
-    motor->isr_timing.fast_current_div_counter++;
-    if (motor->isr_timing.fast_current_div_counter < divider) return;
-    motor->isr_timing.fast_current_div_counter = 0U;
-
-    current_loop_dt_sec = (FOC_PWM_FREQ_KHZ == 0U) ? FOC_CONTROL_DT_SEC
-                          : ((float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f));
+    isr_start = FOC_Platform_ReadCycleCounter();
 
     {
     /* 阶段1：硬件采样 */
@@ -154,9 +125,102 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     FOC_ControlApplyElectricalAngleRuntime(motor, motor->ctrl.electrical_angle_rad);
 
     motor->isr_timing.current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
-    
     }
 }
+
+/* ================================================================
+ * 双 ISR 模式 PWM ISR 入口：插值 → 守卫检查 → 电流环核心。
+ * ================================================================ */
+void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
+{
+    uint8_t divider;
+    float current_loop_dt_sec;
+
+    if (motor == 0) return;
+
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
+    SVPWM_InterpolationISR(motor);
+#endif
+
+    if (motor->state.motor_enabled == 0U)
+    {
+        FOC_ControlExecutor_FullStop(motor);
+        return;
+    }
+
+    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
+        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
+    {
+        if (motor->phase_output_state.valid == 0U) return;
+        FOC_ControlApplyPhaseOutputRuntime(motor);
+        return;
+    }
+
+    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
+    if (motor->state.current_loop_ready == 0U) return;
+
+    divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
+    motor->isr_timing.fast_current_div_counter++;
+    if (motor->isr_timing.fast_current_div_counter < divider) return;
+    motor->isr_timing.fast_current_div_counter = 0U;
+
+    current_loop_dt_sec = (FOC_PWM_FREQ_KHZ == 0U) ? FOC_CONTROL_DT_SEC
+                          : ((float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f));
+
+    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, current_loop_dt_sec);
+}
+
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+/* ================================================================
+ * 三 ISR 模式 - PWM ISR 入口：仅插值 + 守卫检查（无电流环）。
+ * ================================================================ */
+void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
+    SVPWM_InterpolationISR(motor);
+#endif
+
+    if (motor->state.motor_enabled == 0U)
+    {
+        FOC_ControlExecutor_FullStop(motor);
+        return;
+    }
+
+    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
+        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
+    {
+        if (motor->phase_output_state.valid == 0U) return;
+        FOC_ControlApplyPhaseOutputRuntime(motor);
+        return;
+    }
+}
+
+/* ================================================================
+ * 三 ISR 模式 - 电流环 ISR 入口：独立定时器驱动，与 PWM 频率解耦。
+ * ================================================================ */
+void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
+{
+    float current_loop_dt_sec;
+
+    if (motor == 0) return;
+
+    if (motor->state.motor_enabled == 0U)
+    {
+        FOC_ControlExecutor_FullStop(motor);
+        return;
+    }
+
+    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
+    if (motor->state.current_loop_ready == 0U) return;
+
+    current_loop_dt_sec = (FOC_CURRENT_LOOP_ISR_FREQ_HZ == 0U) ? FOC_CONTROL_DT_SEC
+                          : (1.0f / (float)FOC_CURRENT_LOOP_ISR_FREQ_HZ);
+
+    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, current_loop_dt_sec);
+}
+#endif
 
 /* ================================================================
  * 控制周期（主循环调度）

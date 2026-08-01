@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
+#include "LS_Config/foc_config.h"
 
 /** RunCycle return codes */
 #define FOC_CYCLE_OK                0U
@@ -14,9 +15,17 @@
 /** @brief Initialise per-motor control executor state. */
 void FOC_ControlExecutor_Init(foc_motor_t *motor);
 
-/** @brief PWM ISR entry: fast current-loop sampling → control → SVPWM.
+/** @brief PWM ISR entry（双 ISR 模式）: fast current-loop sampling → control → SVPWM.
  *         Skips when control_phase != NORMAL. */
 void FOC_ControlExecutor_RunISR(foc_motor_t *motor);
+
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+/** @brief PWM ISR entry（三 ISR 模式）: 仅插值 + 守卫检查，不运行电流环。 */
+void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor);
+
+/** @brief 电流环 ISR entry（三 ISR 模式）: 独立定时器驱动，与 PWM 频率解耦。 */
+void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor);
+#endif
 
 /**
  * @brief Normal control cycle: sensor validity checked by L1.

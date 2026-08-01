@@ -5,6 +5,27 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.5] - 2026-08-01
+
+### Added
+- **ISR 架构双模式**：新增 `FOC_CURRENT_LOOP_ISR_MODE` 宏（`FOC_ISR_MODE_2ISR` 默认 / `FOC_ISR_MODE_3ISR`），三 ISR 模式将电流环拆分到独立定时器 ISR（默认 8kHz），与 PWM 频率解耦。
+- **PWM 插值正交裁剪**：新增 `FOC_SVPWM_INTERP_ENABLE` 宏，两种 ISR 模式均可独立启用/禁用 PWM 插值，禁用后直接写占空比。
+- **三 ISR 模式独立电流环频率**：`FOC_CURRENT_LOOP_ISR_FREQ_HZ` 可任意配置电流环 ISR 频率。
+- **通用辅助定时器 API**：`FOC_Platform_AuxTimerInit/Start/Stop/SetCallback`，ID 枚举化（`FOC_Platform_AuxTimerId_t`），平台内映射空闲硬件定时器（GD32 实例映射 TIMER4）。
+- **平台内存屏障 API**：`FOC_Platform_MemoryBarrier()`，用于多 ISR 共享数据的写序保证。
+- **实例层 AUXTIMER 驱动**：`Utilities/AUXTIMER/auxtimer.h/.c`，自由运行模式，8kHz 独立节拍。
+
+### Changed
+- **Executor 三入口拆分**：`FOC_ControlExecutor_RunISR`（双 ISR）、`FOC_ControlExecutor_RunISR_PwmOnly`（三 ISR PWM 仅插值+守卫）、`FOC_ControlExecutor_RunISR_CurrentLoop`（三 ISR 独立电流环）。
+- **SVPWM 并发保护**：三 ISR 模式采用 pending + commit 标志，PWM ISR 入口原子取走目标，零锁零阻塞。
+- **`FOC_Init_Runtime` 签名扩展**：新增 `current_loop_cb` 参数，三 ISR 模式注册独立电流环回调。
+- **L1 编排适配**：新增 `FOC_App_OnCurrentLoopISR`；OSC 快照在三 ISR 模式移入电流环 ISR（反映控制环实际数据）。
+- **空平台 API 同步**：`foc_platform_api_empty.c` 补齐辅助定时器与内存屏障接口。
+- **`foc_platform_api.c` 分块整理**：按功能区块（Runtime/Indicator/Comm/Sensor/PWM/AuxTimer/Protection/Diagnostics）重排函数顺序。
+
+### Documentation
+- 版本基线统一更新至 v2.0.5。
+
 ## [2.0.4] - 2026-07-29
 
 ### Added

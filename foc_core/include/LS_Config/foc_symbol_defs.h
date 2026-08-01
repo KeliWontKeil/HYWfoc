@@ -9,6 +9,10 @@
 #define FOC_MATH_PI_BY_3    1.0471975f
 #define FOC_MATH_EPSILON    0.0f
 
+/* ISR 架构模式枚举值 */
+#define FOC_ISR_MODE_2ISR 0U
+#define FOC_ISR_MODE_3ISR 1U
+
 /* ========== 滤波器类型枚举值 ========== */
 #define FOC_FILTER_TYPE_NONE    0
 #define FOC_FILTER_TYPE_KALMAN  1

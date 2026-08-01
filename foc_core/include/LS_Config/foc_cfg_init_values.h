@@ -19,10 +19,13 @@
 #define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
 #define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
 
-/* Fast current-loop: execute every N-th PWM ISR. */
+/* 双 ISR 模式：电流环为PWMISR分频，分频仅作为降低计算负担，仍需保证执行时间小于 PWMISR 周期 */
 #define FOC_CURRENT_LOOP_ISR_DIVIDER   3U
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
-#define FOC_CONTROL_DT_SEC              (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
+
+/* 三 ISR 模式：电流环独立 ISR 频率（Hz），与 PWM 频率解耦 */
+#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   8000U
+#define FOC_CONTROL_DT_SEC             (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
 
  /* ── 电机模型参数 ── */
 #define FOC_MOTOR_MEASUREMENT_TYPE     FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT
@@ -206,10 +209,10 @@
 
 
 /* ── OpenLoop angle source / low-speed policy defaults ── */
-#define FOC_OPENLOOP_CURRENT_A                   0.4f
+#define FOC_OPENLOOP_CURRENT_A                   0.3f
 
 /* ── Source Manager 低/高速 source 切换默认参数/门限 ── */
-#define FOC_ACCEL_SPEED_LIMIT_LOW_RAD_S      25.0f   /* LOW 区域速度上限 */
+#define FOC_ACCEL_SPEED_LIMIT_LOW_RAD_S      10.0f   /* LOW 区域速度上限 */
 #define FOC_ACCEL_SPEED_LIMIT_HIGH_RAD_S     50.0f   /* HIGH/FULL 区域速度上限 */
 
 #define FOC_SOURCE_SWITCH_SETTLE_CYCLES              500U

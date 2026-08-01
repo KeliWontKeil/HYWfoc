@@ -22,7 +22,8 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
                       FOC_Platform_TickCallback_t service_cb,
                       FOC_Platform_TickCallback_t control_cb,
                       FOC_Platform_TickCallback_t monitor_cb,
-                      FOC_Platform_PwmIsrCallback_t pwm_cb)
+                      FOC_Platform_PwmIsrCallback_t pwm_cb,
+                      FOC_Platform_PwmIsrCallback_t current_loop_cb)
 {
     if ((sys == 0) || (motor == 0)) return;
 
@@ -64,6 +65,11 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
 #endif
     FOC_ControlPlatform_InitHardware(motor);
     FOC_Platform_SetPwmUpdateCallback(pwm_cb);
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    FOC_Platform_AuxTimerInit(FOC_AUX_TIMER_CURRENT_LOOP,
+                              FOC_CURRENT_LOOP_ISR_FREQ_HZ,
+                              current_loop_cb);
+#endif
 }
 
 void FOC_Init_MotorAndCalib(foc_motor_t *motor)

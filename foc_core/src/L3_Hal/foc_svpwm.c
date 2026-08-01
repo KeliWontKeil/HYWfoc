@@ -228,11 +228,17 @@ void SVPWM_Init(foc_motor_t *motor, uint16_t freq_kHz, uint8_t deadtime_percent)
 
     if (sv != 0)
     {
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
         sv->interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;
         sv->interp_step_index = sv->interp_steps_total;
+#endif
+        sv->duty_a_current = 0.0f;
+        sv->duty_b_current = 0.0f;
+        sv->duty_c_current = 0.0f;
     }
 }
 
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
 void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
                                 uint8_t sector,
                                 float duty_a,
@@ -249,6 +255,20 @@ void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
     sv->output.duty_b = SVPWM_Clamp01(duty_b);
     sv->output.duty_c = SVPWM_Clamp01(duty_c);
 
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    /* 三 ISR 模式：写端(电流环 ISR)仅写 pending，PWM ISR 入口原子取走 */
+    sv->pending_duty_a_target = sv->output.duty_a;
+    sv->pending_duty_b_target = sv->output.duty_b;
+    sv->pending_duty_c_target = sv->output.duty_c;
+
+    sv->pending_duty_a_step = (sv->pending_duty_a_target - sv->duty_a_current) / (float)sv->interp_steps_total;
+    sv->pending_duty_b_step = (sv->pending_duty_b_target - sv->duty_b_current) / (float)sv->interp_steps_total;
+    sv->pending_duty_c_step = (sv->pending_duty_c_target - sv->duty_c_current) / (float)sv->interp_steps_total;
+
+    FOC_Platform_MemoryBarrier();
+    sv->target_pending = 1U;
+#else
+    /* 双 ISR 模式：同 ISR 内写入，无竞争 */
     sv->duty_a_target = sv->output.duty_a;
     sv->duty_b_target = sv->output.duty_b;
     sv->duty_c_target = sv->output.duty_c;
@@ -257,7 +277,9 @@ void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
     sv->duty_b_step = (sv->duty_b_target - sv->duty_b_current) / (float)sv->interp_steps_total;
     sv->duty_c_step = (sv->duty_c_target - sv->duty_c_current) / (float)sv->interp_steps_total;
     sv->interp_step_index = 0U;
+#endif
 }
+#endif
 
 void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
                            uint8_t sector,
@@ -278,6 +300,7 @@ void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
     sv->duty_a_current = sv->output.duty_a;
     sv->duty_b_current = sv->output.duty_b;
     sv->duty_c_current = sv->output.duty_c;
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     sv->duty_a_target  = sv->output.duty_a;
     sv->duty_b_target  = sv->output.duty_b;
     sv->duty_c_target  = sv->output.duty_c;
@@ -285,6 +308,17 @@ void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
     sv->duty_b_step = 0.0f;
     sv->duty_c_step = 0.0f;
     sv->interp_step_index = sv->interp_steps_total;
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    sv->pending_duty_a_target = sv->output.duty_a;
+    sv->pending_duty_b_target = sv->output.duty_b;
+    sv->pending_duty_c_target = sv->output.duty_c;
+    sv->pending_duty_a_step = 0.0f;
+    sv->pending_duty_b_step = 0.0f;
+    sv->pending_duty_c_step = 0.0f;
+    FOC_Platform_MemoryBarrier();
+    sv->target_pending = 1U;
+#endif
+#endif
 
     FOC_Platform_PWMSetDutyCycleTripleFloat(sv->duty_a_current,
                                             sv->duty_b_current,
@@ -308,6 +342,7 @@ void SVPWM_Update(foc_motor_t *motor,
                         voltage_command, vbus_voltage,
                         &sector, &duty_a, &duty_b, &duty_c);
 
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     if (direct_output != 0U)
     {
         SVPWM_ApplyDirectDuty(motor, sector, duty_a, duty_b, duty_c);
@@ -316,14 +351,35 @@ void SVPWM_Update(foc_motor_t *motor,
     {
         SVPWM_SetRuntimeDutyTarget(motor, sector, duty_a, duty_b, duty_c);
     }
+#else
+    /* 插值裁剪：一律直接写占空比 */
+    (void)direct_output;
+    SVPWM_ApplyDirectDuty(motor, sector, duty_a, duty_b, duty_c);
+#endif
 }
 
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
 void SVPWM_InterpolationISR(foc_motor_t *motor)
 {
     svpwm_interp_state_t *sv;
 
     if (motor == 0) return;
     sv = &motor->svpwm;
+
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    /* 三 ISR 模式：PWM ISR 入口原子取走电流环 ISR 的 pending 目标 */
+    if (sv->target_pending != 0U)
+    {
+        sv->duty_a_target = sv->pending_duty_a_target;
+        sv->duty_b_target = sv->pending_duty_b_target;
+        sv->duty_c_target = sv->pending_duty_c_target;
+        sv->duty_a_step = sv->pending_duty_a_step;
+        sv->duty_b_step = sv->pending_duty_b_step;
+        sv->duty_c_step = sv->pending_duty_c_step;
+        sv->interp_step_index = 0U;
+        sv->target_pending = 0U;
+    }
+#endif
 
     if (sv->interp_step_index < sv->interp_steps_total)
     {
@@ -342,6 +398,7 @@ void SVPWM_InterpolationISR(foc_motor_t *motor)
 
     FOC_Platform_PWMSetDutyCycleTripleFloat(sv->duty_a_current, sv->duty_b_current, sv->duty_c_current);
 }
+#endif
 
 const svpwm_output_t* SVPWM_GetOutput(const foc_motor_t *motor)
 {

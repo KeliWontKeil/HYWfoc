@@ -8,24 +8,23 @@
 #include "timer1.h"
 #include "timer2.h"
 #include "timer3.h"
+#include "auxtimer.h"
 #include "adc.h"
 #include "as5600.h"
 #include "pwm.h"
 
+/*****************************************************************************
+ * Runtime / Clock（运行时/时钟）
+ *****************************************************************************/
 
 void FOC_Platform_RuntimeInit(void)
 {
     systick_config();
 }
 
-void FOC_Platform_IndicatorInit(void)
+void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback)
 {
-    LED_Init();
-}
-
-void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on)
-{
-    LED_SetState(led_index, on);
+    PWM_SetUpdateCallback((pwm_update_callback_t)callback);
 }
 
 void FOC_Platform_ControlTickSourceInit(void)
@@ -49,7 +48,77 @@ void FOC_Platform_SetControlRuntimeInterrupts(uint8_t enable)
 {
     Timer1_SetUpdateInterruptEnabled(enable);
     PWM_SetUpdateInterruptEnabled(enable);
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    AuxTimer_SetUpdateInterruptEnabled(enable);
+#endif
 }
+
+/*****************************************************************************
+ * Auxiliary Timer（辅助定时器）
+ *****************************************************************************/
+
+void FOC_Platform_AuxTimerInit(FOC_Platform_AuxTimerId_t id,
+                               uint32_t freq_hz,
+                               FOC_Platform_PwmIsrCallback_t callback)
+{
+    uint32_t timer_period;
+
+    if ((id != FOC_AUX_TIMER_CURRENT_LOOP) || (freq_hz == 0U))
+    {
+        return;
+    }
+
+    timer_period = (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * (freq_hz / 1000U))) - 1U;
+    AuxTimer_Init(9U, timer_period);
+    AuxTimer_SetCallback((auxtimer_callback_t)callback);
+    AuxTimer_SetUpdateInterruptEnabled(0U);
+}
+
+void FOC_Platform_AuxTimerStart(FOC_Platform_AuxTimerId_t id)
+{
+    if (id != FOC_AUX_TIMER_CURRENT_LOOP)
+    {
+        return;
+    }
+    AuxTimer_Start();
+}
+
+void FOC_Platform_AuxTimerStop(FOC_Platform_AuxTimerId_t id)
+{
+    if (id != FOC_AUX_TIMER_CURRENT_LOOP)
+    {
+        return;
+    }
+    AuxTimer_Stop();
+}
+
+void FOC_Platform_SetAuxTimerCallback(FOC_Platform_AuxTimerId_t id,
+                                      FOC_Platform_PwmIsrCallback_t callback)
+{
+    if (id != FOC_AUX_TIMER_CURRENT_LOOP)
+    {
+        return;
+    }
+    AuxTimer_SetCallback((auxtimer_callback_t)callback);
+}
+
+/*****************************************************************************
+ * Indicator（指示灯）
+ *****************************************************************************/
+
+void FOC_Platform_IndicatorInit(void)
+{
+    LED_Init();
+}
+
+void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on)
+{
+    LED_SetState(led_index, on);
+}
+
+/*****************************************************************************
+ * Communication（通信）
+ *****************************************************************************/
 
 void FOC_Platform_CommInit(void)
 {
@@ -116,6 +185,10 @@ void FOC_Platform_WriteStatusByte(uint8_t status_code)
     USART1_FastWriter_PutByte(status_code);
 }
 
+/*****************************************************************************
+ * Sensor / Acquisition（传感器/采集）
+ *****************************************************************************/
+
 void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
 {
     uint32_t timer_period;
@@ -135,6 +208,11 @@ void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz)
     ADC_Start();
 }
 
+void FOC_Platform_SetSensorSampleOffsetPercent(float percent)
+{
+    Timer3_SetSampleOffsetPercent(percent);
+}
+
 uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c)
 {
     return ADC_ReadPhaseCurrentABOk(phase_current_a,
@@ -147,41 +225,19 @@ uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
     return AS5600_ReadAngleRadOk(angle_rad);
 }
 
-void FOC_Platform_SetSensorSampleOffsetPercent(float percent)
+uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v)
 {
-    Timer3_SetSampleOffsetPercent(percent);
+    return ADC2_ReadVbus(vbus_v);
 }
-
 
 void FOC_Platform_WaitMs(uint32_t ms)
 {
     delay_1ms(ms);
 }
 
-uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v)
-{
-    return ADC2_ReadVbus(vbus_v);
-}
-
-void FOC_Platform_UndervoltageProtect(float vbus_voltage)
-{
-    (void)vbus_voltage;
-}
-
-
-
-void FOC_Platform_EnableCycleCounter(void)
-{
-    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CYCCNT = 0U;
-    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-}
-
-uint32_t FOC_Platform_ReadCycleCounter(void)
-{
-    return DWT->CYCCNT;
-}
-
+/*****************************************************************************
+ * PWM / Actuation（PWM/驱动输出）
+ *****************************************************************************/
 
 void FOC_Platform_PWMInit(uint8_t freq_khz, uint8_t deadtime_percent)
 {
@@ -198,7 +254,32 @@ void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float d
     PWM_SetDutyCycleTripleFloat(duty_a, duty_b, duty_c);
 }
 
-void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback)
+/*****************************************************************************
+ * Protection Hook（保护钩子）
+ *****************************************************************************/
+
+void FOC_Platform_UndervoltageProtect(float vbus_voltage)
 {
-    PWM_SetUpdateCallback((pwm_update_callback_t)callback);
+    (void)vbus_voltage;
+}
+
+/*****************************************************************************
+ * Diagnostics / Profiler（诊断/性能分析）
+ *****************************************************************************/
+
+void FOC_Platform_EnableCycleCounter(void)
+{
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0U;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+uint32_t FOC_Platform_ReadCycleCounter(void)
+{
+    return DWT->CYCCNT;
+}
+
+void FOC_Platform_MemoryBarrier(void)
+{
+    __DMB();
 }

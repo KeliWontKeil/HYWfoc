@@ -20,7 +20,8 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
                       FOC_Platform_TickCallback_t service_cb,
                       FOC_Platform_TickCallback_t control_cb,
                       FOC_Platform_TickCallback_t monitor_cb,
-                      FOC_Platform_PwmIsrCallback_t pwm_cb);
+                      FOC_Platform_PwmIsrCallback_t pwm_cb,
+                      FOC_Platform_PwmIsrCallback_t current_loop_cb);
 
 /* 初始化电机参数并应用配置 */
 void FOC_Init_MotorAndCalib(foc_motor_t *motor);

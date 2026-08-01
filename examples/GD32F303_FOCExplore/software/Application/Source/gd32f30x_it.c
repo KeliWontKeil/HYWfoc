@@ -189,6 +189,11 @@ void TIMER2_IRQHandler(void)
     Timer2_IRQHandler_Internal();
 }
 
+void TIMER4_IRQHandler(void)
+{
+    AuxTimer_IRQHandler_Internal();
+}
+
 /*!
     \brief      DMA0 Channel0 interrupt service routine (for ADC)
     \param[in]  none

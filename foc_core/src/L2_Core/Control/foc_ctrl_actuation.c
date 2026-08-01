@@ -130,11 +130,19 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
         }
         else
         {
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
             SVPWM_SetRuntimeDutyTarget(motor,
                                        motor->svpwm.output.sector,
                                        motor->svpwm.output.duty_a,
                                        motor->svpwm.output.duty_b,
                                        motor->svpwm.output.duty_c);
+#else
+            SVPWM_ApplyDirectDuty(motor,
+                                  motor->svpwm.output.sector,
+                                  motor->svpwm.output.duty_a,
+                                  motor->svpwm.output.duty_b,
+                                  motor->svpwm.output.duty_c);
+#endif
         }
         return;
     }
@@ -292,10 +300,14 @@ uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     return 1U;
 }
 
-/* C31：运行时应用电角度（使用插值SVPWM输出）*/
+/* C31：运行时应用电角度（插值启用走插值路径，裁剪后直接写占空比）*/
 void FOC_ControlApplyElectricalAngleRuntime(foc_motor_t *motor, float electrical_angle)
 {
+#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlApplyElectricalAngleCore(motor, electrical_angle, 0U);
+#else
+    FOC_ControlApplyElectricalAngleCore(motor, electrical_angle, 1U);
+#endif
 }
 
 /* C31：直接应用电角度（直接写入占空比，不插值） */

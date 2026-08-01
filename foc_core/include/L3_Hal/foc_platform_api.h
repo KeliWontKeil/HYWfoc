@@ -11,6 +11,12 @@ typedef void (*FOC_Platform_TickCallback_t)(void);
 /** @brief PWM update ISR callback type for high-rate modulation update path. */
 typedef void (*FOC_Platform_PwmIsrCallback_t)(void);
 
+/** @brief Auxiliary timer ID enumeration. */
+typedef enum {
+    FOC_AUX_TIMER_CURRENT_LOOP = 0,  /* 三 ISR 模式电流环定时器 */
+    FOC_AUX_TIMER_COUNT
+} FOC_Platform_AuxTimerId_t;
+
 /* ===== Runtime / Clock ===== */
 
 /** @brief Initialize runtime base services for the platform. */
@@ -18,6 +24,22 @@ void FOC_Platform_RuntimeInit(void);
 
 /** @brief Set callback used by PWM update ISR path. */
 void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback);
+
+/** @brief Initialize an auxiliary free-running timer with given frequency (Hz).
+ *  The platform selects an available hardware timer internally. */
+void FOC_Platform_AuxTimerInit(FOC_Platform_AuxTimerId_t id,
+                               uint32_t freq_hz,
+                               FOC_Platform_PwmIsrCallback_t callback);
+
+/** @brief Start the auxiliary timer interrupt. */
+void FOC_Platform_AuxTimerStart(FOC_Platform_AuxTimerId_t id);
+
+/** @brief Stop the auxiliary timer interrupt. */
+void FOC_Platform_AuxTimerStop(FOC_Platform_AuxTimerId_t id);
+
+/** @brief Set auxiliary timer callback. */
+void FOC_Platform_SetAuxTimerCallback(FOC_Platform_AuxTimerId_t id,
+                                      FOC_Platform_PwmIsrCallback_t callback);
 
 /** @brief Initialize the control-tick source. */
 void FOC_Platform_ControlTickSourceInit(void);
@@ -109,6 +131,9 @@ void FOC_Platform_PWMStart(void);
 
 /** @brief Write three-phase duty cycles in normalized range. */
 void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c);
+
+/** @brief Memory barrier (data memory barrier) for ISR concurrency. */
+void FOC_Platform_MemoryBarrier(void);
 
 /* ===== Diagnostics / Profiler ===== */
 

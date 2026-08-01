@@ -56,7 +56,7 @@
 
 /* ── SMO_SPEED ── */
 #define FOC_FILTER_SMO_SPEED           FOC_FILTER_TYPE_LPF1
-#define FOC_SMO_ANGLE_HISTORY_SIZE                     128U
+#define FOC_SMO_ANGLE_HISTORY_SIZE                     8U
 #define FOC_SMO_SPEED_WINDOW_SIZE                      8U
 /* Kalman parameters (used when type == KALMAN) */
 #define FOC_FILTER_SMO_SPEED_KALMAN_MEAS_ERR           0.5f

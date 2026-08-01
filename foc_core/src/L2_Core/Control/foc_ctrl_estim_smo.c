@@ -9,6 +9,16 @@
 
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 
+/*
+ * This project's equivalent sliding injection has the opposite polarity to
+ * the physical BEMF angle convention. Keep the observer unchanged and
+ * restore physical polarity only for angle extraction.
+ */
+static float smo_bemf_for_angle(float bemf_component)
+{
+    return -bemf_component;
+}
+
 static float wrap_2pi(float angle_rad)
 {
     while (angle_rad > FOC_MATH_TWO_PI)  angle_rad -= FOC_MATH_TWO_PI;
@@ -25,6 +35,22 @@ static float smo_lpf_alpha(float fc_hz, float dt_sec)
 static float smo_sat(float value)
 {
     return Math_ClampFloat(value, -1.0f, 1.0f);
+}
+
+static float smo_pll_speed_limit_elec(const foc_motor_t *motor)
+{
+    float limit = 100.0f;
+
+    if ((motor != 0) && (motor->params.pole_pairs > 0U))
+    {
+        limit = FOC_ACCEL_SPEED_LIMIT_HIGH_RAD_S * (float)motor->params.pole_pairs * 2.0f;
+        if (limit < 100.0f)
+        {
+            limit = 100.0f;
+        }
+    }
+
+    return limit;
 }
 
 void FOC_EstimSMO_Init(foc_motor_t *motor)
@@ -184,8 +210,9 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
 
         if (bemf_mag > 1e-6f)
         {
-            float angle = FOC_MathLut_Atan2(-motor->estim_smo_state.bemf_alpha,
-                                             motor->estim_smo_state.bemf_beta);
+            float bemf_alpha_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_alpha);
+            float bemf_beta_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_beta);
+            float angle = FOC_MathLut_Atan2(-bemf_alpha_angle, bemf_beta_angle);
 
             angle = wrap_2pi(angle);
             motor->estim_smo_state.pll_angle_rad = angle;
@@ -214,21 +241,43 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
 #else
     {
         float e_theta;
+        float pll_speed_limit;
+        float bemf_alpha_angle;
+        float bemf_beta_angle;
         float cos_theta = FOC_MathLut_Sin(motor->estim_smo_state.pll_angle_rad + 0.5f * FOC_MATH_PI);
         float sin_theta = FOC_MathLut_Sin(motor->estim_smo_state.pll_angle_rad);
 
-        e_theta = motor->estim_smo_state.z_alpha * cos_theta
-                + motor->estim_smo_state.z_beta  * sin_theta;
+        bemf_mag = sqrtf(motor->estim_smo_state.bemf_alpha * motor->estim_smo_state.bemf_alpha
+                       + motor->estim_smo_state.bemf_beta  * motor->estim_smo_state.bemf_beta);
+
+        if (bemf_mag > 1e-6f)
+        {
+            bemf_alpha_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_alpha);
+            bemf_beta_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_beta);
+            e_theta = -(bemf_alpha_angle * cos_theta
+                      + bemf_beta_angle  * sin_theta) / bemf_mag;
+            e_theta = Math_ClampFloat(e_theta, -1.0f, 1.0f);
+        }
+        else
+        {
+            e_theta = 0.0f;
+        }
 
         motor->estim_smo_state.pll_integral += FOC_ESTIM_SMO_PLL_KI_DEFAULT * e_theta * dt_sec;
+        pll_speed_limit = smo_pll_speed_limit_elec(motor);
+        motor->estim_smo_state.pll_integral =
+            Math_ClampFloat(motor->estim_smo_state.pll_integral,
+                            -pll_speed_limit,
+                             pll_speed_limit);
         motor->estim_smo_state.pll_speed_rad_s =
             FOC_ESTIM_SMO_PLL_KP_DEFAULT * e_theta + motor->estim_smo_state.pll_integral;
+        motor->estim_smo_state.pll_speed_rad_s =
+            Math_ClampFloat(motor->estim_smo_state.pll_speed_rad_s,
+                            -pll_speed_limit,
+                             pll_speed_limit);
 
         motor->estim_smo_state.pll_angle_rad += motor->estim_smo_state.pll_speed_rad_s * dt_sec;
         motor->estim_smo_state.pll_angle_rad = wrap_2pi(motor->estim_smo_state.pll_angle_rad);
-
-        bemf_mag = sqrtf(motor->estim_smo_state.bemf_alpha * motor->estim_smo_state.bemf_alpha
-                       + motor->estim_smo_state.bemf_beta  * motor->estim_smo_state.bemf_beta);
     }
 #endif
 
