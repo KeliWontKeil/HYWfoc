@@ -7,7 +7,7 @@
 #define FOC_FILTER_SENSOR_CURRENT_B    FOC_FILTER_TYPE_KALMAN
 #define FOC_FILTER_SENSOR_CURRENT_C    FOC_FILTER_TYPE_KALMAN
 #define FOC_FILTER_SENSOR_ANGLE        FOC_FILTER_TYPE_NONE
-#define FOC_FILTER_ENCODER_SPEED       FOC_FILTER_TYPE_LPF1
+#define FOC_FILTER_ENCODER_SPEED       FOC_FILTER_TYPE_KALMAN
 
 /* ── SENSOR_CURRENT_A ── */
 /* Kalman parameters (used when type == KALMAN) */
@@ -56,7 +56,7 @@
 
 /* ── SMO_SPEED ── */
 #define FOC_FILTER_SMO_SPEED           FOC_FILTER_TYPE_LPF1
-#define FOC_SMO_ANGLE_HISTORY_SIZE                     8U
+#define FOC_SMO_ANGLE_HISTORY_SIZE                     16U
 #define FOC_SMO_SPEED_WINDOW_SIZE                      8U
 /* Kalman parameters (used when type == KALMAN) */
 #define FOC_FILTER_SMO_SPEED_KALMAN_MEAS_ERR           0.5f
@@ -64,6 +64,6 @@
 #define FOC_FILTER_SMO_SPEED_KALMAN_PROC_NOISE         0.01f
 #define FOC_FILTER_SMO_SPEED_KALMAN_INIT               0.0f
 /* LPF1 parameter (used when type == LPF1) */
-#define FOC_FILTER_SMO_SPEED_LPF_ALPHA                 0.6f
+#define FOC_FILTER_SMO_SPEED_LPF_ALPHA                 0.4f
 
 #endif /* FOC_CFG_FILTER_H */

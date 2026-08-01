@@ -7,14 +7,6 @@
 #include "L3_Hal/foc_math_types.h"
 #include "L3_Hal/foc_filter_types.h"
 
-/* ========== SVPWM LPF filter state (three-phase) ========== */
-typedef struct {
-    uint8_t  valid;
-    float    phase_a;
-    float    phase_b;
-    float    phase_c;
-} foc_svpwm_lpf_state_t;
-
 /* ========== Alpha-beta / three-phase voltage state ========== */
 typedef struct {
     float alpha;
@@ -482,10 +474,6 @@ typedef struct foc_motor_t {
 #if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
     foc_reinit_state_t reinit_state;
 #endif
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
-    foc_svpwm_lpf_state_t svpwm_lpf;
-#endif
-
 } foc_motor_t;
 
 #endif /* FOC_CTRL_TYPES_H */

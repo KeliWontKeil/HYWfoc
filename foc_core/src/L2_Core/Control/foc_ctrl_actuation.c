@@ -8,42 +8,6 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-/* SVPWM 前置低通滤波（per-motor 状态）*/
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
-static void FOC_ApplySvpwmPreLpf(foc_motor_t *motor,
-                                 float *phase_a,
-                                 float *phase_b,
-                                 float *phase_c)
-{
-    if ((phase_a == 0) || (phase_b == 0) || (phase_c == 0))
-    {
-        return;
-    }
-
-    if (motor->svpwm_lpf.valid == 0U)
-    {
-        motor->svpwm_lpf.phase_a = *phase_a;
-        motor->svpwm_lpf.phase_b = *phase_b;
-        motor->svpwm_lpf.phase_c = *phase_c;
-        motor->svpwm_lpf.valid = 1U;
-        return;
-    }
-
-    *phase_a = Math_FirstOrderLpf(*phase_a,
-                                  &motor->svpwm_lpf.phase_a,
-                                   FOC_FILTER_SVPWM_LPF_ALPHA,
-                                   &motor->svpwm_lpf.valid);
-    *phase_b = Math_FirstOrderLpf(*phase_b,
-                                   &motor->svpwm_lpf.phase_b,
-                                   FOC_FILTER_SVPWM_LPF_ALPHA,
-                                   &motor->svpwm_lpf.valid);
-    *phase_c = Math_FirstOrderLpf(*phase_c,
-                                   &motor->svpwm_lpf.phase_c,
-                                   FOC_FILTER_SVPWM_LPF_ALPHA,
-                                   &motor->svpwm_lpf.valid);
-}
-#endif
-
 /* 核心：将电机dq电压+电角度转换为三相PWM占空比输出 */
 static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
                                                 float electrical_angle,
@@ -101,13 +65,6 @@ static void FOC_ControlApplyElectricalAngleCore(foc_motor_t *motor,
                                 &motor->alpha_beta.phase_a,
                                 &motor->alpha_beta.phase_b,
                                 &motor->alpha_beta.phase_c);
-
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
-    FOC_ApplySvpwmPreLpf(motor,
-                         &motor->alpha_beta.phase_a,
-                         &motor->alpha_beta.phase_b,
-                         &motor->alpha_beta.phase_c);
-#endif
 
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
 

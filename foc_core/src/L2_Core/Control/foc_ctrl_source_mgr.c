@@ -338,8 +338,6 @@ static void SourceMgr_SyncOuterLoopOnSwitch(foc_motor_t *motor, uint8_t new_sour
 {
     float mech_angle = 0.0f;
     float elec_angle = 0.0f;
-    float speed = 0.0f;
-    uint8_t speed_valid;
 
     if (motor == 0) return;
 
@@ -351,23 +349,12 @@ static void SourceMgr_SyncOuterLoopOnSwitch(foc_motor_t *motor, uint8_t new_sour
         }
     }
 
-    speed_valid = SourceMgr_SourceHasPhysicalSpeed(motor, new_source, &speed);
-    if (speed_valid == 0U)
-    {
-        speed_valid = SourceMgr_SourceHasPhysicalSpeed(motor, old_source, &speed);
-    }
-
     motor->outer_loop.accum_rad = mech_angle;
     motor->outer_loop.prev_rad = mech_angle;
     motor->outer_loop.prev_valid = 1U;
     motor->outer_loop.prev_mech_signed_rad = (float)motor->params.direction * mech_angle;
     motor->outer_loop.speed_err_accum_rad = 0.0f;
     motor->outer_loop.speed_state_valid = 1U;
-
-    if (speed_valid != 0U)
-    {
-        motor->outer_loop.ramped_speed_rad_s = speed;
-    }
 
     SourceMgr_PrimePidOutput(&motor->speed_pid, motor->ctrl.iq_target, 0.0f);
 }

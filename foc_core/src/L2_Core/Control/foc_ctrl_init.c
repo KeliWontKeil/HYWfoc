@@ -266,12 +266,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->outer_loop.speed_err_accum_rad = 0.0f;
     motor->outer_loop.prev_mech_signed_rad = 0.0f;
     motor->outer_loop.speed_state_valid = 0U;
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
-    motor->svpwm_lpf.valid = 0U;
-    motor->svpwm_lpf.phase_a = 0.0f;
-    motor->svpwm_lpf.phase_b = 0.0f;
-    motor->svpwm_lpf.phase_c = 0.0f;
-#endif
 
     FOC_ControlExecutor_Init(motor);
 
