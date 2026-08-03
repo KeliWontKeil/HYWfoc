@@ -397,14 +397,17 @@ Source Manager 在 PWM ISR 中分两步运行，决策与数据发布解耦：
 
 ```
 FOC_SourceMgr_Select(motor)
-  └── 纯决策函数：
+  └── 纯决策函数（速域切换仅服务 SPEED_ONLY 模式）：
+      ├── 非 SPEED_ONLY：锁定 LOW 源，不推进速域状态机（角度模式依赖编码器可靠源）
       ├── 读取低/高 source 配置、当前 active source、各 source 内部状态
-      ├── 检查速度阈值、低速侧升域授权、候选高速源收敛状态
+      ├── 检查：控制模式门槛 + 目标速度域门槛 + 实测速度 + 候选高速源收敛状态
       ├── 如果 single source（low=high）→ 直接返回，control_region = FULL
-      ├── 低→高判断：LowMotionAbove(high_th) + CandidateSpeedAbove(high_th) + high 可获取
+      ├── 低→高判断：TargetInHighRegion + LowMotionAbove(high_th) + CandidateSpeedAbove(high_th) + high 可获取
+      │              （TargetInHighRegion：SPEED_ONLY 且 |speed_only| > high_th，目标低速域时禁止升域）
       ├── 高速获取：使用 low_th 作为取消门限，避免 high_th 附近反复清零
-      ├── 高→低判断：high 失效/发散或速度低于 low_th 后连续确认
-      ├── 消抖窗口：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交切换
+      ├── 高→低判断：目标不在高速域 / high 失效发散 / 速度低于 low_th 后进降级流程
+      ├── 升域消抖：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交 HIGH
+      ├── 降域消抖：恢复 HIGH 需连续满足 FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES（更敏捷），单拍尖峰不打断降级
       └── 切换提交：修改 active_source、standby_source、control_region，并同步外环/电流环状态
 
 FOC_SourceMgr_Publish(motor)
@@ -449,8 +452,9 @@ FULL_ACTIVE
 
 LOW_ACTIVE
   active=low，control_region=LOW
-  -> HIGH_ACQUIRE 条件（四个全满足，使用 high_th）：
-       LowMotionAbove(low, high_th)
+  -> HIGH_ACQUIRE 条件（五者全满足，使用 high_th）：
+       TargetInHighRegion（SPEED_ONLY 且目标速度 > high_th）
+       && LowMotionAbove(low, high_th)
        && CandidateSpeedAbove(high_speed, high_th)
        && high_state >= CONVERGING
        && high source valid
@@ -458,11 +462,12 @@ LOW_ACTIVE
 HIGH_ACQUIRE
   active 仍保持 low，switch_counter 连续累计
   -> LOW_ACTIVE 条件（任一满足即回退，使用 low_th）：
-       LowMotionAbove(low, low_th) == false
+       TargetInHighRegion == false（等待期目标切回低速域即回退）
+       || LowMotionAbove(low, low_th) == false
        || CandidateSpeedAbove(high_speed, low_th) == false
        || high_state 不可获取
        || high source invalid
-  -> HIGH_ACTIVE 条件（消抖达标后直接检查切入条件，无中间 HIGH_READY 状态）：
+  -> HIGH_ACTIVE 条件（消抖达标后直接检查切入条件）：
        switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES
        && high_state == LOCKED
        && (active 是 OPENLOOP || active/high 电角度兼容)
@@ -472,24 +477,28 @@ HIGH_ACQUIRE
 HIGH_ACTIVE
   active=high，control_region=HIGH
   -> HIGH_SUSPECT 条件（降级嫌疑，任一满足即转入）：
-       high_state == DIVERGED
+       TargetInHighRegion == false（目标切回低速域即触发降级）
+       || high_state == DIVERGED
        || high_state 不可保持
        || high source invalid
        || speed_abs < low_th
 
 HIGH_SUSPECT
   降级消抖状态
-  -> HIGH_ACTIVE 条件（嫌疑解除，使用 high_th 为恢复门限）：
-       high_state != DIVERGED
+  -> HIGH_ACTIVE 条件（嫌疑解除，需连续 DEGRADE_CONFIRM_CYCLES 拍，使用 high_th）：
+       TargetInHighRegion
+       && high_state != DIVERGED
        && high_state 可保持
        && high source valid
-       && (speed 无效 || speed_abs >= high_th)
+       && speed 有效 && speed_abs >= high_th
+      （单拍尖峰或速度读取失败不打断降级）
   -> LOW_RECOVERY 条件：
        high_state == DIVERGED（立即）
-       || switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES（消抖完成）
+       || degrade 消抖计数 >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES
 
 LOW_RECOVERY
   low source valid 或 low=OPENLOOP 时 CommitSwitch(low) 并回到 LOW_ACTIVE
+  （CommitSwitch 统一清零 degrade_hold_counter）
 ```
 
 低速侧升域授权规则：
@@ -596,7 +605,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
    - 无感估计器需电流采样
    - SMO 需至少一种低速角度 source（当编码器不可用时）
    - Source 切换配置需满足 low/high source 组合约束
-4. **角度模式 source 兼容性约束**：`FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(src)` 宏判断 source 是否提供可靠的绝对位置（ENCODER 或 HFI）。`SPEED_ANGLE_ONLY` 构建要求两个 source 均为 ANGLE_CAPABLE；`FULL` 构建下默认 control_mode 为 SPEED_ANGLE 时同样要求。
+4. **角度模式 source 兼容性约束**：`FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(src)` 宏判断 source 是否提供可靠的绝对位置（ENCODER 或 HFI）。`SPEED_ANGLE_ONLY` 构建要求两个 source 均为 ANGLE_CAPABLE；`FULL` 构建可在运行时切到 `SPEED_ANGLE`，运行时 Source Manager 会锁定 LOW 源不作速域切换（角度模式依赖编码器可靠源），因此 `FULL` 构建要求 LOW source 为 ANGLE_CAPABLE（HIGH 可为 SMO，仅服务速度模式的高速无感段）。
 
 ## 滤波器子系统
 

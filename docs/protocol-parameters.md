@@ -168,7 +168,7 @@ aaPA3.14b
 | `W` | sensor_sample_offset_percent | float | [0, 100] | 45.0 | % | `FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE` | `aaPW45b` | `aaPWb` |
 | `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPL20b` | `aaPLb` |
 | `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPH100b` | `aaPHb` |
-| `O` | oscilloscope_param_mask | uint | [0, 65535] | 779 (0x030B) | bitmask | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPO63b` | `aaPOb` |
+| `O` | oscilloscope_param_mask | uint | [0, 65535] | 30872 (0x7898) | bitmask | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPO63b` | `aaPOb` |
 | `X` | read_all 哨兵 | - | 只读 | - | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaPXb` |
 
 ### 4.2 C 组：调优/配置参数
@@ -240,18 +240,30 @@ aaPA3.14b
 
 | 位 | 十六进制 | 字段 | 默认启用 |
 |----|---------|------|---------|
-| 0 | 0x0001 | current_a | 是 |
-| 1 | 0x0002 | current_b | 是 |
+| 0 | 0x0001 | current_a | 否 |
+| 1 | 0x0002 | current_b | 否 |
 | 2 | 0x0004 | current_c | 否 |
-| 3 | 0x0008 | angle_filtered | 是 |
-| 4 | 0x0010 | angle_accum | 否 |
+| 3 | 0x0008 | angle_active_mech | 是 |
+| 4 | 0x0010 | angle_standby_mech | 是 |
 | 5 | 0x0020 | execution_time_us | 否 |
-| 6 | 0x0040 | cogging_iq | 否 |
-| 7 | 0x0080 | vbus_voltage | 否 |
-| 8 | 0x0100 | iq_target | 是 |
-| 9 | 0x0200 | iq_measured | 是 |
+| 6 | 0x0040 | vbus_voltage | 否 |
+| 7 | 0x0080 | iq_target | 是 |
+| 8 | 0x0100 | iq_measured | 否 |
+| 9 | 0x0200 | current_a_raw | 否 |
+| 10 | 0x0400 | current_b_raw | 否 |
+| 11 | 0x0800 | speed_active_mech | 是 |
+| 12 | 0x1000 | speed_standby_mech | 是 |
+| 13 | 0x2000 | angle_active_elec | 是 |
+| 14 | 0x4000 | angle_standby_elec | 是 |
+| 15 | 0x8000 | （保留） | 否 |
 
-默认掩码：0x030B（current_a + current_b + angle_filtered + iq_target + iq_measured）。
+默认掩码：由 `DEBUG_STREAM_OSC_DEFAULT_SHOW_*` 编译宏组合生成（当前默认含 bit3/bit4/bit7/bit11/bit12/bit13/bit14，即 `0x7898`）。
+
+说明：
+
+- `angle_*_mech`：活跃/备用源的机械角度（rad）
+- `angle_*_elec`：活跃/备用源的电角度（rad）
+- 不同源的原生角度类型由 Source Manager 统一封装（Encoder 原生机械角度、SMO/OpenLoop 原生电角度），示波器输出始终同时提供机械与电角度两种视图。
 
 ### 4.7 语义调试行说明
 

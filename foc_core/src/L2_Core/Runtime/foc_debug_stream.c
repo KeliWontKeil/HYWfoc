@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L3_Hal/foc_platform_api.h"
 
 /*
@@ -53,27 +54,22 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
 #else
     ds->snapshot.channel[2] = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value);
 #endif
-    ds->snapshot.channel[3] = motor->active_source_state.mech_angle_rad;
-
-    /* bit 4: standby angle */
+    /* bit 3/4: active/standby mech angle, bit 13/14: active/standby elec angle */
     {
-        uint8_t stby = motor->source_mgr_state.standby_source;
-        float angle = 0.0f;
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-        if (stby == FOC_SOURCE_TYPE_ENCODER && motor->sensor.encoder_valid != 0U)
-            angle = motor->sensor.mech_angle_rad.output_value;
-        else
-#endif
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-        if (stby == FOC_SOURCE_TYPE_SMO && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE && motor->params.pole_pairs > 0U)
-            angle = motor->estim_smo_state.pll_angle_rad / (float)motor->params.pole_pairs;
-        else
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-        if (stby == FOC_SOURCE_TYPE_OPENLOOP && motor->openloop_state.phase != FOC_OPENLOOP_STATE_FAILED && motor->params.pole_pairs > 0U)
-            angle = motor->openloop_state.virtual_angle_rad / (float)motor->params.pole_pairs;
-#endif
-        ds->snapshot.channel[4] = angle;
+        float mech = 0.0f;
+        float elec = 0.0f;
+        (void)FOC_SourceMgr_ReadSourceAngle(motor, motor->source_mgr_state.active_source,
+                                            &mech, &elec);
+        ds->snapshot.channel[3]  = mech;
+        ds->snapshot.channel[13] = elec;
+    }
+    {
+        float mech = 0.0f;
+        float elec = 0.0f;
+        (void)FOC_SourceMgr_ReadSourceAngle(motor, motor->source_mgr_state.standby_source,
+                                            &mech, &elec);
+        ds->snapshot.channel[4]  = mech;
+        ds->snapshot.channel[14] = elec;
     }
 
     ds->snapshot.channel[5] = (float)ds->last_exec_cycles / 120.0f;
@@ -87,48 +83,18 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
 
     /* bit 11: active speed */
     {
-        uint8_t active = motor->source_mgr_state.active_source;
         float speed = 0.0f;
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-        if (active == FOC_SOURCE_TYPE_ENCODER && motor->sensor.encoder_valid != 0U)
-            speed = motor->sensor.mech_speed_rad_s;
-        else
-#endif
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-        if (active == FOC_SOURCE_TYPE_SMO && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
-            speed = motor->estim_smo_state.mech_speed_rad_s;
-        else
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-        if (active == FOC_SOURCE_TYPE_OPENLOOP && motor->openloop_state.phase != FOC_OPENLOOP_STATE_FAILED)
-            speed = motor->openloop_state.mech_speed_rad_s;
-#endif
+        (void)FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_mgr_state.active_source, &speed);
         ds->snapshot.channel[11] = speed;
     }
 
     /* bit 12: standby speed */
     {
-        uint8_t stby = motor->source_mgr_state.standby_source;
         float speed = 0.0f;
-#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-        if (stby == FOC_SOURCE_TYPE_ENCODER && motor->sensor.encoder_valid != 0U)
-            speed = motor->sensor.mech_speed_rad_s;
-        else
-#endif
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-        if (stby == FOC_SOURCE_TYPE_SMO && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
-            speed = motor->estim_smo_state.mech_speed_rad_s;
-        else
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-        if (stby == FOC_SOURCE_TYPE_OPENLOOP && motor->openloop_state.phase != FOC_OPENLOOP_STATE_FAILED)
-            speed = motor->openloop_state.mech_speed_rad_s;
-#endif
+        (void)FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_mgr_state.standby_source, &speed);
         ds->snapshot.channel[12] = speed;
     }
 
-    ds->snapshot.channel[13] = 0.0f;
-    ds->snapshot.channel[14] = 0.0f;
     ds->snapshot.channel[15] = 0.0f;
     ds->snapshot.valid = 1U;
 }

@@ -68,7 +68,7 @@
 ".\output\foc_ctrl_sens_cogging_calib.o"
 ".\output\foc_ctrl_sens_reinit.o"
 ".\output\foc_filter_math.o"
---strict --scatter ".\output\Project.sct"
+--library_type=microlib --strict --scatter ".\output\Project.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list ".\list\Project.map" -o .\output\Project.axf

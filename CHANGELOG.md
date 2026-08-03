@@ -5,6 +5,19 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.6] - 2026-08-03
+
+### Fixed
+- **速域切换判据收口（修复电机反向接线时低速域被速度尖峰误切高速域的问题）**：
+  - **目标速度域门槛**：升域（`LOW_ACTIVE→HIGH_ACQUIRE`）、等待（`HIGH_ACQUIRE` 保持）、降级（`HIGH_ACTIVE→HIGH_SUSPECT`）、降级恢复（`HIGH_SUSPECT→HIGH_ACTIVE`）全部要求 `SPEED_ONLY` 且 `|speed_only| > high_th`。目标在低速域时，即使实测瞬时速度 > 门限、SMO 已收敛，也禁止切入/驻留高速域，杜绝单拍速度尖峰盖过其他判据。
+  - **降级去抖独立宏**：新增 `FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES`（默认 20）。`HIGH_SUSPECT` 恢复 `HIGH_ACTIVE` 需目标在高速域 且 实测速度 ≥ high 门限连续该宏拍数；移除 `speed_valid==0` 无条件放行，速度读取失败或单拍尖峰不再打断敏捷降级。
+  - **非速度控制模式锁定**：`FOC_SourceMgr_Select` 在非 `SPEED_ONLY` 时锁定 LOW 源、不推进速域状态机（角度模式依赖编码器可靠源）。
+  - **运行时角度模式编译期收口**：`FULL` 构建下（可在运行时切到 `SPEED_ANGLE`）要求 `LOW` source 为 ENCODER/HFI；`HIGH` 可为 SMO 仅服务速度模式高速无感段。
+  - **枚举收口**：删除未使用的 `FOC_REGION_STATE_HIGH_READY`；`foc_source_mgr_state_t` 新增 `degrade_hold_counter`（追加在非条件编译段，保持字段顺序兼容）。
+
+### Documentation
+- `docs/architecture.md` Source Manager 状态机判据、`Select` 伪码、编译期约束条目同步更新；版本基线统一更新至 v2.0.6。
+
 ## [2.0.5] - 2026-08-01
 
 ### Added

@@ -9,16 +9,6 @@
 
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 
-/*
- * This project's equivalent sliding injection has the opposite polarity to
- * the physical BEMF angle convention. Keep the observer unchanged and
- * restore physical polarity only for angle extraction.
- */
-static float smo_bemf_for_angle(float bemf_component)
-{
-    return -bemf_component;
-}
-
 static float wrap_2pi(float angle_rad)
 {
     while (angle_rad > FOC_MATH_TWO_PI)  angle_rad -= FOC_MATH_TWO_PI;
@@ -65,11 +55,7 @@ void FOC_EstimSMO_Init(foc_motor_t *motor)
     motor->estim_smo_state.z_beta         = 0.0f;
     motor->estim_smo_state.pll_angle_rad  = 0.0f;
     motor->estim_smo_state.pll_speed_rad_s = 0.0f;
-    motor->estim_smo_state.pll_integral   = 0.0f;
     motor->estim_smo_state.k_slide        = FOC_ESTIM_SMO_K_SLIDE_DEFAULT;
-    motor->estim_smo_state.phase_comp_rad = 0.0f;
-    motor->estim_smo_state.prev_z_alpha   = 0.0f;
-    motor->estim_smo_state.prev_z_beta    = 0.0f;
     motor->estim_smo_state.converge_counter = 0U;
     motor->estim_smo_state.lock_counter   = 0U;
     motor->estim_smo_state.rot_dir_counter = 0U;
@@ -78,6 +64,14 @@ void FOC_EstimSMO_Init(foc_motor_t *motor)
     motor->estim_smo_state.speed_window_pos   = 0U;
     motor->estim_smo_state.speed_window_count = 0U;
     motor->estim_smo_state.angle_history_idx = 0U;
+
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
+    motor->estim_smo_state.pll_integral   = 0.0f;
+#endif
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
+    motor->estim_smo_state.phase_comp_rad = 0.0f;
+#endif
+
     {
         uint8_t hi;
         for (hi = 0U; hi < FOC_SMO_ANGLE_HISTORY_SIZE; hi++)
@@ -106,7 +100,9 @@ void FOC_EstimSMO_Init(foc_motor_t *motor)
         }
         motor->estim_smo_state.pll_angle_rad = mech_zero * (float)motor->params.pole_pairs;
         motor->estim_smo_state.pll_angle_rad = wrap_2pi(motor->estim_smo_state.pll_angle_rad);
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
         motor->estim_smo_state.phase_comp_rad = motor->estim_smo_state.pll_angle_rad;
+#endif
         motor->estim_smo_state.initialized   = 1U;
     }
     else
@@ -116,7 +112,10 @@ void FOC_EstimSMO_Init(foc_motor_t *motor)
     }
 }
 
-void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
+/* ================================================================
+ * 观测器核心：电流方程 + BEMF LPF + 收敛状态机 + 旋转方向检测。
+ * ================================================================ */
+static void EstimSMO_StepCore(foc_motor_t *motor, float dt_sec, float *bemf_mag_out)
 {
     float i_alpha_meas, i_beta_meas;
     float u_alpha, u_beta;
@@ -124,13 +123,11 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     float z_alpha_raw, z_beta_raw;
     float sat_current;
     float Rs, Ls, inv_L;
-    float bemf_mag;
     float theta_voltage;
     float ud_voltage;
     float uq_voltage;
-    uint8_t valid_dt;
 
-    if (motor == 0) return;
+    *bemf_mag_out = 0.0f;
 
     if (motor->applied_output.valid != 0U)
     {
@@ -171,8 +168,7 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     if (Ls < 1e-9f) Ls = 1e-9f;
     inv_L = 1.0f / Ls;
 
-    valid_dt = (dt_sec > 0.0f) ? 1U : 0U;
-    if (valid_dt == 0U) return;
+    if (dt_sec <= 0.0f) return;
 
     err_alpha = motor->estim_smo_state.ialpha_est - i_alpha_meas;
     err_beta  = motor->estim_smo_state.ibeta_est  - i_beta_meas;
@@ -193,99 +189,24 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
     motor->estim_smo_state.ibeta_est  += dt_sec * inv_L *
         (u_beta  - Rs * motor->estim_smo_state.ibeta_est  - motor->estim_smo_state.z_beta);
 
-    /* BEMF LPF: 两种角度方法共用 */
+    /* BEMF LPF: 实际滑模注入 z 与物理 BEMF 反极性，这里统一输出物理 BEMF(=-z) */
     {
         float lpf_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_BEMF_LPF_FC, dt_sec);
 
         motor->estim_smo_state.bemf_alpha += lpf_alpha *
-            (motor->estim_smo_state.z_alpha - motor->estim_smo_state.bemf_alpha);
+            (-motor->estim_smo_state.z_alpha - motor->estim_smo_state.bemf_alpha);
         motor->estim_smo_state.bemf_beta  += lpf_alpha *
-            (motor->estim_smo_state.z_beta  - motor->estim_smo_state.bemf_beta);
+            (-motor->estim_smo_state.z_beta  - motor->estim_smo_state.bemf_beta);
     }
 
-#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
-    {
-        bemf_mag = sqrtf(motor->estim_smo_state.bemf_alpha * motor->estim_smo_state.bemf_alpha
-                       + motor->estim_smo_state.bemf_beta  * motor->estim_smo_state.bemf_beta);
-
-        if (bemf_mag > 1e-6f)
-        {
-            float bemf_alpha_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_alpha);
-            float bemf_beta_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_beta);
-            float angle = FOC_MathLut_Atan2(-bemf_alpha_angle, bemf_beta_angle);
-
-            angle = wrap_2pi(angle);
-            motor->estim_smo_state.pll_angle_rad = angle;
-            if (bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V)
-            {
-                float delta = Math_WrapRadDelta(angle - motor->estim_smo_state.phase_comp_rad);
-                float raw_speed = delta / dt_sec;
-                float speed_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_SPEED_LPF_FC, dt_sec);
-
-                motor->estim_smo_state.pll_speed_rad_s += speed_alpha *
-                    (raw_speed - motor->estim_smo_state.pll_speed_rad_s);
-            }
-            else
-            {
-                motor->estim_smo_state.pll_speed_rad_s = 0.0f;
-            }
-            motor->estim_smo_state.phase_comp_rad = angle;
-        }
-        else
-        {
-            motor->estim_smo_state.pll_speed_rad_s = 0.0f;
-            bemf_mag = 0.0f;
-        }
-        motor->estim_smo_state.pll_integral    = 0.0f;
-    }
-#else
-    {
-        float e_theta;
-        float pll_speed_limit;
-        float bemf_alpha_angle;
-        float bemf_beta_angle;
-        float cos_theta = FOC_MathLut_Sin(motor->estim_smo_state.pll_angle_rad + 0.5f * FOC_MATH_PI);
-        float sin_theta = FOC_MathLut_Sin(motor->estim_smo_state.pll_angle_rad);
-
-        bemf_mag = sqrtf(motor->estim_smo_state.bemf_alpha * motor->estim_smo_state.bemf_alpha
-                       + motor->estim_smo_state.bemf_beta  * motor->estim_smo_state.bemf_beta);
-
-        if (bemf_mag > 1e-6f)
-        {
-            bemf_alpha_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_alpha);
-            bemf_beta_angle = smo_bemf_for_angle(motor->estim_smo_state.bemf_beta);
-            e_theta = -(bemf_alpha_angle * cos_theta
-                      + bemf_beta_angle  * sin_theta) / bemf_mag;
-            e_theta = Math_ClampFloat(e_theta, -1.0f, 1.0f);
-        }
-        else
-        {
-            e_theta = 0.0f;
-        }
-
-        motor->estim_smo_state.pll_integral += FOC_ESTIM_SMO_PLL_KI_DEFAULT * e_theta * dt_sec;
-        pll_speed_limit = smo_pll_speed_limit_elec(motor);
-        motor->estim_smo_state.pll_integral =
-            Math_ClampFloat(motor->estim_smo_state.pll_integral,
-                            -pll_speed_limit,
-                             pll_speed_limit);
-        motor->estim_smo_state.pll_speed_rad_s =
-            FOC_ESTIM_SMO_PLL_KP_DEFAULT * e_theta + motor->estim_smo_state.pll_integral;
-        motor->estim_smo_state.pll_speed_rad_s =
-            Math_ClampFloat(motor->estim_smo_state.pll_speed_rad_s,
-                            -pll_speed_limit,
-                             pll_speed_limit);
-
-        motor->estim_smo_state.pll_angle_rad += motor->estim_smo_state.pll_speed_rad_s * dt_sec;
-        motor->estim_smo_state.pll_angle_rad = wrap_2pi(motor->estim_smo_state.pll_angle_rad);
-    }
-#endif
+    *bemf_mag_out = sqrtf(motor->estim_smo_state.bemf_alpha * motor->estim_smo_state.bemf_alpha
+                        + motor->estim_smo_state.bemf_beta  * motor->estim_smo_state.bemf_beta);
 
     /* 旋转方向检测 */
     if (fabsf(motor->estim_smo_state.pll_speed_rad_s) > 1e-6f)
     {
         uint8_t dir = (motor->estim_smo_state.pll_speed_rad_s > 0.0f) ? 1U : 0U;
-			if (dir == motor->estim_smo_state.rot_dir_last && motor->estim_smo_state.rot_dir_counter <= FOC_ESTIM_SMO_ROT_DIR_CONSECUTIVE)
+        if (dir == motor->estim_smo_state.rot_dir_last && motor->estim_smo_state.rot_dir_counter <= FOC_ESTIM_SMO_ROT_DIR_CONSECUTIVE)
             motor->estim_smo_state.rot_dir_counter++;
         else if(dir != motor->estim_smo_state.rot_dir_last)
         {
@@ -299,76 +220,187 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
      * 避免停转或低速时 SMO 误收敛。核心观测器/PLL 始终运行，
      * 仅收敛状态机被门控。
      */
-    uint8_t allow_converge = 1U;
-    if (motor->source_mgr_state.control_region == FOC_CONTROL_REGION_LOW)
     {
-        float mech_speed = (motor->params.pole_pairs > 0U) ?
-            fabsf(motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs) : 0.0f;
-        if (mech_speed < FOC_SMO_ACCEL_PRECONV_SPEED_THRESHOLD_RAD_S)
+        uint8_t allow_converge = 1U;
+        if (motor->source_mgr_state.control_region == FOC_CONTROL_REGION_LOW)
         {
-            allow_converge = 0U;
+            float mech_speed = (motor->params.pole_pairs > 0U) ?
+                fabsf(motor->estim_smo_state.pll_speed_rad_s / (float)motor->params.pole_pairs) : 0.0f;
+            if (mech_speed < FOC_SMO_ACCEL_PRECONV_SPEED_THRESHOLD_RAD_S)
+            {
+                allow_converge = 0U;
+            }
+        }
+
+        if ((allow_converge != 0U) &&
+            (*bemf_mag_out > FOC_ESTIM_SMO_CONVERGE_BEMF_V) &&
+            (motor->estim_smo_state.rot_dir_counter >= FOC_ESTIM_SMO_ROT_DIR_CONSECUTIVE))
+        {
+            motor->estim_smo_state.converge_counter++;
+            motor->estim_smo_state.lock_counter = 0U;
+            motor->estim_smo_state.converged_once = 1U;
+        }
+        else
+        {
+            motor->estim_smo_state.converge_counter = 0U;
+            if (motor->estim_smo_state.converged_once != 0U && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_CONVERGE_CONSECUTIVE)
+            {
+                motor->estim_smo_state.lock_counter++;
+            }
         }
     }
+}
 
-    if ((allow_converge != 0U) &&
-        (bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V) &&
-        (motor->estim_smo_state.rot_dir_counter >= FOC_ESTIM_SMO_ROT_DIR_CONSECUTIVE))
+/* ================================================================
+ * PLL 角度提取（仅 PLL 方法编译）：跟踪 bemf 角，私有字段 pll_integral。
+ * ================================================================ */
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
+static void EstimSMO_ExtractAnglePLL(foc_motor_t *motor, float dt_sec, float bemf_mag)
+{
+    float e_theta;
+    float pll_speed_limit;
+    float cos_theta = FOC_MathLut_Sin(motor->estim_smo_state.pll_angle_rad + 0.5f * FOC_MATH_PI);
+    float sin_theta = FOC_MathLut_Sin(motor->estim_smo_state.pll_angle_rad);
+
+    if (bemf_mag > 1e-6f)
     {
-        motor->estim_smo_state.converge_counter++;
-        motor->estim_smo_state.lock_counter = 0U;
-        motor->estim_smo_state.converged_once = 1U;
+        /* bemf 为物理 BEMF，锁相需 sin 相关取负使 θe 为稳定平衡点 */
+        e_theta = (float)motor->params.direction * (-motor->estim_smo_state.bemf_alpha * cos_theta
+                   - motor->estim_smo_state.bemf_beta  * sin_theta) / bemf_mag;
+        e_theta = Math_ClampFloat(e_theta, -1.0f, 1.0f);
     }
     else
     {
-        motor->estim_smo_state.converge_counter = 0U;
-			if (motor->estim_smo_state.converged_once != 0U && motor->estim_smo_state.lock_counter < FOC_ESTIM_SMO_CONVERGE_CONSECUTIVE)
-        {
-            motor->estim_smo_state.lock_counter++;
-        }
+        e_theta = 0.0f;
     }
 
-    /* S1: 每次 ISR 写入电气角度到环形缓冲（覆盖前捕获旧值作 oldest） */
+    motor->estim_smo_state.pll_integral += FOC_ESTIM_SMO_PLL_KI_DEFAULT * e_theta * dt_sec;
+    pll_speed_limit = smo_pll_speed_limit_elec(motor);
+    motor->estim_smo_state.pll_integral =
+        Math_ClampFloat(motor->estim_smo_state.pll_integral,
+                        -pll_speed_limit,
+                         pll_speed_limit);
+    motor->estim_smo_state.pll_speed_rad_s =
+        FOC_ESTIM_SMO_PLL_KP_DEFAULT * e_theta + motor->estim_smo_state.pll_integral;
+    motor->estim_smo_state.pll_speed_rad_s =
+        Math_ClampFloat(motor->estim_smo_state.pll_speed_rad_s,
+                        -pll_speed_limit,
+                         pll_speed_limit);
+
+    motor->estim_smo_state.pll_angle_rad += motor->estim_smo_state.pll_speed_rad_s * dt_sec;
+    motor->estim_smo_state.pll_angle_rad = wrap_2pi(motor->estim_smo_state.pll_angle_rad);
+}
+#endif
+
+/* ================================================================
+ * LPF_ATAN2 角度提取（仅 ANGLE_METHOD_LPF_ATAN2 方法编译）：atan2 + 差分测速，
+ * 私有字段 phase_comp_rad。
+ * ================================================================ */
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
+static void EstimSMO_ExtractAngleAtan2(foc_motor_t *motor, float dt_sec, float bemf_mag)
+{
+    if (bemf_mag > 1e-6f)
     {
-        uint8_t idx = motor->estim_smo_state.angle_history_idx;
-        float oldest_angle = motor->estim_smo_state.pll_angle_history[idx];
-        motor->estim_smo_state.pll_angle_history[idx] = motor->estim_smo_state.pll_angle_rad;
-        idx++;
-        if (idx >= FOC_SMO_ANGLE_HISTORY_SIZE) idx = 0U;
-        motor->estim_smo_state.angle_history_idx = idx;
+        /* bemf 为物理 BEMF，atan2 标准式直接得物理电角 θe；
+         * 乘以 direction 归一化到 ctrl 参考系，与 encoder/电流环/源切换同系 */
+        float angle = FOC_MathLut_Atan2(-motor->estim_smo_state.bemf_alpha,
+                                        motor->estim_smo_state.bemf_beta);
 
-        /* S2: 每 8 个 ISR 步累积电气角度求机械速度 */
-        if (idx == 0U && motor->params.pole_pairs > 0U)
+        angle = angle * (float)motor->params.direction;
+        angle = wrap_2pi(angle);
+        motor->estim_smo_state.pll_angle_rad = angle;
+        if (bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V)
         {
-            float newest_angle = motor->estim_smo_state.pll_angle_history[FOC_SMO_ANGLE_HISTORY_SIZE - 1U];
-            float delta_elec = Math_WrapRadDelta(newest_angle - oldest_angle);
-            float total_time_sec = (float)(FOC_SMO_ANGLE_HISTORY_SIZE) / ((float)FOC_CURRENT_LOOP_ISR_FREQ * 1000.0f);
-            float raw_mech_speed = (delta_elec / total_time_sec) / (float)motor->params.pole_pairs;
+            float delta = Math_WrapRadDelta(angle - motor->estim_smo_state.phase_comp_rad);
+            float raw_speed = delta / dt_sec;
+            float speed_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_SPEED_LPF_FC, dt_sec);
 
-            motor->estim_smo_state.speed_window[motor->estim_smo_state.speed_window_pos] = raw_mech_speed;
-            motor->estim_smo_state.speed_window_pos++;
-            if (motor->estim_smo_state.speed_window_pos >= FOC_SMO_SPEED_WINDOW_SIZE)
-            {
-                motor->estim_smo_state.speed_window_pos = 0U;
-            }
-            if (motor->estim_smo_state.speed_window_count < FOC_SMO_SPEED_WINDOW_SIZE)
-            {
-                motor->estim_smo_state.speed_window_count++;
-            }
+            motor->estim_smo_state.pll_speed_rad_s += speed_alpha *
+                (raw_speed - motor->estim_smo_state.pll_speed_rad_s);
+        }
+        else
+        {
+            motor->estim_smo_state.pll_speed_rad_s = 0.0f;
+        }
+        motor->estim_smo_state.phase_comp_rad = angle;
+    }
+    else
+    {
+        motor->estim_smo_state.pll_speed_rad_s = 0.0f;
+    }
+}
+#endif
 
-            if (motor->estim_smo_state.speed_window_count > 0U)
+/* ================================================================
+ * 测速尾链：环形缓冲 + 机械速度滤波（两路径共用）。
+ * ================================================================ */
+static void EstimSMO_StepTail(foc_motor_t *motor, float dt_sec)
+{
+    uint8_t idx;
+    float oldest_angle;
+
+    (void)dt_sec;
+
+    idx = motor->estim_smo_state.angle_history_idx;
+    oldest_angle = motor->estim_smo_state.pll_angle_history[idx];
+    motor->estim_smo_state.pll_angle_history[idx] = motor->estim_smo_state.pll_angle_rad;
+    idx++;
+    if (idx >= FOC_SMO_ANGLE_HISTORY_SIZE) idx = 0U;
+    motor->estim_smo_state.angle_history_idx = idx;
+
+    if (idx == 0U && motor->params.pole_pairs > 0U)
+    {
+        float newest_angle = motor->estim_smo_state.pll_angle_history[FOC_SMO_ANGLE_HISTORY_SIZE - 1U];
+        float delta_elec = Math_WrapRadDelta(newest_angle - oldest_angle);
+        float total_time_sec = (float)(FOC_SMO_ANGLE_HISTORY_SIZE) / ((float)FOC_CURRENT_LOOP_ISR_FREQ * 1000.0f);
+        float raw_mech_speed = (delta_elec / total_time_sec) / (float)motor->params.pole_pairs;
+
+        motor->estim_smo_state.speed_window[motor->estim_smo_state.speed_window_pos] = raw_mech_speed;
+        motor->estim_smo_state.speed_window_pos++;
+        if (motor->estim_smo_state.speed_window_pos >= FOC_SMO_SPEED_WINDOW_SIZE)
+        {
+            motor->estim_smo_state.speed_window_pos = 0U;
+        }
+        if (motor->estim_smo_state.speed_window_count < FOC_SMO_SPEED_WINDOW_SIZE)
+        {
+            motor->estim_smo_state.speed_window_count++;
+        }
+
+        if (motor->estim_smo_state.speed_window_count > 0U)
+        {
+            uint8_t i;
+            float sum = 0.0f;
+            for (i = 0U; i < motor->estim_smo_state.speed_window_count; i++)
             {
-                uint8_t i;
-                float sum = 0.0f;
-                for (i = 0U; i < motor->estim_smo_state.speed_window_count; i++)
-                {
-                    sum += motor->estim_smo_state.speed_window[i];
-                }
-                float avg_speed = sum / (float)motor->estim_smo_state.speed_window_count;
-                motor->estim_smo_state.mech_speed_rad_s =
-                    FOC_FilterGate_SMOSpeed(&motor->estim_smo_state.smo_speed_filter, avg_speed);
+                sum += motor->estim_smo_state.speed_window[i];
             }
+            float avg_speed = sum / (float)motor->estim_smo_state.speed_window_count;
+            motor->estim_smo_state.mech_speed_rad_s =
+                FOC_FilterGate_SMOSpeed(&motor->estim_smo_state.smo_speed_filter, avg_speed);
         }
     }
+}
+
+void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
+{
+    float bemf_mag;
+
+    if ((motor == 0) || (dt_sec <= 0.0f)) return;
+
+    /* 观测器核心 */
+    EstimSMO_StepCore(motor, dt_sec, &bemf_mag);
+
+    /* 角度提取（编译期互斥） */
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
+    EstimSMO_ExtractAnglePLL(motor, dt_sec, bemf_mag);
+#elif (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
+    EstimSMO_ExtractAngleAtan2(motor, dt_sec, bemf_mag);
+#else
+#error "Unsupported FOC_ESTIM_SMO_ANGLE_METHOD"
+#endif
+
+    /* 测速尾链 */
+    EstimSMO_StepTail(motor, dt_sec);
 }
 
 #endif

@@ -149,6 +149,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->source_mgr_state.switch_in_progress = 0U;
     motor->source_mgr_state.switch_counter = 0U;
     motor->source_mgr_state.config_valid = 0U;
+    motor->source_mgr_state.degrade_hold_counter = 0U;
     motor->encoder_services.comp_available = 0U;
     motor->encoder_services.comp_active = 0U;
     motor->encoder_services.calib_available = 0U;

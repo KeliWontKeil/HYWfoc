@@ -53,7 +53,6 @@ typedef enum {
     FOC_REGION_STATE_FULL_ACTIVE = 0U,
     FOC_REGION_STATE_LOW_ACTIVE,
     FOC_REGION_STATE_HIGH_ACQUIRE,
-    FOC_REGION_STATE_HIGH_READY,
     FOC_REGION_STATE_HIGH_ACTIVE,
     FOC_REGION_STATE_HIGH_SUSPECT,
     FOC_REGION_STATE_LOW_RECOVERY
@@ -100,6 +99,8 @@ typedef struct {
     uint8_t switch_in_progress;
     uint32_t switch_counter;
     uint8_t config_valid;
+    /* 降域(回LOW)去抖计数：SUsPECT→HIGH 恢复需连续满足高速判据 */
+    uint32_t degrade_hold_counter;
 } foc_source_mgr_state_t;
 
 /* ========== Outer-loop runtime state (private to outer_loop) ========== */
@@ -213,26 +214,36 @@ typedef struct {
 /* ========== SMO 估计器私有状态 ========== */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 typedef struct {
+    /* 观测器核心（两路径共用） */
     float    ialpha_est;
     float    ibeta_est;
     float    bemf_alpha;
     float    bemf_beta;
     float    z_alpha;
     float    z_beta;
+    float    k_slide;
+
+    /* 角度/速度输出（两路径共用） */
     float    pll_angle_rad;
     float    pll_speed_rad_s;
-    float    pll_integral;
-    float    k_slide;
-    float    phase_comp_rad;
-    float    prev_z_alpha;
-    float    prev_z_beta;
     float    mech_speed_rad_s;
+
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
+    float    pll_integral;
+#endif
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
+    float    phase_comp_rad;
+#endif
+
+    /* 收敛/方向判定（两路径共用） */
     uint16_t converge_counter;
     uint16_t lock_counter;
     uint16_t rot_dir_counter;
     uint8_t  initialized;
     uint8_t  rot_dir_last;
     uint8_t  converged_once;
+
+    /* 测速链（两路径共用） */
     FOC_FILTER_TYPEDEF(FOC_FILTER_SMO_SPEED) smo_speed_filter;
     float    pll_angle_history[FOC_SMO_ANGLE_HISTORY_SIZE];
     uint8_t  angle_history_idx;

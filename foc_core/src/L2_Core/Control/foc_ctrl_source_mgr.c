@@ -124,7 +124,7 @@ static uint8_t SourceMgr_SourceValid(const foc_motor_t *motor, uint8_t source)
     }
 }
 
-static uint8_t SourceMgr_SourceHasPhysicalSpeed(const foc_motor_t *motor, uint8_t source, float *speed_out)
+uint8_t FOC_SourceMgr_ReadSourceSpeed(const foc_motor_t *motor, uint8_t source, float *speed_out)
 {
     if ((motor == 0) || (speed_out == 0)) return 0U;
 
@@ -142,6 +142,12 @@ static uint8_t SourceMgr_SourceHasPhysicalSpeed(const foc_motor_t *motor, uint8_
         *speed_out = motor->estim_smo_state.mech_speed_rad_s;
         return 1U;
 #endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    case FOC_SOURCE_TYPE_OPENLOOP:
+        if (motor->openloop_state.phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
+        *speed_out = motor->openloop_state.mech_speed_rad_s;
+        return 1U;
+#endif
     default:
         return 0U;
     }
@@ -153,20 +159,20 @@ static uint8_t SourceMgr_GetSwitchSpeedAbs(const foc_motor_t *motor, float *spee
 
     if ((motor == 0) || (speed_abs == 0)) return 0U;
 
-    if (SourceMgr_SourceHasPhysicalSpeed(motor, motor->source_mgr_state.active_source, &speed) != 0U)
+    if (FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_mgr_state.active_source, &speed) != 0U)
     {
         *speed_abs = fabsf(speed);
         return 1U;
     }
 
-    if (SourceMgr_SourceHasPhysicalSpeed(motor, motor->source_switch_state.high_source, &speed) != 0U)
+    if (FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_switch_state.high_source, &speed) != 0U)
     {
         *speed_abs = fabsf(speed);
         return 1U;
     }
 
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    if (SourceMgr_SourceHasPhysicalSpeed(motor, FOC_SOURCE_TYPE_ENCODER, &speed) != 0U)
+    if (FOC_SourceMgr_ReadSourceSpeed(motor, FOC_SOURCE_TYPE_ENCODER, &speed) != 0U)
     {
         *speed_abs = fabsf(speed);
         return 1U;
@@ -174,7 +180,7 @@ static uint8_t SourceMgr_GetSwitchSpeedAbs(const foc_motor_t *motor, float *spee
 #endif
 
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    if (SourceMgr_SourceHasPhysicalSpeed(motor, FOC_SOURCE_TYPE_SMO, &speed) != 0U)
+    if (FOC_SourceMgr_ReadSourceSpeed(motor, FOC_SOURCE_TYPE_SMO, &speed) != 0U)
     {
         *speed_abs = fabsf(speed);
         return 1U;
@@ -200,7 +206,7 @@ static uint8_t SourceMgr_LowMotionAbove(const foc_motor_t *motor, uint8_t low_so
     }
 #endif
 
-    if (SourceMgr_SourceHasPhysicalSpeed(motor, low_source, &speed) != 0U)
+    if (FOC_SourceMgr_ReadSourceSpeed(motor, low_source, &speed) != 0U)
     {
         return (fabsf(speed) > threshold_rad_s) ? 1U : 0U;
     }
@@ -214,43 +220,44 @@ static uint8_t SourceMgr_CandidateSpeedAbove(uint8_t speed_valid, float speed_ab
     return ((speed_valid != 0U) && (speed_abs > threshold_rad_s * FOC_SOURCE_SWITCH_SPEED_SCALE)) ? 1U : 0U;
 }
 
-static uint8_t SourceMgr_ReadSourceAngle(const foc_motor_t *motor, uint8_t source,
-                                         float *mech_out, float *elec_out)
+uint8_t FOC_SourceMgr_ReadSourceAngle(const foc_motor_t *motor, uint8_t source,
+                                      float *mech_out, float *elec_out)
 {
-    if ((motor == 0) || (elec_out == 0)) return 0U;
+    float mech_local = 0.0f;
+    float elec_local = 0.0f;
+
+    if ((motor == 0) || ((mech_out == 0) && (elec_out == 0))) return 0U;
 
     switch (source)
     {
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_ENCODER:
         if (motor->sensor.encoder_valid == 0U) return 0U;
-        if (mech_out != 0) *mech_out = motor->sensor.mech_angle_rad.output_value;
-        *elec_out = FOC_ControlMechanicalToElectricalAngle(motor, motor->sensor.mech_angle_rad.output_value);
-        return 1U;
+        mech_local = motor->sensor.mech_angle_rad.output_value;
+        elec_local = FOC_ControlMechanicalToElectricalAngle(motor, mech_local);
+        break;
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_SMO:
         if (SourceMgr_StateAcquireReady(SourceMgr_GetSourceState(motor, FOC_SOURCE_TYPE_SMO)) == 0U) return 0U;
-        *elec_out = motor->estim_smo_state.pll_angle_rad;
-        if ((mech_out != 0) && (motor->params.pole_pairs > 0U))
-        {
-            *mech_out = motor->estim_smo_state.pll_angle_rad / (float)motor->params.pole_pairs;
-        }
-        return 1U;
+        elec_local = motor->estim_smo_state.pll_angle_rad;
+        if (motor->params.pole_pairs > 0U) mech_local = elec_local / (float)motor->params.pole_pairs;
+        break;
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
         if (motor->openloop_state.phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
-        *elec_out = motor->openloop_state.virtual_angle_rad;
-        if ((mech_out != 0) && (motor->params.pole_pairs > 0U))
-        {
-            *mech_out = motor->openloop_state.virtual_angle_rad / (float)motor->params.pole_pairs;
-        }
-        return 1U;
+        elec_local = motor->openloop_state.virtual_angle_rad;
+        if (motor->params.pole_pairs > 0U) mech_local = elec_local / (float)motor->params.pole_pairs;
+        break;
 #endif
     default:
         return 0U;
     }
+
+    if (mech_out != 0) *mech_out = mech_local;
+    if (elec_out != 0) *elec_out = elec_local;
+    return 1U;
 }
 
 static uint8_t SourceMgr_AngleCompatible(const foc_motor_t *motor, uint8_t from_source, uint8_t to_source)
@@ -258,8 +265,8 @@ static uint8_t SourceMgr_AngleCompatible(const foc_motor_t *motor, uint8_t from_
     float from_elec;
     float to_elec;
 
-    if (SourceMgr_ReadSourceAngle(motor, from_source, 0, &from_elec) == 0U) return 0U;
-    if (SourceMgr_ReadSourceAngle(motor, to_source, 0, &to_elec) == 0U) return 0U;
+    if (FOC_SourceMgr_ReadSourceAngle(motor, from_source, 0, &from_elec) == 0U) return 0U;
+    if (FOC_SourceMgr_ReadSourceAngle(motor, to_source, 0, &to_elec) == 0U) return 0U;
 
     return (fabsf(Math_WrapRadDelta(to_elec - from_elec)) < FOC_MATH_PI_BY_3) ? 1U : 0U;
 }
@@ -269,7 +276,7 @@ static void SourceMgr_RebaseSource(foc_motor_t *motor, uint8_t new_source, uint8
     float old_elec;
 
     if (motor == 0) return;
-    if (SourceMgr_ReadSourceAngle(motor, old_source, 0, &old_elec) == 0U) return;
+    if (FOC_SourceMgr_ReadSourceAngle(motor, old_source, 0, &old_elec) == 0U) return;
 
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     float old_speed;
@@ -279,7 +286,7 @@ static void SourceMgr_RebaseSource(foc_motor_t *motor, uint8_t new_source, uint8
         motor->openloop_state.virtual_angle_rad =
             Math_WrapNearest(motor->openloop_state.virtual_angle_rad, old_elec);
         if ((motor->params.pole_pairs > 0U) &&
-            (SourceMgr_SourceHasPhysicalSpeed(motor, old_source, &old_speed) != 0U))
+            (FOC_SourceMgr_ReadSourceSpeed(motor, old_source, &old_speed) != 0U))
         {
             motor->openloop_state.virtual_speed_rad_s = old_speed * (float)motor->params.pole_pairs;
             motor->openloop_state.mech_speed_rad_s = old_speed;
@@ -341,9 +348,9 @@ static void SourceMgr_SyncOuterLoopOnSwitch(foc_motor_t *motor, uint8_t new_sour
 
     if (motor == 0) return;
 
-    if (SourceMgr_ReadSourceAngle(motor, new_source, &mech_angle, &elec_angle) == 0U)
+    if (FOC_SourceMgr_ReadSourceAngle(motor, new_source, &mech_angle, &elec_angle) == 0U)
     {
-        if (SourceMgr_ReadSourceAngle(motor, old_source, &mech_angle, &elec_angle) == 0U)
+        if (FOC_SourceMgr_ReadSourceAngle(motor, old_source, &mech_angle, &elec_angle) == 0U)
         {
             mech_angle = motor->active_source_state.mech_angle_rad;
         }
@@ -397,6 +404,7 @@ static void SourceMgr_CommitSwitch(foc_motor_t *motor, uint8_t new_source, uint8
 
     motor->source_mgr_state.switch_in_progress = 0U;
     motor->source_mgr_state.switch_counter = 0U;
+    motor->source_mgr_state.degrade_hold_counter = 0U;
 }
 
 static void SourceMgr_SetFixedSource(foc_motor_t *motor, uint8_t source)
@@ -409,6 +417,20 @@ static void SourceMgr_SetFixedSource(foc_motor_t *motor, uint8_t source)
     motor->source_mgr_state.region_state = FOC_REGION_STATE_FULL_ACTIVE;
     motor->source_mgr_state.switch_in_progress = 0U;
     motor->source_mgr_state.switch_counter = 0U;
+    motor->source_mgr_state.degrade_hold_counter = 0U;
+}
+
+/* 速域切换仅服务速度控制模式（角度模式依赖编码器可靠源，不作源切换） */
+static uint8_t SourceMgr_SpeedModeAllows(const foc_motor_t *motor)
+{
+    return (motor->state.control_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY) ? 1U : 0U;
+}
+
+/* 目标速度位于高速域（> 高速切换门限）才允许驻留/恢复高速域 */
+static uint8_t SourceMgr_TargetInHighRegion(const foc_motor_t *motor)
+{
+    return ((SourceMgr_SpeedModeAllows(motor) != 0U) &&
+            (fabsf(motor->cfg.speed_only_rad_s) > motor->source_switch_state.speed_threshold_high_rad_s)) ? 1U : 0U;
 }
 
 void FOC_SourceMgr_Init(foc_motor_t *motor, uint8_t low_source, uint8_t high_source)
@@ -444,6 +466,8 @@ void FOC_SourceMgr_Init(foc_motor_t *motor, uint8_t low_source, uint8_t high_sou
     motor->active_source_state.elec_angle_rad = 0.0f;
     motor->active_source_state.mech_angle_rad = 0.0f;
 
+    motor->source_mgr_state.degrade_hold_counter = 0U;
+
     SourceMgr_UpdateEncoderServices(motor);
 }
 
@@ -469,12 +493,26 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
     high_state = SourceMgr_GetSourceState(motor, high);
     speed_valid = SourceMgr_GetSwitchSpeedAbs(motor, &speed_abs);
 
+    /* 非速度控制模式：锁定低速源，不做速域切换（角度模式依赖编码器可靠源） */
+    if (SourceMgr_SpeedModeAllows(motor) == 0U)
+    {
+        motor->source_mgr_state.active_source = low;
+        motor->source_mgr_state.standby_source = FOC_SOURCE_TYPE_NONE;
+        motor->source_mgr_state.control_region = FOC_CONTROL_REGION_LOW;
+        motor->source_mgr_state.region_state = FOC_REGION_STATE_LOW_ACTIVE;
+        motor->source_mgr_state.switch_in_progress = 0U;
+        motor->source_mgr_state.switch_counter = 0U;
+        motor->source_mgr_state.degrade_hold_counter = 0U;
+        return;
+    }
+
     switch (motor->source_mgr_state.region_state)
     {
     case FOC_REGION_STATE_LOW_ACTIVE:
         motor->source_mgr_state.active_source = low;
         motor->source_mgr_state.control_region = FOC_CONTROL_REGION_LOW;
-        if ((SourceMgr_LowMotionAbove(motor, low,
+        if ((SourceMgr_TargetInHighRegion(motor) != 0U) &&
+            (SourceMgr_LowMotionAbove(motor, low,
                 motor->source_switch_state.speed_threshold_high_rad_s) != 0U) &&
             (SourceMgr_CandidateSpeedAbove(speed_valid, speed_abs,
                 motor->source_switch_state.speed_threshold_high_rad_s) != 0U) &&
@@ -492,7 +530,8 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
         break;
 
     case FOC_REGION_STATE_HIGH_ACQUIRE:
-        if ((SourceMgr_LowMotionAbove(motor, low,
+        if ((SourceMgr_TargetInHighRegion(motor) == 0U) ||
+            (SourceMgr_LowMotionAbove(motor, low,
                 motor->source_switch_state.speed_threshold_low_rad_s) == 0U) ||
             (SourceMgr_CandidateSpeedAbove(speed_valid, speed_abs,
                 motor->source_switch_state.speed_threshold_low_rad_s) == 0U) ||
@@ -521,7 +560,9 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
     case FOC_REGION_STATE_HIGH_ACTIVE:
         motor->source_mgr_state.active_source = high;
         motor->source_mgr_state.control_region = FOC_CONTROL_REGION_HIGH;
-        if ((high_state == FOC_SOURCE_STATE_DIVERGED) ||
+        /* 目标不在高速域、SMO 非收敛/发散/无效、或实测速度低于门限 → 触发降级 */
+        if ((SourceMgr_TargetInHighRegion(motor) == 0U) ||
+            (high_state == FOC_SOURCE_STATE_DIVERGED) ||
             (SourceMgr_StateHoldValid(high_state) == 0U) ||
             (SourceMgr_SourceValid(motor, high) == 0U) ||
             ((speed_valid != 0U) &&
@@ -530,6 +571,7 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
             motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_SUSPECT;
             motor->source_mgr_state.switch_in_progress = 1U;
             motor->source_mgr_state.switch_counter = 1U;
+            motor->source_mgr_state.degrade_hold_counter = 0U;
         }
         else
         {
@@ -539,23 +581,35 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
         break;
 
     case FOC_REGION_STATE_HIGH_SUSPECT:
-        if ((high_state != FOC_SOURCE_STATE_DIVERGED) &&
+        /*
+         * 降级恢复要求：目标在高速域 且 实测速度 ≥ high 门限 连续 DEGRADE_CONFIRM_CYCLES 拍，
+         * 单拍尖峰或速度读取失败不能打断敏捷降级。
+         */
+        if ((SourceMgr_TargetInHighRegion(motor) != 0U) &&
+            (high_state != FOC_SOURCE_STATE_DIVERGED) &&
             (SourceMgr_StateHoldValid(high_state) != 0U) &&
             (SourceMgr_SourceValid(motor, high) != 0U) &&
-            ((speed_valid == 0U) ||
-             (speed_abs >= motor->source_switch_state.speed_threshold_high_rad_s)))
+            (speed_valid != 0U) &&
+            (speed_abs >= motor->source_switch_state.speed_threshold_high_rad_s))
         {
-            motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_ACTIVE;
-            motor->source_mgr_state.switch_in_progress = 0U;
-            motor->source_mgr_state.switch_counter = 0U;
+            motor->source_mgr_state.degrade_hold_counter++;
+            if (motor->source_mgr_state.degrade_hold_counter >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES)
+            {
+                motor->source_mgr_state.region_state = FOC_REGION_STATE_HIGH_ACTIVE;
+                motor->source_mgr_state.switch_in_progress = 0U;
+                motor->source_mgr_state.switch_counter = 0U;
+                motor->source_mgr_state.degrade_hold_counter = 0U;
+            }
             break;
         }
 
+        motor->source_mgr_state.degrade_hold_counter = 0U;
         motor->source_mgr_state.switch_counter++;
         if ((high_state == FOC_SOURCE_STATE_DIVERGED) ||
-            (motor->source_mgr_state.switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES))
+            (motor->source_mgr_state.switch_counter >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES))
         {
             motor->source_mgr_state.region_state = FOC_REGION_STATE_LOW_RECOVERY;
+            motor->source_mgr_state.switch_in_progress = 0U;
         }
         break;
 
@@ -590,7 +644,7 @@ void FOC_SourceMgr_Publish(foc_motor_t *motor)
     src = motor->source_mgr_state.active_source;
     mech_angle = 0.0f;
     elec_angle = 0.0f;
-    valid = SourceMgr_ReadSourceAngle(motor, src, &mech_angle, &elec_angle);
+    valid = FOC_SourceMgr_ReadSourceAngle(motor, src, &mech_angle, &elec_angle);
 
     motor->active_source_state.source = src;
     motor->active_source_state.state = SourceMgr_GetSourceState(motor, src);
