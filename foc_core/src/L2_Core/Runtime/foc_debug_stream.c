@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
 
 #include <stdio.h>

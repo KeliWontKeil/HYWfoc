@@ -7,11 +7,8 @@
 
 #include "L2_Core/foc_ctrl_types.h"
 
-uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
-                                        float electrical_angle,
-                                        uint16_t settle_ms,
-                                        uint16_t sample_count,
-                                        float *mech_angle_rad);
+/* 前置声明：避免依赖 L3 头间接声明 */
+typedef struct foc_motor_t foc_motor_t;
 
 uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
                                           int8_t *direction_est,

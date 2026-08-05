@@ -5,7 +5,11 @@
 
 #include "LS_Config/foc_config.h"
 #include "L3_Hal/foc_math_types.h"
-#include "L3_Hal/foc_filter_types.h"
+
+/* 过渡期（阶段 1b 前）：保持 sensor_data_t / svpwm 类型可见性
+ * 阶段 1b 完成后，L2 共享类型层不再依赖 L3 类型头。 */
+#include "L3_Hal/foc_sensor.h"
+#include "L3_Hal/foc_svpwm.h"
 
 /* ========== Alpha-beta / three-phase voltage state ========== */
 typedef struct {
@@ -43,21 +47,14 @@ typedef struct {
     float    mech_angle_rad;
 } foc_active_source_state_t;
 
+/* ========== Source/control region switch hint（跨域枚举） ========== */
 typedef enum {
     FOC_CONTROL_REGION_LOW = 0U,
     FOC_CONTROL_REGION_HIGH = 1U,
     FOC_CONTROL_REGION_FULL = 2U
 } foc_control_region_t;
 
-typedef enum {
-    FOC_REGION_STATE_FULL_ACTIVE = 0U,
-    FOC_REGION_STATE_LOW_ACTIVE,
-    FOC_REGION_STATE_HIGH_ACQUIRE,
-    FOC_REGION_STATE_HIGH_ACTIVE,
-    FOC_REGION_STATE_HIGH_SUSPECT,
-    FOC_REGION_STATE_LOW_RECOVERY
-} foc_region_state_t;
-
+/* ========== Encoder services availability ========== */
 typedef struct {
     uint8_t comp_available;
     uint8_t comp_active;
@@ -65,6 +62,7 @@ typedef struct {
     uint8_t reinit_available;
 } foc_encoder_services_state_t;
 
+/* ========== Phase output (special-phase state machines) ========== */
 typedef enum {
     FOC_PHASE_OUTPUT_IDLE = 0U,
     FOC_PHASE_OUTPUT_ZERO,
@@ -90,45 +88,6 @@ typedef struct {
     float uq;
     float electrical_angle_rad;
 } foc_applied_output_state_t;
-
-typedef struct {
-    uint8_t active_source;
-    uint8_t standby_source;
-    uint8_t control_region;
-    uint8_t region_state;
-    uint8_t switch_in_progress;
-    uint32_t switch_counter;
-    uint8_t config_valid;
-    /* 降域(回LOW)去抖计数：SUsPECT→HIGH 恢复需连续满足高速判据 */
-    uint32_t degrade_hold_counter;
-} foc_source_mgr_state_t;
-
-/* ========== Outer-loop runtime state (private to outer_loop) ========== */
-typedef struct {
-    float  speed_err_accum_rad;
-    float  prev_mech_signed_rad;
-    uint8_t speed_state_valid;
-    float  accum_rad;
-    float  prev_rad;
-    uint8_t prev_valid;
-
-    float  ramped_speed_rad_s;      /* 加速器当前限幅后速度 */
-} foc_outer_loop_private_t;
-
-/* ========== Control mode transition tracking ========== */
-typedef struct {
-    uint8_t prev_control_mode;
-    uint8_t prev_control_mode_valid;
-    uint8_t prev_control_mode_check;
-} foc_mode_transition_t;
-
-/* ========== SVPWM output snapshot type ========== */
-typedef struct {
-    uint8_t sector;
-    float duty_a;
-    float duty_b;
-    float duty_c;
-} svpwm_output_t;
 
 /* ========== 故障码枚举（per-motor） ========== */
 typedef enum {
@@ -167,216 +126,7 @@ typedef struct {
     uint32_t control_skip_count;
 } foc_motor_state_t;
 
-/* ========== Current soft-switch status ========== */
-typedef struct {
-    uint8_t enabled;
-    uint8_t configured_mode;
-    uint8_t active_mode;
-    float blend_factor;
-    float auto_open_iq_a;
-    float auto_closed_iq_a;
-    uint8_t blend_initialized;
-    uint8_t prev_active_mode;
-} foc_current_soft_switch_status_t;
-
-/* ========== Cogging compensation status ========== */
-typedef struct {
-    uint8_t enabled;
-    uint8_t available;
-    uint8_t source;
-    uint16_t point_count;
-    float iq_lsb_a;
-    float speed_gate_rad_s;
-    float speed_ref_rad_s;
-    float iq_limit_a;
-    float calib_gain_k;
-} foc_cogging_comp_status_t;
-
-/* Cogging calibration runtime state */
-typedef struct {
-    uint8_t in_progress;
-    uint8_t progress_percent;
-    uint16_t point_index;
-    uint8_t completed_pass_count;
-    float pred_mech_angle;
-    uint16_t settle_counter;
-    uint16_t last_lut_index;
-    uint16_t bins_collected;
-    uint8_t pass_num;
-    uint8_t last_reported_progress;
-    uint8_t saved_softswitch_enabled;
-    uint8_t saved_softswitch_mode;
-    uint8_t request_start;
-    uint8_t request_dump;
-    uint8_t request_export;
-} foc_cogging_calib_state_t;
-
-/* ========== SMO 估计器私有状态 ========== */
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-typedef struct {
-    /* 观测器核心（两路径共用） */
-    float    ialpha_est;
-    float    ibeta_est;
-    float    bemf_alpha;
-    float    bemf_beta;
-    float    z_alpha;
-    float    z_beta;
-    float    k_slide;
-
-    /* 角度/速度输出（两路径共用） */
-    float    pll_angle_rad;
-    float    pll_speed_rad_s;
-    float    mech_speed_rad_s;
-
-#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
-    float    pll_integral;
-#endif
-#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
-    float    phase_comp_rad;
-#endif
-
-    /* 收敛/方向判定（两路径共用） */
-    uint16_t converge_counter;
-    uint16_t lock_counter;
-    uint16_t rot_dir_counter;
-    uint8_t  initialized;
-    uint8_t  rot_dir_last;
-    uint8_t  converged_once;
-
-    /* 测速链（两路径共用） */
-    FOC_FILTER_TYPEDEF(FOC_FILTER_SMO_SPEED) smo_speed_filter;
-    float    pll_angle_history[FOC_SMO_ANGLE_HISTORY_SIZE];
-    uint8_t  angle_history_idx;
-    float    speed_window[FOC_SMO_SPEED_WINDOW_SIZE];
-    uint8_t  speed_window_pos;
-    uint8_t  speed_window_count;
-} foc_estim_smo_state_t;
-#endif
-
-/* ========== HFI 估计器私有状态 ========== */
-#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
-typedef struct {
-    float    hf_sin_demod;
-    float    hf_cos_demod;
-} foc_estim_hfi_state_t;
-#endif
-
-/* ========== OpenLoop angle source private state ========== */
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-#define FOC_OPENLOOP_STATE_IDLE      0U
-#define FOC_OPENLOOP_STATE_RUNNING   1U
-#define FOC_OPENLOOP_STATE_DONE      2U
-#define FOC_OPENLOOP_STATE_FAILED    3U
-
-typedef struct {
-    uint8_t  phase;
-    float    virtual_angle_rad;
-    float    virtual_speed_rad_s;
-    float    ramp_rate_rad_s2;
-    float    target_speed_rad_s;
-    float    mech_speed_rad_s;
-} foc_openloop_state_t;
-#endif
-
-/* ========== Source Manager low/high source switch private state ========== */
-typedef struct {
-    uint8_t  low_source;
-    uint8_t  high_source;
-    float    speed_threshold_high_rad_s;
-    float    speed_threshold_low_rad_s;
-} foc_source_switch_state_t;
-
-/* ========== 非阻塞重初始化状态 ========== */
-#define FOC_REINIT_PHASE_IDLE          0U
-#define FOC_REINIT_PHASE_STOP          1U
-#define FOC_REINIT_PHASE_ZERO_SAMPLE   2U
-#define FOC_REINIT_PHASE_ZERO_CALC     3U
-#define FOC_REINIT_PHASE_ALIGN_SETTLE  4U
-#define FOC_REINIT_PHASE_ALIGN_SAMPLE  5U
-#define FOC_REINIT_PHASE_ALIGN_CALC    6U
-#define FOC_REINIT_PHASE_DIR_STEP      7U
-#define FOC_REINIT_PHASE_DIR_SAMPLE    8U
-#define FOC_REINIT_PHASE_DIR_CALC      9U
-#define FOC_REINIT_PHASE_DIR_REV_STEP  10U
-#define FOC_REINIT_PHASE_DIR_REV_SAMPLE 11U
-#define FOC_REINIT_PHASE_FINALIZE      12U
-#define FOC_REINIT_PHASE_DONE          13U
-
-typedef struct {
-    uint16_t phase;
-    uint16_t settle_cycles;
-    uint16_t sample_count;
-    uint16_t sample_target;
-    float    sin_sum;
-    float    cos_sum;
-    float    elec_angle_rad;
-    float    calib_uq;
-    float    prev_mech_rad;
-    float    prev_elec_rad;
-    float    sum_d_mech;
-    float    sum_d_elec;
-    uint8_t  has_prev;
-    uint8_t  step_index;
-    uint8_t  step_count;
-    uint8_t  reverse_pass;
-} foc_reinit_state_t;
-
-/* ========== SVPWM 插值引擎状态 ========== */
-typedef struct {
-    svpwm_output_t output;
-    float duty_a_current;
-    float duty_b_current;
-    float duty_c_current;
-#if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
-    float duty_a_target;
-    float duty_b_target;
-    float duty_c_target;
-    float duty_a_step;
-    float duty_b_step;
-    float duty_c_step;
-    uint16_t interp_steps_total;
-    uint16_t interp_step_index;
-#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
-    /* 三 ISR 模式双写者并发保护：写端(电流环 ISR)写 pending，PWM ISR 入口原子取走 */
-    volatile uint8_t target_pending;
-    float pending_duty_a_target;
-    float pending_duty_b_target;
-    float pending_duty_c_target;
-    float pending_duty_a_step;
-    float pending_duty_b_step;
-    float pending_duty_c_step;
-#endif
-#endif
-} svpwm_interp_state_t;
-
-/* ========== Sensor data snapshot ========== */
-typedef struct {
-    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_A) current_a;
-    float current_a_zero_offset;
-    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_B) current_b;
-    float current_b_zero_offset;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_C) current_c;
-    float current_c_zero_offset;
-#endif
-    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_ANGLE)     mech_angle_rad;
-    float prev_mech_angle_rad;
-    float mech_speed_rad_s;
-    uint8_t mech_speed_valid;
-    FOC_FILTER_TYPEDEF(FOC_FILTER_ENCODER_SPEED) encoder_speed_filter;
-    float speed_window[FOC_ENCODER_SPEED_WINDOW_SIZE];
-    uint8_t speed_window_pos;
-    uint8_t speed_window_count;
-    struct {
-        float raw;
-        float filtered;
-    } vbus;
-    uint8_t adc_valid;
-    uint8_t encoder_valid;
-    uint8_t vbus_valid;
-} sensor_data_t;
-
-/* ========== D/Q 控制运行时 ========== */
+/* ========== D/Q 控制运行时（控制链总线） ========== */
 typedef struct {
     float electrical_angle_rad;
     float ud;
@@ -409,82 +159,10 @@ typedef struct {
     float speed_angle_transition_end_rad;
 } foc_control_cfg_t;
 
-/* ========== ISR 测速 ========== */
-typedef struct {
-    uint8_t  fast_current_div_counter;
-    uint32_t current_loop_cycles;
-} foc_isr_timing_t;
-
 /* ========== Torque mode ========== */
 typedef enum {
     FOC_TORQUE_MODE_OPEN_LOOP = 0,
     FOC_TORQUE_MODE_CURRENT_PID = 1
 } foc_torque_mode_t;
-
-/* ========== Motor aggregate state ========== */
-typedef struct foc_motor_t {
-    /* ─── 传感器（L3）─── */
-    sensor_data_t sensor;
-
-    /* ─── 控制运行时（ISR 数据总线）─── */
-    foc_control_runtime_t ctrl;
-    foc_alpha_beta_phase_t alpha_beta;
-
-    /* ─── 源管理器 ─── */
-    foc_active_source_state_t active_source_state;
-    foc_source_mgr_state_t source_mgr_state;
-    foc_source_switch_state_t source_switch_state;
-
-    /* ─── SVPWM ─── */
-    svpwm_interp_state_t svpwm;
-
-    /* ─── 输出快照与状态 ─── */
-    foc_applied_output_state_t applied_output;
-    foc_phase_output_state_t phase_output_state;
-    foc_motor_state_t state;
-
-    /* ─── ISR 测速 ─── */
-    foc_isr_timing_t isr_timing;
-
-    /* ─── 电机物理参数（冷路径，只读）─── */
-    foc_motor_params_t params;
-
-    /* ─── PID（冷路径）─── */
-    foc_pid_t torque_current_pid;
-    foc_pid_t speed_pid;
-    foc_pid_t angle_pid;
-
-    /* ─── 控制配置（冷路径）─── */
-    foc_control_cfg_t cfg;
-
-    /* ─── 服务与辅助 ─── */
-    foc_encoder_services_state_t encoder_services;
-    foc_outer_loop_private_t outer_loop;
-    foc_mode_transition_t       mode_transition;
-
-    /* ─── 条件编译区 ─── */
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    foc_estim_smo_state_t estim_smo_state;
-#endif
-#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
-    foc_estim_hfi_state_t estim_hfi_state;
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-    foc_openloop_state_t openloop_state;
-#endif
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    foc_current_soft_switch_status_t current_soft_switch_status;
-#endif
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    foc_cogging_comp_status_t cogging_comp_status;
-    int16_t cogging_comp_table_q15[FOC_COGGING_LUT_POINT_COUNT];
-#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-    foc_cogging_calib_state_t cogging_calib_state;
-#endif
-#endif
-#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
-    foc_reinit_state_t reinit_state;
-#endif
-} foc_motor_t;
 
 #endif /* FOC_CTRL_TYPES_H */

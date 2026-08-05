@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 
 #include <math.h>
@@ -8,8 +9,6 @@
 
 static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.blend_initialized = 0U;
 #else
@@ -19,8 +18,6 @@ static void FOC_ResetSoftSwitchBlendInit(foc_motor_t *motor)
 
 void FOC_ControlConfigResetDefault(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
     motor->cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
     motor->cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
     motor->cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;
@@ -55,157 +52,18 @@ void FOC_ControlConfigResetDefault(foc_motor_t *motor)
 #endif
 }
 
-void FOC_ControlSetMinMechAngleAccumDeltaRad(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cfg.min_mech_angle_accum_delta_rad = (value < 0.0f) ? 0.0f : value;
-}
-
-void FOC_ControlSetAngleHoldIntegralLimit(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cfg.angle_hold_integral_limit = (value < 0.0f) ? 0.0f : value;
-}
-
-void FOC_ControlSetAngleHoldPidDeadbandRad(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cfg.angle_hold_pid_deadband_rad = (value < 0.0f) ? 0.0f : value;
-}
-
-void FOC_ControlSetSpeedAngleTransitionStartRad(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cfg.speed_angle_transition_start_rad = (value < 0.0f) ? 0.0f : value;
-}
-
-void FOC_ControlSetSpeedAngleTransitionEndRad(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cfg.speed_angle_transition_end_rad = (value < 0.0f) ? 0.0f : value;
-}
-
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-
-void FOC_ControlSetCurrentSoftSwitchEnable(foc_motor_t *motor, uint8_t enable)
-{
-    uint8_t new_enable;
-    if (motor == 0) return;
-
-    new_enable = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
-    if (motor->current_soft_switch_status.enabled != new_enable)
-    {
-        motor->current_soft_switch_status.enabled = new_enable;
-        FOC_ResetSoftSwitchBlendInit(motor);
-    }
-}
-
-void FOC_ControlSetCurrentSoftSwitchMode(foc_motor_t *motor, uint8_t mode)
-{
-    if (motor == 0) return;
-    if ((mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
-        (mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED) &&
-        (mode != FOC_CURRENT_SOFT_SWITCH_MODE_AUTO))
-    {
-        mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-    }
-    motor->current_soft_switch_status.configured_mode = mode;
-    if (mode != FOC_CURRENT_SOFT_SWITCH_MODE_AUTO)
-    {
-        motor->current_soft_switch_status.active_mode = mode;
-    }
-    FOC_ResetSoftSwitchBlendInit(motor);
-}
-
-void FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->current_soft_switch_status.auto_open_iq_a = (value < 0.0f) ? 0.0f : value;
-}
-
-void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->current_soft_switch_status.auto_closed_iq_a = (value < 0.0f) ? 0.0f : value;
-}
 
 const foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatus(const foc_motor_t *motor)
 {
-    if (motor == 0) return 0;
     return &motor->current_soft_switch_status;
 }
 
-foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(foc_motor_t *motor)
-{
-    if (motor == 0) return 0;
-    return &motor->current_soft_switch_status;
-}
+#else /* FOC_CURRENT_SOFT_SWITCH_ENABLE == DISABLE -- stub */
 
-void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor)
-{
-    if (motor == 0) return;
-    FOC_ResetSoftSwitchBlendInit(motor);
-    if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN)
-    {
-        motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-        motor->current_soft_switch_status.blend_factor = 0.0f;
-    }
-    else if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
-    {
-        motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-        motor->current_soft_switch_status.blend_factor = 1.0f;
-    }
-    else
-    {
-        if ((motor->current_soft_switch_status.active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
-            (motor->current_soft_switch_status.active_mode != FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED))
-        {
-            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-        }
-        motor->current_soft_switch_status.blend_factor =
-            (motor->current_soft_switch_status.active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED) ? 1.0f : 0.0f;
-    }
-}
-
-#else /* FOC_CURRENT_SOFT_SWITCH_ENABLE == DISABLE -- stubs */
-
-void FOC_ControlSetCurrentSoftSwitchEnable(foc_motor_t *motor, uint8_t enable) { (void)motor; (void)enable; }
-void FOC_ControlSetCurrentSoftSwitchMode(foc_motor_t *motor, uint8_t mode) { (void)motor; (void)mode; }
-void FOC_ControlSetCurrentSoftSwitchAutoOpenIqA(foc_motor_t *motor, float value) { (void)motor; (void)value; }
-void FOC_ControlSetCurrentSoftSwitchAutoClosedIqA(foc_motor_t *motor, float value) { (void)motor; (void)value; }
 const foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatus(const foc_motor_t *motor) { (void)motor; return 0; }
-foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatusMutable(foc_motor_t *motor) { (void)motor; return 0; }
-void FOC_ControlResetCurrentSoftSwitchState(foc_motor_t *motor) { (void)motor; }
 
 #endif /* FOC_CURRENT_SOFT_SWITCH_ENABLE */
-
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable)
-{
-    if (motor == 0) return;
-    motor->cogging_comp_status.enabled = (enable != 0U) ? FOC_CFG_ENABLE : FOC_CFG_DISABLE;
-}
-void FOC_ControlSetCoggingCompIqLimitA(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cogging_comp_status.iq_limit_a = (value < 0.0f) ? 0.0f : value;
-}
-void FOC_ControlSetCoggingCompSpeedGateRadS(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cogging_comp_status.speed_gate_rad_s = (value < 0.0f) ? 0.0f : value;
-}
-void FOC_ControlSetCoggingCalibGainK(foc_motor_t *motor, float value)
-{
-    if (motor == 0) return;
-    motor->cogging_comp_status.calib_gain_k = (value < 0.0f) ? 0.0f : value;
-}
-#else
-void FOC_ControlSetCoggingCompEnable(foc_motor_t *motor, uint8_t enable) { (void)motor; (void)enable; }
-void FOC_ControlSetCoggingCompIqLimitA(foc_motor_t *motor, float value) { (void)motor; (void)value; }
-void FOC_ControlSetCoggingCompSpeedGateRadS(foc_motor_t *motor, float value) { (void)motor; (void)value; }
-void FOC_ControlSetCoggingCalibGainK(foc_motor_t *motor, float value) { (void)motor; (void)value; }
-#endif
 
 void FOC_PIDInit(foc_pid_t *pid, float kp, float ki, float kd, float out_min, float out_max)
 {
@@ -224,8 +82,6 @@ void FOC_Control_ApplyConfig(foc_motor_t *motor)
 {
     float phase_res;
     float i_max;
-
-    if (motor == 0) return;
 
     phase_res = (fabsf(motor->params.phase_resistance) > 1e-6f) ? fabsf(motor->params.phase_resistance) : 1e-6f;
     i_max = motor->ctrl.max_phase_voltage / phase_res;

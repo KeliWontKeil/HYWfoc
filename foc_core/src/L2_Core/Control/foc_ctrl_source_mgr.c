@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 
 #include <math.h>
@@ -9,8 +10,6 @@
 static void SourceMgr_UpdateEncoderServices(foc_motor_t *motor)
 {
     uint8_t encoder_active;
-
-    if (motor == 0) return;
 
     encoder_active = (motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_ENCODER) ? 1U : 0U;
     motor->encoder_services.comp_available = 0U;
@@ -30,8 +29,6 @@ static void SourceMgr_UpdateEncoderServices(foc_motor_t *motor)
 
 static uint8_t SourceMgr_GetSourceState(const foc_motor_t *motor, uint8_t source)
 {
-    if (motor == 0) return FOC_SOURCE_STATE_INIT;
-
     switch (source)
     {
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
@@ -94,8 +91,6 @@ static uint8_t SourceMgr_StateHoldValid(uint8_t state)
 
 static uint8_t SourceMgr_SourceValid(const foc_motor_t *motor, uint8_t source)
 {
-    if (motor == 0) return 0U;
-
 #if ((FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE) || (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE))
     uint8_t state;
     state = SourceMgr_GetSourceState(motor, source);
@@ -157,7 +152,7 @@ static uint8_t SourceMgr_GetSwitchSpeedAbs(const foc_motor_t *motor, float *spee
 {
     float speed;
 
-    if ((motor == 0) || (speed_abs == 0)) return 0U;
+    if (speed_abs == 0) return 0U;
 
     if (FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_mgr_state.active_source, &speed) != 0U)
     {
@@ -196,8 +191,6 @@ static uint8_t SourceMgr_LowMotionAbove(const foc_motor_t *motor, uint8_t low_so
 {
     float speed;
 
-    if (motor == 0) return 0U;
-
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     if (low_source == FOC_SOURCE_TYPE_OPENLOOP)
     {
@@ -234,7 +227,9 @@ uint8_t FOC_SourceMgr_ReadSourceAngle(const foc_motor_t *motor, uint8_t source,
     case FOC_SOURCE_TYPE_ENCODER:
         if (motor->sensor.encoder_valid == 0U) return 0U;
         mech_local = motor->sensor.mech_angle_rad.output_value;
-        elec_local = FOC_ControlMechanicalToElectricalAngle(motor, mech_local);
+        elec_local = FOC_ControlMechanicalToElectricalAngle(&motor->params,
+                                                            motor->ctrl.electrical_angle_rad,
+                                                            mech_local);
         break;
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
@@ -275,7 +270,6 @@ static void SourceMgr_RebaseSource(foc_motor_t *motor, uint8_t new_source, uint8
 {
     float old_elec;
 
-    if (motor == 0) return;
     if (FOC_SourceMgr_ReadSourceAngle(motor, old_source, 0, &old_elec) == 0U) return;
 
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
@@ -313,8 +307,6 @@ static void SourceMgr_PrimePidOutput(foc_pid_t *pid, float target_output, float 
 {
     float integral;
 
-    if (pid == 0) return;
-
     pid->prev_error = error;
 
     if (fabsf(pid->ki) <= 1e-6f)
@@ -346,8 +338,6 @@ static void SourceMgr_SyncOuterLoopOnSwitch(foc_motor_t *motor, uint8_t new_sour
     float mech_angle = 0.0f;
     float elec_angle = 0.0f;
 
-    if (motor == 0) return;
-
     if (FOC_SourceMgr_ReadSourceAngle(motor, new_source, &mech_angle, &elec_angle) == 0U)
     {
         if (FOC_SourceMgr_ReadSourceAngle(motor, old_source, &mech_angle, &elec_angle) == 0U)
@@ -370,8 +360,6 @@ static void SourceMgr_SyncCurrentLoopOnSwitch(foc_motor_t *motor)
 {
     float iq_error;
 
-    if (motor == 0) return;
-
     iq_error = motor->ctrl.iq_target - motor->ctrl.iq_measured;
     SourceMgr_PrimePidOutput(&motor->torque_current_pid, motor->ctrl.uq, iq_error);
 
@@ -387,8 +375,6 @@ static void SourceMgr_SyncCurrentLoopOnSwitch(foc_motor_t *motor)
 static void SourceMgr_CommitSwitch(foc_motor_t *motor, uint8_t new_source, uint8_t new_region)
 {
     uint8_t old_source;
-
-    if (motor == 0) return;
 
     old_source = motor->source_mgr_state.active_source;
     SourceMgr_RebaseSource(motor, new_source, old_source);
@@ -409,8 +395,6 @@ static void SourceMgr_CommitSwitch(foc_motor_t *motor, uint8_t new_source, uint8
 
 static void SourceMgr_SetFixedSource(foc_motor_t *motor, uint8_t source)
 {
-    if (motor == 0) return;
-
     motor->source_mgr_state.active_source = source;
     motor->source_mgr_state.standby_source = FOC_SOURCE_TYPE_NONE;
     motor->source_mgr_state.control_region = FOC_CONTROL_REGION_FULL;
@@ -436,8 +420,6 @@ static uint8_t SourceMgr_TargetInHighRegion(const foc_motor_t *motor)
 void FOC_SourceMgr_Init(foc_motor_t *motor, uint8_t low_source, uint8_t high_source)
 {
     uint8_t switchable;
-
-    if (motor == 0) return;
 
     switchable = ((high_source != FOC_SOURCE_TYPE_NONE) &&
                   (high_source != low_source) &&
@@ -478,8 +460,6 @@ void FOC_SourceMgr_Select(foc_motor_t *motor)
     uint8_t high_state;
     float speed_abs;
     uint8_t speed_valid;
-
-    if (motor == 0) return;
 
     low = motor->source_switch_state.low_source;
     high = motor->source_switch_state.high_source;
@@ -638,8 +618,6 @@ void FOC_SourceMgr_Publish(foc_motor_t *motor)
     uint8_t valid;
     float mech_angle;
     float elec_angle;
-
-    if (motor == 0) return;
 
     src = motor->source_mgr_state.active_source;
     mech_angle = 0.0f;

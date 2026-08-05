@@ -1,4 +1,5 @@
-﻿#include "L2_Core/Control/foc_ctrl_param_learn.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/Control/foc_ctrl_param_learn.h"
 
 #include <math.h>
 

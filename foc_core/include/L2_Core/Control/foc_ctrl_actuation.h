@@ -5,7 +5,9 @@
 
 #include "L2_Core/foc_ctrl_types.h"
 
-float FOC_ControlMechanicalToElectricalAngle(const foc_motor_t *motor, float mech_angle_rad);
+float FOC_ControlMechanicalToElectricalAngle(const foc_motor_params_t *params,
+                                             float fallback_elec_angle_rad,
+                                             float mech_angle_rad);
 void FOC_ControlRecordPhaseOutputDqAngle(foc_motor_t *motor,
                                          uint8_t phase,
                                          uint8_t state_id,

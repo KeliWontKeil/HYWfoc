@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
 
 #include <math.h>
@@ -27,6 +28,8 @@ static float smo_sat(float value)
     return Math_ClampFloat(value, -1.0f, 1.0f);
 }
 
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
+
 static float smo_pll_speed_limit_elec(const foc_motor_t *motor)
 {
     float limit = 100.0f;
@@ -43,10 +46,10 @@ static float smo_pll_speed_limit_elec(const foc_motor_t *motor)
     return limit;
 }
 
+#endif
+
 void FOC_EstimSMO_Init(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
     motor->estim_smo_state.ialpha_est     = 0.0f;
     motor->estim_smo_state.ibeta_est      = 0.0f;
     motor->estim_smo_state.bemf_alpha     = 0.0f;
@@ -385,7 +388,7 @@ void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec)
 {
     float bemf_mag;
 
-    if ((motor == 0) || (dt_sec <= 0.0f)) return;
+    if (dt_sec <= 0.0f) return;
 
     /* 观测器核心 */
     EstimSMO_StepCore(motor, dt_sec, &bemf_mag);

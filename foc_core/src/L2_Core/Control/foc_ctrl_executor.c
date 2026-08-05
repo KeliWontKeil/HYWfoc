@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
 
 #include <math.h>
@@ -18,15 +19,12 @@
 
 static void ResetPID(foc_pid_t *pid)
 {
-    if (pid == 0) return;
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
 }
 
 void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
     /* 清零控制输出 */
     motor->ctrl.ud = 0.0f;
     motor->ctrl.uq = 0.0f;
@@ -74,7 +72,6 @@ void FOC_ControlExecutor_Stop(foc_motor_t *motor)
 
 void FOC_ControlExecutor_Init(foc_motor_t *motor)
 {
-    if (motor == 0) return;
     motor->isr_timing.fast_current_div_counter = 0U;
 }
 
@@ -86,21 +83,18 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
 {
     uint32_t isr_start;
 
-    if (motor == 0) return;
-
     isr_start = FOC_Platform_ReadCycleCounter();
 
     {
     /* 阶段1：硬件采样 */
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
 #if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
-    Sensor_ReadEncoder(motor, &motor->sensor, current_loop_dt_sec);
-    Sensor_AccumulateEcycle(motor, &motor->sensor);
+    Sensor_ReadEncoder(&motor->sensor, current_loop_dt_sec);
 #endif
 #endif
     if (FOC_ControlRequiresCurrentSample() != 0U)
     {
-        Sensor_ReadCurrent(motor);
+        Sensor_ReadCurrent(&motor->sensor);
         if (motor->sensor.adc_valid == 0U) return;
     }
 
@@ -117,8 +111,15 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
     FOC_SourceMgr_Publish(motor);
     
     /* 阶段4：电流环 */
-    FOC_CurrentControlStep(motor, &motor->sensor,
-                           motor->ctrl.electrical_angle_rad,
+    FOC_CurrentControlStep(&motor->ctrl,
+                           &motor->torque_current_pid,
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+                           &motor->current_soft_switch_status,
+#else
+                           0,
+#endif
+                           &motor->sensor,
+                           &motor->params,
                            current_loop_dt_sec);
 
     /* 阶段5：SVPWM */
@@ -134,9 +135,6 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
 void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 {
     uint8_t divider;
-    float current_loop_dt_sec;
-
-    if (motor == 0) return;
 
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     SVPWM_InterpolationISR(motor);
@@ -164,10 +162,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     if (motor->isr_timing.fast_current_div_counter < divider) return;
     motor->isr_timing.fast_current_div_counter = 0U;
 
-    current_loop_dt_sec = (FOC_PWM_FREQ_KHZ == 0U) ? FOC_CONTROL_DT_SEC
-                          : ((float)divider / ((float)FOC_PWM_FREQ_KHZ * 1000.0f));
-
-    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, current_loop_dt_sec);
+    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_DT_SEC);
 }
 
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
@@ -176,8 +171,6 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
  * ================================================================ */
 void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     SVPWM_InterpolationISR(motor);
 #endif
@@ -202,9 +195,6 @@ void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
  * ================================================================ */
 void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
 {
-    float current_loop_dt_sec;
-
-    if (motor == 0) return;
 
     if (motor->state.motor_enabled == 0U)
     {
@@ -215,10 +205,7 @@ void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
     if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
     if (motor->state.current_loop_ready == 0U) return;
 
-    current_loop_dt_sec = (FOC_CURRENT_LOOP_ISR_FREQ_HZ == 0U) ? FOC_CONTROL_DT_SEC
-                          : (1.0f / (float)FOC_CURRENT_LOOP_ISR_FREQ_HZ);
-
-    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, current_loop_dt_sec);
+    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_ISR3_DT_SEC);
 }
 #endif
 
@@ -228,8 +215,6 @@ void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
 
 uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
 {
-    if (motor == 0) return FOC_CYCLE_SKIPPED;
-
     if (motor->state.motor_enabled == 0U)
     {
         return FOC_CYCLE_SKIPPED;
@@ -249,7 +234,17 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     if (motor->source_mgr_state.active_source == FOC_SOURCE_TYPE_OPENLOOP)
     {
-        FOC_OpenLoop_RunStep(motor, dt_sec);
+        float openloop_mech_speed_rad_s = 0.0f;
+        if (FOC_OpenLoop_RunStep(&motor->openloop_state,
+                                 &motor->ctrl,
+                                 &motor->params,
+                                 &motor->cfg,
+                                 dt_sec,
+                                 &openloop_mech_speed_rad_s) != 0U)
+        {
+            /* 开环段保持速度外环参考轨迹连续，使切换到 HIGH 时加速器起点正确 */
+            motor->outer_loop.ramped_speed_rad_s = openloop_mech_speed_rad_s;
+        }
     }
     else
 #endif
@@ -264,8 +259,6 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec)
 
 static void Executor_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t old_mode)
 {
-    if (motor == 0) return;
-
     motor->outer_loop.accum_rad = motor->active_source_state.mech_angle_rad;
     motor->outer_loop.prev_rad = motor->active_source_state.mech_angle_rad;
     motor->outer_loop.prev_valid = 1U;
@@ -307,16 +300,13 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 
 #if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)
 
-    FOC_SpeedOuterLoopStep(motor,
-                           &motor->speed_pid,
+    FOC_SpeedOuterLoopStep(&motor->outer_loop, &motor->speed_pid, &motor->ctrl, &motor->active_source_state, &motor->cfg, &motor->params, motor->source_mgr_state.control_region,
                            motor->cfg.speed_only_rad_s,
                            dt_sec);
 
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
 
-    FOC_SpeedAngleOuterLoopStep(motor,
-                                &motor->speed_pid,
-                                &motor->angle_pid,
+    FOC_SpeedAngleOuterLoopStep(&motor->outer_loop, &motor->speed_pid, &motor->angle_pid, &motor->ctrl, &motor->active_source_state, &motor->cfg, &motor->params,
                                 motor->cfg.target_angle_rad,
                                 motor->cfg.angle_position_speed_rad_s,
                                 dt_sec);
@@ -325,16 +315,13 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 
     if (cur_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY)
     {
-        FOC_SpeedOuterLoopStep(motor,
-                               &motor->speed_pid,
+        FOC_SpeedOuterLoopStep(&motor->outer_loop, &motor->speed_pid, &motor->ctrl, &motor->active_source_state, &motor->cfg, &motor->params, motor->source_mgr_state.control_region,
                                motor->cfg.speed_only_rad_s,
                                dt_sec);
     }
     else if (cur_mode == COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE)
     {
-        FOC_SpeedAngleOuterLoopStep(motor,
-                                    &motor->speed_pid,
-                                    &motor->angle_pid,
+        FOC_SpeedAngleOuterLoopStep(&motor->outer_loop, &motor->speed_pid, &motor->angle_pid, &motor->ctrl, &motor->active_source_state, &motor->cfg, &motor->params,
                                     motor->cfg.target_angle_rad,
                                     motor->cfg.angle_position_speed_rad_s,
                                     dt_sec);
@@ -349,7 +336,12 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
 #endif
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-    if (FOC_CoggingCalibIsBusy(motor) == 0U)
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+    /* 标定进行中跳过补偿；CALIB 裁剪时恒执行补偿 */
+    if (FOC_CoggingCalibIsBusy(&motor->cogging_calib_state) == 0U)
+#else
+    if (1)
+#endif
     {
         FOC_ControlApplyCoggingCompensation(motor,
                                             motor->active_source_state.mech_angle_rad,

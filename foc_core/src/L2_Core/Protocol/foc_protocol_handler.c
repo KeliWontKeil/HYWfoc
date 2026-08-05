@@ -1,4 +1,5 @@
-﻿#include "L2_Core/Protocol/foc_protocol_handler.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/Protocol/foc_protocol_handler.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -759,7 +760,7 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_DUMP)
     {
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        FOC_CoggingCalib_RequestDump(motor);
+        FOC_CoggingCalib_RequestDump(&motor->cogging_calib_state);
 #endif
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
@@ -770,7 +771,7 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_COGGING_EXPORT)
     {
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        FOC_CoggingCalib_RequestExport(motor);
+        FOC_CoggingCalib_RequestExport(&motor->cogging_calib_state);
 #endif
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;

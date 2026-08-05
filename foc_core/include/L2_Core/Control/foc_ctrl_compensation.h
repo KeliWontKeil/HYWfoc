@@ -1,9 +1,26 @@
-#ifndef FOC_CTRL_COMPENSATION_H
-#define FOC_CTRL_COMPENSATION_H
+#ifndef FOC_CONTROL_C24_COMPENSATION_H
+#define FOC_CONTROL_C24_COMPENSATION_H
+
+#include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
 
+typedef struct foc_motor_t foc_motor_t;
+
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+
+/* ========== Cogging compensation status ========== */
+typedef struct {
+    uint8_t enabled;
+    uint8_t available;
+    uint8_t source;
+    uint16_t point_count;
+    float iq_lsb_a;
+    float speed_gate_rad_s;
+    float speed_ref_rad_s;
+    float iq_limit_a;
+    float calib_gain_k;
+} foc_cogging_comp_status_t;
 
 /*
  * =====================================================================
@@ -25,7 +42,6 @@ uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
                                             float iq_lsb_a,
                                             uint8_t source);
 
-void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
 
 #endif /* FOC_COGGING_COMP_ENABLE */
 
@@ -38,4 +54,5 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
 
 /* Forward include for the inline definitions */
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
+
 #endif /* FOC_CONTROL_C24_COMPENSATION_H */

@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 
 #include <stdio.h>
@@ -28,11 +29,6 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     uint8_t need_zero;
     uint8_t need_direction;
     uint8_t need_pole_pairs;
-
-    if (motor == 0)
-    {
-        return;
-    }
 
     need_zero = (motor->params.mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) ? 1U : 0U;
     need_direction = (motor->params.direction == FOC_DIR_UNDEFINED) ? 1U : 0U;
@@ -121,11 +117,6 @@ void FOC_MotorInit(foc_motor_t *motor,
                    float mech_angle_at_elec_zero_rad,
                    int8_t direction)
 {
-    if (motor == 0)
-    {
-        return;
-    }
-
     if (vbus_voltage < 0.0f)
     {
         vbus_voltage = 0.0f;
@@ -312,14 +303,12 @@ void FOC_MotorInit(foc_motor_t *motor,
 /* L2 硬件初始化收口：封装 Sensor/SVPWM/ControlExecutor 初始化序列 */
 void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
     Sensor_InitSnapshot(&motor->sensor);
     Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
-    Sensor_SetZeroOffset(motor);
+    Sensor_SetZeroOffset(&motor->sensor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    Sensor_ReadEncoder(motor, &motor->sensor, FOC_CONTROL_DT_SEC);
+    Sensor_ReadEncoder(&motor->sensor, FOC_CONTROL_DT_SEC);
 #endif
     Sensor_ReadVBUS(&motor->sensor);
     motor->sensor.adc_valid = 1U;

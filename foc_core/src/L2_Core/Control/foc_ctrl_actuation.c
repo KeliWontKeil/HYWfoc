@@ -1,4 +1,5 @@
-﻿#include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/Control/foc_ctrl_actuation.h"
 
 #include <math.h>
 
@@ -140,8 +141,6 @@ void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
                                       uint8_t phase,
                                       uint8_t state_id)
 {
-    if (motor == 0) return;
-
     motor->phase_output_state.phase = phase;
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_ZERO;
     motor->phase_output_state.valid = 1U;
@@ -157,7 +156,6 @@ void FOC_ControlRecordPhaseOutputZero(foc_motor_t *motor,
 
 void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
 {
-    if (motor == 0) return;
     if (motor->phase_output_state.valid == 0U) return;
 
     switch (motor->phase_output_state.type)
@@ -195,23 +193,20 @@ void FOC_ControlApplyPhaseOutputRuntime(foc_motor_t *motor)
 }
 
 /* C31：将机械角度转换为电角度（基于极对数和机械零点） */
-float FOC_ControlMechanicalToElectricalAngle(const foc_motor_t *motor, float mech_angle_rad)
+float FOC_ControlMechanicalToElectricalAngle(const foc_motor_params_t *params,
+                                             float fallback_elec_angle_rad,
+                                             float mech_angle_rad)
 {
     float mech_delta;
 
-    if (motor == 0)
+    if ((params->pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
+        (params->mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
     {
-        return 0.0f;
+        return fallback_elec_angle_rad;
     }
 
-    if ((motor->params.pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ||
-        (motor->params.mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
-    {
-        return motor->ctrl.electrical_angle_rad;
-    }
-
-    mech_delta = Math_WrapRadDelta(mech_angle_rad - motor->params.mech_angle_at_elec_zero_rad);
-    return Math_WrapRad((float)motor->params.direction * mech_delta * (float)motor->params.pole_pairs);
+    mech_delta = Math_WrapRadDelta(mech_angle_rad - params->mech_angle_at_elec_zero_rad);
+    return Math_WrapRad((float)params->direction * mech_delta * (float)params->pole_pairs);
 }
 
 /* C31：采样锁定的机械角度（用于电机零点标定） */
@@ -225,7 +220,7 @@ uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
     float cos_sum = 0.0f;
     uint16_t i;
 
-    if ((motor == 0) || (mech_angle_rad == 0) || (sample_count == 0U))
+    if ((mech_angle_rad == 0) || (sample_count == 0U))
     {
         return 0U;
     }

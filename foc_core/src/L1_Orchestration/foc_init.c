@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L1_Orchestration/foc_init.h"
 
 #include <stdio.h>

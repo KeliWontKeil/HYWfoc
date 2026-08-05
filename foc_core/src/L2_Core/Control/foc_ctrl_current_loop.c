@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_current_loop.h"
 
 #include <math.h>
@@ -40,11 +41,6 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
     float derivative;
     float output;
 
-    if (pid == 0)
-    {
-        return 0.0f;
-    }
-
     dt_sec = FOC_NormalizeDt(dt_sec);
 
     error = target - measurement;
@@ -71,7 +67,8 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
 }
 #endif
 
-static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_motor_t *motor,
+static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_control_runtime_t *ctrl,
+                                                           const foc_motor_params_t *params,
                                                            float iq_ref,
                                                            float id_ref,
                                                            float *ud_out,
@@ -84,13 +81,13 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_motor_t *mo
     float iq_estimated;
     float id_estimated;
 
-    if ((motor == 0) || (ud_out == 0) || (uq_out == 0) || (iq_estimated_out == 0))
+    if ((ctrl == 0) || (params == 0) || (ud_out == 0) || (uq_out == 0) || (iq_estimated_out == 0))
     {
         return;
     }
 
-    voltage_limit = Math_ClampFloat(motor->ctrl.max_phase_voltage, 0.0f, motor->params.vbus_voltage);
-    phase_resistance = fabsf(motor->params.phase_resistance);
+    voltage_limit = Math_ClampFloat(ctrl->max_phase_voltage, 0.0f, params->vbus_voltage);
+    phase_resistance = fabsf(params->phase_resistance);
 
     if (phase_resistance < 1e-6f)
     {
@@ -106,7 +103,8 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_motor_t *mo
     *iq_estimated_out = iq_estimated;
 }
 
-static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_motor_t *motor,
+static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_control_runtime_t *ctrl,
+                                                        const foc_motor_params_t *params,
                                                         float iq_ref,
                                                         float id_ref)
 {
@@ -114,21 +112,17 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_motor_t *motor,
     float uq = 0.0f;
     float iq_estimated = 0.0f;
 
-    if (motor == 0)
-    {
-        return;
-    }
-
-    FOC_CurrentLoopEstimateOpenLoopResistanceModel(motor,
+    FOC_CurrentLoopEstimateOpenLoopResistanceModel(ctrl,
+                                                   params,
                                                    iq_ref,
                                                    id_ref,
                                                    &ud,
                                                    &uq,
                                                    &iq_estimated);
 
-    motor->ctrl.uq = uq;
-    motor->ctrl.ud = ud;
-    motor->ctrl.iq_measured = iq_estimated;
+    ctrl->uq = uq;
+    ctrl->ud = ud;
+    ctrl->iq_measured = iq_estimated;
 }
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
@@ -175,7 +169,8 @@ static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
 
 }
 
-static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
+static void FOC_CurrentControlClosedLoopStep(foc_control_runtime_t *ctrl,
+                                              foc_pid_t *torque_pid,
                                               const sensor_data_t *sensor,
                                               float electrical_angle,
                                               float dt_sec)
@@ -187,12 +182,12 @@ static void FOC_CurrentControlClosedLoopStep(foc_motor_t *motor,
                                      electrical_angle,
                                      &iq_measured);
 
-    uq_cmd = FOC_CurrentLoopPIDRun(&motor->torque_current_pid, motor->ctrl.iq_target, iq_measured, dt_sec);
+    uq_cmd = FOC_CurrentLoopPIDRun(torque_pid, ctrl->iq_target, iq_measured, dt_sec);
 
-    motor->ctrl.iq_measured = iq_measured;
+    ctrl->iq_measured = iq_measured;
 
-    motor->ctrl.ud = 0.0f;
-    motor->ctrl.uq = uq_cmd;
+    ctrl->ud = 0.0f;
+    ctrl->uq = uq_cmd;
 }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
@@ -239,12 +234,14 @@ static uint8_t FOC_CurrentSoftSwitchResolveActiveMode(foc_current_soft_switch_st
     return soft_switch_status->active_mode;
 }
 
-static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
+static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
+                                             foc_pid_t *torque_pid,
+                                             foc_current_soft_switch_status_t *soft_switch_status,
                                              const sensor_data_t *sensor,
+                                             const foc_motor_params_t *params,
                                              float electrical_angle,
                                              float dt_sec)
 {
-    foc_current_soft_switch_status_t *soft_switch_status;
     uint8_t *blend_initialized;
     float open_ud = 0.0f;
     float open_uq = 0.0f;
@@ -256,28 +253,23 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
     float target_blend;
     uint8_t active_mode;
 
-    if ((motor == 0) || (sensor == 0))
-    {
-        return;
-    }
-
-    soft_switch_status = &motor->current_soft_switch_status;
-    blend_initialized = &motor->current_soft_switch_status.blend_initialized;
+    blend_initialized = &soft_switch_status->blend_initialized;
 
     /* Resolve active mode first, since the branch below depends on it. */
     active_mode = FOC_CurrentSoftSwitchResolveActiveMode(soft_switch_status,
-                                                          fabsf(motor->ctrl.iq_target));
+                                                          fabsf(ctrl->iq_target));
 
     if (active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
     {
         /* CLOSED: run PID closed-loop current control. */
-        FOC_CurrentControlClosedLoopStep(motor,
+        FOC_CurrentControlClosedLoopStep(ctrl,
+                                         torque_pid,
                                          sensor,
                                          electrical_angle,
                                          dt_sec);
-        closed_ud = motor->ctrl.ud;
-        closed_uq = motor->ctrl.uq;
-        closed_iq = motor->ctrl.iq_measured;
+        closed_ud = ctrl->ud;
+        closed_uq = ctrl->uq;
+        closed_iq = ctrl->iq_measured;
     }
     else
     {
@@ -298,18 +290,19 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
     }
 
     /* OPEN→CLOSED transition: reset PID integral to avoid stale-state voltage bump. */
-    if ((motor->current_soft_switch_status.prev_active_mode != 0xFFU) &&
-        (motor->current_soft_switch_status.prev_active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
+    if ((soft_switch_status->prev_active_mode != 0xFFU) &&
+        (soft_switch_status->prev_active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) &&
         (active_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED))
     {
-        motor->torque_current_pid.integral = 0.0f;
-        motor->torque_current_pid.prev_error = 0.0f;
+        torque_pid->integral = 0.0f;
+        torque_pid->prev_error = 0.0f;
     }
-    motor->current_soft_switch_status.prev_active_mode = active_mode;
+    soft_switch_status->prev_active_mode = active_mode;
 
     /* Open-loop resistance model: always computed (OPEN mode uses it for uq output). */
-    FOC_CurrentLoopEstimateOpenLoopResistanceModel(motor,
-                                                   motor->ctrl.iq_target,
+    FOC_CurrentLoopEstimateOpenLoopResistanceModel(ctrl,
+                                                   params,
+                                                   ctrl->iq_target,
                                                    0.0f,
                                                    &open_ud,
                                                    &open_uq,
@@ -324,30 +317,32 @@ static void FOC_CurrentControlSoftSwitchStep(foc_motor_t *motor,
     soft_switch_status->blend_factor = blend_factor;
 
     /* Mix ud/uq for smooth OPEN↔CLOSED transition. */
-    motor->ctrl.ud = open_ud + (closed_ud - open_ud) * blend_factor;
-    motor->ctrl.uq = open_uq + (closed_uq - open_uq) * blend_factor;
+    ctrl->ud = open_ud + (closed_ud - open_ud) * blend_factor;
+    ctrl->uq = open_uq + (closed_uq - open_uq) * blend_factor;
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
-    motor->ctrl.iq_measured = closed_iq;
+    ctrl->iq_measured = closed_iq;
 #else
-    motor->ctrl.iq_measured = open_iq + (closed_iq - open_iq) * blend_factor;
+    ctrl->iq_measured = open_iq + (closed_iq - open_iq) * blend_factor;
 #endif
 }
 #endif
 #endif
 
-void FOC_CurrentControlStep(foc_motor_t *motor,
+void FOC_CurrentControlStep(foc_control_runtime_t *ctrl,
+                            foc_pid_t *torque_pid,
+                            foc_current_soft_switch_status_t *soft_switch,
                             const sensor_data_t *sensor,
-                            float electrical_angle,
+                            const foc_motor_params_t *params,
                             float dt_sec)
 {
     float local_angle;
 
-    if (motor == 0)
+    if ((ctrl == 0) || (params == 0))
     {
         return;
     }
 
-    local_angle = Math_WrapRad(electrical_angle);
+    local_angle = Math_WrapRad(ctrl->electrical_angle_rad);
     dt_sec = FOC_NormalizeDt(dt_sec);
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
@@ -357,43 +352,48 @@ void FOC_CurrentControlStep(foc_motor_t *motor,
     }
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    if (motor->current_soft_switch_status.enabled != 0U)
+    if (soft_switch->enabled != 0U)
     {
-        FOC_CurrentControlSoftSwitchStep(motor,
+        FOC_CurrentControlSoftSwitchStep(ctrl,
+                                         torque_pid,
+                                         soft_switch,
                                          sensor,
+                                         params,
                                          local_angle,
                                          dt_sec);
     }
     else
     {
         if (sensor->adc_valid == 0U) return;
-        motor->current_soft_switch_status.blend_initialized = 0U;
-        if (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
+        soft_switch->blend_initialized = 0U;
+        if (soft_switch->configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED)
         {
-            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
-            motor->current_soft_switch_status.blend_factor = 1.0f;
-            FOC_CurrentControlClosedLoopStep(motor, sensor, local_angle, dt_sec);
+            soft_switch->active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED;
+            soft_switch->blend_factor = 1.0f;
+            FOC_CurrentControlClosedLoopStep(ctrl, torque_pid, sensor, local_angle, dt_sec);
         }
         else
         {
-            motor->current_soft_switch_status.active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
-            motor->current_soft_switch_status.blend_factor = 0.0f;
-            FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->ctrl.iq_target, 0.0f);
+            soft_switch->active_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+            soft_switch->blend_factor = 0.0f;
+            FOC_CurrentLoopApplyOpenLoopResistanceModel(ctrl, params, ctrl->iq_target, 0.0f);
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
             FOC_CurrentLoopComputeIqMeasured(sensor,
                                              local_angle,
-                                             &motor->ctrl.iq_measured);
+                                             &ctrl->iq_measured);
 #endif
         }
     }
 #else
     /* FOC_CURRENT_SOFT_SWITCH_ENABLE == DISABLE: always run closed-loop PID */
     if (sensor->adc_valid == 0U) return;
-    FOC_CurrentControlClosedLoopStep(motor, sensor, local_angle, dt_sec);
+    FOC_CurrentControlClosedLoopStep(ctrl, torque_pid, sensor, local_angle, dt_sec);
 #endif
 #else
     (void)sensor;
-    FOC_CurrentLoopApplyOpenLoopResistanceModel(motor, motor->ctrl.iq_target, 0.0f);
+    (void)torque_pid;
+    (void)soft_switch;
+    FOC_CurrentLoopApplyOpenLoopResistanceModel(ctrl, params, ctrl->iq_target, 0.0f);
 #endif
 }
 

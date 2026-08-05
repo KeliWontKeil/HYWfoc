@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 
 #include <math.h>
@@ -76,11 +77,6 @@ void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
 {
     float iq_comp;
 
-    if (motor == 0)
-    {
-        return;
-    }
-
     if ((motor->cogging_comp_status.enabled == 0U) ||
         (motor->cogging_comp_status.available == 0U))
     {
@@ -101,7 +97,7 @@ uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
                                             float iq_lsb_a,
                                             uint8_t source)
 {
-    if ((motor == 0) || (table_q15 == 0))
+    if (table_q15 == 0)
     {
         return 0U;
     }
@@ -121,16 +117,6 @@ uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
     motor->cogging_comp_status.available   = 1U;
 
     return 1U;
-}
-
-void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source)
-{
-    if (motor == 0)
-    {
-        return;
-    }
-    motor->cogging_comp_status.available = 0U;
-    motor->cogging_comp_status.source    = source;
 }
 
 #endif /* FOC_COGGING_COMP_ENABLE */

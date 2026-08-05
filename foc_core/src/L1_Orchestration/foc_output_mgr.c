@@ -1,4 +1,5 @@
-﻿#include "L1_Orchestration/foc_output_mgr.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L1_Orchestration/foc_output_mgr.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -104,8 +105,6 @@ void FOC_OutputMgr_PollSources(foc_system_t *sys)
 void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
 {
     char buf[160];
-
-    if (motor == 0) return;
 
     snprintf(buf, sizeof(buf),
              "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, max_phase_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",

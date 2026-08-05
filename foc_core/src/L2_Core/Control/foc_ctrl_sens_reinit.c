@@ -1,4 +1,5 @@
-﻿#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 
 #if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
 
@@ -14,6 +15,13 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "L3_Hal/foc_sensor.h"
 #include "LS_Config/foc_config.h"
+
+/* ========== 公共 API ========== */
+
+void FOC_ReInit_Request(foc_motor_t *motor)
+{
+    motor->state.control_phase = FOC_CONTROL_PHASE_REINIT;
+}
 
 /* ========== 内部工具 ========== */
 
@@ -87,11 +95,6 @@ static float ReInit_AngleFromSum(const foc_reinit_state_t *rs)
 uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 {
     foc_reinit_state_t *rs;
-
-    if (motor == 0)
-    {
-        return 0U;
-    }
 
     rs = &motor->reinit_state;
     if (dt_sec <= 0.0f)
@@ -491,7 +494,6 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
 void FOC_ReInit_Abort(foc_motor_t *motor)
 {
-    if (motor == 0) return;
     motor->reinit_state.phase = FOC_REINIT_PHASE_IDLE;
 }
 

@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L3_Hal/foc_svpwm.h"
 
 #include <math.h>
@@ -220,22 +221,19 @@ static void SVPWM_CalculateDuty(float phase_a,
 
 void SVPWM_Init(foc_motor_t *motor, uint16_t freq_kHz, uint8_t deadtime_percent)
 {
-    svpwm_interp_state_t *sv = (motor != 0) ? &motor->svpwm : 0;
+    svpwm_interp_state_t *sv = &motor->svpwm;
 
     FOC_Platform_PWMInit((uint8_t)freq_kHz, deadtime_percent);
     FOC_Platform_PWMSetDutyCycleTripleFloat(0.0f, 0.0f, 0.0f);
     FOC_Platform_PWMStart();
 
-    if (sv != 0)
-    {
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
-        sv->interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;
-        sv->interp_step_index = sv->interp_steps_total;
+    sv->interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;
+    sv->interp_step_index = sv->interp_steps_total;
 #endif
-        sv->duty_a_current = 0.0f;
-        sv->duty_b_current = 0.0f;
-        sv->duty_c_current = 0.0f;
-    }
+    sv->duty_a_current = 0.0f;
+    sv->duty_b_current = 0.0f;
+    sv->duty_c_current = 0.0f;
 }
 
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
@@ -247,7 +245,6 @@ void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
 {
     svpwm_interp_state_t *sv;
 
-    if (motor == 0) return;
     sv = &motor->svpwm;
 
     sv->output.sector = sector;
@@ -289,7 +286,6 @@ void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
 {
     svpwm_interp_state_t *sv;
 
-    if (motor == 0) return;
     sv = &motor->svpwm;
 
     sv->output.sector = sector;
@@ -336,8 +332,6 @@ void SVPWM_Update(foc_motor_t *motor,
     uint8_t sector;
     float duty_a, duty_b, duty_c;
 
-    if (motor == 0) return;
-
     SVPWM_CalculateDuty(phase_a, phase_b, phase_c,
                         voltage_command, vbus_voltage,
                         &sector, &duty_a, &duty_b, &duty_c);
@@ -363,7 +357,6 @@ void SVPWM_InterpolationISR(foc_motor_t *motor)
 {
     svpwm_interp_state_t *sv;
 
-    if (motor == 0) return;
     sv = &motor->svpwm;
 
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)

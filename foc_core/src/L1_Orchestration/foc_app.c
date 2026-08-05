@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L1_Orchestration/foc_app.h"
 
 #include <stdio.h>
@@ -84,7 +85,7 @@ void FOC_App_Init(void)
 
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
 #if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
-    FOC_OpenLoop_Init(&motor);
+    FOC_OpenLoop_Init(&motor.openloop_state, &motor.params, &motor.cfg);
 #endif
 
     FOC_SourceMgr_Init(&motor,
@@ -165,14 +166,14 @@ void FOC_App_Loop(void)
         if (needs_system_info  != 0U) FOC_Protocol_QueueSystemInfo(&motor, &g_sys.runtime.output.tx_fifo);
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        if (FOC_CoggingCalibIsDumpPending(&motor) != 0U)
+        if (FOC_CoggingCalibIsDumpPending(&motor.cogging_calib_state) != 0U)
         {
-            FOC_CoggingCalibClearDumpPending(&motor);
+            FOC_CoggingCalibClearDumpPending(&motor.cogging_calib_state);
             FOC_CoggingCalibDumpTable(&motor);
         }
-        if (FOC_CoggingCalibIsExportPending(&motor) != 0U)
+        if (FOC_CoggingCalibIsExportPending(&motor.cogging_calib_state) != 0U)
         {
-            FOC_CoggingCalibClearExportPending(&motor);
+            FOC_CoggingCalibClearExportPending(&motor.cogging_calib_state);
             FOC_CoggingCalibExportTable(&motor);
         }
 #endif
@@ -269,7 +270,7 @@ void FOC_App_ControlTrigger(void)
 #endif
 
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
-    Sensor_ReadEncoder(&motor, &motor.sensor, FOC_CONTROL_DT_SEC);
+    Sensor_ReadEncoder(&motor.sensor, FOC_CONTROL_DT_SEC);
 #endif
     Sensor_ReadVBUS(&motor.sensor);
 

@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
 
 #include <stdio.h>
