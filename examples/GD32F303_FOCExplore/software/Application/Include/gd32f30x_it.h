@@ -16,6 +16,7 @@
 #include "usart2.h"
 #include "timer1.h"
 #include "timer2.h"
+#include "auxtimer.h"
 #include "adc.h"
 #include "pwm.h"
 
@@ -50,6 +51,8 @@ void USART2_IRQHandler(void);
 void TIMER1_IRQHandler(void);
 /* this function handles TIMER2 interrupt */
 void TIMER2_IRQHandler(void);
+/* this function handles TIMER4 interrupt */
+void TIMER4_IRQHandler(void);
 /* this function handles DMA0 Channel0 interrupt */
 void DMA0_Channel0_IRQHandler(void);
 

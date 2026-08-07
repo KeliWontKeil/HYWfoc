@@ -1,131 +1,186 @@
-#ifndef FOC_PAL_H
-
-#define FOC_PAL_H
-
+#ifndef FOC_PLATFORM_API_H
+#define FOC_PLATFORM_API_H
 
 #include <stdint.h>
 
-/** @brief Control tick callback type for the platform timer source. */
-typedef void (*FOC_Platform_TickCallback_t)(void);
+/*
+ * ============================================================================
+ * 平台 API 契约（Platform API Contract）
+ * ============================================================================
+ *
+ * 本头文件是 L1/L2/L3 访问硬件的唯一平台抽象面（foc_pal）。
+ *
+ * 契约模型：
+ *   1) 接口面稳定：全部接口无条件声明，不随配置宏裁剪。宏组合只改变
+ *      实现行为，不改变接口面。
+ *   2) 行为自适应：条件功能由实现内部按配置宏 #if 适配；条件关闭时
+ *      安全退化为 no-op / 返回 0。
+ *   3) 参数分类：编译期固定配置（PWM 频率、采样频率、调度节拍等）由
+ *      实现内部从 LS 配置宏（foc_cfg_*.h）读取，不进入接口签名；
+ *      仅运行时可变参数显式传参。
+ *
+ * 契约档位：
+ *   【必须】恒定实现，所有平台必须提供完整功能。
+ *   【按需】依赖配置宏组合；条件成立时须实现，否则可安全退化为
+ *           no-op / 返回 0。
+ *   【可选】允许空实现，不提供该功能时恒返回 0 / 不动作。
+ *
+ * 宏组合行为矩阵：
+ *   FOC_CURRENT_LOOP_ISR_MODE == 2ISR  → AuxTimer* 可为 no-op（L1 不调用）
+ *   FOC_CURRENT_LOOP_ISR_MODE == 3ISR  → AuxTimer* 必须实现
+ *   FOC_CURRENT_SENSE_PHASES == NONE   → SensorInputInit 仅初始化存活路径；
+ *                                         ReadPhaseCurrent 恒返回 0；
+ *                                         SetSensorSampleOffsetPercent no-op
+ *   FOC_CURRENT_SENSE_PHASES == 2/3    → 电流采样相关必须实现（C 相指针
+ *                                         按相数传 NULL / 有效指针）
+ *   无角度反馈硬件                       → ReadMechanicalAngleRad 恒返回 0
+ *   FOC_FEATURE_UNDERVOLTAGE_PROTECTION 关闭 → ReadVbusVoltage 可空实现返回 0
+ *   未支持的通信源 ID                   → CommSource_ReadFrame 恒返回 0
+ * ============================================================================
+ */
 
-/** @brief PWM update ISR callback type for high-rate modulation update path. */
-typedef void (*FOC_Platform_PwmIsrCallback_t)(void);
+/* 平台无参中断回调（PWM ISR / 控制节拍 / 辅助定时器共用） */
+typedef void (*FOC_Platform_IsrCallback_t)(void);
 
-/* ===== Runtime / Clock ===== */
+/* 通信源 ID */
+typedef enum {
+    FOC_COMM_SOURCE_0 = 0,
+    FOC_COMM_SOURCE_1,
+    FOC_COMM_SOURCE_2,
+    FOC_COMM_SOURCE_3,
+    FOC_COMM_SOURCE_COUNT
+} FOC_Platform_CommSourceId_t;
 
-/** @brief Initialize runtime base services for the platform. */
+/* 辅助定时器用途 ID */
+typedef enum {
+    FOC_AUX_TIMER_CURRENT_LOOP = 0,  /* 三 ISR 模式电流环定时器 */
+    FOC_AUX_TIMER_COUNT
+} FOC_Platform_AuxTimerId_t;
+
+/* ===== Runtime & Clock（运行时/时钟） ===== */
+
+/** @brief 平台基础运行时初始化（系统时钟、中断分组等平台固定配置）。【必须】 */
 void FOC_Platform_RuntimeInit(void);
 
-/** @brief Set callback used by PWM update ISR path. */
-void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_PwmIsrCallback_t callback);
+/** @brief 绑定 PWM 更新中断回调（高速调制更新路径）。【必须】 */
+void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_IsrCallback_t callback);
 
-/** @brief Initialize the control-tick source. */
+/** @brief 初始化控制节拍源（频率取 FOC_SCHEDULER_TICK_HZ）。【必须】 */
 void FOC_Platform_ControlTickSourceInit(void);
 
-/** @brief Set the callback used by the control-tick source. */
-void FOC_Platform_SetControlTickCallback(FOC_Platform_TickCallback_t callback);
+/** @brief 绑定控制节拍回调。【必须】 */
+void FOC_Platform_SetControlTickCallback(FOC_Platform_IsrCallback_t callback);
 
-/** @brief Start the control-tick source. */
+/** @brief 启动控制节拍源。【必须】 */
 void FOC_Platform_StartControlTickSource(void);
 
-/** @brief Enable or disable runtime control interrupts. */
-void FOC_Platform_SetControlRuntimeInterrupts(uint8_t enable);
+/** @brief 使能/禁用控制相关外设更新中断（控制节拍/PWM/辅助定时器）。
+ *  @param enable 0=禁用, 1=使能 【必须】 */
+void FOC_Platform_SetControlInterruptsEnabled(uint8_t enable);
 
-/* ===== Indicator ===== */
+/** @brief 初始化辅助自由运行定时器（按需，见宏组合矩阵）。
+ *  @param id       辅助定时器用途 ID
+ *  @param freq_hz  中断频率 [Hz]
+ *  @param callback 更新中断回调 【按需】 */
+void FOC_Platform_AuxTimerInit(FOC_Platform_AuxTimerId_t id,
+                               uint32_t freq_hz,
+                               FOC_Platform_IsrCallback_t callback);
 
-/** @brief Initialize board indicator peripherals. */
-void FOC_Platform_IndicatorInit(void);
+/** @brief 启动辅助定时器中断。【按需】 */
+void FOC_Platform_AuxTimerStart(FOC_Platform_AuxTimerId_t id);
 
-/** @brief Set indicator on/off state by logical indicator index. */
-void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on);
+/** @brief 停止辅助定时器中断。【按需】 */
+void FOC_Platform_AuxTimerStop(FOC_Platform_AuxTimerId_t id);
 
-/* ===== Communication ===== */
+/** @brief 设置辅助定时器回调。【按需】 */
+void FOC_Platform_SetAuxTimerCallback(FOC_Platform_AuxTimerId_t id,
+                                      FOC_Platform_IsrCallback_t callback);
 
-/** @brief Initialize communication peripherals used by platform transport. */
-void FOC_Platform_CommInit(void);
-
-/** @brief Return non-zero when communication source 1 has one complete frame ready. */
-uint8_t FOC_Platform_CommSource1_IsFrameReady(void);
-
-/** @brief Return non-zero when communication source 2 has one complete frame ready. */
-uint8_t FOC_Platform_CommSource2_IsFrameReady(void);
-
-/** @brief Return non-zero when communication source 3 has one complete frame ready. */
-uint8_t FOC_Platform_CommSource3_IsFrameReady(void);
-
-/** @brief Return non-zero when communication source 4 has one complete frame ready. */
-uint8_t FOC_Platform_CommSource4_IsFrameReady(void);
-
-/** @brief Read one received frame from communication source 1. */
-uint16_t FOC_Platform_CommSource1_ReadFrame(uint8_t *buffer, uint16_t max_len);
-
-/** @brief Read one received frame from communication source 2. */
-uint16_t FOC_Platform_CommSource2_ReadFrame(uint8_t *buffer, uint16_t max_len);
-
-/** @brief Read one received frame from communication source 3. */
-uint16_t FOC_Platform_CommSource3_ReadFrame(uint8_t *buffer, uint16_t max_len);
-
-/** @brief Read one received frame from communication source 4. */
-uint16_t FOC_Platform_CommSource4_ReadFrame(uint8_t *buffer, uint16_t max_len);
-
-/** @brief Write human-readable debug text to host output channel.
- *  Main-loop only (blocking DMA). Not safe for ISR context. */
-void FOC_Platform_WriteDebugText(const char *str);
-
-/** @brief Write debug text via fast path (ISR-safe, non-blocking).
- *  Uses ring buffer + TXE interrupt. Suitable for short status strings. */
-void FOC_Platform_WriteDebugFast(const char *str);
-
-/** @brief Write one compact status byte to host output channel.
- *  ISR-safe, non-blocking. Suitable for any context including ISR. */
-void FOC_Platform_WriteStatusByte(uint8_t status_code);
-
-/* ===== Sensor / Acquisition ===== */
-
-/** @brief Initialize sensor input pipeline for current and angle acquisition. */
-void FOC_Platform_SensorInputInit(uint8_t pwm_freq_khz);
-
-/** @brief Set sensor sampling trigger offset percent in the control period. */
-void FOC_Platform_SetSensorSampleOffsetPercent(float percent);
-
-/** @brief Read phase currents from ADC.
- *  When phase_current_c is NULL, only A/B are read (two-phase).
- *  Returns non-zero on success. */
-uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_current_b, float *phase_current_c);
-
-/** @brief Read mechanical angle in radians. */
-uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad);
-
-/** @brief Perform a blocking delay in milliseconds. */
+/** @brief 阻塞等待指定毫秒数（仅初始化/标定使用，禁止在 ISR 中调用）。【必须】 */
 void FOC_Platform_WaitMs(uint32_t ms);
 
-/* ===== PWM / Actuation ===== */
+/** @brief 数据内存屏障（多 ISR 共享数据写序保证，如 SVPWM pending commit）。【必须】 */
+void FOC_Platform_MemoryBarrier(void);
 
-/** @brief Initialize PWM peripheral for motor actuation. */
-void FOC_Platform_PWMInit(uint8_t freq_khz, uint8_t deadtime_percent);
+/* ===== Indicator（指示灯） ===== */
 
-/** @brief Start PWM output path. */
-void FOC_Platform_PWMStart(void);
+/** @brief 初始化板载指示灯。【必须】 */
+void FOC_Platform_IndicatorInit(void);
 
-/** @brief Write three-phase duty cycles in normalized range. */
-void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c);
+/** @brief 按逻辑索引设置指示灯状态（索引值取 LS 层 FOC_LED_*_INDEX）。【必须】
+ *  @param led_index 指示灯逻辑索引
+ *  @param on        0=灭, 1=亮 */
+void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on);
 
-/* ===== Diagnostics / Profiler ===== */
+/* ===== Communication（通信） ===== */
 
-/** @brief Enable cycle counter for execution time profiling. */
-void FOC_Platform_EnableCycleCounter(void);
+/** @brief 初始化通信外设。【必须】 */
+void FOC_Platform_CommInit(void);
 
-/** @brief Read current cycle counter value. */
-uint32_t FOC_Platform_ReadCycleCounter(void);
+/** @brief 从指定通信源读取一帧完整数据。
+ *  @param id      通信源 ID
+ *  @param buffer  输出缓冲区（存放原始帧字节）
+ *  @param max_len 缓冲区最大长度
+ *  @return 实际读取字节数；0 表示无帧或该源未实现
+ *  【必须：源 0/1；可选：源 2/3（未支持恒返回 0）】 */
+uint16_t FOC_Platform_CommSource_ReadFrame(FOC_Platform_CommSourceId_t id,
+                                           uint8_t *buffer,
+                                           uint16_t max_len);
 
-/* ===== VBUS Voltage Sampling ===== */
+/** @brief 慢路径输出调试文本（主循环阻塞式 DMA，禁止 ISR 调用）。【必须】 */
+void FOC_Platform_WriteDebugText(const char *str);
 
-/** @brief Read VBUS voltage via ADC2 (software trigger, EOC polling). */
+/** @brief 快路径输出调试文本（ISR-safe 非阻塞，环形缓冲+发送中断）。【必须】 */
+void FOC_Platform_WriteDebugFast(const char *str);
+
+/** @brief 输出单字节状态码（ISR-safe 非阻塞）。【必须】 */
+void FOC_Platform_WriteStatusByte(uint8_t status_code);
+
+/* ===== Sensor / Acquisition（传感器/采集） ===== */
+
+/** @brief 初始化传感器输入（电流/角度采样；频率取 FOC_SENSOR_SAMPLE_FREQ_KHZ）。
+ *  【按需：FOC_CURRENT_SENSE_PHASES == NONE 时仅初始化存活路径（编码器等）】 */
+void FOC_Platform_SensorInputInit(void);
+
+/** @brief 设置 ADC 采样触发偏移（相对 PWM 周期的百分比）。【按需】
+ *  @param percent 偏移百分比 [0.0, 100.0] */
+void FOC_Platform_SetSensorSampleOffsetPercent(float percent);
+
+/** @brief 读取相电流（两相采样时 C 相指针传 NULL）。【按需】
+ *  @return 1=成功, 0=失败（无电流采样恒返回 0） */
+uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a,
+                                      float *phase_current_b,
+                                      float *phase_current_c);
+
+/** @brief 读取机械角度 [rad]（范围 0~2PI）。【按需】
+ *  @return 1=成功, 0=失败（无角度反馈恒返回 0） */
+uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad);
+
+/** @brief 读取母线电压 [V]（用于欠压保护与电压前馈）。【按需】
+ *  @return 1=成功, 0=失败/不支持 */
 uint8_t FOC_Platform_ReadVbusVoltage(float *vbus_v);
 
-/* ===== Protection Hook ===== */
+/* ===== PWM / Actuation（PWM/驱动输出） ===== */
 
-/** @brief Execute optional undervoltage protection hook. */
-void FOC_Platform_UndervoltageProtect(float vbus_voltage);
+/** @brief 初始化 PWM 输出（频率/死区取 FOC_PWM_FREQ_KHZ 与
+ *  FOC_SVPWM_DEADTIME_PERCENT_DEFAULT）。【必须】 */
+void FOC_Platform_PWMInit(void);
+
+/** @brief 启动 PWM 输出。【必须】 */
+void FOC_Platform_PWMStart(void);
+
+/** @brief 写入三相占空比（ISR 高频调用，须极低延迟）。【必须】
+ *  @param duty_a A 相占空比 [0.0~1.0]（0.5 为中点）
+ *  @param duty_b B 相占空比 [0.0~1.0]
+ *  @param duty_c C 相占空比 [0.0~1.0] */
+void FOC_Platform_PWMSetDutyCycleTripleFloat(float duty_a, float duty_b, float duty_c);
+
+/* ===== Diagnostics / Profiler（诊断/性能分析） ===== */
+
+/** @brief 使能执行时间性能计数器（如 DWT_CYCCNT）。【可选】 */
+void FOC_Platform_EnableCycleCounter(void);
+
+/** @brief 读取性能计数器值（不支持时恒返回 0）。【可选】 */
+uint32_t FOC_Platform_ReadCycleCounter(void);
 
 #endif /* FOC_PLATFORM_API_H */

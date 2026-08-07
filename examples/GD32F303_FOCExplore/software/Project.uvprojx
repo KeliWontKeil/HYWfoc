@@ -189,7 +189,7 @@
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
-            <useUlib>0</useUlib>
+            <useUlib>1</useUlib>
             <EndSel>0</EndSel>
             <uLtcg>0</uLtcg>
             <nSecure>0</nSecure>
@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>USE_STDPERIPH_DRIVER,GD32F30X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc_core\include\L1_Orchestration;..\..\..\foc_core\include\L2_Core;..\..\..\foc_core\include\L3_Hal;..\..\..\foc_core\include\LS_Config;..\..\..\foc_core\include</IncludePath>
+              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc_core\include\L1_Orchestration;..\..\..\foc_core\include\L2_Core;..\..\..\foc_core\include\L3_Hal;..\..\..\foc_core\include\LS_Config;..\..\..\foc_core\include;.\Utilities\AUXTIMER</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -602,6 +602,11 @@
               <FileName>timer3.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\TIMER3\timer3.c</FilePath>
+            </File>
+            <File>
+              <FileName>auxtimer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\AUXTIMER\auxtimer.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1351,6 +1356,11 @@
               <FileType>1</FileType>
               <FilePath>.\Utilities\TIMER3\timer3.c</FilePath>
             </File>
+            <File>
+              <FileName>auxtimer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\AUXTIMER\auxtimer.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1507,7 +1517,8 @@
       <TargetName>GD32F30X_HD</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>6120000::V6.12::.\ARMCLANG</pCCUsed>
+      <pArmCC>5060750::V5.06 update 6 (build 750)::ARMCC</pArmCC>
+      <pCCUsed>5060750::V5.06 update 6 (build 750)::ARMCC</pCCUsed>
       <uAC6>8</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -1631,11 +1642,11 @@
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
             <Capability>1</Capability>
-            <DriverSelection>4099</DriverSelection>
+            <DriverSelection>4100</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>Segger\JL2CM3.dll</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -1809,7 +1820,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>3</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -1833,9 +1844,9 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>USE_STDPERIPH_DRIVER,GD32F30X_CL</Define>
+              <Define>USE_STDPERIPH_DRIVER,GD32F30X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc\include</IncludePath>
+              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc_core\include;..\..\..\foc_core\include\L1_Orchestration;..\..\..\foc_core\include\L3_Hal;..\..\..\foc_core\include\LS_Config;..\..\..\foc_core\include\L2_Core\Protocol;..\..\..\foc_core\include\L2_Core\Control;..\..\..\foc_core\include\L2_Core\Runtime</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -2098,6 +2109,11 @@
               <FileName>timer3.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\TIMER3\timer3.c</FilePath>
+            </File>
+            <File>
+              <FileName>auxtimer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\AUXTIMER\auxtimer.c</FilePath>
             </File>
           </Files>
         </Group>

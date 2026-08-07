@@ -53,6 +53,58 @@ float Math_ClampFloat(float value, float min_val, float max_val)
     return value;
 }
 
+float Math_NormalizeDt(float dt_sec, float fallback_dt_sec)
+{
+    return (dt_sec > 0.0f) ? dt_sec : fallback_dt_sec;
+}
+
+void Math_FloatToFixed(float value, uint8_t decimals, int32_t *ipart_out, int32_t *fpart_out)
+{
+    float scale = 1.0f;
+    uint8_t i;
+    int32_t v;
+
+    if ((ipart_out == 0) || (fpart_out == 0))
+    {
+        return;
+    }
+
+    /* 防御：限制输入规模，避免浮点放大后超出 int32 范围 */
+    if (value > 20000.0f)
+    {
+        value = 20000.0f;
+    }
+    else if (value < -20000.0f)
+    {
+        value = -20000.0f;
+    }
+
+    for (i = 0U; i < decimals; i++)
+    {
+        scale *= 10.0f;
+    }
+    if (scale < 1.0f)
+    {
+        scale = 1.0f;
+    }
+
+    if (value < 0.0f)
+    {
+        v = (int32_t)(value * scale - 0.5f);
+    }
+    else
+    {
+        v = (int32_t)(value * scale + 0.5f);
+    }
+
+    *ipart_out = v / (int32_t)scale;
+    *fpart_out = v % (int32_t)scale;
+    if (*fpart_out < 0)
+    {
+        *fpart_out = -*fpart_out;
+    }
+}
+
 float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_valid)
 {
     float alpha_clamped;

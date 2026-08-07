@@ -1,6 +1,6 @@
 # 库文档索引
 
-> 版本基线：v2.0.4
+> 版本基线：v2.1.0
 > 项目命名：HYW FOC（中文名：何易位FOC）
 
 ## 作用范围
@@ -27,7 +27,7 @@
 
 ## 当前基线
 
-- 版本基线：v2.0.4
+- 版本基线：v2.1.0
 - 项目名称：HYW FOC（何易位FOC）
 - 任务目标：下一目标版本见 [NEXT_MISSION.md](../NEXT_MISSION.md)
 - 第三方许可证声明：见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
@@ -35,8 +35,6 @@
 ## 相关实例文档（GD32F303）
 
 - [../examples/GD32F303_FOCExplore/README.md](../examples/GD32F303_FOCExplore/README.md)
-- [../examples/GD32F303_FOCExplore/DEVELOPMENT.md](../examples/GD32F303_FOCExplore/DEVELOPMENT.md)
-- [../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md)
 - [../examples/GD32F303_FOCExplore/hardware/hardware.md](../examples/GD32F303_FOCExplore/hardware/hardware.md)
 
 ## 推荐阅读顺序

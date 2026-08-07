@@ -69,4 +69,17 @@ static inline float FOC_FilterGate_EncoderSpeed(
 #endif
 }
 
+static inline float FOC_FilterGate_SMOSpeed(
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SMO_SPEED) *f, float input)
+{
+#if (FOC_FILTER_SMO_SPEED == FOC_FILTER_TYPE_KALMAN)
+    return FOC_FilterMath_KalmanStep(f, input);
+#elif (FOC_FILTER_SMO_SPEED == FOC_FILTER_TYPE_LPF1)
+    return FOC_FilterMath_Lpf1Step(f, input, FOC_FILTER_SMO_SPEED_LPF_ALPHA);
+#else
+    (void)f;
+    return input;
+#endif
+}
+
 #endif /* FOC_FILTER_GATE_H */

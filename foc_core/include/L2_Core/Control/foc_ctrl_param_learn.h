@@ -6,14 +6,13 @@
 #include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
+#include "L3_Hal/foc_svpwm.h"
 
-uint8_t FOC_SampleLockedMechanicalAngle(foc_motor_t *motor,
-                                        float electrical_angle,
-                                        uint16_t settle_ms,
-                                        uint16_t sample_count,
-                                        float *mech_angle_rad);
-
-uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
+uint8_t FOC_EstimateDirectionAndPolePairs(foc_control_runtime_t *ctrl,
+                                          const foc_motor_params_t *params,
+                                          svpwm_interp_state_t *svpwm,
+                                          foc_applied_output_state_t *applied,
+                                          foc_alpha_beta_phase_t *alpha_beta,
                                           int8_t *direction_est,
                                           uint8_t *pole_pairs_est);
 

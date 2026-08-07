@@ -22,7 +22,10 @@ uint8_t FIFO_Enqueue(fifo_queue_t *q, const uint8_t *data)
 
     if (q->count >= q->depth)
     {
-        q->overflow_count++;
+        if (q->overflow_count < UINT8_MAX)
+        {
+            q->overflow_count++;
+        }
         return 0U;
     }
 

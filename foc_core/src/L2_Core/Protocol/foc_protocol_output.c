@@ -1,4 +1,5 @@
-﻿#include "L2_Core/Protocol/foc_protocol_output.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/Protocol/foc_protocol_output.h"
 
 #include <stdio.h>
 

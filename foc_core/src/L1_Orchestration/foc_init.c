@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L1_Orchestration/foc_init.h"
 
 #include <stdio.h>
@@ -18,11 +19,12 @@
 #include "LS_Config/foc_config.h"
 
 void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
-                      FOC_Platform_TickCallback_t tick_cb,
-                      FOC_Platform_TickCallback_t service_cb,
-                      FOC_Platform_TickCallback_t control_cb,
-                      FOC_Platform_TickCallback_t monitor_cb,
-                      FOC_Platform_PwmIsrCallback_t pwm_cb)
+                      FOC_Platform_IsrCallback_t tick_cb,
+                      FOC_Platform_IsrCallback_t service_cb,
+                      FOC_Platform_IsrCallback_t control_cb,
+                      FOC_Platform_IsrCallback_t monitor_cb,
+                      FOC_Platform_IsrCallback_t pwm_cb,
+                      FOC_Platform_IsrCallback_t current_loop_cb)
 {
     if ((sys == 0) || (motor == 0)) return;
 
@@ -44,7 +46,7 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
     ControlScheduler_SetCallback(&sys->runtime.scheduler, FOC_TASK_RATE_SERVICE, service_cb);
     ControlScheduler_SetCallback(&sys->runtime.scheduler, FOC_TASK_RATE_FAST_CONTROL, control_cb);
     ControlScheduler_SetCallback(&sys->runtime.scheduler, FOC_TASK_RATE_MONITOR, monitor_cb);
-    FOC_Platform_SetControlRuntimeInterrupts(0U);
+    FOC_Platform_SetControlInterruptsEnabled(0U);
 
     FOC_Platform_CommInit();
     FOC_OutputMgr_Init(sys);
@@ -64,6 +66,11 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
 #endif
     FOC_ControlPlatform_InitHardware(motor);
     FOC_Platform_SetPwmUpdateCallback(pwm_cb);
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    FOC_Platform_AuxTimerInit(FOC_AUX_TIMER_CURRENT_LOOP,
+                              FOC_CURRENT_LOOP_ISR_FREQ_HZ,
+                              current_loop_cb);
+#endif
 }
 
 void FOC_Init_MotorAndCalib(foc_motor_t *motor)
@@ -78,14 +85,19 @@ void FOC_Init_MotorAndCalib(foc_motor_t *motor)
                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
-    FOC_Control_ApplyConfig(motor);
+    FOC_Control_ApplyConfig(&motor->ctrl,
+                            &motor->torque_current_pid,
+                            &motor->speed_pid,
+                            &motor->angle_pid,
+                            &motor->cfg,
+                            &motor->params);
 
     /* 初始化所有编译启用的 Source 私有状态 */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimSMO_Init(motor);
+    FOC_EstimSMO_Init(&motor->estim_smo_state, &motor->params);
 #endif
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimHFI_Init(motor);
+    FOC_EstimHFI_Init(&motor->estim_hfi_state);
 #endif
 }
 

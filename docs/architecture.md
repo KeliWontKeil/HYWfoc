@@ -45,7 +45,7 @@ FOC_VSCODE/
 |---|---|---|---|
 | `LS` 配置层 | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
 | `L1` 编排层 | `foc_core/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（comm RX FIFO、output TX FIFO、monitor element FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
-| `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source 与 low-speed policy、估计器体系（编码器/SMO/HFI/FLUX）、外环、电流环、参数学习、补偿、有感齿槽标定、有感重初始化、执行输出 | 不持实例，操作传入的 `foc_motor_t` 指针 |
+| `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source 与 low-speed policy、估计器体系（编码器/SMO/HFI/FLUX）、外环、电流环、参数学习、补偿、有感齿槽标定、有感重初始化、执行输出、**FullStop 安全归零** | 不持实例，操作传入的 `foc_motor_t` 指针 |
 | `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **单帧处理**：解析一帧 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（系统 report 配置） |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（提供 PollNextValue + 格式化接口，由 L1 双上下文调用） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
 | `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、滤波器数学 | 无实例（纯函数或操作 motor 中的字段） |
@@ -57,13 +57,24 @@ FOC_VSCODE/
 2. 公共头文件不得暴露 `gd32f30x_*` 设备头。
 3. L4 不得反向依赖 `foc_core/src/*` 业务逻辑。
 4. 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值。
-5. L2 各块间禁止跨块直接调用，数据通过 `foc_motor_t` 由 L1 统一协调。
+5. **L2 传参规范**：算法模块函数只收"自有私有状态 + 最小跨域子结构 + 必要标量"，禁止传整个 `foc_motor_t`；数据由 L1/Executor 从聚合体拆包分发，L2 各块间禁止跨块直接调用。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛。**聚合访问权唯一化**：`foc_motor_t` 完整类型仅保留给 L1 编排、L2 Executor（facade）、协议/调试只读链（`const foc_motor_t *`）、冷路径状态机（init/标定/重初始化）；`foc_motor_aggregate.h` 物理路径暂留 `L2_Core/`（阶段 1b 上移 L1 需 Executor 上下文视图化后实施，见 `结构优化重构.md`）。
 6. **L2 任何模块不得包含 `L1_Orchestration/` 头文件**。
 7. **L2 任何模块不得持有队列实例**——队列存储由 L1 在 `foc_runtime_ctx_t` 中分配，L2 通过指针参数操作。
 8. L1 编排负责检测 dirty 标志、转发系统命令、管理初始化流程。
 9. **L1 不直接调用 Sensor_* / SVPWM_* 等 L3 硬件初始化方法**——硬件初始化统一通过 L2 的 `FOC_ControlPlatform_InitHardware()` 收口。平台管理类（`FOC_Platform_*`、回调注册）和输出封装（`FOC_OutputMgr_*`）仍由 L1 直调 L3。
 10. **传感器硬件存在性与算法使用分离**：`FOC_SENSOR_ENCODER_ENABLE` 控制编码器硬件层，`FOC_ESTIMATOR_ENCODER_ENABLE` 控制是否使用编码器作为反馈源。齿槽补偿/标定依赖 `FOC_SENSOR_ENCODER_ENABLE`。
 11. **有效性检查收口单一检查点**：传感器有效性检查仅在 L1 `FOC_App_ControlTrigger` 中执行，L2 `RunCycle` 不再重复检查。
+
+### 平台 API 契约（foc_platform_api.h）
+
+- **接口面稳定**：平台 API 全部无条件声明，不随配置宏裁剪。宏组合只改变实现行为（退化 no-op / 返回 0），不改变接口面。
+- **契约三档**：
+  - 【必须】所有平台必须实现（Runtime、Indicator、Comm、PWM、Write*、WaitMs、MemoryBarrier 等）。
+  - 【按需】依赖宏组合：`AuxTimer*`（三 ISR 模式必须，双 ISR 可 no-op）；电流采样相关 `SensorInputInit/ReadPhaseCurrent/SetSensorSampleOffsetPercent`（`FOC_CURRENT_SENSE_PHASES != NONE` 必须）；`ReadMechanicalAngleRad`（有角度反馈必须，否则恒返回 0）；`ReadVbusVoltage`（欠压保护启用时必须）。
+  - 【可选】可空实现：`CommSource` 源 2/3、`EnableCycleCounter/ReadCycleCounter`。
+- **参数约定**：编译期固定配置（`FOC_PWM_FREQ_KHZ`、`FOC_SENSOR_SAMPLE_FREQ_KHZ`、`FOC_SCHEDULER_TICK_HZ`、`FOC_SVPWM_DEADTIME_PERCENT_DEFAULT`）由平台实现内部读取，不进入接口签名；仅运行时参数（辅助定时器频率、采样偏移）显式传参。
+- **回调统一**：`FOC_Platform_IsrCallback_t` 为唯一无参中断回调类型（PWM ISR / 控制节拍 / 辅助定时器共用）。
+- **通信源枚举**：`FOC_Platform_CommSourceId_t`（源 0/1 必须，2/3 可选）；`FOC_Platform_CommSource_ReadFrame(id, ...)` 返回 0 表示无帧或未支持该源。
 
 ## 核心数据结构
 
@@ -138,7 +149,7 @@ FOC_VSCODE/
 平台 UART ISR
   │
   ▼ （Service 触发回调中）
-读帧（FOC_Platform_CommSource*_ReadFrame）
+读帧（FOC_Platform_CommSource_ReadFrame）
   │
   ▼
 FIFO_Enqueue(runtime.comm.rx_fifo)   ← L2/Runtime 队列方法，操作 L1 的队列实例
@@ -153,9 +164,10 @@ FOC_Protocol_ProcessSingle() ← L2/Protocol 单帧处理
   ├── [comm_active]  → 更新 LED 指示器
   ├── [needs_summary] → L1 生成摘要文本 →
   │                      FIFO_Enqueue(runtime.output.tx_fifo)
-  ├── [needs_status]  → 状态码已在协议内部直写（快路径）
-  └── [param_changed] → L1 稍后检测 cfg_dirty → ApplyConfig
-```
+  └── [needs_status]  → 状态码已在协议内部直写（快路径）
+
+参数写入语义：协议（主循环单写者）直接写 motor 字段，**写入即生效**（下一次控制 ISR 拍生效）；
+无运行时派生重算（`FOC_Control_ApplyConfig` 仅冷路径调用，见"配置应用"节）。
 
 ### 双输出路径
 
@@ -210,7 +222,7 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 
 | 文件名 | 职责 |
 |------|------|
-| `foc_ctrl_executor` | 算法入口：PWM ISR 与 Control ISR 路由，外环调度、控制模式切换 |
+| `foc_ctrl_executor` | 算法入口：PWM ISR 与 Control ISR 路由，外环调度、控制模式切换、**FullStop 安全归零** |
 | `foc_ctrl_init` | 初始化与标定 |
 | `foc_ctrl_cfg` | 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter） |
 | `foc_ctrl_source_mgr` | Source Manager：Select（切换决策）+ Publish（发布 active source view） |
@@ -236,28 +248,35 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
        → FOC_ControlExecutor_Init → FOC_Control_ApplyConfig
 
 Control ISR（低频控制线，严格不做 source 选择）：
-  阶段0：系统守卫（L1）
+  阶段0：L1 系统守卫
     → system_fault 检查 → return
+    → [特殊 phase 自动退出] motor_enabled==0 或 control_mode 变化 → AbortSpecialPhase
   阶段1：传感器读取
     → [SLOW] Sensor_ReadEncoder、Sensor_ReadVBUS
     → 有效性检查（adc_valid + [encoder] encoder_valid）
     → 欠压保护检查（FOC_FEATURE_UNDERVOLTAGE_PROTECTION）
   阶段2：按 control_phase 运行状态机
-    → NORMAL：Control Policy 路由（FOC_ControlExecutor_RunCycle）
+    → NORMAL：motor_enabled 检查 → FOC_ControlExecutor_RunCycle
       → OpenLoop active → FOC_OpenLoop_RunStep（写 motor->ctrl.iq_target）
       → 其他 source active → FOC_ControlExecutor_RunOuterLoop：
         根据 control_mode 选择外环 → FOC_SpeedOuterLoopStep / FOC_SpeedAngleOuterLoopStep
         → 齿槽补偿（FOC_ControlApplyCoggingCompensation，使用 active_source_state.mech_angle_rad）
     → COGGING_CALIB/REINIT：特殊状态机记录 `phase_output_state`
 
-PWM ISR（5 阶段管线，严格串行，不可调换）：
-  [L1 系统守卫]
-    → system_fault 检查 → SafeOutput + return
-    → system_running / motor_enabled 检查 → return
+PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
+  [L2 公共前导]
+    → SVPWM_InterpolationISR（插值启用时执行）
+      （三 ISR + 插值：PWM ISR 入口原子取走电流环 ISR 的 pending 目标）
+      （插值禁用：PWM ISR 不执行插值，SVPWM 占空比由电流环/外环直接写入）
 
-  [公共前导] SVPWM_InterpolationISR
-  [特殊 phase 路由]（管线内部行为）
-    → COGGING_CALIB/REINIT：直接消费 phase_output_state → apply → return，跳过后续 NORMAL 流程
+  [L2 守卫与路由]
+    → motor_enabled==0：FOC_ControlExecutor_FullStop → return
+      （FullStop：清零 ud/uq/iq_target/PID/外环状态/current_loop_ready/软切换 + 归零 PWM）
+      后续 ISR 因 current_loop_ready==0 被拦截，仅执行插值
+    → control_phase==COGGING_CALIB/REINIT：
+        if phase_output_state.valid → ApplyPhaseOutputRuntime → return
+        （ControlTrigger 的 RunStep 负责通过 RecordPhaseOutputDqAngle 设置输出）
+    → control_phase != NORMAL：return（跳过所有管线）
 
   [NORMAL 标准流程——电流分频控制]：
   阶段1：硬件采样
@@ -282,10 +301,11 @@ PWM ISR（5 阶段管线，严格串行，不可调换）：
   阶段5：SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime
 
-配置应用：
-  FOC_Control_ApplyConfig(motor)
-    → 从 motor 结构体读取 PID 参数和 fine-tuning 设置
-```
+配置应用（冷路径专用）：
+  FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
+    → 基于 max_phase_voltage / phase_resistance 重算 PID 输出限幅，并应用采样偏移
+    → 仅在初始化（foc_init）与重初始化完成（reinit）时调用
+    运行时协议写参数不触发：参数直写即生效，无派生重算
 
 **关键执行顺序说明**：
 - Estimator 迭代在 Source Manager 决策之前，确保切换判据使用**当前周期**的收敛状态
@@ -293,13 +313,44 @@ PWM ISR（5 阶段管线，严格串行，不可调换）：
 - 电流环在发布之后，消费已发布的 `motor->ctrl.electrical_angle_rad`
 - 电流分频：`FOC_CURRENT_LOOP_ISR_DIVIDER` 控制每 N 个 PWM 周期执行一次完整电流环，中间的 PWM 周期只做插值和 Estimator 迭代
 
+### ISR 架构双模式（v2.0.5）
+
+由 `FOC_CURRENT_LOOP_ISR_MODE` 宏选择，硬件资源丰富 MCU 用三 ISR，资源紧张用双 ISR：
+
+| 模式 | PWM ISR 内容 | 电流环位置 | 电流环频率 |
+|------|-------------|-----------|-----------|
+| 双 ISR（默认） | 插值 + 守卫 + 电流环（分频） | PWM ISR | `PWM_FREQ / FOC_CURRENT_LOOP_ISR_DIVIDER` |
+| 三 ISR | 仅插值 + 守卫（~2us） | 独立辅助定时器 ISR | `FOC_CURRENT_LOOP_ISR_FREQ_HZ`（与 PWM 解耦，值由配置宏决定） |
+
+- 三 ISR 模式电流环频率由 `FOC_CURRENT_LOOP_ISR_FREQ_HZ` 独立配置（与 PWM 解耦，值由配置宏决定）。
+- 电流环周期宏 `FOC_CURRENT_LOOP_DT_SEC` 随 `FOC_CURRENT_LOOP_ISR_MODE` 自动收敛：双 ISR 取 `1/(PWM_FREQ/DIVIDER)`，三 ISR 取 `1/FOC_CURRENT_LOOP_ISR_FREQ_HZ`（为 0 时退化为控制周期）。所有电流环 ISR 内模块（Estimator/电流环）统一使用该宏作为 dt 唯一真值。
+- SMO 测速尾链使用调用方每拍传入的 `dt_sec` 累计窗口时长，不依赖任何 ISR 频率宏，ISR 模式切换不改变测速尺度。
+- `FOC_SVPWM_INTERP_ENABLE` 插值开关两种模式可独立裁剪；禁用后 `FOC_ControlApplyElectricalAngleRuntime` 直接写占空比。
+- 三 ISR 模式 SVPWM 双写者保护：电流环 ISR 写 pending 字段 → `FOC_Platform_MemoryBarrier()` → commit 标志；PWM ISR 入口原子取走。
+- 辅助定时器通过 `FOC_Platform_AuxTimerInit/Start/Stop/SetCallback` 映射空闲硬件定时器（GD32 实例 TIMER4，优先级 (2,0) 低于 PWM ISR）。
+- OSC 快照在三 ISR 模式移入电流环 ISR（反映控制环实际看到的数据）。
+
+### FOC_ControlExecutor_FullStop — 统一安全归零
+
+`FullStop` 收敛了 fault/disable/phase-switch 三条归零路径，确保一致的行为：
+
+- 清零控制输出：`ctrl.ud = 0`, `ctrl.uq = 0`, `ctrl.iq_target = 0`
+- 清零全部 PID：`torque_current_pid`、`speed_pid`、`angle_pid`（integral + prev_error）
+- 清零外环累积状态：`outer_loop.accum_rad`、`prev_rad`、`prev_valid`、`ramped_speed_rad_s`、`speed_state_valid`、`speed_err_accum_rad`
+- 复位模式切换标记：`mode_transition.prev_control_mode_valid = 0`（使下次 RunCycle 重新初始化外环）
+- 阻断 ISR 控制链：`current_loop_ready = 0`
+- 清零软切换状态（条件编译）
+- 归零 PWM：`RecordPhaseOutputZero` + `ApplyPhaseOutputRuntime` → `SVPWM_ApplyDirectDuty(0,0,0)`
+
+调用方：`L1 OnPwmUpdateISR`（system_fault 时）、`L2 RunISR`（motor_enabled==0 时）、`L1 AbortSpecialPhase`（退出特殊状态时）。`SafeOutput` 和 `Stop` 均委托至 `FullStop`。
+
 ### 采样路径规则
 
 1. **电流采样独占性**：ADC 电流读取全部归 PWM ISR 独占（`Sensor_ReadCurrent`），控制 ISR 不再直接读 ADC。
 2. **编码器角度路径选择**：由 `FOC_SENSOR_ANGLE_FAST_ENABLE` 宏联动：
    - `DISABLE`（慢速编码器，如 I2C AS5600）：在 Control ISR 中读取（`Sensor_ReadEncoder`）。
    - `ENABLE`（快速编码器，如霍尔/QEI）：在 PWM ISR 中同步读取。
-3. **控制 ISR 电流数据来源**：通过 `Sensor_SyncCurrentSnapshot` 从 `motor->sensor_fast` 复制到 `motor->sensor`。
+3. **控制 ISR 电流数据来源**：电流采样在 PWM ISR/电流环 ISR 独占读取（`Sensor_ReadCurrent`），Control ISR 不再直接读 ADC。
 4. **PWM ISR 角度同步**：电流环之后仅拷贝 `raw_value` 和有效性标志到 `motor->sensor`，不完整拷贝滤波器完整状态。
 5. **L3 平台 API**：统一为单一 `FOC_Platform_ReadPhaseCurrent`，无 `Fast/Slow` 双入口。
 
@@ -317,6 +368,20 @@ typedef enum {
 
 `control_phase` 表示当前顶层控制模式，决定 Control ISR 的状态机入口和 PWM ISR 的输出流程路由。
 低速/高速、OpenLoop/SMO/Encoder/HFI 切换不通过 `control_phase` 表示，只属于 NORMAL 标准流程内部的 source/control 状态。
+
+### 特殊控制状态退出机制（Abort）
+
+当 `control_phase != NORMAL` 时，系统支持三种退出路径，由 `FOC_SPECIAL_PHASE_ABORT_ENABLE` 宏总控（当 `FOC_COGGING_CALIB_ENABLE` 或 `FOC_REINIT_ENABLE` 任一启用时自动开启）：
+
+| 退出路径 | 触发方式 | 行为 |
+|---------|---------|------|
+| **显式命令** | 协议 `Y:A`（`a61YAb`） | `FOC_App_AbortSpecialPhase` → 调用对应模块 `_Abort` + `control_phase=NORMAL` + `FullStop` + 状态码 `O` |
+| **禁能自动** | `S:M=0`（motor_enabled=0） | ControlTrigger 检测 → `AbortSpecialPhase` |
+| **模式切换自动** | `P:D=xxx`（control_mode 变化） | ControlTrigger 检测 → `AbortSpecialPhase` |
+
+退出时通过 `FOC_Protocol_OutputDiag("INFO", "abort", <phase_name>)` 输出诊断日志。
+
+模块级 Abort 函数（`FOC_CoggingCalib_Abort` / `FOC_ReInit_Abort`）重置对应模块的内部状态机，不清除已采集的数据以便下次启动时恢复。
 
 ### control_region
 
@@ -348,14 +413,17 @@ Source Manager 在 PWM ISR 中分两步运行，决策与数据发布解耦：
 
 ```
 FOC_SourceMgr_Select(motor)
-  └── 纯决策函数：
+  └── 纯决策函数（速域切换仅服务 SPEED_ONLY 模式）：
+      ├── 非 SPEED_ONLY：锁定 LOW 源，不推进速域状态机（角度模式依赖编码器可靠源）
       ├── 读取低/高 source 配置、当前 active source、各 source 内部状态
-      ├── 检查速度阈值、低速侧升域授权、候选高速源收敛状态
+      ├── 检查：控制模式门槛 + 目标速度域门槛 + 实测速度 + 候选高速源收敛状态
       ├── 如果 single source（low=high）→ 直接返回，control_region = FULL
-      ├── 低→高判断：LowMotionAbove(high_th) + CandidateSpeedAbove(high_th) + high 可获取
+      ├── 低→高判断：TargetInHighRegion + LowMotionAbove(high_th) + CandidateSpeedAbove(high_th) + high 可获取
+      │              （TargetInHighRegion：SPEED_ONLY 且 |speed_only| > high_th，目标低速域时禁止升域）
       ├── 高速获取：使用 low_th 作为取消门限，避免 high_th 附近反复清零
-      ├── 高→低判断：high 失效/发散或速度低于 low_th 后连续确认
-      ├── 消抖窗口：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交切换
+      ├── 高→低判断：目标不在高速域 / high 失效发散 / 速度低于 low_th 后进降级流程
+      ├── 升域消抖：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交 HIGH
+      ├── 降域消抖：恢复 HIGH 需连续满足 FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES（更敏捷），单拍尖峰不打断降级
       └── 切换提交：修改 active_source、standby_source、control_region，并同步外环/电流环状态
 
 FOC_SourceMgr_Publish(motor)
@@ -400,8 +468,9 @@ FULL_ACTIVE
 
 LOW_ACTIVE
   active=low，control_region=LOW
-  -> HIGH_ACQUIRE 条件（四个全满足，使用 high_th）：
-       LowMotionAbove(low, high_th)
+  -> HIGH_ACQUIRE 条件（五者全满足，使用 high_th）：
+       TargetInHighRegion（SPEED_ONLY 且目标速度 > high_th）
+       && LowMotionAbove(low, high_th)
        && CandidateSpeedAbove(high_speed, high_th)
        && high_state >= CONVERGING
        && high source valid
@@ -409,11 +478,12 @@ LOW_ACTIVE
 HIGH_ACQUIRE
   active 仍保持 low，switch_counter 连续累计
   -> LOW_ACTIVE 条件（任一满足即回退，使用 low_th）：
-       LowMotionAbove(low, low_th) == false
+       TargetInHighRegion == false（等待期目标切回低速域即回退）
+       || LowMotionAbove(low, low_th) == false
        || CandidateSpeedAbove(high_speed, low_th) == false
        || high_state 不可获取
        || high source invalid
-  -> HIGH_ACTIVE 条件（消抖达标后直接检查切入条件，无中间 HIGH_READY 状态）：
+  -> HIGH_ACTIVE 条件（消抖达标后直接检查切入条件）：
        switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES
        && high_state == LOCKED
        && (active 是 OPENLOOP || active/high 电角度兼容)
@@ -423,24 +493,28 @@ HIGH_ACQUIRE
 HIGH_ACTIVE
   active=high，control_region=HIGH
   -> HIGH_SUSPECT 条件（降级嫌疑，任一满足即转入）：
-       high_state == DIVERGED
+       TargetInHighRegion == false（目标切回低速域即触发降级）
+       || high_state == DIVERGED
        || high_state 不可保持
        || high source invalid
        || speed_abs < low_th
 
 HIGH_SUSPECT
   降级消抖状态
-  -> HIGH_ACTIVE 条件（嫌疑解除，使用 high_th 为恢复门限）：
-       high_state != DIVERGED
+  -> HIGH_ACTIVE 条件（嫌疑解除，需连续 DEGRADE_CONFIRM_CYCLES 拍，使用 high_th）：
+       TargetInHighRegion
+       && high_state != DIVERGED
        && high_state 可保持
        && high source valid
-       && (speed 无效 || speed_abs >= high_th)
+       && speed 有效 && speed_abs >= high_th
+      （单拍尖峰或速度读取失败不打断降级）
   -> LOW_RECOVERY 条件：
        high_state == DIVERGED（立即）
-       || switch_counter >= FOC_SOURCE_SWITCH_SETTLE_CYCLES（消抖完成）
+       || degrade 消抖计数 >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES
 
 LOW_RECOVERY
   low source valid 或 low=OPENLOOP 时 CommitSwitch(low) 并回到 LOW_ACTIVE
+  （CommitSwitch 统一清零 degrade_hold_counter）
 ```
 
 低速侧升域授权规则：
@@ -517,6 +591,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 4. Source 切换：`FOC_SOURCE_SWITCH_ENABLE`
 5. 齿槽补偿特性（`FOC_COGGING_COMP_ENABLE` + `FOC_COGGING_CALIB_ENABLE`）
 6. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
+7. 特殊控制状态退出：`FOC_SPECIAL_PHASE_ABORT_ENABLE`（当 `COGGING_CALIB_ENABLE` 或 `REINIT_ENABLE` 启用时自动开启）
 
 ### 常见功能宏组合
 
@@ -529,9 +604,10 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 ### 协议裁剪开关
 
 1. 定义位置：`foc_core/include/LS_Config/foc_cfg_feature_switches.h`
-2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
+2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C/A`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
-4. **协议裁剪宏仅控制协议命令可见性与参数读写通道，不得用于保护控制算法的逻辑分支**
+4. `Y:A`（Abort）受 `FOC_SPECIAL_PHASE_ABORT_ENABLE` 裁剪
+5. **协议裁剪宏仅控制协议命令可见性与参数读写通道，不得用于保护控制算法的逻辑分支**
 
 ### 编译期约束
 
@@ -545,6 +621,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
    - 无感估计器需电流采样
    - SMO 需至少一种低速角度 source（当编码器不可用时）
    - Source 切换配置需满足 low/high source 组合约束
+4. **角度模式 source 兼容性约束**：`FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(src)` 宏判断 source 是否提供可靠的绝对位置（ENCODER 或 HFI）。`SPEED_ANGLE_ONLY` 构建要求两个 source 均为 ANGLE_CAPABLE；`FULL` 构建可在运行时切到 `SPEED_ANGLE`，运行时 Source Manager 会锁定 LOW 源不作速域切换（角度模式依赖编码器可靠源），因此 `FULL` 构建要求 LOW source 为 ANGLE_CAPABLE（HIGH 可为 SMO，仅服务速度模式的高速无感段）。
 
 ## 滤波器子系统
 
@@ -556,7 +633,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 |------|------|------|
 | `LS_Config/foc_cfg_filter.h` | LS | 滤波器参数配置：按作用对象分组，每组内按算法子分类（Kalman/LPF1 参数） |
 | `LS_Config/foc_symbol_defs.h` | LS | 类型值符号（`FOC_FILTER_TYPE_NONE/KALMAN/LPF1/BIQUAD`）和类型推导宏表（`FOC_FILTER_TYPEDEF_0/1/2/3`） |
-| `L3_Hal/foc_filter_types.h` | L3 | 滤波器数据结构体（`foc_filter_kalman_t`、`foc_filter_lpf1_t`、`foc_filter_biquad_t`） |
+| `L3_Hal/foc_filter_types.h` | L3 | 滤波器数据结构体（`foc_filter_kalman_t`、`foc_filter_lpf1_t`、`foc_filter_biquad_t`、**`foc_filter_none_t`**） |
 | `L3_Hal/foc_filter_math.h/.c` | L3 | 纯数学滤波算法（无状态、可复用），如 `FOC_FilterMath_KalmanStep`、`FOC_FilterMath_Lpf1Step`、`FOC_FilterMath_Lpf1AngleStep`（带 0/2pi 环绕处理的 LPF1 变体） |
 | `L3_Hal/foc_filter_gate.h` | L3 | 门控函数（static inline），在编译时通过 `#if` 选择正确的纯数学函数并传入默认 alpha |
 
@@ -571,8 +648,8 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 | SENSOR_CURRENT_C | `FOC_FILTER_SENSOR_CURRENT_C_KALMAN_*` / `LPF_ALPHA` | 同上 | Kalman + LPF1 |
 | SENSOR_ANGLE | `FOC_FILTER_SENSOR_ANGLE_KALMAN_*` / `LPF_ALPHA` | 同上 | Kalman + LPF1 |
 | CURRENT_LOOP_IQ | `FOC_FILTER_CURRENT_LOOP_IQ_LPF_ALPHA` | alpha 系数 | LPF1 |
-| SVPWM | `FOC_FILTER_SVPWM_LPF_ALPHA` | alpha 系数 | LPF1 |
-| ENCODER_SPEED | `FOC_FILTER_ENCODER_SPEED_LPF_ALPHA` | alpha 系数 | LPF1 |
+| ENCODER_SPEED | `FOC_FILTER_ENCODER_SPEED_LPF_ALPHA` 或 `KALMAN_*` | alpha 系数 或 Kalman 四参数 | Kalman + LPF1 |
+| SVPWM | 已删除（v2.0.4） | — | — |
 
 类型选择宏 `FOC_FILTER_SENSOR_CURRENT_A` 等定义于 `foc_cfg_feature_switches.h`，供用户选择每位置的滤波器类型。
 
@@ -581,17 +658,19 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 `foc_symbol_defs.h` 中定义了 4 元推导表，将类型值（0/1/2/3）隐式映射为对应的 C 类型：
 
 ```c
-#define FOC_FILTER_TYPEDEF_0    uint8_t              // NONE
+#define FOC_FILTER_TYPEDEF_0    foc_filter_none_t    // NONE — 仅含 output_value，统一访问接口
 #define FOC_FILTER_TYPEDEF_1    foc_filter_kalman_t   // KALMAN
 #define FOC_FILTER_TYPEDEF_2    foc_filter_lpf1_t     // LPF1
 #define FOC_FILTER_TYPEDEF_3    foc_filter_biquad_t   // BIQUAD
 ```
 
+`foc_filter_none_t` 是 NONE 配置的语义化占位类型，仅包含 `float output_value` 字段，确保所有 `.output_value` 访问点在 NONE 配置下仍能编译通过。
+
 在 `foc_ctrl_types.h` 中，`sensor_data_t` 的每个滤波器字段通过 `FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_A)` 推导出正确的类型。
 
 ### 门控函数
 
-`foc_filter_gate.h` 为 7 个位置各提供一个 `FOC_FilterGate_<Position>()` static inline 函数。这些函数在编译时根据位置选择宏的值展开对应的算法分支，消除运行时 dispatch 开销。LPF1 分支直接使用位置特定的 `FOC_FILTER_<POSITION>_LPF_ALPHA` 宏。其中 Angle 门的 LPF1 分支使用 `FOC_FilterMath_Lpf1AngleStep`（处理 0/2PI 环绕），其余位置使用标准 `FOC_FilterMath_Lpf1Step`。
+`foc_filter_gate.h` 为 7 个位置各提供一个 `FOC_FilterGate_<Position>()` static inline 函数。这些函数在编译时根据位置选择宏的值展开对应的算法分支（Kalman/LPF1/NONE），消除运行时 dispatch 开销。LPF1 分支直接使用位置特定的 `FOC_FILTER_<POSITION>_LPF_ALPHA` 宏。其中 Angle 门的 LPF1 分支使用 `FOC_FilterMath_Lpf1AngleStep`（处理 0/2PI 环绕），其余位置使用标准 `FOC_FilterMath_Lpf1Step`。NONE 分支直接返回输入值。
 
 ## 维护规则
 

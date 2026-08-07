@@ -7,7 +7,14 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor);
+static void ApplyZeroOffsets(sensor_data_t *out)
+{
+    out->current_a.output_value -= out->current_a_zero_offset;
+    out->current_b.output_value -= out->current_b_zero_offset;
+#if (FOC_CURRENT_SENSE_PHASES == 3U)
+    out->current_c.output_value -= out->current_c_zero_offset;
+#endif
+}
 
 void Sensor_InitSnapshot(sensor_data_t *out)
 {
@@ -94,13 +101,13 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->current_b_zero_offset = 0.0f;
 }
 
-void Sensor_Init(uint8_t pwm_freq_kHz, float adc_sample_offset_percent)
+void Sensor_Init(void)
 {
-    FOC_Platform_SensorInputInit(pwm_freq_kHz);
-    Sensor_ADCSampleTimeOffset(adc_sample_offset_percent);
+    FOC_Platform_SensorInputInit();
+    Sensor_ADCSampleTimeOffset(FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
 }
 
-void Sensor_SetZeroOffset(foc_motor_t *motor)
+void Sensor_SetZeroOffset(sensor_data_t *out)
 {
     uint16_t i;
     uint16_t valid_samples = 0U;
@@ -120,11 +127,11 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
     float avg_c;
 #endif
 
-    if (motor == 0) return;
+    if (out == 0) return;
 
 #if (FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE)
-    motor->sensor.current_a_zero_offset = 0.0f;
-    motor->sensor.current_b_zero_offset = 0.0f;
+    out->current_a_zero_offset = 0.0f;
+    out->current_b_zero_offset = 0.0f;
     return;
 #endif
 
@@ -151,10 +158,10 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
 
     if (valid_samples < SENSOR_ZERO_CALIB_MIN_VALID_SAMPLES)
     {
-        motor->sensor.current_a_zero_offset = 0.0f;
-        motor->sensor.current_b_zero_offset = 0.0f;
+        out->current_a_zero_offset = 0.0f;
+        out->current_b_zero_offset = 0.0f;
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
-        motor->sensor.current_c_zero_offset = 0.0f;
+        out->current_c_zero_offset = 0.0f;
 #endif
         return;
     }
@@ -168,37 +175,28 @@ void Sensor_SetZeroOffset(foc_motor_t *motor)
     if ((fabsf(avg_a) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT) &&
         (fabsf(avg_b) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT))
     {
-        motor->sensor.current_a_zero_offset = avg_a;
-        motor->sensor.current_b_zero_offset = avg_b;
+        out->current_a_zero_offset = avg_a;
+        out->current_b_zero_offset = avg_b;
     }
     else
     {
-        motor->sensor.current_a_zero_offset = 0.0f;
-        motor->sensor.current_b_zero_offset = 0.0f;
+        out->current_a_zero_offset = 0.0f;
+        out->current_b_zero_offset = 0.0f;
     }
 
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
     if (fabsf(avg_c) <= SENSOR_ZERO_CALIB_MAX_ABS_CURRENT)
     {
-        motor->sensor.current_c_zero_offset = avg_c;
+        out->current_c_zero_offset = avg_c;
     }
     else
     {
-        motor->sensor.current_c_zero_offset = 0.0f;
+        out->current_c_zero_offset = 0.0f;
     }
 #endif
 }
 
-static void ApplyZeroOffsets(sensor_data_t *out, const foc_motor_t *motor)
-{
-    out->current_a.output_value -= motor->sensor.current_a_zero_offset;
-    out->current_b.output_value -= motor->sensor.current_b_zero_offset;
-#if (FOC_CURRENT_SENSE_PHASES == 3U)
-    out->current_c.output_value -= motor->sensor.current_c_zero_offset;
-#endif
-}
-
-void Sensor_ReadCurrent(foc_motor_t *motor)
+void Sensor_ReadCurrent(sensor_data_t *out)
 {
     float current_a = 0.0f;
     float current_b = 0.0f;
@@ -207,10 +205,10 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
 #endif
     uint8_t read_ok;
 
-    if (motor == 0) return;
+    if (out == 0) return;
 
 #if (FOC_CURRENT_SENSE_PHASES == FOC_CURRENT_SENSE_NONE)
-    motor->sensor.adc_valid = 1;
+    out->adc_valid = 1;
     return;
 #endif
 
@@ -222,31 +220,29 @@ void Sensor_ReadCurrent(foc_motor_t *motor)
 
     if (read_ok != 0U)
     {
-        sensor_data_t *out = &motor->sensor;
-
         out->current_a.output_value = FOC_FilterGate_CurrentA(&out->current_a, current_a);
         out->current_b.output_value = FOC_FilterGate_CurrentB(&out->current_b, current_b);
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
         out->current_c.output_value = FOC_FilterGate_CurrentC(&out->current_c, current_c);
 #endif
 
-        ApplyZeroOffsets(out, motor);
+        ApplyZeroOffsets(out);
 
         out->adc_valid = 1;
     }
     else
     {
-        motor->sensor.adc_valid = 0;
+        out->adc_valid = 0;
     }
 }
 
-void Sensor_ReadEncoder(foc_motor_t *motor, sensor_data_t *out, float dt_sec)
+void Sensor_ReadEncoder(sensor_data_t *out, float dt_sec)
 {
     float angle_rad;
     float angle_for_output;
     float delta;
 
-    if ((motor == 0) || (out == 0)) return;
+    if (out == 0) return;
 
     if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
     {
@@ -322,22 +318,4 @@ void Sensor_ADCSampleTimeOffset(float percent)
 #else
     (void)percent;
 #endif
-}
-
-void Sensor_AccumulateEcycle(foc_motor_t *motor, const sensor_data_t *current_snapshot)
-{
-    (void)motor;
-    (void)current_snapshot;
-}
-
-float Sensor_GetVBUSVoltage(const sensor_data_t *snapshot)
-{
-    if (snapshot == 0) return 0.0f;
-    return snapshot->vbus.filtered;
-}
-
-uint8_t Sensor_IsVBUSValid(const sensor_data_t *snapshot)
-{
-    if (snapshot == 0) return 0U;
-    return snapshot->vbus_valid;
 }

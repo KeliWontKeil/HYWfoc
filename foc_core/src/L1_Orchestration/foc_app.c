@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L1_Orchestration/foc_app.h"
 
 #include <stdio.h>
@@ -11,7 +12,6 @@
 #include "L2_Core/Runtime/foc_task_scheduler.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
-#include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
@@ -73,17 +73,51 @@ void FOC_App_Init(void)
                      FOC_App_ServiceTrigger,
                      FOC_App_ControlTrigger,
                      FOC_App_MonitorTrigger,
-                     FOC_App_OnPwmUpdateISR);
+                     FOC_App_OnPwmUpdateISR,
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+                     FOC_App_OnCurrentLoopISR
+#else
+                     0
+#endif
+                     );
     FOC_Init_MotorAndCalib(&motor);
 
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
 #if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
-    FOC_OpenLoop_Init(&motor);
+    FOC_OpenLoop_Init(&motor.openloop_state, &motor.params, &motor.cfg);
 #endif
 
-    FOC_SourceMgr_Init(&motor,
-                       (uint8_t)FOC_CONTROL_LOW_SOURCE,
-                       (uint8_t)FOC_CONTROL_HIGH_SOURCE);
+    {
+        foc_source_mgr_ctx_t sm_ctx;
+
+        sm_ctx.sensor = &motor.sensor;
+        sm_ctx.params = &motor.params;
+        sm_ctx.cfg = &motor.cfg;
+        sm_ctx.control_mode = motor.state.control_mode;
+        sm_ctx.switch_cfg = &motor.source_switch_state;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.smo_state = &motor.estim_smo_state;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.openloop_state = &motor.openloop_state;
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.cogging_status = &motor.cogging_comp_status;
+#endif
+        sm_ctx.state = &motor.source_mgr_state;
+        sm_ctx.active = &motor.active_source_state;
+        sm_ctx.ctrl = &motor.ctrl;
+        sm_ctx.outer_loop = &motor.outer_loop;
+        sm_ctx.speed_pid = &motor.speed_pid;
+        sm_ctx.torque_current_pid = &motor.torque_current_pid;
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.soft_switch = &motor.current_soft_switch_status;
+#endif
+        sm_ctx.encoder_services = &motor.encoder_services;
+        FOC_SourceMgr_Init(&sm_ctx,
+                           (uint8_t)FOC_CONTROL_LOW_SOURCE,
+                           (uint8_t)FOC_CONTROL_HIGH_SOURCE);
+    }
 
     FOC_Init_Verify(&motor, &motor.sensor);
     FOC_OutputMgr_WriteStartupInfo(&motor);
@@ -92,8 +126,11 @@ void FOC_App_Init(void)
 
 void FOC_App_Start(void)
 {
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    FOC_Platform_AuxTimerStart(FOC_AUX_TIMER_CURRENT_LOOP);
+#endif
     FOC_Platform_StartControlTickSource();
-    FOC_Platform_SetControlRuntimeInterrupts(1U);
+    FOC_Platform_SetControlInterruptsEnabled(1U);
 }
 
 void FOC_App_Loop(void)
@@ -144,26 +181,20 @@ void FOC_App_Loop(void)
             needs_system_info  |= result.needs_system_info;
         }
 
-        if (motor.state.cfg_dirty != 0U)
-        {
-            FOC_Control_ApplyConfig(&motor);
-            motor.state.cfg_dirty = 0U;
-        }
-
         if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.runtime.output.tx_fifo);
         if (needs_config_dump  != 0U) FOC_Protocol_QueueConfigs(&motor, &g_sys.runtime.output.tx_fifo);
         if (needs_state_dump   != 0U) FOC_Protocol_QueueStates(&motor, &g_sys.runtime.output.tx_fifo);
         if (needs_system_info  != 0U) FOC_Protocol_QueueSystemInfo(&motor, &g_sys.runtime.output.tx_fifo);
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        if (FOC_CoggingCalibIsDumpPending(&motor) != 0U)
+        if (FOC_CoggingCalibIsDumpPending(&motor.cogging_calib_state) != 0U)
         {
-            FOC_CoggingCalibClearDumpPending(&motor);
+            FOC_CoggingCalibClearDumpPending(&motor.cogging_calib_state);
             FOC_CoggingCalibDumpTable(&motor);
         }
-        if (FOC_CoggingCalibIsExportPending(&motor) != 0U)
+        if (FOC_CoggingCalibIsExportPending(&motor.cogging_calib_state) != 0U)
         {
-            FOC_CoggingCalibClearExportPending(&motor);
+            FOC_CoggingCalibClearExportPending(&motor.cogging_calib_state);
             FOC_CoggingCalibExportTable(&motor);
         }
 #endif
@@ -174,7 +205,7 @@ void FOC_App_Loop(void)
 
 void FOC_App_ServiceTrigger(void)
 {
-    FOC_Indicator_Update(&motor, &g_sys.runtime);
+    
     FOC_OutputMgr_PollSources(&g_sys);
     g_sys.runtime.tasks.service_pending = 1U;
 }
@@ -243,7 +274,7 @@ void FOC_App_ControlTrigger(void)
 {
     uint8_t phase;
     uint8_t cycle_result = FOC_CYCLE_OK;
-
+    FOC_Indicator_Update(&motor, &g_sys.runtime);
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
 
@@ -259,8 +290,8 @@ void FOC_App_ControlTrigger(void)
     }
 #endif
 
-#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
-    Sensor_ReadEncoder(&motor, &motor.sensor, FOC_CONTROL_DT_SEC);
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    Sensor_ReadEncoder(&motor.sensor, FOC_CONTROL_DT_SEC);
 #endif
     Sensor_ReadVBUS(&motor.sensor);
 
@@ -272,7 +303,10 @@ void FOC_App_ControlTrigger(void)
 #endif
     {
         motor.state.sensor_invalid_consecutive++;
-        motor.state.control_skip_count++;
+        if (motor.state.control_skip_count < UINT32_MAX)
+        {
+            motor.state.control_skip_count++;
+        }
         motor.state.last_fault_code = (motor.sensor.adc_valid == 0U) ?
             (uint8_t)FOC_FAULT_SENSOR_ADC_INVALID : (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID;
 
@@ -329,5 +363,27 @@ void FOC_App_OnPwmUpdateISR(void)
 
     if (motor.state.system_running == 0U) return;
 
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+    FOC_ControlExecutor_RunISR_PwmOnly(&motor);
+#else
     FOC_ControlExecutor_RunISR(&motor);
+#endif
+
+#if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE) && (FOC_CURRENT_LOOP_ISR_MODE != FOC_ISR_MODE_3ISR)
+    DebugStream_CaptureOscSnapshot(&g_sys.runtime.monitor.stream, &motor);
+#endif
 }
+
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+void FOC_App_OnCurrentLoopISR(void)
+{
+    if (motor.state.system_fault != 0U) return;
+    if (motor.state.system_running == 0U) return;
+
+    FOC_ControlExecutor_RunISR_CurrentLoop(&motor);
+
+#if (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE)
+    DebugStream_CaptureOscSnapshot(&g_sys.runtime.monitor.stream, &motor);
+#endif
+}
+#endif

@@ -61,6 +61,7 @@ virtualFolder:
         - path: Utilities/I2C/i2c0.c
         - path: Utilities/USART/usart1.c
         - path: Utilities/TIMER3/timer3.c
+        - path: Utilities/AUXTIMER/auxtimer.c
         - path: Utilities/USART/usart2.c
       folders: []
     - name: ::CMSIS
@@ -127,6 +128,7 @@ targets:
         - Utilities/I2C
         - Utilities/ADC
         - Utilities/TIMER3
+        - Utilities/AUXTIMER
       libList:
         - Utilities
         - Application

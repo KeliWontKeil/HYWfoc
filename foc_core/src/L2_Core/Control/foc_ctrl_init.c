@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 
 #include <stdio.h>
@@ -29,11 +30,6 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     uint8_t need_direction;
     uint8_t need_pole_pairs;
 
-    if (motor == 0)
-    {
-        return;
-    }
-
     need_zero = (motor->params.mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) ? 1U : 0U;
     need_direction = (motor->params.direction == FOC_DIR_UNDEFINED) ? 1U : 0U;
     need_pole_pairs = (motor->params.pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ? 1U : 0U;
@@ -54,7 +50,9 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     if (need_zero != 0U)
     {
-        if (FOC_SampleLockedMechanicalAngle(motor,
+        if (FOC_SampleLockedMechanicalAngle(&motor->ctrl, &motor->svpwm,
+                                            &motor->applied_output, &motor->alpha_beta,
+                                            &motor->params,
                                             0.0f,
                                             FOC_CALIB_ZERO_LOCK_SETTLE_MS,
                                             FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT,
@@ -76,13 +74,18 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     }
     else
     {
-        FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+        FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                              &motor->applied_output, &motor->alpha_beta,
+                                              &motor->params,
+                                              0.0f);
         FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
     }
 
     if ((need_direction != 0U) || (need_pole_pairs != 0U))
     {
-        if (FOC_EstimateDirectionAndPolePairs(motor, &direction_est, &pole_pairs_est) != 0U)
+        if (FOC_EstimateDirectionAndPolePairs(&motor->ctrl, &motor->params, &motor->svpwm,
+                                              &motor->applied_output, &motor->alpha_beta,
+                                              &direction_est, &pole_pairs_est) != 0U)
         {
             if (need_direction != 0U)
             {
@@ -109,7 +112,10 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     motor->ctrl.ud = backup_ud;
     motor->ctrl.uq = backup_uq;
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                          &motor->applied_output, &motor->alpha_beta,
+                                          &motor->params,
+                                          0.0f);
 }
 
 void FOC_MotorInit(foc_motor_t *motor,
@@ -121,11 +127,6 @@ void FOC_MotorInit(foc_motor_t *motor,
                    float mech_angle_at_elec_zero_rad,
                    int8_t direction)
 {
-    if (motor == 0)
-    {
-        return;
-    }
-
     if (vbus_voltage < 0.0f)
     {
         vbus_voltage = 0.0f;
@@ -149,6 +150,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->source_mgr_state.switch_in_progress = 0U;
     motor->source_mgr_state.switch_counter = 0U;
     motor->source_mgr_state.config_valid = 0U;
+    motor->source_mgr_state.degrade_hold_counter = 0U;
     motor->encoder_services.comp_available = 0U;
     motor->encoder_services.comp_active = 0U;
     motor->encoder_services.calib_available = 0U;
@@ -157,6 +159,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->applied_output.valid = 0U;
     motor->applied_output.ud = 0.0f;
     motor->applied_output.uq = 0.0f;
+    motor->applied_output.electrical_angle_rad = 0.0f;
     motor->phase_output_state.phase = FOC_CONTROL_PHASE_NORMAL;
     motor->phase_output_state.type = FOC_PHASE_OUTPUT_IDLE;
     motor->phase_output_state.valid = 0U;
@@ -177,7 +180,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ctrl.iq_target = 0.0f;
 
     motor->ctrl.iq_measured = 0.0f;
-    motor->cogging_comp_status.speed_ref_rad_s = 0.0f;
     motor->outer_loop.accum_rad = 0.0f;
     motor->outer_loop.prev_rad = 0.0f;
     motor->outer_loop.prev_valid = 0U;
@@ -213,7 +215,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->state.system_running = 0U;
     motor->state.system_fault = 0U;
     motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-    motor->state.cfg_dirty = 0U;
     motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
     motor->state.control_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CONTROL_MODE;
     motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
@@ -252,12 +253,21 @@ void FOC_MotorInit(foc_motor_t *motor,
 #endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     motor->cogging_comp_status.enabled = (uint8_t)FOC_COGGING_COMP_ENABLE;
+    motor->cogging_comp_status.speed_ref_rad_s = 0.0f;
     motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
     motor->cogging_comp_status.speed_gate_rad_s = FOC_COGGING_COMP_SPEED_GATE_RAD_S;
     motor->cogging_comp_status.calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
 #endif
 
-    FOC_ControlConfigResetDefault(motor);
+    FOC_ControlConfigResetDefault(&motor->cfg,
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+                                  &motor->current_soft_switch_status,
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+                                  &motor->cogging_comp_status,
+                                  motor->cogging_comp_table_q15,
+#endif
+                                  FOC_COGGING_LUT_POINT_COUNT);
     /* per-motor sub-struct init */
     motor->mode_transition.prev_control_mode = 0U;
     motor->mode_transition.prev_control_mode_valid = 0U;
@@ -265,12 +275,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->outer_loop.speed_err_accum_rad = 0.0f;
     motor->outer_loop.prev_mech_signed_rad = 0.0f;
     motor->outer_loop.speed_state_valid = 0U;
-#if (FOC_SVPWM_PRE_LPF_ENABLE == FOC_CFG_ENABLE)
-    motor->svpwm_lpf.valid = 0U;
-    motor->svpwm_lpf.phase_a = 0.0f;
-    motor->svpwm_lpf.phase_b = 0.0f;
-    motor->svpwm_lpf.phase_c = 0.0f;
-#endif
 
     FOC_ControlExecutor_Init(motor);
 
@@ -293,11 +297,12 @@ void FOC_MotorInit(foc_motor_t *motor,
         motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
 
 #if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
-        (void)FOC_ControlLoadCoggingCompTableQ15(motor,
-                                                  foc_cogging_default_table_q15,
-                                                  FOC_COGGING_LUT_POINT_COUNT,
-                                                  FOC_COGGING_LUT_IQ_LSB_A,
-                                                  FOC_COGGING_COMP_SOURCE_STATIC);
+        (void)FOC_ControlLoadCoggingCompTableQ15(&motor->cogging_comp_status,
+                                                 motor->cogging_comp_table_q15,
+                                                 foc_cogging_default_table_q15,
+                                                 FOC_COGGING_LUT_POINT_COUNT,
+                                                 FOC_COGGING_LUT_IQ_LSB_A,
+                                                 FOC_COGGING_COMP_SOURCE_STATIC);
 #endif
 
         if (table_defined != 0U)
@@ -316,17 +321,17 @@ void FOC_MotorInit(foc_motor_t *motor,
 /* L2 硬件初始化收口：封装 Sensor/SVPWM/ControlExecutor 初始化序列 */
 void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
 {
-    if (motor == 0) return;
-
     Sensor_InitSnapshot(&motor->sensor);
-    Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
-    Sensor_SetZeroOffset(motor);
+    Sensor_Init();
+    Sensor_SetZeroOffset(&motor->sensor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */
-    Sensor_ReadEncoder(motor, &motor->sensor, FOC_CONTROL_DT_SEC);
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    Sensor_ReadEncoder(&motor->sensor, FOC_CONTROL_DT_SEC);
+#endif
     Sensor_ReadVBUS(&motor->sensor);
     motor->sensor.adc_valid = 1U;
 
-    SVPWM_Init(motor, FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
+    SVPWM_Init(&motor->svpwm);
 
     FOC_ControlExecutor_Init(motor);
 }

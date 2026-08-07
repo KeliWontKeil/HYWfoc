@@ -1,4 +1,5 @@
-﻿#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 
 #if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
 
@@ -14,6 +15,13 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "L3_Hal/foc_sensor.h"
 #include "LS_Config/foc_config.h"
+
+/* ========== 公共 API ========== */
+
+void FOC_ReInit_Request(foc_motor_t *motor)
+{
+    motor->state.control_phase = FOC_CONTROL_PHASE_REINIT;
+}
 
 /* ========== 内部工具 ========== */
 
@@ -41,7 +49,7 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 {
     motor->ctrl.uq = 0.0f;
     motor->ctrl.ud = calib_uq;
-    FOC_ControlRecordPhaseOutputDqAngle(motor,
+    FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                         FOC_CONTROL_PHASE_REINIT,
                                         motor->reinit_state.phase,
                                         0.0f,
@@ -53,7 +61,8 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
 {
     (void)dt_sec;
-    FOC_ControlRecordPhaseOutputZero(motor,
+    FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
+                                     &motor->outer_loop,
                                      FOC_CONTROL_PHASE_REINIT,
                                      motor->reinit_state.phase);
 }
@@ -87,11 +96,6 @@ static float ReInit_AngleFromSum(const foc_reinit_state_t *rs)
 uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 {
     foc_reinit_state_t *rs;
-
-    if (motor == 0)
-    {
-        return 0U;
-    }
 
     rs = &motor->reinit_state;
     if (dt_sec <= 0.0f)
@@ -255,7 +259,8 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             /* 退磁 */
             motor->ctrl.uq = 0.0f;
             motor->ctrl.ud = 0.0f;
-            FOC_ControlRecordPhaseOutputZero(motor,
+            FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
+                                             &motor->outer_loop,
                                              FOC_CONTROL_PHASE_REINIT,
                                              rs->phase);
 
@@ -282,7 +287,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         /* 应用 D 轴对齐电压在目标电角度 */
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -304,7 +309,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -397,7 +402,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -419,7 +424,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -449,10 +454,15 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         ReInit_ZeroOutput(motor, dt_sec);
 
         /* 强制 PWM 输出 50% 中点（零电压），绕过 ISR 延迟 */
-        SVPWM_ApplyDirectDuty(motor, 0U, 0.5f, 0.5f, 0.5f);
+        SVPWM_ApplyDirectDuty(&motor->svpwm, 0U, 0.5f, 0.5f, 0.5f);
 
         /* 应用配置 */
-        FOC_Control_ApplyConfig(motor);
+        FOC_Control_ApplyConfig(&motor->ctrl,
+                                &motor->torque_current_pid,
+                                &motor->speed_pid,
+                                &motor->angle_pid,
+                                &motor->cfg,
+                                &motor->params);
 
         motor->state.system_running = 1U;
         motor->state.current_loop_ready = 0U;
@@ -461,12 +471,20 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         {
             char info[120];
+            int32_t ip_mech;
+            int32_t fp_mech;
+            int32_t ip_vbus;
+            int32_t fp_vbus;
+
+            Math_FloatToFixed(motor->params.mech_angle_at_elec_zero_rad, 4, &ip_mech, &fp_mech);
+            Math_FloatToFixed(motor->params.vbus_voltage, 2, &ip_vbus, &fp_vbus);
+
             snprintf(info, sizeof(info),
-                     "reinit done: mech_zero=%.4f rad, dir=%d, poles=%d, vbus=%.2fV\r\n",
-                     (double)motor->params.mech_angle_at_elec_zero_rad,
+                     "reinit done: mech_zero=%d.%04d rad, dir=%d, poles=%d, vbus=%d.%02dV\r\n",
+                     (int)ip_mech, (int)fp_mech,
                      (int)motor->params.direction,
                      (int)motor->params.pole_pairs,
-                     (double)motor->params.vbus_voltage);
+                     (int)ip_vbus, (int)fp_vbus);
             FOC_Platform_WriteDebugText(info);
         }
 
@@ -491,7 +509,6 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
 void FOC_ReInit_Abort(foc_motor_t *motor)
 {
-    if (motor == 0) return;
     motor->reinit_state.phase = FOC_REINIT_PHASE_IDLE;
 }
 

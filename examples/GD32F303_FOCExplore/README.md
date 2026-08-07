@@ -21,8 +21,6 @@
 
 - [hardware/](hardware/)：板级文档、接线与管脚速查。
 - [software/](software/)：可直接打开的实例工程包（构建/烧录/调试入口）。
-- [DEVELOPMENT.md](DEVELOPMENT.md)：实例构建与调试详细说明。
-- [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md)：实例通信通道映射与快速验证命令。
 
 ## 3. 首次打开工程
 
@@ -43,23 +41,23 @@
 
 ## 4. 上电后快速验证
 
-1. 连接串口并确认通信参数（见 [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md)）。
+1. 连接串口并确认通信参数（见 [../../docs/protocol-parameters.md](../../docs/protocol-parameters.md) 与 [hardware/hardware.md](hardware/hardware.md)）。
 2. 默认本机 driver_id 为 `0x61`（`'a'`），可先用 `aaPXb` 验证参数读回。
 3. 继续执行 `aaPP3.0b`、`aaSM1b`、`aaYRb`、`aaYCb` 等快速命令，确认状态输出和故障清除路径。
 
-说明：本页只给最小验证路径，具体通道绑定与命令语义以 [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md) 与 [../../docs/protocol-parameters-bilingual.md](../../docs/protocol-parameters-bilingual.md) 为准。
+说明：本页只给最小验证路径，具体通道绑定与命令语义以 [../../docs/protocol-parameters.md](../../docs/protocol-parameters.md) 与 [hardware/hardware.md](hardware/hardware.md) 为准。
 
 ## 5. 常见问题（最小排查）
 
 - 构建失败：先确认你打开的是实例工作区而非根工作区。
 - 烧录失败：检查 ST-LINK 连接、电源与 SWD 接线。
-- 串口无输出：核对通道与参数，参考 [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md)。
+- 串口无输出：核对通道与参数，参考 [../../docs/protocol-parameters.md](../../docs/protocol-parameters.md)。
 - 电机无响应：先完成命令链路验证，再排查硬件连接，参考 [hardware/hardware.md](hardware/hardware.md)。
 
 ## 6. 进一步阅读
 
-- 实例构建/调试细节： [DEVELOPMENT.md](DEVELOPMENT.md)
-- 实例协议映射与验证： [PROTOCOL_ADAPTATION.md](PROTOCOL_ADAPTATION.md)
+- 实例构建/烧录入口： [software/](software/)（EIDE / Keil 工程）
+- 实例协议验证： [../../docs/protocol-parameters.md](../../docs/protocol-parameters.md)
 - 硬件管脚速查： [hardware/hardware.md](hardware/hardware.md)
 - 库级架构与通用规则： [../../docs/architecture.md](../../docs/architecture.md)、[../../docs/development.md](../../docs/development.md)
 

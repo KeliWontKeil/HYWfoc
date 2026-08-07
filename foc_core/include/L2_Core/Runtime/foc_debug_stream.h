@@ -8,6 +8,13 @@
 #include "L2_Core/Runtime/foc_monitor_queue_types.h"
 #include "LS_Config/foc_config.h"
 
+#define OSC_SNAPSHOT_CHANNEL_COUNT 16U
+
+typedef struct {
+    float    channel[OSC_SNAPSHOT_CHANNEL_COUNT];
+    uint8_t  valid;
+} osc_snapshot_t;
+
 /*
  * 调试流运行时状态（实例由 L1 在 foc_runtime_ctx_t 中分配）
  * 语义遥测行数：0~8 共 9 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
@@ -23,6 +30,7 @@ typedef struct {
     uint32_t last_exec_cycles;
     uint8_t  line_index;
     uint8_t  osc_param_bit_idx;   /* 当前示波器掩码位索引 */
+    osc_snapshot_t snapshot;
 } debug_stream_state_t;
 
 /*
@@ -44,6 +52,8 @@ typedef struct {
 
 void DebugStream_Init(debug_stream_state_t *ds);
 void DebugStream_SetExecutionCycles(debug_stream_state_t *ds, uint32_t exec_cycles);
+
+void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t *motor);
 
 /* ---- ISR 级接口 ---- */
 
@@ -74,13 +84,5 @@ void DebugStream_AppendOscValue(char *osc_buffer, uint16_t *offset,
 
 /* 组装示波器行（加头尾标记），完成行。返回写入的总字符数。 */
 uint16_t DebugStream_FormatOscLine(char *osc_buffer, uint16_t max_len);
-
-/* ---- 向后兼容接口 ---- */
-
-uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
-                                  const foc_motor_t *motor,
-                                  const foc_report_config_t *report,
-                                  char *line_out,
-                                  uint16_t line_max);
 
 #endif /* FOC_DEBUG_STREAM_H */

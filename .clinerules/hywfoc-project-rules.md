@@ -44,6 +44,14 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 - **L2 任何模块不得反向包含 `L1_Orchestration/` 头文件**
 - **L2 任何模块不得持有实例**——所有实例在 L1 中分配，L2 通过指针参数操作
 
+## Platform API contract
+
+- **接口面稳定**：平台 API（`foc_platform_api.h`）全部无条件声明，不随配置宏裁剪；宏组合只改变实现行为（条件功能关闭时退化为 no-op / 返回 0），不改变接口面。
+- **参数约定**：编译期固定配置（PWM 频率、采样频率、调度节拍、死区等）由平台实现内部从 `foc_cfg_*.h` 宏读取，不进入接口签名；仅运行时可变参数显式传参。
+- **契约三档**：逐函数标注【必须】（所有平台实现）/【按需】（依赖宏组合，条件成立时须实现）/【可选】（允许空实现）。
+- **回调统一**：中断回调统一使用 `FOC_Platform_IsrCallback_t`，不新增语义化重复的回调类型。
+- 平台 API 的注释与契约矩阵是移植者第一手依据，修改 API 面时需同步更新 `foc_platform_api.h`、`foc_platform_api_empty.c` 与 `docs/architecture.md` 的契约小节。
+
 ## L2 Control module naming
 
 L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功能分组列出：
@@ -102,6 +110,7 @@ LS_Config 文件分为三大类：
 - **类型命名**：`xxx_t` 后缀
 - **条件编译**：宏裁剪链路必须声明/定义/调用三者一致，关闭宏后必须同步收口所有引用点
 - **指针校验**：函数入口检查指针是否为 NULL，返回 0 或直接 return
+- **传参排序（耦合域规范）**：函数参数按 `[本域私有状态] → [跨域可写总线] → [跨域只读输入(const)] → [显式 out] → [标量(dt 最后)]` 分组排序；`const` 指针=只读输入，非 `const`=可写/状态。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛，其余域函数不引入 ctx 聚合
 - **ISR 路径**：禁止阻塞操作，避免浮点运算；优先转发到模块处理函数
 - **keil兼容**：所有文件最后一行要空一行，避免警告
 
@@ -122,7 +131,7 @@ L1 主循环（`FOC_App_Loop`）编排三个独立任务段，顺序无关：
 
 ## Version control practices
 
-- 语义化版本 `MAJOR.MINOR.PATCH`（当前 `v2.0.2`）
+- 语义化版本 `MAJOR.MINOR.PATCH`
 - 默认在 `main` 直接开发，不创建新分支
 - 每次完整修改后仅做本地 `git commit`
 - 默认不 `git push`，仅在用户明确要求时执行
@@ -141,16 +150,7 @@ L1 主循环（`FOC_App_Loop`）编排三个独立任务段，顺序无关：
 7. `docs/engineering/dev-guidelines/rules/*` — 规则文件（如分层描述变化）
 
 **禁止**：新增"平行事实源"文档，优先更新已有主文档。
-
-## Communication protocol
-
-帧格式：`a<driver_id><cmd><subcmd><param>b`
-
-- 命令通道：`P`（参数通道）、`S`（状态通道）、`Y`（系统通道）
-- 默认本地 ID：`0x61`（`'a'`）
-- 返回状态码：`O`(成功)、`E`(格式错误)、`P`(参数无效)、`I`(命令无效)、`T`(超时)
-- 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C`
-- 协议裁剪开关：`FOC_PROTOCOL_ENABLE_*` 系列宏
+- 文档中不要附带可配置修改的参数，否则会出现经常性的文档和配置不匹配
 
 ## Current mission
 
@@ -176,19 +176,6 @@ set DOTNET_ROLL_FORWARD=Major
 - `--rebuild`：强制全量重建
 - `-p`：指定 `builder.params` 路径
 
-### 常见错误与解决方案
-
-| 错误 | 根因 | 解决方案 |
-|------|------|----------|
-| `Not found any source files` / 文件未编译 | `builder.params` 中 `sourceList` 路径错误或文件缺失 | 检查 `.c` 文件是否存在，路径基于 `rootDir` 的相对引用 |
-| `L6218E: Undefined symbol` (链接错误) | 某 `.c` 文件未加入 `sourceList`，或函数名拼写差异 | 检查 `builder.params.sourceList` 是否包含该文件；检查声明/定义/调用三者一致 |
-| `#20: identifier undefined` / 类型未定义 | 头文件依赖缺失或 `#include` 路径不对 | 检查 `builder.params.incDirs` 是否包含所需头文件目录 |
-| `#77-D: has no storage class` / `#65: expected ";"` | 代码在函数体外部（通常是缺少 `{` 导致函数体提前闭合） | 检查该文件最近的 `if/for/while` 是否缺少左大括号 |
-| `#147-D: declaration is incompatible` | 函数声明与定义参数不匹配 | 检查 `.h` 与 `.c` 的函数签名一致 |
-| 条件编译宏裁掉函数定义但未裁掉调用 | 宏裁剪链路不同步 | 功能宏关闭后，必须同步收口所有引用点的声明/定义/调用 |
-| `#1-D: last line of file ends without a newline` | 文件末尾缺少换行符 | 在文件末尾添加一个空行 |
-| `not found any source files` | `sourceList` 路径与 `rootDir` 不匹配 | 优先检查 `sourceList` 路径是否正确 |
-
 ### 构建日志查看
 
 - 完整实时日志：`unify_builder.exe` 的 stdout 输出
@@ -204,7 +191,11 @@ set DOTNET_ROLL_FORWARD=Major
 - 不允许使用“更简单的修改方式”，而是使用更好的、更符合系统架构的、解决根本问题的修改方案。
 - 计划过程中，请考虑和分析：调用链影响、数据流组织方式、算法调用结构等底层根因，不要仅处理现象。
 - 不可总结计划。如果出现了计划变更，请在原计划上完整的修改，并给出更新的完整计划，避免之后的执行漂移。
-- 禁止附和用户，如果有疑问或是认为用户的理解不正确/理解和现状冲突，必须提出，而不是按照用户的错误理解错上加错
+- 禁止附和用户，如果有疑问或是认为用户的理解不正确/理解和现状冲突，必须提出，而不是按照用户的错误理解错上加错。用户提出的不一定是完全正确的。
+- 项目配置可能会手动修改，必须更新理解。
+- 不要假设和过度思考。一旦出现现状与描述矛盾，先确认文件。
+- 对于任何参数宏的值，无需向用户确认默认值，这个值是可以快速修改调参的
+- 使用agent内置工具，不允许使用python脚本做代码修改/替换，如果遇到工具保持请仔细检查工具调用情况而不是去用python
 
 ### 项目规则/架构约束
 - 本处用于记载项目的架构约束/编码规范，或是调试过程中形成的经验型约束

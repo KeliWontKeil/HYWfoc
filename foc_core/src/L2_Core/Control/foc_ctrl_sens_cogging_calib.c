@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 
 #include <math.h>
@@ -39,86 +40,61 @@ static inline int16_t FloatToQ15(float val, float lsb)
 
 /* ========== Public API ========== */
 
-void FOC_CoggingCalib_RequestStart(foc_motor_t *motor)
+uint8_t FOC_CoggingCalibIsBusy(const foc_cogging_calib_state_t *state)
 {
-    if (motor != 0)
-    {
-        motor->cogging_calib_state.request_start = 1U;
-        motor->state.control_phase = FOC_CONTROL_PHASE_COGGING_CALIB;
-    }
+    return (state->in_progress != 0U) ||
+           (state->request_start != 0U);
+}
+
+void FOC_CoggingCalib_RequestStart(foc_cogging_calib_state_t *state)
+{
+    state->request_start = 1U;
 }
 
 void FOC_CoggingCalib_Abort(foc_motor_t *motor)
 {
-    if (motor == 0) return;
     motor->cogging_calib_state.point_index = CALIB_PHASE_IDLE;
     motor->cogging_calib_state.request_start = 0U;
     motor->cogging_calib_state.pass_num = 0U;
     motor->cogging_calib_state.in_progress = 0U;
 }
 
-void FOC_CoggingCalib_RequestDump(foc_motor_t *motor)
+void FOC_CoggingCalib_RequestDump(foc_cogging_calib_state_t *state)
 {
-    if (motor != 0)
-    {
-        motor->cogging_calib_state.request_dump = 1U;
-    }
+    state->request_dump = 1U;
 }
 
-void FOC_CoggingCalib_RequestExport(foc_motor_t *motor)
+void FOC_CoggingCalib_RequestExport(foc_cogging_calib_state_t *state)
 {
-    if (motor != 0)
-    {
-        motor->cogging_calib_state.request_export = 1U;
-    }
+    state->request_export = 1U;
 }
 
-uint8_t FOC_CoggingCalibIsDumpPending(const foc_motor_t *motor)
+uint8_t FOC_CoggingCalibIsDumpPending(const foc_cogging_calib_state_t *state)
 {
-    if (motor == 0)
-    {
-        return 0U;
-    }
-    return motor->cogging_calib_state.request_dump;
+    return state->request_dump;
 }
 
-uint8_t FOC_CoggingCalibIsExportPending(const foc_motor_t *motor)
+uint8_t FOC_CoggingCalibIsExportPending(const foc_cogging_calib_state_t *state)
 {
-    if (motor == 0)
-    {
-        return 0U;
-    }
-    return motor->cogging_calib_state.request_export;
+    return state->request_export;
 }
 
-void FOC_CoggingCalibClearDumpPending(foc_motor_t *motor)
+void FOC_CoggingCalibClearDumpPending(foc_cogging_calib_state_t *state)
 {
-    if (motor != 0)
-    {
-        motor->cogging_calib_state.request_dump = 0U;
-    }
+    state->request_dump = 0U;
 }
 
-void FOC_CoggingCalibClearExportPending(foc_motor_t *motor)
+void FOC_CoggingCalibClearExportPending(foc_cogging_calib_state_t *state)
 {
-    if (motor != 0)
-    {
-        motor->cogging_calib_state.request_export = 0U;
-    }
+    state->request_export = 0U;
 }
 
 /* ========== Internal helpers ========== */
 
 static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
 {
-    //float uq;
     float elec_angle;
     float mech_for_elec;
-
-    if (motor == 0)
-    {
-        return;
-    }
 
     mech_for_elec = motor->cogging_calib_state.pred_mech_angle + motor->params.mech_angle_at_elec_zero_rad;
     elec_angle = Math_WrapRad(mech_for_elec * (float)motor->params.pole_pairs * (float)motor->params.direction);
@@ -127,7 +103,7 @@ static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
     motor->ctrl.uq = FOC_COGGING_CALIB_IQ_A * motor->params.phase_resistance * (float)motor->params.direction;
     motor->ctrl.iq_target = 0.0f;
 
-    FOC_ControlRecordPhaseOutputDqAngle(motor,
+    FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                         FOC_CONTROL_PHASE_COGGING_CALIB,
                                         motor->cogging_calib_state.pass_num,
                                         elec_angle,
@@ -290,11 +266,6 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     int16_t *table;
     char     buf[64];
 
-    if (motor == 0)
-    {
-        return;
-    }
-
     table = motor->cogging_comp_table_q15;
 
     sum = 0;
@@ -355,11 +326,6 @@ static uint8_t CoggingCalib_Start(foc_motor_t *motor)
 {
     uint16_t i;
 
-    if (motor == 0)
-    {
-        return 0U;
-    }
-
     if (motor->cogging_calib_state.in_progress != 0U)
     {
         return 0U;
@@ -400,7 +366,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                                  float dt_sec)
 {
 
-    if ((motor == 0) || (sensor == 0))
+    if (sensor == 0)
     {
         return 0U;
     }
@@ -644,11 +610,6 @@ void FOC_CoggingCalibDumpTable(const foc_motor_t *motor)
     uint16_t n;
     const int16_t *table;
 
-    if (motor == 0)
-    {
-        return;
-    }
-
     if (motor->cogging_comp_status.available == 0U)
     {
         FOC_Platform_WriteDebugText("--- COGGING LUT DUMP: no table available ---\r\n");
@@ -683,11 +644,6 @@ void FOC_CoggingCalibExportTable(const foc_motor_t *motor)
     char line_buf[72];
     uint16_t n;
     const int16_t *table;
-
-    if (motor == 0)
-    {
-        return;
-    }
 
     if (motor->cogging_comp_status.available == 0U)
     {

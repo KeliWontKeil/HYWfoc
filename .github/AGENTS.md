@@ -69,13 +69,15 @@
 
 ## 5. 构建相关
 
-构建脚本（自动定位最新 EIDE 扩展版本）：
+构建命令（在实例工作区 `examples/GD32F303_FOCExplore/software` 内执行，或使用 VS Code 任务）：
 
 ```powershell
-.\tools\build_gd32f303.ps1
+set DOTNET_ROLL_FORWARD=Major
+unify_builder.exe --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
 ```
 
-验收标准：0 errors, no newly introduced warnings, ROM <= 256 KB, RAM <= 96 KB。
+- `--rebuild`：强制全量重建；`-p`：指定 `builder.params` 路径。
+- EIDE 扩展版本号随安装更新，完整路径请以 VS Code 任务或 `.clinerules/hywfoc-project-rules.md` 为准。
 
-根 `AGENTS.md` 中的构建脚本信息已合并至此。
+验收标准：0 errors, no newly introduced warnings, ROM <= 256 KB, RAM <= 96 KB。
 

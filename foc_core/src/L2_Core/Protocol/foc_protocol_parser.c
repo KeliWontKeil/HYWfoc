@@ -1,9 +1,11 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #include "LS_Config/foc_config.h"
+#include "L3_Hal/foc_math_transforms.h"
 
 protocol_core_frame_parse_result_t ProtocolCore_ParseFrame(const uint8_t *frame,
                                                            uint16_t len,
@@ -390,11 +392,14 @@ void ProtocolText_FormatParamLine(char *out,
     }
     else
     {
+        int32_t ip;
+        int32_t fp;
+        Math_FloatToFixed(value, 3, &ip, &fp);
         snprintf(out,
                  out_len,
-                 "parameter.%s=%.3f\r\n",
+                 "parameter.%s=%d.%03d\r\n",
                  ProtocolText_GetParamName(subcommand),
-                 value);
+                 (int)ip, (int)fp);
     }
 }
 
@@ -420,11 +425,14 @@ void ProtocolText_FormatConfigLine(char *out,
     }
     else
     {
+        int32_t ip;
+        int32_t fp;
+        Math_FloatToFixed(value, 3, &ip, &fp);
         snprintf(out,
                  out_len,
-                 "config.%s=%.3f\r\n",
+                 "config.%s=%d.%03d\r\n",
                  ProtocolText_GetConfigName(subcommand),
-                 value);
+                 (int)ip, (int)fp);
     }
 }
 

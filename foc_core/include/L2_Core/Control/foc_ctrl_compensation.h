@@ -1,9 +1,24 @@
-#ifndef FOC_CTRL_COMPENSATION_H
-#define FOC_CTRL_COMPENSATION_H
+#ifndef FOC_CONTROL_C24_COMPENSATION_H
+#define FOC_CONTROL_C24_COMPENSATION_H
+
+#include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+
+/* ========== Cogging compensation status ========== */
+typedef struct {
+    uint8_t enabled;
+    uint8_t available;
+    uint8_t source;
+    uint16_t point_count;
+    float iq_lsb_a;
+    float speed_gate_rad_s;
+    float speed_ref_rad_s;
+    float iq_limit_a;
+    float calib_gain_k;
+} foc_cogging_comp_status_t;
 
 /*
  * =====================================================================
@@ -15,17 +30,19 @@ float FOC_ControlCoggingLookupIq(const foc_cogging_comp_status_t *status,
                                  float mech_angle_rad,
                                  float speed_ref_rad_s);
 
-void FOC_ControlApplyCoggingCompensation(foc_motor_t *motor,
-                                          float mech_angle_rad,
-                                          float speed_ref_rad_s);
+void FOC_ControlApplyCoggingCompensation(foc_cogging_comp_status_t *status,
+                                         foc_control_runtime_t *ctrl,
+                                         const int16_t *table_q15,
+                                         float mech_angle_rad,
+                                         float speed_ref_rad_s);
 
-uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_motor_t *motor,
-                                            const int16_t *table_q15,
-                                            uint16_t point_count,
-                                            float iq_lsb_a,
-                                            uint8_t source);
+uint8_t FOC_ControlLoadCoggingCompTableQ15(foc_cogging_comp_status_t *status,
+                                           int16_t *table_q15,
+                                           const int16_t *src_table,
+                                           uint16_t point_count,
+                                           float iq_lsb_a,
+                                           uint8_t source);
 
-void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
 
 #endif /* FOC_COGGING_COMP_ENABLE */
 
@@ -38,4 +55,5 @@ void FOC_ControlSetCoggingCompUnavailable(foc_motor_t *motor, uint8_t source);
 
 /* Forward include for the inline definitions */
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
+
 #endif /* FOC_CONTROL_C24_COMPENSATION_H */
