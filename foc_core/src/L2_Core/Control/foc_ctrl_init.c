@@ -215,7 +215,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->state.system_running = 0U;
     motor->state.system_fault = 0U;
     motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-    motor->state.cfg_dirty = 0U;
     motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
     motor->state.control_mode = (uint8_t)COMMAND_MANAGER_DEFAULT_CONTROL_MODE;
     motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
@@ -323,7 +322,7 @@ void FOC_MotorInit(foc_motor_t *motor,
 void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
 {
     Sensor_InitSnapshot(&motor->sensor);
-    Sensor_Init(FOC_SENSOR_SAMPLE_FREQ_KHZ, FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
+    Sensor_Init();
     Sensor_SetZeroOffset(&motor->sensor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
@@ -332,7 +331,7 @@ void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
     Sensor_ReadVBUS(&motor->sensor);
     motor->sensor.adc_valid = 1U;
 
-    SVPWM_Init(&motor->svpwm, FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
+    SVPWM_Init(&motor->svpwm);
 
     FOC_ControlExecutor_Init(motor);
 }

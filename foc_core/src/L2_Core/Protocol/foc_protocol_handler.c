@@ -10,6 +10,7 @@
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Runtime/foc_queue.h"
+#include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -55,7 +56,11 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
         break;
 
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
-        return 0U;
+        if (IsInRange(value, COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MIN_PERCENT,
+                      COMMAND_MANAGER_PARAM_SENSOR_SAMPLE_OFFSET_MAX_PERCENT) == 0U) return 0U;
+        motor->cfg.sensor_sample_offset_percent = value;
+        Sensor_ADCSampleTimeOffset(value);
+        break;
 
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
@@ -80,7 +85,6 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
     default:
         return 0U;
     }
-    motor->state.cfg_dirty = 1U;
     return 1U;
 }
 
@@ -97,7 +101,7 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
     case COMMAND_MANAGER_PARAM_SUBCMD_SPEED_ONLY_SPEED:
         *value_out = motor->cfg.speed_only_rad_s; break;
     case COMMAND_MANAGER_PARAM_SUBCMD_SENSOR_SAMPLE_OFFSET:
-        return 0U;
+        *value_out = motor->cfg.sensor_sample_offset_percent; break;
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
         { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->semantic_freq_hz : 0.0f; } break;
@@ -125,8 +129,6 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KP_MAX) == 0U) return 0U;
         motor->torque_current_pid.kp = value;
-        motor->torque_current_pid.integral = 0.0f;
-        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -135,8 +137,6 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KI_MAX) == 0U) return 0U;
         motor->torque_current_pid.ki = value;
-        motor->torque_current_pid.integral = 0.0f;
-        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -145,8 +145,6 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MIN, COMMAND_MANAGER_PARAM_PID_CURRENT_KD_MAX) == 0U) return 0U;
         motor->torque_current_pid.kd = value;
-        motor->torque_current_pid.integral = 0.0f;
-        motor->torque_current_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -157,8 +155,6 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MIN, COMMAND_MANAGER_PARAM_PID_ANGLE_KP_MAX) == 0U) return 0U;
         motor->angle_pid.kp = value;
-        motor->angle_pid.integral = 0.0f;
-        motor->angle_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -185,8 +181,6 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
 #if (FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING == FOC_CFG_ENABLE)
         if (IsInRange(value, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MIN, COMMAND_MANAGER_PARAM_PID_SPEED_KP_MAX) == 0U) return 0U;
         motor->speed_pid.kp = value;
-        motor->speed_pid.integral = 0.0f;
-        motor->speed_pid.prev_error = 0.0f;
         break;
 #else
         return 0U;
@@ -305,7 +299,6 @@ static uint8_t WriteConfigParam(foc_motor_t *motor, char subcommand, float value
     default:
         return 0U;
     }
-    motor->state.cfg_dirty = 1U;
     return 1U;
 }
 
@@ -465,7 +458,6 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
     case COMMAND_MANAGER_STATE_SUBCMD_COGGING_COMP_ENABLE:
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
         motor->cogging_comp_status.enabled = normalized;
-        motor->state.cfg_dirty = 1U;
         break;
 #else
         return 0U;
@@ -552,7 +544,6 @@ static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const pro
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
         res.needs_status = 1U;
-        res.param_changed = 1U;
         return res;
     }
 
@@ -598,7 +589,6 @@ static foc_protocol_frame_result_t ExecuteCCommand(foc_motor_t *motor, const pro
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
         res.needs_status = 1U;
-        res.param_changed = 1U;
         return res;
     }
 
@@ -655,7 +645,6 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active   = 1U;
         res.needs_status  = 1U;
-        res.param_changed = 1U;
         return res;
     }
 
@@ -723,7 +712,6 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
         motor->state.control_skip_count = 0U;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
         motor->state.system_fault = 0U;
-        motor->state.cfg_dirty = 1U;
         motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
         motor->state.current_loop_ready = 0U;
         motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
@@ -806,7 +794,10 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
     if (len == 0U) return res;
     if (ProtocolCore_ExtractFrame(frame, len, &payload, &payload_len) == 0U)
     {
-        motor->state.protocol_error_count++;
+        if (motor->state.protocol_error_count < UINT32_MAX)
+        {
+            motor->state.protocol_error_count++;
+        }
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_PROTOCOL_FRAME;
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_FRAME_ERROR_CHAR);
         res.needs_status = 1U;
@@ -817,7 +808,10 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
     if (parse_result == PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH) return res;
     if (parse_result != PROTOCOL_CORE_FRAME_PARSE_OK)
     {
-        motor->state.protocol_error_count++;
+        if (motor->state.protocol_error_count < UINT32_MAX)
+        {
+            motor->state.protocol_error_count++;
+        }
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_PROTOCOL_FRAME;
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_FRAME_ERROR_CHAR);
         res.needs_status = 1U;
@@ -869,11 +863,6 @@ foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
 
     res = ParseAndDispatchFrame(motor, frame, len);
     return res;
-}
-
-void FOC_Protocol_Commit(foc_motor_t *motor)
-{
-    motor->state.cfg_dirty = 0U;
 }
 
 const foc_report_config_t *FOC_Protocol_GetReportConfig(void)
@@ -985,14 +974,28 @@ void FOC_Protocol_QueueStates(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
     }
 }
 
+/* system 信息行浮点输出：定点格式，避免 %f 引入 double 库（32 位平台非原子 64 位运算） */
+static void QueueSystemInfoFloatLine(fifo_queue_t *tx_fifo,
+                                     char *out,
+                                     uint16_t out_size,
+                                     const char *name,
+                                     float value)
+{
+    int32_t ip;
+    int32_t fp;
+
+    Math_FloatToFixed(value, 3, &ip, &fp);
+    snprintf(out, out_size, "system.%s=%d.%03d\r\n", name, (int)ip, (int)fp);
+    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+}
+
 void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
 {
     char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 
     if (motor == 0) return;
 
-    snprintf(out, sizeof(out), "system.phase_resistance=%.3f\r\n", motor->params.phase_resistance);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    QueueSystemInfoFloatLine(tx_fifo, out, sizeof(out), "phase_resistance", motor->params.phase_resistance);
 
     snprintf(out, sizeof(out), "system.pole_pairs=%u\r\n", (unsigned int)motor->params.pole_pairs);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
@@ -1031,8 +1034,7 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 #endif
 
-    snprintf(out, sizeof(out), "system.mech_zero_rad=%.3f\r\n", motor->params.mech_angle_at_elec_zero_rad);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    QueueSystemInfoFloatLine(tx_fifo, out, sizeof(out), "mech_zero_rad", motor->params.mech_angle_at_elec_zero_rad);
 
     {
         const char *dir_str = "UNDEFINED";
@@ -1044,17 +1046,13 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
         (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
     }
 
-    snprintf(out, sizeof(out), "system.vbus_voltage_v=%.3f\r\n", motor->params.vbus_voltage);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    QueueSystemInfoFloatLine(tx_fifo, out, sizeof(out), "vbus_voltage_v", motor->params.vbus_voltage);
 
-    snprintf(out, sizeof(out), "system.max_phase_voltage_v=%.3f\r\n", motor->ctrl.max_phase_voltage);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    QueueSystemInfoFloatLine(tx_fifo, out, sizeof(out), "max_phase_voltage_v", motor->ctrl.max_phase_voltage);
 
-      snprintf(out, sizeof(out), "system.zero_offset_a=%.3f\r\n", motor->sensor.current_a_zero_offset);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    QueueSystemInfoFloatLine(tx_fifo, out, sizeof(out), "zero_offset_a", motor->sensor.current_a_zero_offset);
 
-      snprintf(out, sizeof(out), "system.zero_offset_b=%.3f\r\n", motor->sensor.current_b_zero_offset);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    QueueSystemInfoFloatLine(tx_fifo, out, sizeof(out), "zero_offset_b", motor->sensor.current_b_zero_offset);
 
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     {
@@ -1071,7 +1069,12 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
     snprintf(out, sizeof(out), "system.cogging_point_count=%u\r\n",
              (unsigned int)motor->cogging_comp_status.point_count);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
-    snprintf(out, sizeof(out), "system.cogging_iq_lsb_a=%.5f\r\n", motor->cogging_comp_status.iq_lsb_a);
-    (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    {
+        int32_t ip;
+        int32_t fp;
+        Math_FloatToFixed(motor->cogging_comp_status.iq_lsb_a, 5, &ip, &fp);
+        snprintf(out, sizeof(out), "system.cogging_iq_lsb_a=%d.%05d\r\n", (int)ip, (int)fp);
+        (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+    }
 #endif
 }

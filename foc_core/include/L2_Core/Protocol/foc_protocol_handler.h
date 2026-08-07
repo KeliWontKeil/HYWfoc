@@ -34,9 +34,6 @@ foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
  */
 void FOC_Protocol_Init(foc_report_config_t *report);
 
-/* 清除配置脏标志（L1 应用配置后调用） */
-void FOC_Protocol_Commit(foc_motor_t *motor);
-
 /* 获取报告配置（供 L1/debug 流使用） */
 const foc_report_config_t *FOC_Protocol_GetReportConfig(void);
 

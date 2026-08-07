@@ -615,10 +615,6 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
             SourceMgr_CommitSwitch(ctx, low, FOC_CONTROL_REGION_LOW);
             ctx->state->region_state = FOC_REGION_STATE_LOW_ACTIVE;
         }
-        else
-        {
-            ctx->state->switch_counter++;
-        }
         break;
 
     case FOC_REGION_STATE_FULL_ACTIVE:

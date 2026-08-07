@@ -71,6 +71,13 @@ void FOC_PIDInit(foc_pid_t *pid, float kp, float ki, float kd, float out_min, fl
     pid->out_max = out_max;
 }
 
+void FOC_PIDReset(foc_pid_t *pid)
+{
+    if (pid == 0) return;
+    pid->integral = 0.0f;
+    pid->prev_error = 0.0f;
+}
+
 /* FOC_Control_ApplyConfig — 副作用执行器（无 cfg 同步） */
 void FOC_Control_ApplyConfig(foc_control_runtime_t *ctrl,
                              foc_pid_t *torque_pid,

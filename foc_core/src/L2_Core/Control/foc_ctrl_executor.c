@@ -7,6 +7,7 @@
 #include "L2_Core/Control/foc_ctrl_current_loop.h"
 #include "L2_Core/Control/foc_ctrl_outer_loop.h"
 #include "L2_Core/Control/foc_ctrl_compensation.h"
+#include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
@@ -17,12 +18,6 @@
 #include "L3_Hal/foc_math_types.h"
 #include "LS_Config/foc_config.h"
 
-static void ResetPID(foc_pid_t *pid)
-{
-    pid->integral = 0.0f;
-    pid->prev_error = 0.0f;
-}
-
 void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 {
     /* 清零控制输出 */
@@ -31,9 +26,9 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
     motor->ctrl.iq_target = 0.0f;
 
     /* 清零 PID */
-    ResetPID(&motor->torque_current_pid);
-    ResetPID(&motor->speed_pid);
-    ResetPID(&motor->angle_pid);
+    FOC_PIDReset(&motor->torque_current_pid);
+    FOC_PIDReset(&motor->speed_pid);
+    FOC_PIDReset(&motor->angle_pid);
 
     /* 清零外环累积状态 */
     motor->outer_loop.accum_rad = 0.0f;
@@ -313,8 +308,8 @@ static void Executor_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t 
     motor->outer_loop.speed_state_valid = 0U;
     motor->outer_loop.speed_err_accum_rad = 0.0f;
 
-    ResetPID(&motor->speed_pid);
-    ResetPID(&motor->angle_pid);
+    FOC_PIDReset(&motor->speed_pid);
+    FOC_PIDReset(&motor->angle_pid);
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     motor->current_soft_switch_status.enabled = 0U;

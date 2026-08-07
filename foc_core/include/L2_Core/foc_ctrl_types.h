@@ -113,7 +113,6 @@ typedef struct {
     uint8_t system_running;
     uint8_t system_fault;
     uint8_t last_fault_code;
-    uint8_t cfg_dirty;
     uint8_t motor_enabled;
     uint8_t control_mode;
     uint8_t control_phase;

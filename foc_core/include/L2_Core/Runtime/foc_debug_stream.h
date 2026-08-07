@@ -85,12 +85,4 @@ void DebugStream_AppendOscValue(char *osc_buffer, uint16_t *offset,
 /* 组装示波器行（加头尾标记），完成行。返回写入的总字符数。 */
 uint16_t DebugStream_FormatOscLine(char *osc_buffer, uint16_t max_len);
 
-/* ---- 向后兼容接口 ---- */
-
-uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
-                                  const foc_motor_t *motor,
-                                  const foc_report_config_t *report,
-                                  char *line_out,
-                                  uint16_t line_max);
-
 #endif /* FOC_DEBUG_STREAM_H */

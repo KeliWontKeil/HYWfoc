@@ -65,6 +65,17 @@ FOC_VSCODE/
 10. **传感器硬件存在性与算法使用分离**：`FOC_SENSOR_ENCODER_ENABLE` 控制编码器硬件层，`FOC_ESTIMATOR_ENCODER_ENABLE` 控制是否使用编码器作为反馈源。齿槽补偿/标定依赖 `FOC_SENSOR_ENCODER_ENABLE`。
 11. **有效性检查收口单一检查点**：传感器有效性检查仅在 L1 `FOC_App_ControlTrigger` 中执行，L2 `RunCycle` 不再重复检查。
 
+### 平台 API 契约（foc_platform_api.h）
+
+- **接口面稳定**：平台 API 全部无条件声明，不随配置宏裁剪。宏组合只改变实现行为（退化 no-op / 返回 0），不改变接口面。
+- **契约三档**：
+  - 【必须】所有平台必须实现（Runtime、Indicator、Comm、PWM、Write*、WaitMs、MemoryBarrier 等）。
+  - 【按需】依赖宏组合：`AuxTimer*`（三 ISR 模式必须，双 ISR 可 no-op）；电流采样相关 `SensorInputInit/ReadPhaseCurrent/SetSensorSampleOffsetPercent`（`FOC_CURRENT_SENSE_PHASES != NONE` 必须）；`ReadMechanicalAngleRad`（有角度反馈必须，否则恒返回 0）；`ReadVbusVoltage`（欠压保护启用时必须）。
+  - 【可选】可空实现：`CommSource` 源 2/3、`EnableCycleCounter/ReadCycleCounter`。
+- **参数约定**：编译期固定配置（`FOC_PWM_FREQ_KHZ`、`FOC_SENSOR_SAMPLE_FREQ_KHZ`、`FOC_SCHEDULER_TICK_HZ`、`FOC_SVPWM_DEADTIME_PERCENT_DEFAULT`）由平台实现内部读取，不进入接口签名；仅运行时参数（辅助定时器频率、采样偏移）显式传参。
+- **回调统一**：`FOC_Platform_IsrCallback_t` 为唯一无参中断回调类型（PWM ISR / 控制节拍 / 辅助定时器共用）。
+- **通信源枚举**：`FOC_Platform_CommSourceId_t`（源 0/1 必须，2/3 可选）；`FOC_Platform_CommSource_ReadFrame(id, ...)` 返回 0 表示无帧或未支持该源。
+
 ## 核心数据结构
 
 系统以两个顶层结构体为数据中枢：
@@ -138,7 +149,7 @@ FOC_VSCODE/
 平台 UART ISR
   │
   ▼ （Service 触发回调中）
-读帧（FOC_Platform_CommSource*_ReadFrame）
+读帧（FOC_Platform_CommSource_ReadFrame）
   │
   ▼
 FIFO_Enqueue(runtime.comm.rx_fifo)   ← L2/Runtime 队列方法，操作 L1 的队列实例
@@ -153,9 +164,10 @@ FOC_Protocol_ProcessSingle() ← L2/Protocol 单帧处理
   ├── [comm_active]  → 更新 LED 指示器
   ├── [needs_summary] → L1 生成摘要文本 →
   │                      FIFO_Enqueue(runtime.output.tx_fifo)
-  ├── [needs_status]  → 状态码已在协议内部直写（快路径）
-  └── [param_changed] → L1 稍后检测 cfg_dirty → ApplyConfig
-```
+  └── [needs_status]  → 状态码已在协议内部直写（快路径）
+
+参数写入语义：协议（主循环单写者）直接写 motor 字段，**写入即生效**（下一次控制 ISR 拍生效）；
+无运行时派生重算（`FOC_Control_ApplyConfig` 仅冷路径调用，见"配置应用"节）。
 
 ### 双输出路径
 
@@ -289,10 +301,11 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   阶段5：SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime
 
-配置应用：
-  FOC_Control_ApplyConfig(motor)
-    → 从 motor 结构体读取 PID 参数和 fine-tuning 设置
-```
+配置应用（冷路径专用）：
+  FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
+    → 基于 max_phase_voltage / phase_resistance 重算 PID 输出限幅，并应用采样偏移
+    → 仅在初始化（foc_init）与重初始化完成（reinit）时调用
+    运行时协议写参数不触发：参数直写即生效，无派生重算
 
 **关键执行顺序说明**：
 - Estimator 迭代在 Source Manager 决策之前，确保切换判据使用**当前周期**的收敛状态
@@ -307,9 +320,9 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 | 模式 | PWM ISR 内容 | 电流环位置 | 电流环频率 |
 |------|-------------|-----------|-----------|
 | 双 ISR（默认） | 插值 + 守卫 + 电流环（分频） | PWM ISR | `PWM_FREQ / FOC_CURRENT_LOOP_ISR_DIVIDER` |
-| 三 ISR | 仅插值 + 守卫（~2us） | 独立辅助定时器 ISR | `FOC_CURRENT_LOOP_ISR_FREQ_HZ`（当前默认 4kHz，与 PWM 解耦） |
+| 三 ISR | 仅插值 + 守卫（~2us） | 独立辅助定时器 ISR | `FOC_CURRENT_LOOP_ISR_FREQ_HZ`（与 PWM 解耦，值由配置宏决定） |
 
-- 三 ISR 模式电流环频率由 `FOC_CURRENT_LOOP_ISR_FREQ_HZ` 独立配置（当前默认 4kHz，与 PWM 解耦）。
+- 三 ISR 模式电流环频率由 `FOC_CURRENT_LOOP_ISR_FREQ_HZ` 独立配置（与 PWM 解耦，值由配置宏决定）。
 - 电流环周期宏 `FOC_CURRENT_LOOP_DT_SEC` 随 `FOC_CURRENT_LOOP_ISR_MODE` 自动收敛：双 ISR 取 `1/(PWM_FREQ/DIVIDER)`，三 ISR 取 `1/FOC_CURRENT_LOOP_ISR_FREQ_HZ`（为 0 时退化为控制周期）。所有电流环 ISR 内模块（Estimator/电流环）统一使用该宏作为 dt 唯一真值。
 - SMO 测速尾链使用调用方每拍传入的 `dt_sec` 累计窗口时长，不依赖任何 ISR 频率宏，ISR 模式切换不改变测速尺度。
 - `FOC_SVPWM_INTERP_ENABLE` 插值开关两种模式可独立裁剪；禁用后 `FOC_ControlApplyElectricalAngleRuntime` 直接写占空比。

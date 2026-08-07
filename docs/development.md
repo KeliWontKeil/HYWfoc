@@ -7,7 +7,7 @@
 1. 可复用库：`foc_core/`
 2. 工作流文档：`docs/`、`.github/`
 
-实例专属构建与烧录细节请看：`examples/<instance>/DEVELOPMENT.md`。
+实例专属构建与烧录细节请看：`examples/<instance>/README.md`。
 
 ## 工作区职责
 
@@ -18,7 +18,7 @@
 
 ### 1. 任务确认
 
-1. 先读 `AI_INITIALIZATION.md` 与 `NEXT_MISSION.md`，确认范围和验收口径。
+1. 先读 `AI_INITIALIZATION.md` 与 `NEXT_MISSION.md`，确认范围和验收口径，但是用户任务可能并不在其中，需要结合实际进行。。
 2. 明确任务属性：改代码 / 仅设计 / 暂缓。
 3. 评估影响层级与回滚点。
 
@@ -29,7 +29,7 @@
 3. 所有可配置参数先进入 `foc_core/include/LS_Config/foc_cfg_*.h`，再在 `.c` 中使用。
 4. 运行时主循环由 L1 编排，三个任务段顺序无关，无固定管线链：
    - Monitor 段：调试流生成器逐行输出 → 入 TX 队列
-   - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列、配置脏检查）
+   - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列）；参数写入即生效（直写 motor 字段，无运行时派生重算）
    - TX 消费段：TX 队列出队 → 平台发送
 5. L2/Control 模块命名按职责分组：`foc_ctrl_executor`（算法入口、外环调度、控制模式切换）、`foc_ctrl_init`（初始化与标定）、`foc_ctrl_cfg`（配置状态管理）、`foc_ctrl_source_mgr`（Source Manager）、`foc_ctrl_openloop`（OpenLoop 角度源/低速策略）、`foc_ctrl_estim`（估计器注册中心）、`foc_ctrl_estim_encoder`（编码器估计器）、`foc_ctrl_estim_smo`（SMO 估计器）、`foc_ctrl_estim_hfi`（HFI 估计器）、`foc_ctrl_outer_loop`（速度/位置外环）、`foc_ctrl_current_loop`（电流内环）、`foc_ctrl_param_learn`（参数学习）、`foc_ctrl_compensation`（齿槽补偿）、`foc_ctrl_sens_cogging_calib`（有感齿槽标定）、`foc_ctrl_sens_reinit`（有感重初始化）、`foc_ctrl_actuation`（执行输出）。
    Source Manager 只在 PWM ISR 的 NORMAL 标准流程中发布 active source；Control Policy / 外环在 Control ISR 中生成 `iq_target`。齿槽标定和重初始化以特殊 `control_phase` 状态机推进，由 PWM ISR 特殊输出流程应用输出。
@@ -80,17 +80,12 @@
 
 ```batch
 set DOTNET_ROLL_FORWARD=Major
-"C:\Users\MSI-NB\.vscode\extensions\cl.eide-3.26.9\res\tools\win32\unify_builder\unify_builder.exe" --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
+"C:\Users\MSI-NB\.vscode\extensions\cl.eide-3.27.2\res\tools\win32\unify_builder\unify_builder.exe" --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
 ```
 
 - `--rebuild`：强制全量重建
 - `-p`：指定 `builder.params` 路径
-
-辅助脚本（自动定位最新 EIDE 扩展版本，避免硬编码版本路径）：
-
-```powershell
-.\tools\build_gd32f303.ps1
-```
+- EIDE 扩展版本号随安装更新，若路径失效请以 VS Code 任务或 `.clinerules/hywfoc-project-rules.md` 为准。
 
 ### 构建目标约束
 

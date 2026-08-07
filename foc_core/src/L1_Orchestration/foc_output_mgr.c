@@ -7,6 +7,7 @@
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Runtime/foc_monitor_queue_types.h"
+#include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -62,7 +63,7 @@ uint8_t FOC_OutputMgr_GetOverflowCount(const foc_system_t *sys)
     return sys->runtime.output.tx_fifo.overflow_count;
 }
 
-static uint8_t FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx)
+static void FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx)
 {
     uint8_t frame[PROTOCOL_PARSER_RX_MAX_LEN];
     uint16_t len;
@@ -75,14 +76,9 @@ static uint8_t FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx
     {
         uint8_t idx = (uint8_t)((source_idx + i) % 4U);
 
-        switch (idx)
-        {
-        case 0U: len = FOC_Platform_CommSource1_ReadFrame(frame, sizeof(frame)); break;
-        case 1U: len = FOC_Platform_CommSource2_ReadFrame(frame, sizeof(frame)); break;
-        case 2U: len = FOC_Platform_CommSource3_ReadFrame(frame, sizeof(frame)); break;
-        case 3U: len = FOC_Platform_CommSource4_ReadFrame(frame, sizeof(frame)); break;
-        default: len = 0U; break;
-        }
+        len = FOC_Platform_CommSource_ReadFrame((FOC_Platform_CommSourceId_t)idx,
+                                               frame,
+                                               sizeof(frame));
 
         if (len == 0U) continue;
 
@@ -93,7 +89,6 @@ static uint8_t FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx
 
         if (i >= (max_frames - 1U)) break;
     }
-    return 0U;
 }
 
 void FOC_OutputMgr_PollSources(foc_system_t *sys)
@@ -105,16 +100,34 @@ void FOC_OutputMgr_PollSources(foc_system_t *sys)
 void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
 {
     char buf[160];
+    int32_t ip_mech_zero;
+    int32_t fp_mech_zero;
+    int32_t ip_vbus;
+    int32_t fp_vbus;
+    int32_t ip_max_phase;
+    int32_t fp_max_phase;
+    int32_t ip_duty;
+    int32_t fp_duty;
+    int32_t ip_true_vbus;
+    int32_t fp_true_vbus;
+
+    Math_FloatToFixed(motor->params.mech_angle_at_elec_zero_rad, 4, &ip_mech_zero, &fp_mech_zero);
+    Math_FloatToFixed(motor->params.vbus_voltage, 2, &ip_vbus, &fp_vbus);
+    Math_FloatToFixed(motor->ctrl.max_phase_voltage, 2, &ip_max_phase, &fp_max_phase);
+    Math_FloatToFixed((motor->params.vbus_voltage > 0.0f) ?
+                      (motor->ctrl.max_phase_voltage / motor->params.vbus_voltage) : 0.0f,
+                      2, &ip_duty, &fp_duty);
+    Math_FloatToFixed(motor->sensor.vbus.filtered, 2, &ip_true_vbus, &fp_true_vbus);
 
     snprintf(buf, sizeof(buf),
-             "mech zero at elec0: %.4f rad, direction: %d, pole pairs: %d, vbus: %.2fV, max_phase_voltage: %.2fV, duty_max: %.2f\r\n true_vbus: %.2fV\r\n",
-             (double)motor->params.mech_angle_at_elec_zero_rad,
+             "mech zero at elec0: %d.%04d rad, direction: %d, pole pairs: %d, vbus: %d.%02dV, max_phase_voltage: %d.%02dV, duty_max: %d.%02d\r\n true_vbus: %d.%02dV\r\n",
+             (int)ip_mech_zero, (int)fp_mech_zero,
              (int)motor->params.direction,
              (int)motor->params.pole_pairs,
-             (double)motor->params.vbus_voltage,
-             (double)motor->ctrl.max_phase_voltage,
-             (double)(motor->params.vbus_voltage > 0.0f ? motor->ctrl.max_phase_voltage / motor->params.vbus_voltage : 0.0f),
-               (double)motor->sensor.vbus.filtered);
+             (int)ip_vbus, (int)fp_vbus,
+             (int)ip_max_phase, (int)fp_max_phase,
+             (int)ip_duty, (int)fp_duty,
+             (int)ip_true_vbus, (int)fp_true_vbus);
     FOC_OutputMgr_WriteDirect(buf);
 }
 

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
+#include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
 
 /*
@@ -356,8 +357,12 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
                                      char *line_out, uint16_t line_max)
 {
     uint8_t idx;
+    int32_t ip;
+    int32_t fp;
 
     if ((line_out == 0) || (line_max == 0U)) return;
+
+    Math_FloatToFixed(value, 3, &ip, &fp);
 
     idx = tag & 0x0FU;
 
@@ -365,39 +370,39 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
     {
     case 0U:
         snprintf(line_out, line_max,
-            "measurement.phase_current_a_ampere=%.3f\r\n", value);
+            "measurement.phase_current_a_ampere=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 1U:
         snprintf(line_out, line_max,
-            "measurement.phase_current_b_ampere=%.3f\r\n", value);
+            "measurement.phase_current_b_ampere=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 2U:
         snprintf(line_out, line_max,
-            "measurement.phase_current_c_ampere=%.3f\r\n", value);
+            "measurement.phase_current_c_ampere=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 3U:
         snprintf(line_out, line_max,
-            "measurement.mech_angle_raw_rad=%.3f\r\n", value);
+            "measurement.mech_angle_raw_rad=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 4U:
         snprintf(line_out, line_max,
-            "measurement.mech_angle_filtered_rad=%.3f\r\n", value);
+            "measurement.mech_angle_filtered_rad=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 5U:
         snprintf(line_out, line_max,
-            "measurement.vbus_voltage_raw_v=%.3f\r\n", value);
+            "measurement.vbus_voltage_raw_v=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 6U:
         snprintf(line_out, line_max,
-            "measurement.vbus_voltage_filtered_v=%.3f\r\n", value);
+            "measurement.vbus_voltage_filtered_v=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 7U:
         snprintf(line_out, line_max,
-            "control.execution_time_us=%.3f\r\n", value);
+            "control.execution_time_us=%d.%03d\r\n", (int)ip, (int)fp);
         break;
     case 8U:
         snprintf(line_out, line_max,
-            "control.current_loop_execution_time_us=%.3f\r\n\r\n", value);
+            "control.current_loop_execution_time_us=%d.%03d\r\n\r\n", (int)ip, (int)fp);
         break;
     default:
         snprintf(line_out, line_max, "measurement.status=invalid\r\n");
@@ -433,13 +438,16 @@ void DebugStream_AppendOscValue(char *osc_buffer, uint16_t *offset,
                                  float value)
 {
     int written;
+    int32_t ip;
+    int32_t fp;
 
     if ((osc_buffer == 0) || (offset == 0) || (*offset >=
         (uint16_t)(DEBUG_STREAM_OSC_PAYLOAD_LEN - 12U))) return;
 
+    Math_FloatToFixed(value, 3, &ip, &fp);
     written = snprintf(osc_buffer + *offset,
                        (size_t)(DEBUG_STREAM_OSC_PAYLOAD_LEN - *offset),
-                       " %.3f", value);
+                       " %d.%03d", (int)ip, (int)fp);
     if (written < 0) return;
     if ((uint16_t)written >= (DEBUG_STREAM_OSC_PAYLOAD_LEN - *offset))
     {
@@ -485,100 +493,4 @@ uint16_t DebugStream_FormatOscLine(char *osc_buffer, uint16_t max_len)
         }
         return cur;
     }
-}
-
-/* ========== 向后兼容：原生成器 ========== */
-
-uint8_t DebugStream_GenerateLine(debug_stream_state_t *ds,
-                                  const foc_motor_t *motor,
-                                  const foc_report_config_t *report,
-                                  char *line_out,
-                                  uint16_t line_max)
-{
-    monitor_element_t elem;
-    static char compat_osc_buf[DEBUG_STREAM_OSC_PAYLOAD_LEN];
-    static uint16_t compat_osc_off;
-    static uint8_t  compat_osc_active;
-
-    if ((ds == 0) || (line_out == 0) || (line_max == 0U)) return 0U;
-
-    if (DebugStream_PollNextValue(ds, motor, report, &elem) == 0U) return 0U;
-
-    if (elem.tag == MONITOR_ELEM_FRAME_START)
-    {
-        return DebugStream_GenerateLine(ds, motor, report,
-                                         line_out, line_max);
-    }
-
-    if (elem.tag <= MONITOR_ELEM_SEMANTIC_8)
-    {
-        if (elem.aux == 0U)
-        {
-            uint8_t idx = (uint8_t)(elem.tag - MONITOR_ELEM_SEMANTIC_0);
-            switch (idx)
-            {
-            case 0U:
-                snprintf(line_out, line_max,
-                    "measurement.current.status=invalid\r\n");
-                break;
-            case 3U:
-                snprintf(line_out, line_max,
-                    "measurement.mech_angle.status=invalid\r\n");
-                break;
-            case 5U:
-                snprintf(line_out, line_max,
-                    "measurement.vbus.status=invalid\r\n");
-                break;
-            default:
-                return DebugStream_GenerateLine(ds, motor, report,
-                                                 line_out, line_max);
-            }
-            return 1U;
-        }
-        DebugStream_FormatSemanticLine(elem.tag, elem.value,
-                                        line_out, line_max);
-        return 1U;
-    }
-
-    if (elem.tag == MONITOR_ELEM_SEMANTIC_END)
-    {
-        return DebugStream_GenerateLine(ds, motor, report,
-                                         line_out, line_max);
-    }
-
-    if (elem.tag == MONITOR_ELEM_OSC_VALUE)
-    {
-        if (compat_osc_active == 0U)
-        {
-            compat_osc_off = (uint16_t)snprintf(compat_osc_buf,
-                               sizeof(compat_osc_buf), "%c",
-                               (char)DEBUG_STREAM_OSC_HEAD_BYTE);
-            compat_osc_active = 1U;
-        }
-
-        DebugStream_AppendOscValue(compat_osc_buf, &compat_osc_off, elem.value);
-
-        return DebugStream_GenerateLine(ds, motor, report,
-                                         line_out, line_max);
-    }
-
-    if (elem.tag == MONITOR_ELEM_OSC_END)
-    {
-        uint16_t cur = (uint16_t)strlen(compat_osc_buf);
-        int osc_written = snprintf(compat_osc_buf + cur,
-                                   sizeof(compat_osc_buf) - cur,
-                                   " %c ", (char)DEBUG_STREAM_OSC_TAIL_BYTE);
-        if (osc_written < 0) return 0U;
-        cur += (uint16_t)osc_written;
-        (void)memcpy(line_out, compat_osc_buf,
-                     (cur < line_max) ? cur : line_max);
-        if (cur < line_max)
-            line_out[cur] = '\0';
-        else
-            line_out[line_max - 1U] = '\0';
-        compat_osc_active = 0U;
-        return 1U;
-    }
-
-    return 0U;
 }

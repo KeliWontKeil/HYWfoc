@@ -12,7 +12,6 @@
 #include "L2_Core/Runtime/foc_task_scheduler.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
-#include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
@@ -131,7 +130,7 @@ void FOC_App_Start(void)
     FOC_Platform_AuxTimerStart(FOC_AUX_TIMER_CURRENT_LOOP);
 #endif
     FOC_Platform_StartControlTickSource();
-    FOC_Platform_SetControlRuntimeInterrupts(1U);
+    FOC_Platform_SetControlInterruptsEnabled(1U);
 }
 
 void FOC_App_Loop(void)
@@ -180,17 +179,6 @@ void FOC_App_Loop(void)
             needs_config_dump  |= result.needs_config_dump;
             needs_state_dump   |= result.needs_state_dump;
             needs_system_info  |= result.needs_system_info;
-        }
-
-        if (motor.state.cfg_dirty != 0U)
-        {
-            FOC_Control_ApplyConfig(&motor.ctrl,
-                                    &motor.torque_current_pid,
-                                    &motor.speed_pid,
-                                    &motor.angle_pid,
-                                    &motor.cfg,
-                                    &motor.params);
-            motor.state.cfg_dirty = 0U;
         }
 
         if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.runtime.output.tx_fifo);
@@ -315,7 +303,10 @@ void FOC_App_ControlTrigger(void)
 #endif
     {
         motor.state.sensor_invalid_consecutive++;
-        motor.state.control_skip_count++;
+        if (motor.state.control_skip_count < UINT32_MAX)
+        {
+            motor.state.control_skip_count++;
+        }
         motor.state.last_fault_code = (motor.sensor.adc_valid == 0U) ?
             (uint8_t)FOC_FAULT_SENSOR_ADC_INVALID : (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID;
 

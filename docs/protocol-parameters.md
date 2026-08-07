@@ -12,10 +12,9 @@
 实现说明：
 
 - 库解析器支持最多 4 个输入源。具体实例可仅连接部分源（例如 Source1 和 Source2），其余保持为空/弱桩。
+- 协议层源编号为 1-based 语义；平台 API 侧为 0-based 枚举（`FOC_Platform_CommSourceId_t`：`FOC_COMM_SOURCE_0..3`），协议源 N 对应平台源 N-1。
 
 本文件仅定义协议语义；具体 UART/USB/CAN 映射归属各实例文档。
-
-GD32F303 参考绑定见：`../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md`
 
 ---
 
@@ -159,43 +158,46 @@ aaPA3.14b
 
 ### 4.1 P 组：运行参数
 
-| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 裁剪宏 | 写示例 | 读示例 |
-|--------|--------|------|------|--------|------|--------|--------|--------|
-| `A` | target_angle_rad | float | [-100, 100] | 3.14 | rad | （固定） | `aaPA1.57b` | `aaPAb` |
-| `R` | angle_position_speed_rad_s | float | [0, 36] | 18.0 | rad/s | （固定） | `aaPR12b` | `aaPRb` |
-| `S` | speed_only_speed_rad_s | float | [-36, 36] | 2.0 | rad/s | （固定） | `aaPS-20b` | `aaPSb` |
-| `D` | control_mode | uint | 0 或 1 | 0 | - | （固定） | `aaPD0b` | `aaPDb` |
-| `W` | sensor_sample_offset_percent | float | [0, 100] | 45.0 | % | `FOC_SENSOR_ELEC_CYCLE_OFFSET_ENABLE` | `aaPW45b` | `aaPWb` |
-| `L` | semantic_report_frequency_hz | uint | [1, 200] | 2 | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPL20b` | `aaPLb` |
-| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | 100 | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPH100b` | `aaPHb` |
-| `O` | oscilloscope_param_mask | uint | [0, 65535] | 30872 (0x7898) | bitmask | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPO63b` | `aaPOb` |
-| `X` | read_all 哨兵 | - | 只读 | - | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaPXb` |
+| 子命令 | 参数名 | 类型 | 范围 | 单位 | 裁剪宏 | 写示例 | 读示例 |
+|--------|--------|------|------|------|--------|--------|--------|
+| `A` | target_angle_rad | float | [-100, 100] | rad | （固定） | `aaPA1.57b` | `aaPAb` |
+| `R` | angle_position_speed_rad_s | float | [0, 36] | rad/s | （固定） | `aaPR12b` | `aaPRb` |
+| `S` | speed_only_speed_rad_s | float | [-36, 36] | rad/s | （固定） | `aaPS-20b` | `aaPSb` |
+| `D` | control_mode | uint | 0 或 1 | - | （固定） | `aaPD0b` | `aaPDb` |
+| `W` | sensor_sample_offset_percent | float | [0, 100] | % | （固定） | `aaPW45b` | `aaPWb` |
+| `L` | semantic_report_frequency_hz | uint | [1, 200] | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPL20b` | `aaPLb` |
+| `H` | oscilloscope_report_frequency_hz | uint | [1, 200] | Hz | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPH100b` | `aaPHb` |
+| `O` | oscilloscope_param_mask | uint | [0, 65535] | bitmask | `FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT` | `aaPO63b` | `aaPOb` |
+| `X` | read_all 哨兵 | - | 只读 | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaPXb` |
+
+> 参数默认值由 LS 配置宏（`foc_cfg_init_values.h`）定义，可能随调试调整，请通过读命令获取实际值。
+> `P:W` 运行时可写，写入即生效（立即调整 ADC 采样点位置）；用于调试模式，用户需知悉采样点瞬时移动的影响。
 
 ### 4.2 C 组：调优/配置参数
 
-| 子命令 | 参数名 | 类型 | 范围 | 默认值 | 单位 | 裁剪宏 | 写示例 | 读示例 |
-|--------|--------|------|------|--------|------|--------|--------|--------|
-| `C` | pid_current_kp | float | [0, 50] | 4.0 | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCC2.0b` | `aaCCb` |
-| `I` | pid_current_ki | float | [0, 50] | 60.0 | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCI10b` | `aaCIb` |
-| `J` | pid_current_kd | float | [0, 10] | 0.00 | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCJ0.01b` | `aaCJb` |
-| `G` | pid_angle_kp | float | [0, 50] | 2.0 | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCG2.5b` | `aaCGb` |
-| `K` | pid_angle_ki | float | [0, 50] | 0.8 | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCK0.9b` | `aaCKb` |
-| `N` | pid_angle_kd | float | [0, 10] | 0.01 | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCN0.02b` | `aaCNb` |
-| `P` | pid_speed_kp | float | [0, 50] | 0.8 | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCP1.5b` | `aaCPb` |
-| `S` | pid_speed_ki | float | [0, 50] | 0.6 | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCS0.6b` | `aaCSb` |
-| `R` | pid_speed_kd | float | [0, 10] | 0.005 | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCR0.005b` | `aaCRb` |
-| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | 0.001 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCM0.002b` | `aaCMb` |
-| `B` | control_angle_hold_integral_limit | float | >= 0 | 0.05 | - | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCB0.10b` | `aaCBb` |
-| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | 0.005 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCE0.004b` | `aaCEb` |
-| `F` | control_speed_angle_transition_start_rad | float | >= 0 | 0.60 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCF0.45b` | `aaCFb` |
-| `T` | control_speed_angle_transition_end_rad | float | >= 0 | 1.00 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCT0.70b` | `aaCTb` |
-| `Q` | current_soft_switch_mode | uint | 0/1/2 | 2 | - | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCQ2b` | `aaCQb` |
-| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | 0.20 | A | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCZ0.5b` | `aaCZb` |
-| `O` | current_soft_switch_auto_closed_iq_a | float | [0, 100] 且 >= open | 0.50 | A | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCO1.0b` | `aaCOb` |
-| `L` | cogging_comp_iq_limit_a | float | [0, 10] | 0.50 | A | `FOC_COGGING_COMP_ENABLE` | `aaCL1.0b` | `aaCLb` |
-| `A` | cogging_comp_speed_gate_rad_s | float | [0, 36] | 12.0 | rad/s | `FOC_COGGING_COMP_ENABLE` | `aaCA8.0b` | `aaCAb` |
-| `Y` | cogging_calib_gain_k | float | >= 0 | 0.05 | - | `FOC_COGGING_CALIB_ENABLE` | `aaCY0.10b` | `aaCYb` |
-| `X` | read_all 哨兵 | - | 只读 | - | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaCXb` |
+| 子命令 | 参数名 | 类型 | 范围 | 单位 | 裁剪宏 | 写示例 | 读示例 |
+|--------|--------|------|------|------|--------|--------|--------|
+| `C` | pid_current_kp | float | [0, 50] | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCC2.0b` | `aaCCb` |
+| `I` | pid_current_ki | float | [0, 50] | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCI10b` | `aaCIb` |
+| `J` | pid_current_kd | float | [0, 10] | - | `FOC_PROTOCOL_ENABLE_CURRENT_PID_TUNING` | `aaCJ0.01b` | `aaCJb` |
+| `G` | pid_angle_kp | float | [0, 50] | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCG2.5b` | `aaCGb` |
+| `K` | pid_angle_ki | float | [0, 50] | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCK0.9b` | `aaCKb` |
+| `N` | pid_angle_kd | float | [0, 10] | - | `FOC_PROTOCOL_ENABLE_ANGLE_PID_TUNING` | `aaCN0.02b` | `aaCNb` |
+| `P` | pid_speed_kp | float | [0, 50] | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCP1.5b` | `aaCPb` |
+| `S` | pid_speed_ki | float | [0, 50] | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCS0.6b` | `aaCSb` |
+| `R` | pid_speed_kd | float | [0, 10] | - | `FOC_PROTOCOL_ENABLE_SPEED_PID_TUNING` | `aaCR0.005b` | `aaCRb` |
+| `M` | control_min_mech_angle_accum_delta_rad | float | >= 0 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCM0.002b` | `aaCMb` |
+| `B` | control_angle_hold_integral_limit | float | >= 0 | - | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCB0.10b` | `aaCBb` |
+| `E` | control_angle_hold_pid_deadband_rad | float | >= 0 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCE0.004b` | `aaCEb` |
+| `F` | control_speed_angle_transition_start_rad | float | >= 0 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCF0.45b` | `aaCFb` |
+| `T` | control_speed_angle_transition_end_rad | float | >= 0 | rad | `FOC_PROTOCOL_ENABLE_CONTROL_FINE_TUNING` | `aaCT0.70b` | `aaCTb` |
+| `Q` | current_soft_switch_mode | uint | 0/1/2 | - | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCQ2b` | `aaCQb` |
+| `Z` | current_soft_switch_auto_open_iq_a | float | [0, 100] | A | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCZ0.5b` | `aaCZb` |
+| `O` | current_soft_switch_auto_closed_iq_a | float | [0, 100] 且 >= open | A | `FOC_CURRENT_SOFT_SWITCH_ENABLE` | `aaCO1.0b` | `aaCOb` |
+| `L` | cogging_comp_iq_limit_a | float | [0, 10] | A | `FOC_COGGING_COMP_ENABLE` | `aaCL1.0b` | `aaCLb` |
+| `A` | cogging_comp_speed_gate_rad_s | float | [0, 36] | rad/s | `FOC_COGGING_COMP_ENABLE` | `aaCA8.0b` | `aaCAb` |
+| `Y` | cogging_calib_gain_k | float | >= 0 | - | `FOC_COGGING_CALIB_ENABLE` | `aaCY0.10b` | `aaCYb` |
+| `X` | read_all 哨兵 | - | 只读 | - | `FOC_PROTOCOL_ENABLE_BATCH_READ` | 不可用 | `aaCXb` |
 
 ### 4.3 控制模式值
 
@@ -379,7 +381,7 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 6. 发送 `aaYCb` 确认故障计数器已清除。
 
 实例特定的串口终端设置和通道布线文档见：
-- `../examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md`
+- `../examples/GD32F303_FOCExplore/README.md`（硬件章节）
 
 最佳实践：
 

@@ -2,16 +2,10 @@
 
 #include <math.h>
 
+#include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-
-static float OpenLoop_Wrap2Pi(float angle_rad)
-{
-    while (angle_rad > FOC_MATH_TWO_PI) angle_rad -= FOC_MATH_TWO_PI;
-    while (angle_rad < 0.0f) angle_rad += FOC_MATH_TWO_PI;
-    return angle_rad;
-}
 
 void FOC_OpenLoop_Init(foc_openloop_state_t *state,
                        const foc_motor_params_t *params,
@@ -83,7 +77,7 @@ uint8_t FOC_OpenLoop_RunStep(foc_openloop_state_t *state,
     state->virtual_speed_rad_s = virtual_speed;
 
     virtual_angle = state->virtual_angle_rad + virtual_speed * dt_sec;
-    virtual_angle = OpenLoop_Wrap2Pi(virtual_angle);
+    virtual_angle = Math_WrapRad(virtual_angle);
     state->virtual_angle_rad = virtual_angle;
 
     state->mech_speed_rad_s = virtual_speed / (float)params->pole_pairs;

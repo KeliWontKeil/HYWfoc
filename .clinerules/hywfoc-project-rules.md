@@ -44,6 +44,14 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 - **L2 任何模块不得反向包含 `L1_Orchestration/` 头文件**
 - **L2 任何模块不得持有实例**——所有实例在 L1 中分配，L2 通过指针参数操作
 
+## Platform API contract
+
+- **接口面稳定**：平台 API（`foc_platform_api.h`）全部无条件声明，不随配置宏裁剪；宏组合只改变实现行为（条件功能关闭时退化为 no-op / 返回 0），不改变接口面。
+- **参数约定**：编译期固定配置（PWM 频率、采样频率、调度节拍、死区等）由平台实现内部从 `foc_cfg_*.h` 宏读取，不进入接口签名；仅运行时可变参数显式传参。
+- **契约三档**：逐函数标注【必须】（所有平台实现）/【按需】（依赖宏组合，条件成立时须实现）/【可选】（允许空实现）。
+- **回调统一**：中断回调统一使用 `FOC_Platform_IsrCallback_t`，不新增语义化重复的回调类型。
+- 平台 API 的注释与契约矩阵是移植者第一手依据，修改 API 面时需同步更新 `foc_platform_api.h`、`foc_platform_api_empty.c` 与 `docs/architecture.md` 的契约小节。
+
 ## L2 Control module naming
 
 L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功能分组列出：

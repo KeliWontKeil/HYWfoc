@@ -218,14 +218,14 @@ static void SVPWM_CalculateDuty(float phase_a,
     *sector_out = sector_id;
 }
 
-void SVPWM_Init(svpwm_interp_state_t *svpwm, uint16_t freq_kHz, uint8_t deadtime_percent)
+void SVPWM_Init(svpwm_interp_state_t *svpwm)
 {
-    FOC_Platform_PWMInit((uint8_t)freq_kHz, deadtime_percent);
+    FOC_Platform_PWMInit();
     FOC_Platform_PWMSetDutyCycleTripleFloat(0.0f, 0.0f, 0.0f);
     FOC_Platform_PWMStart();
 
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
-    svpwm->interp_steps_total = (freq_kHz > 0U) ? freq_kHz : 1U;
+    svpwm->interp_steps_total = (FOC_PWM_FREQ_KHZ > 0U) ? FOC_PWM_FREQ_KHZ : 1U;
     svpwm->interp_step_index = svpwm->interp_steps_total;
 #endif
     svpwm->duty_a_current = 0.0f;

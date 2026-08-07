@@ -16,12 +16,12 @@
 
 /* 初始化 runtime 子系统（调度器/任务标志/通信/输出/监控/协议/硬件） */
 void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
-                      FOC_Platform_TickCallback_t tick_cb,
-                      FOC_Platform_TickCallback_t service_cb,
-                      FOC_Platform_TickCallback_t control_cb,
-                      FOC_Platform_TickCallback_t monitor_cb,
-                      FOC_Platform_PwmIsrCallback_t pwm_cb,
-                      FOC_Platform_PwmIsrCallback_t current_loop_cb);
+                      FOC_Platform_IsrCallback_t tick_cb,
+                      FOC_Platform_IsrCallback_t service_cb,
+                      FOC_Platform_IsrCallback_t control_cb,
+                      FOC_Platform_IsrCallback_t monitor_cb,
+                      FOC_Platform_IsrCallback_t pwm_cb,
+                      FOC_Platform_IsrCallback_t current_loop_cb);
 
 /* 初始化电机参数并应用配置 */
 void FOC_Init_MotorAndCalib(foc_motor_t *motor);

@@ -5,11 +5,6 @@
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
-static float FOC_NormalizeDt(float dt_sec)
-{
-    return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_SEC;
-}
-
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
 static float FOC_CurrentSoftSwitchUpdateBlend(float current_blend,
                                               uint8_t *blend_initialized,
@@ -40,7 +35,7 @@ static float FOC_CurrentLoopPIDRun(foc_pid_t *pid, float target, float measureme
     float derivative;
     float output;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
 
     error = target - measurement;
 
@@ -342,7 +337,7 @@ void FOC_CurrentControlStep(foc_control_runtime_t *ctrl,
     }
 
     local_angle = Math_WrapRad(ctrl->electrical_angle_rad);
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
     if (sensor == 0)

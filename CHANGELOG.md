@@ -18,9 +18,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **include 清理**：openloop/outer_loop/current_loop/compensation/estim_smo/estim_hfi/actuation/cfg/source_mgr/sensor/svpwm 移除 `foc_motor_aggregate.h` 依赖；L2/L3 各模块 `.h` 移除 `foc_motor_t` 前置声明。
 - **函数传参排序规范（可读性）**：统一按"本域私有状态 → 跨域可写总线 → 跨域只读输入(const) → 显式 out → 标量(dt 最后)"分组排序。执行输出域（`FOC_ControlApplyElectricalAngleRuntime/Direct`、`FOC_ControlApplyPhaseOutputRuntime`、`FOC_SampleLockedMechanicalAngle`）`params` 移入 const 只读组；`FOC_ControlApplyCoggingCompensation` 改为 `(status, ctrl, table, ...)`；`FOC_Control_ApplyConfig` 改为 `(ctrl, pids, cfg, const params)` 且 `params` 加 const。规范写入 `.clinerules/hywfoc-project-rules.md`。
 - **聚合访问权唯一化**：`foc_motor_t` 完整类型仅保留给 L1 编排、L2 Executor（facade）、协议/调试只读链、冷路径状态机（init/标定/重初始化）。`foc_motor_aggregate.h` 物理路径保留在 `L2_Core/`（阶段 1b 上移 L1 需 Executor 上下文视图化后实施，见 `结构优化重构.md`）。
+- **平台 API 契约重构（foc_platform_api.h / empty 模板 / GD32 实例同步）**：
+  - **契约模型确立**：接口面稳定（全部无条件声明，不随配置宏裁剪）+ 行为自适应（条件功能实现内部按宏适配，关闭时退化为 no-op / 返回 0）+ 三档契约标注（【必须】/【按需】/【可选】），宏组合行为矩阵写入头文件。
+  - **参数传递统一**：编译期固定配置由平台实现内部读 LS 宏，不进入接口签名——`FOC_Platform_PWMInit(void)`、`FOC_Platform_SensorInputInit(void)`、`FOC_Platform_ControlTickSourceInit(void)` 统一无参；仅运行时参数（AuxTimer 频率、采样偏移）显式传参。L3 同步简化：`Sensor_Init(void)`、`SVPWM_Init(svpwm)`（插值步数改读 `FOC_PWM_FREQ_KHZ`）。
+  - **回调类型统一**：删除 `FOC_Platform_TickCallback_t` / `FOC_Platform_PwmIsrCallback_t` 冗余双类型，统一为单一 `FOC_Platform_IsrCallback_t`（消除 AuxTimer 借用 PWM 回调类型的错位；`FOC_Init_Runtime` 签名同步）。
+  - **通信源收敛**：8 个 `CommSource{1..4}_IsFrameReady/ReadFrame` → 1 个 `FOC_Platform_CommSource_ReadFrame(FOC_Platform_CommSourceId_t id, ...)`；删除 4 个无调用者的孤儿接口 `IsFrameReady`（ReadFrame 返回 0 已含"无帧"语义）。
+  - **区块重组与描述修正**：`WaitMs`/`MemoryBarrier` 归入 Runtime & Clock（原 PWM/Sensor 区块错位）；`ReadVbusVoltage` 归入 Sensor 区块并移除头文件注释中绑定的 ADC2 平台细节；守卫注释统一 `FOC_PLATFORM_API_H`（原 `FOC_PAL_H` 与结尾注释矛盾）；头文件注释全面中文化。
+  - **孤儿 API 删除**：`FOC_Platform_UndervoltageProtect`（L1 欠压状态机从不调用，且其注释声称的调用上下文与 L1 ISR 检测矛盾）、`CommSource*_IsFrameReady`×4。
+  - `FOC_Platform_SetControlRuntimeInterrupts` 更名为 `FOC_Platform_SetControlInterruptsEnabled`（消除"Runtime"误导）。
+  - 命名修正：`FOC_Platform_AuxTimerId_t`、`FOC_Platform_CommSourceId_t` 枚举化；实例 `CommSource_ReadFrame` switch(id) 映射 USART1/2。
+  - ROM：54.90kB → 54.82kB（删 5 个孤儿函数 + 去参）。
+- **契约文档化**：`architecture.md` 新增"平台 API 契约"小节（三档 + 宏组合矩阵 + 参数约定）；`foc_platform_api.h` 文件头契约说明。
 
 ### Documentation
 - `docs/architecture.md` L2 约束区第 5 条更新为"L2 传参规范 + 聚合访问权唯一化"。
+
+### Note
+- 平台 API 为稳定契约面，移植新平台时无需关心配置宏组合——接口恒存在，条件功能退化语义已文档化。
+- 通信源 0/1 为必须实现（GD32 实例映射 USART1/USART2）；源 2/3 可选（恒返回 0 即可）。
+
+## [2.0.7] - 2026-08-07
+
+### Changed
+- **重复算法函数去重**：
+  - `FOC_NormalizeDt`（current_loop / outer_loop 双份）→ L3 `Math_NormalizeDt(dt_sec, fallback_dt_sec)`，所有调用点收敛。
+  - `wrap_2pi`（SMO）/ `OpenLoop_Wrap2Pi`（OpenLoop）→ 统一使用 L3 既有 `Math_WrapRad`。
+  - `ResetPID`（executor）/ `FOC_ResetPIDState`（outer_loop）→ 统一为 `FOC_PIDReset`（归入 `foc_ctrl_cfg` 配置域）。
+  - 删除无调用点的向后兼容死代码 `DebugStream_GenerateLine`（含 static 不可重入缓冲），消除不可重入隐患。
+- **无逻辑影响的冗余赋值清理**：`FOC_OutputMgr_PollOneSource` 恒返回 0 且调用方忽略，改 `void` 返回。
+- **计数/累加溢出防护（不新增配置宏）**：
+  - SMO `converge_counter` 达到 `FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE` 后停止递增，消除 uint16 回绕导致收敛状态倒退。
+  - SourceMgr `LOW_RECOVERY` 分支无消费的 `switch_counter++` 移除。
+  - `control_skip_count` / `protocol_error_count` 饱和到 `UINT32_MAX`；`overflow_count` 饱和到 `UINT8_MAX`。
+- **64 位运算清除（32 位平台双字撕裂防护 + ROM 缩减）**：
+  - 移除全部 `(double)` 强制转换与 `%f/%.Nf` 格式符，新增 L3 定点格式化工具 `Math_FloatToFixed(value, decimals, ipart, fpart)`，调用方以 `%d.%0Nd` 输出。
+  - 涉及：`foc_output_mgr.c`、`foc_ctrl_sens_reinit.c`、`foc_protocol_handler.c`、`foc_protocol_parser.c`、`foc_debug_stream.c`。
+  - 全链路不再链接 double 打印库；ROM：57.02kB → 54.96kB（-2.06kB，-3.6%）。
+- **参数调整行为收敛（写入契约简化）**：
+  - 删除运行时 `cfg_dirty → FOC_Control_ApplyConfig` 链路：`ApplyConfig` 收敛为冷路径专用（仅初始化/重初始化时基于 `max_phase_voltage`/`phase_resistance` 重算 PID 输出限幅）；运行时协议写参数**直写即生效**，无派生重算。
+  - 删除死代码/死字段：`foc_motor_state_t.cfg_dirty`、`foc_protocol_frame_result_t.param_changed`（L1 从不消费）、`FOC_Protocol_Commit`（无调用者）。
+  - PID 增益写入统一"**不清积分**"：移除协议对 `integral/prev_error` 的写入（协议只写增益字段，不插手控制动态状态），消除"电流环全清 vs 速度/角度环仅 kp 清"的不一致。
+  - `P:W`（sensor_sample_offset_percent）开放运行时可写：写入即生效（立即调 `Sensor_ADCSampleTimeOffset`），读回恢复；文档标注为调试用途。
+  - ROM：54.96kB → 54.90kB。
+
+### Note
+- 电流环 / 速度环 / 角度环三份 PID 核心按设计保持独立（电流环条件积分、速度环 back-calculation、角度环死区+限幅），本轮不做行为合并。
+- PID 参数配置撕裂结论：参数为"主循环单写者 + ISR 多读者"，单字段对齐原子访问，1~2 控制周期读取延迟可接受；不引入临界区/发布点等原子化机制（过度设计）。
 
 ## [2.0.6] - 2026-08-03
 

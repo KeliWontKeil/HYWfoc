@@ -31,4 +31,7 @@ void FOC_PIDInit(foc_pid_t *pid,
                  float out_min,
                  float out_max);
 
+/* 复位 PID 动态状态（积分与误差历史），保留配置 */
+void FOC_PIDReset(foc_pid_t *pid);
+
 #endif /* FOC_CONTROL_C13_CFG_STATE_H */

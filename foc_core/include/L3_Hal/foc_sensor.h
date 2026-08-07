@@ -35,7 +35,7 @@ typedef struct {
     uint8_t vbus_valid;
 } sensor_data_t;
 
-void Sensor_Init(uint8_t pwm_freq_kHz, float adc_sample_offset_percent);
+void Sensor_Init(void);
 void Sensor_InitSnapshot(sensor_data_t *out);
 void Sensor_ReadCurrent(sensor_data_t *out);
 void Sensor_ReadEncoder(sensor_data_t *out, float dt_sec);

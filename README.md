@@ -7,8 +7,8 @@
 - English Name：HYW FOC（想不到怎么翻译好，先这样用首字母吧）
 
 - 当前项目状态：单电机 FOC 驱动库（有感稳定，架构已扩展至无感）
-- 当前稳定基线：v2.0.6
-- 下一活跃目标版本：v2.1.0（待定）
+- 当前稳定基线：v2.1.0
+- 下一活跃目标版本：v2.2.0（待定）
 
 ## 何意味？（这个项目是什么）
 
@@ -20,8 +20,6 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、暂时只
 - 纯C语言实现，不依赖任何实时系统/运行环境
 - 采用OOP相关思想，模块化分层解耦架构
 - 部分功能可使用宏裁剪
-
-**当前版本正在进行结构调整优化和功能开发，未优化api移植性，暂时可移植性不佳**
 
 使用 AI 辅助开发（非 VibeCoding）🤖  
 - 开发过程中尝试使用了多种AI插件开发，copilot、cline、claudecode等等，目前还是用的cline  
@@ -112,7 +110,7 @@ FOC_VSCODE/
 - 部分可选的滤波器
 - 部分用于调节参数的通信协议
 - 控制算法
-具体协议裁剪开关见 [foc_core/include/LS_Config/foc_cfg_feature_switches.h](foc_core/include/LS_Config/foc_cfg_feature_switches.h)，裁剪映射关系见协议文档的"Build-Time Protocol Trimming"小节。
+具体协议裁剪开关见 [foc_core/include/LS_Config/foc_cfg_feature_switches.h](foc_core/include/LS_Config/foc_cfg_feature_switches.h)，裁剪映射关系见协议文档的"编译期协议裁剪"小节。
 
 ---
 
@@ -131,7 +129,7 @@ FOC_VSCODE/
 1. 准备硬件。我在hardware文件夹里直接放了整个嘉立创EDA专业版的工程，买元件，嫖板子，然后把它装起来！当然你要觉得我画的板子不咋地~~确实不咋地~~，可以参考原理图自己从头设计。
 2. 打开 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace) 或 [examples/GD32F303_FOCExplore/software/Project.uvprojx](examples/GD32F303_FOCExplore/software/Project.uvprojx)。你可以选择你喜欢和熟悉的IDE。
 3. 调整相关宏定义设置相关参数和算法裁剪，编译并烧录。
-4. 按 [examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md) 指导，发送命令并进行验证/观察现象
+4. 按 [docs/protocol-parameters.md](docs/protocol-parameters.md) 与实例 README 指导，发送命令并进行验证/观察现象
 5. 如果一切正常的话，去做你想做的吧，摸索代码/二次开发/优化算法都行。
 
 #### 捷径（极其推荐）：把 AI_INITIALIZATION.md 甩给 AI
@@ -192,10 +190,10 @@ https://github.com/KeliWontKeil/PortOSC
 ## 其他开发相关
 ### 开发计划
 
-下版本目标：v2.1.0 无感切换测试版：
+下版本目标：v2.2.0（SMO 优化与有感/无感切换）：
+- SMO 算法优化、估计滞后问题
+- 有感->SMO 切换调试与切换速度跳跃问题
 - 控制效果优化
-- 文档全面审计与补充
-- SMO 调试与有感/无感切换策略验证
 
 极长期目标（不知道会拖到什么时候去了）：
 1. 完成无感FOC开发
@@ -216,8 +214,6 @@ https://github.com/KeliWontKeil/PortOSC
 
 #### 实例级文档（以具体项目为准的具体工程实例文档）
 - [examples/GD32F303_FOCExplore/README.md](examples/GD32F303_FOCExplore/README.md)：实例入口文档
-- [examples/GD32F303_FOCExplore/DEVELOPMENT.md](examples/GD32F303_FOCExplore/DEVELOPMENT.md)：实例构建/调试细节
-- [examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md](examples/GD32F303_FOCExplore/PROTOCOL_ADAPTATION.md)：实例通信通道映射
 - [examples/GD32F303_FOCExplore/hardware/README.md](examples/GD32F303_FOCExplore/hardware/README.md)：硬件目录说明
 - [examples/GD32F303_FOCExplore/hardware/hardware.md](examples/GD32F303_FOCExplore/hardware/hardware.md)：硬件管脚速查
 

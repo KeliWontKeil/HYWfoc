@@ -101,10 +101,10 @@ void Sensor_InitSnapshot(sensor_data_t *out)
     out->current_b_zero_offset = 0.0f;
 }
 
-void Sensor_Init(uint8_t pwm_freq_kHz, float adc_sample_offset_percent)
+void Sensor_Init(void)
 {
-    FOC_Platform_SensorInputInit(pwm_freq_kHz);
-    Sensor_ADCSampleTimeOffset(adc_sample_offset_percent);
+    FOC_Platform_SensorInputInit();
+    Sensor_ADCSampleTimeOffset(FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT);
 }
 
 void Sensor_SetZeroOffset(sensor_data_t *out)

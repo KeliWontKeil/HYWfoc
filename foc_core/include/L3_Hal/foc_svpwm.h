@@ -46,7 +46,7 @@ typedef struct {
 /*
  * SVPWM API
  */
-void SVPWM_Init(svpwm_interp_state_t *svpwm, uint16_t freq_kHz, uint8_t deadtime_percent);
+void SVPWM_Init(svpwm_interp_state_t *svpwm);
 void SVPWM_Update(svpwm_interp_state_t *svpwm,
                   float phase_a,
                   float phase_b,

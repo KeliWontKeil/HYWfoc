@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
@@ -42,18 +43,13 @@ float FOC_Accel_ApplySpeedLimit(foc_outer_loop_private_t *state,
     return current;
 }
 
-static float FOC_NormalizeDt(float dt_sec)
-{
-    return (dt_sec > 0.0f) ? dt_sec : FOC_CONTROL_DT_SEC;
-}
-
 static float FOC_PIDRunCore(foc_pid_t *pid, float target, float measurement, float dt_sec)
 {
     float error;
     float derivative;
     float output;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
     error = target - measurement;
     pid->integral += error * dt_sec;
     derivative = (error - pid->prev_error) / dt_sec;
@@ -79,7 +75,7 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid,
     float derivative;
     float output;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
     error = target - measurement;
     if (fabsf(error) <= cfg->angle_hold_pid_deadband_rad)
     {
@@ -103,12 +99,6 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid,
     }
     pid->prev_error = error;
     return output;
-}
-
-static void FOC_ResetPIDState(foc_pid_t *pid)
-{
-    pid->integral = 0.0f;
-    pid->prev_error = 0.0f;
 }
 
 static void FOC_ResetSpeedState(foc_outer_loop_private_t *state)
@@ -149,7 +139,7 @@ static float FOC_UpdateSpeedAngleError(foc_outer_loop_private_t *state,
     float mech_delta_rad;
     float speed_cmd_delta_rad;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
     mech_signed_rad = params->direction * mech_angle_rad;
 
     if (state->speed_state_valid == 0U)
@@ -186,7 +176,7 @@ void FOC_SpeedOuterLoopStep(foc_outer_loop_private_t *state,
 
     if ((state == 0) || (speed_pid == 0) || (ctrl == 0) || (active == 0) || (cfg == 0) || (params == 0)) return;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
 
     /* 加速器：斜坡限幅 + 区域上限钳位（单点入口 FOC_Accel_ApplySpeedLimit） */
     if (control_region == FOC_CONTROL_REGION_LOW)
@@ -234,7 +224,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_outer_loop_private_t *state,
     if ((state == 0) || (speed_pid == 0) || (angle_hold_pid == 0) ||
         (ctrl == 0) || (active == 0) || (cfg == 0) || (params == 0)) return;
 
-    dt_sec = FOC_NormalizeDt(dt_sec);
+    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
     mech_angle_rad = active->mech_angle_rad;
     angle_ref_rad *= params->direction;
 
@@ -257,7 +247,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_outer_loop_private_t *state,
 
     if (speed_blend < 1e-4f)
     {
-        FOC_ResetPIDState(speed_pid);
+        FOC_PIDReset(speed_pid);
         FOC_ResetSpeedState(state);
         torque_ref_speed = 0.0f;
     }

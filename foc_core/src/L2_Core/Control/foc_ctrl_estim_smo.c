@@ -9,13 +9,6 @@
 
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 
-static float wrap_2pi(float angle_rad)
-{
-    while (angle_rad > FOC_MATH_TWO_PI)  angle_rad -= FOC_MATH_TWO_PI;
-    while (angle_rad < 0.0f)             angle_rad += FOC_MATH_TWO_PI;
-    return angle_rad;
-}
-
 static float smo_lpf_alpha(float fc_hz, float dt_sec)
 {
     float alpha = FOC_MATH_TWO_PI * fc_hz * dt_sec;
@@ -102,7 +95,7 @@ void FOC_EstimSMO_Init(foc_estim_smo_state_t *state, const foc_motor_params_t *p
             mech_zero = FOC_MATH_TWO_PI - mech_zero;
         }
         state->pll_angle_rad = mech_zero * (float)params->pole_pairs;
-        state->pll_angle_rad = wrap_2pi(state->pll_angle_rad);
+        state->pll_angle_rad = Math_WrapRad(state->pll_angle_rad);
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
         state->phase_comp_rad = state->pll_angle_rad;
 #endif
@@ -247,7 +240,10 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
             (*bemf_mag_out > FOC_ESTIM_SMO_CONVERGE_BEMF_V) &&
             (state->rot_dir_counter >= FOC_ESTIM_SMO_ROT_DIR_CONSECUTIVE))
         {
-            state->converge_counter++;
+            if (state->converge_counter < FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
+            {
+                state->converge_counter++;
+            }
             state->lock_counter = 0U;
             state->converged_once = 1U;
         }
@@ -301,7 +297,7 @@ static void EstimSMO_ExtractAnglePLL(foc_estim_smo_state_t *state,
                          pll_speed_limit);
 
     state->pll_angle_rad += state->pll_speed_rad_s * dt_sec;
-    state->pll_angle_rad = wrap_2pi(state->pll_angle_rad);
+    state->pll_angle_rad = Math_WrapRad(state->pll_angle_rad);
 }
 #endif
 
@@ -322,7 +318,7 @@ static void EstimSMO_ExtractAngleAtan2(foc_estim_smo_state_t *state,
                                         state->bemf_beta);
 
         angle = angle * (float)params->direction;
-        angle = wrap_2pi(angle);
+        angle = Math_WrapRad(angle);
         state->pll_angle_rad = angle;
         if (bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V)
         {

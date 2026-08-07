@@ -19,12 +19,12 @@
 #include "LS_Config/foc_config.h"
 
 void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
-                      FOC_Platform_TickCallback_t tick_cb,
-                      FOC_Platform_TickCallback_t service_cb,
-                      FOC_Platform_TickCallback_t control_cb,
-                      FOC_Platform_TickCallback_t monitor_cb,
-                      FOC_Platform_PwmIsrCallback_t pwm_cb,
-                      FOC_Platform_PwmIsrCallback_t current_loop_cb)
+                      FOC_Platform_IsrCallback_t tick_cb,
+                      FOC_Platform_IsrCallback_t service_cb,
+                      FOC_Platform_IsrCallback_t control_cb,
+                      FOC_Platform_IsrCallback_t monitor_cb,
+                      FOC_Platform_IsrCallback_t pwm_cb,
+                      FOC_Platform_IsrCallback_t current_loop_cb)
 {
     if ((sys == 0) || (motor == 0)) return;
 
@@ -46,7 +46,7 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
     ControlScheduler_SetCallback(&sys->runtime.scheduler, FOC_TASK_RATE_SERVICE, service_cb);
     ControlScheduler_SetCallback(&sys->runtime.scheduler, FOC_TASK_RATE_FAST_CONTROL, control_cb);
     ControlScheduler_SetCallback(&sys->runtime.scheduler, FOC_TASK_RATE_MONITOR, monitor_cb);
-    FOC_Platform_SetControlRuntimeInterrupts(0U);
+    FOC_Platform_SetControlInterruptsEnabled(0U);
 
     FOC_Platform_CommInit();
     FOC_OutputMgr_Init(sys);

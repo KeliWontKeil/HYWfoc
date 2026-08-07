@@ -24,7 +24,7 @@
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
 
 /* 三 ISR 模式：电流环独立 ISR 频率（Hz），与 PWM 频率解耦 */
-#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   4000U
+#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   8000U
 #define FOC_CONTROL_DT_SEC             (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
 
 /* 电流环周期（秒）：按 FOC_CURRENT_LOOP_ISR_MODE 收敛的唯一真值，所有电流环 ISR 内模块统一使用

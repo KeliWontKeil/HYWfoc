@@ -32,14 +32,12 @@ typedef enum {
  * comm_active   = 1: 当前帧有通信活动（用于 LED 指示）
  * needs_status  = 1: 状态码已在协议内部直写完成
  * needs_summary = 1: 请求 L1 生成 RUNTIME_SUMMARY 并发送
- * param_changed = 1: 参数被修改，需要 L1 调用 ApplyConfig
  * needs_*_dump  = 1: 请求 L1 将批量数据格式化为 TX 队列（对应 X 指令）
  */
 typedef struct {
     uint8_t comm_active      : 1;
     uint8_t needs_status     : 1;
     uint8_t needs_summary    : 1;
-    uint8_t param_changed    : 1;
     uint8_t needs_param_dump : 1;
     uint8_t needs_config_dump: 1;
     uint8_t needs_state_dump : 1;
