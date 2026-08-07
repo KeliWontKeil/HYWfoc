@@ -49,7 +49,7 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 {
     motor->ctrl.uq = 0.0f;
     motor->ctrl.ud = calib_uq;
-    FOC_ControlRecordPhaseOutputDqAngle(motor,
+    FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                         FOC_CONTROL_PHASE_REINIT,
                                         motor->reinit_state.phase,
                                         0.0f,
@@ -61,7 +61,8 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
 {
     (void)dt_sec;
-    FOC_ControlRecordPhaseOutputZero(motor,
+    FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
+                                     &motor->outer_loop,
                                      FOC_CONTROL_PHASE_REINIT,
                                      motor->reinit_state.phase);
 }
@@ -258,7 +259,8 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             /* 退磁 */
             motor->ctrl.uq = 0.0f;
             motor->ctrl.ud = 0.0f;
-            FOC_ControlRecordPhaseOutputZero(motor,
+            FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
+                                             &motor->outer_loop,
                                              FOC_CONTROL_PHASE_REINIT,
                                              rs->phase);
 
@@ -285,7 +287,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         /* 应用 D 轴对齐电压在目标电角度 */
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -307,7 +309,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -400,7 +402,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -422,7 +424,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     {
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
-        FOC_ControlRecordPhaseOutputDqAngle(motor,
+        FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                             FOC_CONTROL_PHASE_REINIT,
                                             rs->phase,
                                             rs->elec_angle_rad,
@@ -452,10 +454,15 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         ReInit_ZeroOutput(motor, dt_sec);
 
         /* 强制 PWM 输出 50% 中点（零电压），绕过 ISR 延迟 */
-        SVPWM_ApplyDirectDuty(motor, 0U, 0.5f, 0.5f, 0.5f);
+        SVPWM_ApplyDirectDuty(&motor->svpwm, 0U, 0.5f, 0.5f, 0.5f);
 
         /* 应用配置 */
-        FOC_Control_ApplyConfig(motor);
+        FOC_Control_ApplyConfig(&motor->ctrl,
+                                &motor->torque_current_pid,
+                                &motor->speed_pid,
+                                &motor->angle_pid,
+                                &motor->cfg,
+                                &motor->params);
 
         motor->state.system_running = 1U;
         motor->state.current_loop_ready = 0U;

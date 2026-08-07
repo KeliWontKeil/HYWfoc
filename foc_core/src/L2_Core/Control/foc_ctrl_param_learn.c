@@ -1,4 +1,3 @@
-#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_param_learn.h"
 
 #include <math.h>
@@ -22,7 +21,11 @@ static uint8_t FOC_ClampPolePairs(int32_t pole_pairs)
     return (uint8_t)pole_pairs;
 }
 
-uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
+uint8_t FOC_EstimateDirectionAndPolePairs(foc_control_runtime_t *ctrl,
+                                          const foc_motor_params_t *params,
+                                          svpwm_interp_state_t *svpwm,
+                                          foc_applied_output_state_t *applied,
+                                          foc_alpha_beta_phase_t *alpha_beta,
                                           int8_t *direction_est,
                                           uint8_t *pole_pairs_est)
 {
@@ -35,7 +38,8 @@ uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     uint16_t step_count = FOC_CALIB_COARSE_STEP_COUNT;
     float step_elec_rad = FOC_CALIB_COARSE_STEP_ELEC_RAD;
 
-    if ((motor == 0) || (direction_est == 0) || (pole_pairs_est == 0))
+    if ((ctrl == 0) || (params == 0) || (svpwm == 0) || (applied == 0) ||
+        (alpha_beta == 0) || (direction_est == 0) || (pole_pairs_est == 0))
     {
         return 0U;
     }
@@ -45,7 +49,7 @@ uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
         float elec_target = step_elec_rad * (float)i;
         float mech_rad;
 
-        if (FOC_SampleLockedMechanicalAngle(motor,
+        if (FOC_SampleLockedMechanicalAngle(ctrl, svpwm, applied, alpha_beta, params,
                                             elec_target,
                                             FOC_CALIB_COARSE_STEP_SETTLE_MS,
                                             FOC_CALIB_COARSE_STEP_SAMPLE_COUNT,
@@ -86,7 +90,8 @@ uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
     *direction_est = (sum_d_mech >= 0.0f) ? FOC_DIR_NORMAL : FOC_DIR_REVERSED;
     *pole_pairs_est = FOC_ClampPolePairs((int32_t)(fabsf(sum_d_elec / sum_d_mech) + 0.5f));
 
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleDirect(ctrl, svpwm, applied, alpha_beta, params,
+                                          0.0f);
     FOC_Platform_WaitMs(FOC_CALIB_COARSE_STEP_SETTLE_MS);
 
     for (i = step_count; i > 0U; i--)
@@ -94,7 +99,7 @@ uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
         float elec_target = step_elec_rad * (float)i;
         float mech_rad;
 
-        FOC_SampleLockedMechanicalAngle(motor,
+        FOC_SampleLockedMechanicalAngle(ctrl, svpwm, applied, alpha_beta, params,
                                         elec_target,
                                         FOC_CALIB_COARSE_STEP_SETTLE_MS,
                                         FOC_CALIB_COARSE_STEP_SAMPLE_COUNT,

@@ -5,8 +5,6 @@
 
 #include "L2_Core/Control/foc_ctrl_estim.h"
 
-typedef struct foc_motor_t foc_motor_t;
-
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
 /* ========== HFI 估计器私有状态 ========== */
 typedef struct {
@@ -14,8 +12,8 @@ typedef struct {
     float    hf_cos_demod;
 } foc_estim_hfi_state_t;
 
-void FOC_EstimHFI_Step(foc_motor_t *motor, float dt_sec);
-void FOC_EstimHFI_Init(foc_motor_t *motor);
+void FOC_EstimHFI_Step(foc_estim_hfi_state_t *state, float dt_sec);
+void FOC_EstimHFI_Init(foc_estim_hfi_state_t *state);
 #endif
 
 #endif /* FOC_CTRL_ESTIM_HFI_H */

@@ -46,27 +46,27 @@ typedef struct {
 /*
  * SVPWM API
  */
-void SVPWM_Init(foc_motor_t *motor, uint16_t freq_kHz, uint8_t deadtime_percent);
-void SVPWM_Update(foc_motor_t *motor,
+void SVPWM_Init(svpwm_interp_state_t *svpwm, uint16_t freq_kHz, uint8_t deadtime_percent);
+void SVPWM_Update(svpwm_interp_state_t *svpwm,
                   float phase_a,
                   float phase_b,
                   float phase_c,
                   float voltage_command,
                   float vbus_voltage,
                   uint8_t direct_output);
-void SVPWM_ApplyDirectDuty(foc_motor_t *motor,
+void SVPWM_ApplyDirectDuty(svpwm_interp_state_t *svpwm,
                            uint8_t sector,
                            float duty_a,
                            float duty_b,
                            float duty_c);
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
-void SVPWM_SetRuntimeDutyTarget(foc_motor_t *motor,
+void SVPWM_SetRuntimeDutyTarget(svpwm_interp_state_t *svpwm,
                                 uint8_t sector,
                                 float duty_a,
                                 float duty_b,
                                 float duty_c);
-void SVPWM_InterpolationISR(foc_motor_t *motor);
+void SVPWM_InterpolationISR(svpwm_interp_state_t *svpwm);
 #endif
-const svpwm_output_t* SVPWM_GetOutput(const foc_motor_t *motor);
+const svpwm_output_t* SVPWM_GetOutput(const svpwm_interp_state_t *svpwm);
 
 #endif /* FOC_SVPWM_H */

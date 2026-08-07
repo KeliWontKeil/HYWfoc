@@ -56,8 +56,11 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 #endif
 
     /* 归零 PWM */
-    FOC_ControlRecordPhaseOutputZero(motor, motor->state.control_phase, 0U);
-    FOC_ControlApplyPhaseOutputRuntime(motor);
+    FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
+                                     &motor->outer_loop, motor->state.control_phase, 0U);
+    FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
+                                       &motor->applied_output, &motor->alpha_beta,
+                                       &motor->phase_output_state, &motor->params);
 }
 
 void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor)
@@ -100,15 +103,50 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
 
     /* 阶段2：各 Estimator 数值迭代（读 sensor_fast，只写内部状态） */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimSMO_Step(motor, current_loop_dt_sec);
+    FOC_EstimSMO_Step(&motor->estim_smo_state,
+                      &motor->params,
+                      &motor->sensor,
+                      &motor->applied_output,
+                      &motor->ctrl,
+                      motor->source_mgr_state.active_source,
+                      motor->source_mgr_state.control_region,
+                      current_loop_dt_sec);
 #endif
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimHFI_Step(motor, current_loop_dt_sec);
+    FOC_EstimHFI_Step(&motor->estim_hfi_state, current_loop_dt_sec);
 #endif
 
     /* 阶段3：数据选择与发布 */
-    FOC_SourceMgr_Select(motor);
-    FOC_SourceMgr_Publish(motor);
+    {
+        foc_source_mgr_ctx_t sm_ctx;
+
+        sm_ctx.sensor = &motor->sensor;
+        sm_ctx.params = &motor->params;
+        sm_ctx.cfg = &motor->cfg;
+        sm_ctx.control_mode = motor->state.control_mode;
+        sm_ctx.switch_cfg = &motor->source_switch_state;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.smo_state = &motor->estim_smo_state;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.openloop_state = &motor->openloop_state;
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.cogging_status = &motor->cogging_comp_status;
+#endif
+        sm_ctx.state = &motor->source_mgr_state;
+        sm_ctx.active = &motor->active_source_state;
+        sm_ctx.ctrl = &motor->ctrl;
+        sm_ctx.outer_loop = &motor->outer_loop;
+        sm_ctx.speed_pid = &motor->speed_pid;
+        sm_ctx.torque_current_pid = &motor->torque_current_pid;
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.soft_switch = &motor->current_soft_switch_status;
+#endif
+        sm_ctx.encoder_services = &motor->encoder_services;
+        FOC_SourceMgr_Select(&sm_ctx);
+        FOC_SourceMgr_Publish(&sm_ctx);
+    }
     
     /* 阶段4：电流环 */
     FOC_CurrentControlStep(&motor->ctrl,
@@ -123,7 +161,10 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                            current_loop_dt_sec);
 
     /* 阶段5：SVPWM */
-    FOC_ControlApplyElectricalAngleRuntime(motor, motor->ctrl.electrical_angle_rad);
+    FOC_ControlApplyElectricalAngleRuntime(&motor->ctrl, &motor->svpwm,
+                                           &motor->applied_output, &motor->alpha_beta,
+                                           &motor->params,
+                                           motor->ctrl.electrical_angle_rad);
 
     motor->isr_timing.current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
     }
@@ -137,7 +178,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
     uint8_t divider;
 
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
-    SVPWM_InterpolationISR(motor);
+    SVPWM_InterpolationISR(&motor->svpwm);
 #endif
 
     if (motor->state.motor_enabled == 0U)
@@ -150,7 +191,9 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
         (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
     {
         if (motor->phase_output_state.valid == 0U) return;
-        FOC_ControlApplyPhaseOutputRuntime(motor);
+        FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
+                                           &motor->applied_output, &motor->alpha_beta,
+                                           &motor->phase_output_state, &motor->params);
         return;
     }
 
@@ -172,7 +215,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
 {
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
-    SVPWM_InterpolationISR(motor);
+    SVPWM_InterpolationISR(&motor->svpwm);
 #endif
 
     if (motor->state.motor_enabled == 0U)
@@ -185,7 +228,9 @@ void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
         (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
     {
         if (motor->phase_output_state.valid == 0U) return;
-        FOC_ControlApplyPhaseOutputRuntime(motor);
+        FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
+                                           &motor->applied_output, &motor->alpha_beta,
+                                           &motor->phase_output_state, &motor->params);
         return;
     }
 }
@@ -205,7 +250,7 @@ void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
     if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
     if (motor->state.current_loop_ready == 0U) return;
 
-    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_ISR3_DT_SEC);
+    FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_DT_SEC);
 }
 #endif
 
@@ -343,7 +388,9 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
     if (1)
 #endif
     {
-        FOC_ControlApplyCoggingCompensation(motor,
+        FOC_ControlApplyCoggingCompensation(&motor->cogging_comp_status,
+                                            &motor->ctrl,
+                                            motor->cogging_comp_table_q15,
                                             motor->active_source_state.mech_angle_rad,
                                             motor->cogging_comp_status.speed_ref_rad_s);
     }

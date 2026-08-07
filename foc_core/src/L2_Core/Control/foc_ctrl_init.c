@@ -50,7 +50,9 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     if (need_zero != 0U)
     {
-        if (FOC_SampleLockedMechanicalAngle(motor,
+        if (FOC_SampleLockedMechanicalAngle(&motor->ctrl, &motor->svpwm,
+                                            &motor->applied_output, &motor->alpha_beta,
+                                            &motor->params,
                                             0.0f,
                                             FOC_CALIB_ZERO_LOCK_SETTLE_MS,
                                             FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT,
@@ -72,13 +74,18 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
     }
     else
     {
-        FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+        FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                              &motor->applied_output, &motor->alpha_beta,
+                                              &motor->params,
+                                              0.0f);
         FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
     }
 
     if ((need_direction != 0U) || (need_pole_pairs != 0U))
     {
-        if (FOC_EstimateDirectionAndPolePairs(motor, &direction_est, &pole_pairs_est) != 0U)
+        if (FOC_EstimateDirectionAndPolePairs(&motor->ctrl, &motor->params, &motor->svpwm,
+                                              &motor->applied_output, &motor->alpha_beta,
+                                              &direction_est, &pole_pairs_est) != 0U)
         {
             if (need_direction != 0U)
             {
@@ -105,7 +112,10 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 
     motor->ctrl.ud = backup_ud;
     motor->ctrl.uq = backup_uq;
-    FOC_ControlApplyElectricalAngleDirect(motor, 0.0f);
+    FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                          &motor->applied_output, &motor->alpha_beta,
+                                          &motor->params,
+                                          0.0f);
 }
 
 void FOC_MotorInit(foc_motor_t *motor,
@@ -250,7 +260,15 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->cogging_comp_status.calib_gain_k = FOC_COGGING_CALIB_GAIN_K;
 #endif
 
-    FOC_ControlConfigResetDefault(motor);
+    FOC_ControlConfigResetDefault(&motor->cfg,
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+                                  &motor->current_soft_switch_status,
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+                                  &motor->cogging_comp_status,
+                                  motor->cogging_comp_table_q15,
+#endif
+                                  FOC_COGGING_LUT_POINT_COUNT);
     /* per-motor sub-struct init */
     motor->mode_transition.prev_control_mode = 0U;
     motor->mode_transition.prev_control_mode_valid = 0U;
@@ -280,11 +298,12 @@ void FOC_MotorInit(foc_motor_t *motor,
         motor->cogging_comp_status.iq_limit_a = FOC_COGGING_COMP_IQ_LIMIT_A;
 
 #if (FOC_COGGING_STATIC_TABLE_DEFINED == FOC_CFG_ENABLE)
-        (void)FOC_ControlLoadCoggingCompTableQ15(motor,
-                                                  foc_cogging_default_table_q15,
-                                                  FOC_COGGING_LUT_POINT_COUNT,
-                                                  FOC_COGGING_LUT_IQ_LSB_A,
-                                                  FOC_COGGING_COMP_SOURCE_STATIC);
+        (void)FOC_ControlLoadCoggingCompTableQ15(&motor->cogging_comp_status,
+                                                 motor->cogging_comp_table_q15,
+                                                 foc_cogging_default_table_q15,
+                                                 FOC_COGGING_LUT_POINT_COUNT,
+                                                 FOC_COGGING_LUT_IQ_LSB_A,
+                                                 FOC_COGGING_COMP_SOURCE_STATIC);
 #endif
 
         if (table_defined != 0U)
@@ -313,7 +332,7 @@ void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
     Sensor_ReadVBUS(&motor->sensor);
     motor->sensor.adc_valid = 1U;
 
-    SVPWM_Init(motor, FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
+    SVPWM_Init(&motor->svpwm, FOC_PWM_FREQ_KHZ, FOC_SVPWM_DEADTIME_PERCENT_DEFAULT);
 
     FOC_ControlExecutor_Init(motor);
 }

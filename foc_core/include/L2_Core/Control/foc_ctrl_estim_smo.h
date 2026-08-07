@@ -6,8 +6,7 @@
 #include "L2_Core/Control/foc_ctrl_estim.h"
 #include "LS_Config/foc_config.h"
 #include "L3_Hal/foc_filter_types.h"
-
-typedef struct foc_motor_t foc_motor_t;
+#include "L3_Hal/foc_sensor.h"
 
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
 /* ========== SMO 估计器私有状态 ========== */
@@ -48,10 +47,18 @@ typedef struct {
     float    speed_window[FOC_SMO_SPEED_WINDOW_SIZE];
     uint8_t  speed_window_pos;
     uint8_t  speed_window_count;
+    float    speed_dt_accum;
 } foc_estim_smo_state_t;
 
-void FOC_EstimSMO_Step(foc_motor_t *motor, float dt_sec);
-void FOC_EstimSMO_Init(foc_motor_t *motor);
+void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
+                       const foc_motor_params_t *params,
+                       const sensor_data_t *sensor,
+                       const foc_applied_output_state_t *applied,
+                       const foc_control_runtime_t *ctrl,
+                       uint8_t active_source,
+                       uint8_t control_region,
+                       float dt_sec);
+void FOC_EstimSMO_Init(foc_estim_smo_state_t *state, const foc_motor_params_t *params);
 #endif
 
 #endif /* FOC_CTRL_ESTIM_SMO_H */

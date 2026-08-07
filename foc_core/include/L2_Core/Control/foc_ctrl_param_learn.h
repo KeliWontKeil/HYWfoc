@@ -6,11 +6,13 @@
 #include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
+#include "L3_Hal/foc_svpwm.h"
 
-/* 前置声明：避免依赖 L3 头间接声明 */
-typedef struct foc_motor_t foc_motor_t;
-
-uint8_t FOC_EstimateDirectionAndPolePairs(foc_motor_t *motor,
+uint8_t FOC_EstimateDirectionAndPolePairs(foc_control_runtime_t *ctrl,
+                                          const foc_motor_params_t *params,
+                                          svpwm_interp_state_t *svpwm,
+                                          foc_applied_output_state_t *applied,
+                                          foc_alpha_beta_phase_t *alpha_beta,
                                           int8_t *direction_est,
                                           uint8_t *pole_pairs_est);
 

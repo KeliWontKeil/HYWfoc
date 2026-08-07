@@ -1,4 +1,3 @@
-#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_outer_loop.h"
 
 #include <math.h>

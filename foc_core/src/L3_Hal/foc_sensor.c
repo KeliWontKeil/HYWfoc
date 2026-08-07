@@ -1,4 +1,3 @@
-#include "L2_Core/foc_motor_aggregate.h"
 #include "L3_Hal/foc_sensor.h"
 
 #include <math.h>

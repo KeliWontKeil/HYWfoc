@@ -5,9 +5,30 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-08-07
+
+### Changed
+- **L2 传参收窄重构（耦合域显式化，延续 `结构优化重构.md` G1/G3）**：
+  - **L3 SVPWM 收窄**：`SVPWM_Init/Update/ApplyDirectDuty/SetRuntimeDutyTarget/InterpolationISR/GetOutput` 首参 `foc_motor_t *` → `svpwm_interp_state_t *`，消除 L3 对 motor 聚合的反向依赖。
+  - **Estimator 域收窄**：`FOC_EstimSMO_Step(state, params, sensor, applied, ctrl, active_source, control_region, dt)`、`FOC_EstimSMO_Init(state, params)`；`FOC_EstimHFI_Step/Init(state, ...)`；`foc_ctrl_estim.h` 收敛为纯状态宏层（API 声明转移至各模块 `.h`），删除无实现的 Flux 空声明。
+  - **执行输出域收窄**：`FOC_ControlApplyElectricalAngleRuntime/Direct`、`FOC_ControlRecordPhaseOutputDqAngle/Zero`、`FOC_ControlApplyPhaseOutputRuntime`、`FOC_SampleLockedMechanicalAngle` 全部改为 `(ctrl, params, svpwm, applied, alpha_beta, phase_output, ...)` 子结构传参。
+  - **SourceMgr 上下文视图**：新增 `foc_source_mgr_ctx_t`（输入 sensor/params/cfg/control_mode + 输入输出 switch_cfg/state/active/ctrl/outer_loop/pids/encoder_services + 条件编译 source 状态），`FOC_SourceMgr_Init/Select/Publish(ctx)`；新增 `foc_source_read_ctx_t` 只读窗，`FOC_SourceMgr_ReadSourceAngle/Speed(ctx, ...)`；删除无调用点的 `FOC_SourceMgr_GetActive`。
+  - **配置/补偿域收窄**：`FOC_ControlConfigResetDefault(cfg, soft_switch, comp_status, table, count)`、`FOC_Control_ApplyConfig(params, ctrl, pids, cfg)`、`FOC_ControlApplyCoggingCompensation(status, table, ctrl, angle, speed)`、`FOC_ControlLoadCoggingCompTableQ15(status, table, src, ...)`；删除无调用点的 `FOC_ControlGetCurrentSoftSwitchStatus`。
+  - **参数学习收窄**：`FOC_EstimateDirectionAndPolePairs(ctrl, params, svpwm, applied, alpha_beta, ...)`。
+  - **include 清理**：openloop/outer_loop/current_loop/compensation/estim_smo/estim_hfi/actuation/cfg/source_mgr/sensor/svpwm 移除 `foc_motor_aggregate.h` 依赖；L2/L3 各模块 `.h` 移除 `foc_motor_t` 前置声明。
+- **函数传参排序规范（可读性）**：统一按"本域私有状态 → 跨域可写总线 → 跨域只读输入(const) → 显式 out → 标量(dt 最后)"分组排序。执行输出域（`FOC_ControlApplyElectricalAngleRuntime/Direct`、`FOC_ControlApplyPhaseOutputRuntime`、`FOC_SampleLockedMechanicalAngle`）`params` 移入 const 只读组；`FOC_ControlApplyCoggingCompensation` 改为 `(status, ctrl, table, ...)`；`FOC_Control_ApplyConfig` 改为 `(ctrl, pids, cfg, const params)` 且 `params` 加 const。规范写入 `.clinerules/hywfoc-project-rules.md`。
+- **聚合访问权唯一化**：`foc_motor_t` 完整类型仅保留给 L1 编排、L2 Executor（facade）、协议/调试只读链、冷路径状态机（init/标定/重初始化）。`foc_motor_aggregate.h` 物理路径保留在 `L2_Core/`（阶段 1b 上移 L1 需 Executor 上下文视图化后实施，见 `结构优化重构.md`）。
+
+### Documentation
+- `docs/architecture.md` L2 约束区第 5 条更新为"L2 传参规范 + 聚合访问权唯一化"。
+
 ## [2.0.6] - 2026-08-03
 
 ### Fixed
+- **SMO 测速窗口消除 ISR 频率硬编码（结构性传参修复）**：
+  - `EstimSMO_StepTail` 原以 2ISR 推导宏 `FOC_CURRENT_LOOP_ISR_FREQ`（8kHz）重建 16 拍测速窗口时长，三 ISR 模式（实际电流环 4kHz）下窗口被算成 2ms（实际 4ms），导致 SMO 测速恒定放大 2 倍。现改为累计调用方每拍传入的 `dt_sec`（新增 `speed_dt_accum` 字段），彻底消除对 ISR 频率宏的依赖。
+  - `FOC_CURRENT_LOOP_DT_SEC` 收敛为按 `FOC_CURRENT_LOOP_ISR_MODE` 条件编译的唯一真值（双 ISR 取分频周期，三 ISR 取 `1/FOC_CURRENT_LOOP_ISR_FREQ_HZ`）；删除语义孪生的 `FOC_CURRENT_LOOP_ISR3_DT_SEC`，Executor 两个电流环入口统一使用 `FOC_CURRENT_LOOP_DT_SEC`。
+  - **编译期约束收口**：`foc_compile_limits.h` 校验 `FOC_CURRENT_LOOP_ISR_MODE` 合法值；三 ISR 模式强制 `FOC_CURRENT_LOOP_ISR_FREQ_HZ` 非零，避免辅助定时器不初始化导致电流环静默停摆。
 - **速域切换判据收口（修复电机反向接线时低速域被速度尖峰误切高速域的问题）**：
   - **目标速度域门槛**：升域（`LOW_ACTIVE→HIGH_ACQUIRE`）、等待（`HIGH_ACQUIRE` 保持）、降级（`HIGH_ACTIVE→HIGH_SUSPECT`）、降级恢复（`HIGH_SUSPECT→HIGH_ACTIVE`）全部要求 `SPEED_ONLY` 且 `|speed_only| > high_th`。目标在低速域时，即使实测瞬时速度 > 门限、SMO 已收敛，也禁止切入/驻留高速域，杜绝单拍速度尖峰盖过其他判据。
   - **降级去抖独立宏**：新增 `FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES`（默认 20）。`HIGH_SUSPECT` 恢复 `HIGH_ACTIVE` 需目标在高速域 且 实测速度 ≥ high 门限连续该宏拍数；移除 `speed_valid==0` 无条件放行，速度读取失败或单拍尖峰不再打断敏捷降级。

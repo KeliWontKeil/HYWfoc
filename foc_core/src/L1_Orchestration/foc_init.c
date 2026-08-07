@@ -85,14 +85,19 @@ void FOC_Init_MotorAndCalib(foc_motor_t *motor)
                   FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT,
                   FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD,
                   FOC_MOTOR_INIT_DIRECTION_DEFAULT);
-    FOC_Control_ApplyConfig(motor);
+    FOC_Control_ApplyConfig(&motor->ctrl,
+                            &motor->torque_current_pid,
+                            &motor->speed_pid,
+                            &motor->angle_pid,
+                            &motor->cfg,
+                            &motor->params);
 
     /* 初始化所有编译启用的 Source 私有状态 */
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimSMO_Init(motor);
+    FOC_EstimSMO_Init(&motor->estim_smo_state, &motor->params);
 #endif
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
-    FOC_EstimHFI_Init(motor);
+    FOC_EstimHFI_Init(&motor->estim_hfi_state);
 #endif
 }
 

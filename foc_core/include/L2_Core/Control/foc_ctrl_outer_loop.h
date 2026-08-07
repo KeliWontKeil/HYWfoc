@@ -6,8 +6,6 @@
 #include "L3_Hal/foc_math_types.h"
 #include "L2_Core/foc_ctrl_types.h"
 
-typedef struct foc_motor_t foc_motor_t;
-
 /* ========== Outer-loop runtime state (private to outer_loop) ========== */
 typedef struct {
     float  speed_err_accum_rad;

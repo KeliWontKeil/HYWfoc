@@ -8,8 +8,6 @@
 #include "L3_Hal/foc_math_types.h"
 #include "L2_Core/foc_ctrl_types.h"
 
-typedef struct foc_motor_t foc_motor_t;
-
 /* ========== Current soft-switch status（电流环域私有） ========== */
 typedef struct {
     uint8_t enabled;

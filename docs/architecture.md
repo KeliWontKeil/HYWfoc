@@ -57,7 +57,7 @@ FOC_VSCODE/
 2. 公共头文件不得暴露 `gd32f30x_*` 设备头。
 3. L4 不得反向依赖 `foc_core/src/*` 业务逻辑。
 4. 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值。
-5. L2 各块间禁止跨块直接调用，数据通过 `foc_motor_t` 由 L1 统一协调。
+5. **L2 传参规范**：算法模块函数只收"自有私有状态 + 最小跨域子结构 + 必要标量"，禁止传整个 `foc_motor_t`；数据由 L1/Executor 从聚合体拆包分发，L2 各块间禁止跨块直接调用。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛。**聚合访问权唯一化**：`foc_motor_t` 完整类型仅保留给 L1 编排、L2 Executor（facade）、协议/调试只读链（`const foc_motor_t *`）、冷路径状态机（init/标定/重初始化）；`foc_motor_aggregate.h` 物理路径暂留 `L2_Core/`（阶段 1b 上移 L1 需 Executor 上下文视图化后实施，见 `结构优化重构.md`）。
 6. **L2 任何模块不得包含 `L1_Orchestration/` 头文件**。
 7. **L2 任何模块不得持有队列实例**——队列存储由 L1 在 `foc_runtime_ctx_t` 中分配，L2 通过指针参数操作。
 8. L1 编排负责检测 dirty 标志、转发系统命令、管理初始化流程。
@@ -307,8 +307,11 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 | 模式 | PWM ISR 内容 | 电流环位置 | 电流环频率 |
 |------|-------------|-----------|-----------|
 | 双 ISR（默认） | 插值 + 守卫 + 电流环（分频） | PWM ISR | `PWM_FREQ / FOC_CURRENT_LOOP_ISR_DIVIDER` |
-| 三 ISR | 仅插值 + 守卫（~2us） | 独立辅助定时器 ISR | `FOC_CURRENT_LOOP_ISR_FREQ_HZ`（默认 8kHz，与 PWM 解耦） |
+| 三 ISR | 仅插值 + 守卫（~2us） | 独立辅助定时器 ISR | `FOC_CURRENT_LOOP_ISR_FREQ_HZ`（当前默认 4kHz，与 PWM 解耦） |
 
+- 三 ISR 模式电流环频率由 `FOC_CURRENT_LOOP_ISR_FREQ_HZ` 独立配置（当前默认 4kHz，与 PWM 解耦）。
+- 电流环周期宏 `FOC_CURRENT_LOOP_DT_SEC` 随 `FOC_CURRENT_LOOP_ISR_MODE` 自动收敛：双 ISR 取 `1/(PWM_FREQ/DIVIDER)`，三 ISR 取 `1/FOC_CURRENT_LOOP_ISR_FREQ_HZ`（为 0 时退化为控制周期）。所有电流环 ISR 内模块（Estimator/电流环）统一使用该宏作为 dt 唯一真值。
+- SMO 测速尾链使用调用方每拍传入的 `dt_sec` 累计窗口时长，不依赖任何 ISR 频率宏，ISR 模式切换不改变测速尺度。
 - `FOC_SVPWM_INTERP_ENABLE` 插值开关两种模式可独立裁剪；禁用后 `FOC_ControlApplyElectricalAngleRuntime` 直接写占空比。
 - 三 ISR 模式 SVPWM 双写者保护：电流环 ISR 写 pending 字段 → `FOC_Platform_MemoryBarrier()` → commit 标志；PWM ISR 入口原子取走。
 - 辅助定时器通过 `FOC_Platform_AuxTimerInit/Start/Stop/SetCallback` 映射空闲硬件定时器（GD32 实例 TIMER4，优先级 (2,0) 低于 PWM ISR）。

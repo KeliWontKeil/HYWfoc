@@ -103,7 +103,7 @@ static void CoggingCalib_OpenLoopDriveStep(foc_motor_t *motor, float dt_sec)
     motor->ctrl.uq = FOC_COGGING_CALIB_IQ_A * motor->params.phase_resistance * (float)motor->params.direction;
     motor->ctrl.iq_target = 0.0f;
 
-    FOC_ControlRecordPhaseOutputDqAngle(motor,
+    FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                         FOC_CONTROL_PHASE_COGGING_CALIB,
                                         motor->cogging_calib_state.pass_num,
                                         elec_angle,

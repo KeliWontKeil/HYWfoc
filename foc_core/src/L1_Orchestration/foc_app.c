@@ -88,9 +88,37 @@ void FOC_App_Init(void)
     FOC_OpenLoop_Init(&motor.openloop_state, &motor.params, &motor.cfg);
 #endif
 
-    FOC_SourceMgr_Init(&motor,
-                       (uint8_t)FOC_CONTROL_LOW_SOURCE,
-                       (uint8_t)FOC_CONTROL_HIGH_SOURCE);
+    {
+        foc_source_mgr_ctx_t sm_ctx;
+
+        sm_ctx.sensor = &motor.sensor;
+        sm_ctx.params = &motor.params;
+        sm_ctx.cfg = &motor.cfg;
+        sm_ctx.control_mode = motor.state.control_mode;
+        sm_ctx.switch_cfg = &motor.source_switch_state;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.smo_state = &motor.estim_smo_state;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.openloop_state = &motor.openloop_state;
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.cogging_status = &motor.cogging_comp_status;
+#endif
+        sm_ctx.state = &motor.source_mgr_state;
+        sm_ctx.active = &motor.active_source_state;
+        sm_ctx.ctrl = &motor.ctrl;
+        sm_ctx.outer_loop = &motor.outer_loop;
+        sm_ctx.speed_pid = &motor.speed_pid;
+        sm_ctx.torque_current_pid = &motor.torque_current_pid;
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+        sm_ctx.soft_switch = &motor.current_soft_switch_status;
+#endif
+        sm_ctx.encoder_services = &motor.encoder_services;
+        FOC_SourceMgr_Init(&sm_ctx,
+                           (uint8_t)FOC_CONTROL_LOW_SOURCE,
+                           (uint8_t)FOC_CONTROL_HIGH_SOURCE);
+    }
 
     FOC_Init_Verify(&motor, &motor.sensor);
     FOC_OutputMgr_WriteStartupInfo(&motor);
@@ -156,7 +184,12 @@ void FOC_App_Loop(void)
 
         if (motor.state.cfg_dirty != 0U)
         {
-            FOC_Control_ApplyConfig(&motor);
+            FOC_Control_ApplyConfig(&motor.ctrl,
+                                    &motor.torque_current_pid,
+                                    &motor.speed_pid,
+                                    &motor.angle_pid,
+                                    &motor.cfg,
+                                    &motor.params);
             motor.state.cfg_dirty = 0U;
         }
 

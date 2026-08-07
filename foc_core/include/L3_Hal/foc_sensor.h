@@ -8,8 +8,6 @@
 #include "LS_Config/foc_config.h"
 #include "L3_Hal/foc_filter_types.h"
 
-typedef struct foc_motor_t foc_motor_t;
-
 /* ========== Sensor data snapshot ========== */
 typedef struct {
     FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_CURRENT_A) current_a;

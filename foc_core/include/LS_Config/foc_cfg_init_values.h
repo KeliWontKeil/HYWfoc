@@ -7,6 +7,11 @@
 /* Platform timing base and timer source setup. */
 #define FOC_PLATFORM_BASE_CLOCK_KHZ 120000U
 
+/*PWM initialization defaults.*/
+#define FOC_PWM_FREQ_KHZ                24U
+#define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
+#define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
+
 /* Scheduler rates. */
 #define FOC_SCHEDULER_TICK_HZ 1000U
 #define FOC_SCHEDULER_CONTROL_HZ 1000U
@@ -14,21 +19,26 @@
 #define FOC_SCHEDULER_MONITOR_HZ 200U
 #define FOC_SCHEDULER_HEARTBEAT_HZ 1U
 
-/*PWM initialization defaults.*/
-#define FOC_PWM_FREQ_KHZ                24U
-#define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
-#define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
-
 /* 双 ISR 模式：电流环为PWMISR分频，分频仅作为降低计算负担，仍需保证执行时间小于 PWMISR 周期 */
 #define FOC_CURRENT_LOOP_ISR_DIVIDER   3U
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
 
 /* 三 ISR 模式：电流环独立 ISR 频率（Hz），与 PWM 频率解耦 */
-#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   8000U
-/* 控制/电流环周期 */
+#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   4000U
 #define FOC_CONTROL_DT_SEC             (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
+
+/* 电流环周期（秒）：按 FOC_CURRENT_LOOP_ISR_MODE 收敛的唯一真值，所有电流环 ISR 内模块统一使用
+ * - 双 ISR 模式：PWM ISR 分频后 = 1 / 电流环ISR频率（FOC_CURRENT_LOOP_ISR_FREQ 单位 kHz）
+ * - 三 ISR 模式：1 / FOC_CURRENT_LOOP_ISR_FREQ_HZ，为 0 时退化为控制周期 */
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_2ISR)
 #define FOC_CURRENT_LOOP_DT_SEC        (1.0f / ((float)FOC_CURRENT_LOOP_ISR_FREQ * 1000.0f))
-#define FOC_CURRENT_LOOP_ISR3_DT_SEC   (1.0f / ((float)FOC_CURRENT_LOOP_ISR_FREQ_HZ))
+#elif (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
+#define FOC_CURRENT_LOOP_DT_SEC        ((FOC_CURRENT_LOOP_ISR_FREQ_HZ == 0U) ? \
+                                        FOC_CONTROL_DT_SEC : \
+                                        (1.0f / (float)FOC_CURRENT_LOOP_ISR_FREQ_HZ))
+#else
+#error "FOC_CURRENT_LOOP_ISR_MODE must be FOC_ISR_MODE_2ISR or FOC_ISR_MODE_3ISR"
+#endif
 
  /* ── 电机模型参数 ── */
 #define FOC_MOTOR_MEASUREMENT_TYPE     FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT
@@ -200,7 +210,7 @@
 
 #define FOC_ESTIM_SMO_PLL_KP_DEFAULT         150.0f
 #define FOC_ESTIM_SMO_PLL_KI_DEFAULT         450.0f
-#define FOC_ESTIM_SMO_CONVERGE_BEMF_V        0.1f
+#define FOC_ESTIM_SMO_CONVERGE_BEMF_V        0.05f
 #define FOC_ESTIM_SMO_CONVERGE_CONSECUTIVE   50U
 #define FOC_ESTIM_SMO_LOCK_CONSECUTIVE       100U
 #define FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE    200U

@@ -5,12 +5,24 @@
 
 #include "L3_Hal/foc_math_types.h"
 #include "L2_Core/foc_ctrl_types.h"
+#include "L2_Core/Control/foc_ctrl_current_loop.h"
+#include "L2_Core/Control/foc_ctrl_compensation.h"
 
-void FOC_ControlConfigResetDefault(foc_motor_t *motor);
-void FOC_Control_ApplyConfig(foc_motor_t *motor);
-
-/* 软切换状态只读窗（协议/调试层查询） */
-const foc_current_soft_switch_status_t *FOC_ControlGetCurrentSoftSwitchStatus(const foc_motor_t *motor);
+void FOC_ControlConfigResetDefault(foc_control_cfg_t *cfg,
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+                                   foc_current_soft_switch_status_t *soft_switch,
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+                                   foc_cogging_comp_status_t *comp_status,
+                                   int16_t *comp_table_q15,
+#endif
+                                   uint16_t comp_table_point_count);
+void FOC_Control_ApplyConfig(foc_control_runtime_t *ctrl,
+                             foc_pid_t *torque_pid,
+                             foc_pid_t *speed_pid,
+                             foc_pid_t *angle_pid,
+                             foc_control_cfg_t *cfg,
+                             const foc_motor_params_t *params);
 
 void FOC_PIDInit(foc_pid_t *pid,
                  float kp,

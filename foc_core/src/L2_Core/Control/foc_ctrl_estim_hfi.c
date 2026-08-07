@@ -1,17 +1,16 @@
-#include "L2_Core/foc_motor_aggregate.h"
-#include "L2_Core/Control/foc_ctrl_estim.h"
+#include "L2_Core/Control/foc_ctrl_estim_hfi.h"
 
 #include "LS_Config/foc_config.h"
 
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
 
-void FOC_EstimHFI_Init(foc_motor_t *motor)
+void FOC_EstimHFI_Init(foc_estim_hfi_state_t *state)
 {
-    motor->estim_hfi_state.hf_sin_demod = 0.0f;
-    motor->estim_hfi_state.hf_cos_demod = 0.0f;
+    state->hf_sin_demod = 0.0f;
+    state->hf_cos_demod = 0.0f;
 }
 
-void FOC_EstimHFI_Step(foc_motor_t *motor, float dt_sec)
+void FOC_EstimHFI_Step(foc_estim_hfi_state_t *state, float dt_sec)
 {
     (void)dt_sec;
 

@@ -46,7 +46,19 @@ void DebugStream_Init(debug_stream_state_t *ds)
 
 void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t *motor)
 {
+    foc_source_read_ctx_t rctx;
+
     if ((ds == 0) || (motor == 0)) return;
+
+    rctx.sensor = &motor->sensor;
+    rctx.params = &motor->params;
+    rctx.ctrl = &motor->ctrl;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    rctx.smo_state = &motor->estim_smo_state;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    rctx.openloop_state = &motor->openloop_state;
+#endif
 
     ds->snapshot.channel[0] = motor->sensor.current_a.output_value;
     ds->snapshot.channel[1] = motor->sensor.current_b.output_value;
@@ -59,7 +71,7 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     {
         float mech = 0.0f;
         float elec = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceAngle(motor, motor->source_mgr_state.active_source,
+        (void)FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.active_source,
                                             &mech, &elec);
         ds->snapshot.channel[3]  = mech;
         ds->snapshot.channel[13] = elec;
@@ -67,7 +79,7 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     {
         float mech = 0.0f;
         float elec = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceAngle(motor, motor->source_mgr_state.standby_source,
+        (void)FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.standby_source,
                                             &mech, &elec);
         ds->snapshot.channel[4]  = mech;
         ds->snapshot.channel[14] = elec;
@@ -85,14 +97,14 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     /* bit 11: active speed */
     {
         float speed = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_mgr_state.active_source, &speed);
+        (void)FOC_SourceMgr_ReadSourceSpeed(&rctx, motor->source_mgr_state.active_source, &speed);
         ds->snapshot.channel[11] = speed;
     }
 
     /* bit 12: standby speed */
     {
         float speed = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceSpeed(motor, motor->source_mgr_state.standby_source, &speed);
+        (void)FOC_SourceMgr_ReadSourceSpeed(&rctx, motor->source_mgr_state.standby_source, &speed);
         ds->snapshot.channel[12] = speed;
     }
 
