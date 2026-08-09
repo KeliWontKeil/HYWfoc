@@ -46,4 +46,7 @@ void FOC_ControlExecutor_Stop(foc_motor_t *motor);
 /** @brief Outer-loop unified entry (speed or speed-angle). */
 void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec);
 
+/** @brief 控制参考单点发布（控制 ISR 过程末尾调用，供电流环 ISR 原子获取）。 */
+void FOC_ControlExecutor_PublishControlRef(foc_motor_t *motor);
+
 #endif /* FOC_CTRL_EXECUTOR_H */

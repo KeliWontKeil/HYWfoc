@@ -88,13 +88,43 @@ static uint8_t SourceMgr_StateHoldValid(uint8_t state)
             (state == FOC_SOURCE_STATE_LOCKED)) ? 1U : 0U;
 }
 
+/* 编码器采样位置决定其读取源：
+ * - ANGLE_FAST == DISABLE：编码器由控制 ISR 采样，经 ctrl_ref 原子发布 → 读 ref。
+ * - ANGLE_FAST == ENABLE ：编码器由电流环 ISR 采样，自持于 sensor → 读 sensor。 */
+static uint8_t SourceMgr_EncoderValid(const foc_source_read_ctx_t *ctx)
+{
+#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    return ctx->ref->encoder_valid;
+#else
+    return ctx->sensor->encoder_valid;
+#endif
+}
+
+static float SourceMgr_EncoderAngleRad(const foc_source_read_ctx_t *ctx)
+{
+#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    return ctx->ref->mech_angle_rad;
+#else
+    return ctx->sensor->mech_angle_rad.output_value;
+#endif
+}
+
+static float SourceMgr_EncoderSpeed(const foc_source_read_ctx_t *ctx)
+{
+#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    return ctx->ref->mech_speed_rad_s;
+#else
+    return ctx->sensor->mech_speed_rad_s;
+#endif
+}
+
 static uint8_t SourceMgr_SourceValid(const foc_source_read_ctx_t *rctx, uint8_t source)
 {
     switch (source)
     {
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_ENCODER:
-        return rctx->sensor->encoder_valid;
+        return SourceMgr_EncoderValid(rctx);
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_SMO:
@@ -106,7 +136,7 @@ static uint8_t SourceMgr_SourceValid(const foc_source_read_ctx_t *rctx, uint8_t 
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
-        return (rctx->openloop_state->phase != FOC_OPENLOOP_STATE_FAILED) ? 1U : 0U;
+        return (rctx->ref->openloop_phase != FOC_OPENLOOP_STATE_FAILED) ? 1U : 0U;
 #endif
     default:
         return 0U;
@@ -121,8 +151,8 @@ uint8_t FOC_SourceMgr_ReadSourceSpeed(const foc_source_read_ctx_t *ctx, uint8_t 
     {
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_ENCODER:
-        if (ctx->sensor->encoder_valid == 0U) return 0U;
-        *speed_out = ctx->sensor->mech_speed_rad_s;   /* 物理坐标系 */
+        if (SourceMgr_EncoderValid(ctx) == 0U) return 0U;
+        *speed_out = SourceMgr_EncoderSpeed(ctx);   /* 物理坐标系 */
         return 1U;
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
@@ -133,8 +163,8 @@ uint8_t FOC_SourceMgr_ReadSourceSpeed(const foc_source_read_ctx_t *ctx, uint8_t 
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
-        if (ctx->openloop_state->phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
-        *speed_out = ctx->openloop_state->mech_speed_rad_s * (float)ctx->params->direction;   /* 控制→物理 */
+        if (ctx->ref->openloop_phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
+        *speed_out = ctx->ref->openloop_mech_speed_rad_s * (float)ctx->params->direction;   /* 控制→物理 */
         return 1U;
 #endif
     default:
@@ -149,6 +179,7 @@ static foc_source_read_ctx_t SourceMgr_ReadCtx(const foc_source_mgr_ctx_t *ctx)
     rctx.sensor = ctx->sensor;
     rctx.params = ctx->params;
     rctx.ctrl = ctx->ctrl;
+    rctx.ref = ctx->ref;
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     rctx.smo_state = ctx->smo_state;
 #endif
@@ -233,8 +264,8 @@ static uint8_t SourceMgr_LowMotionAbove(const foc_source_mgr_ctx_t *ctx, uint8_t
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     if (low_source == FOC_SOURCE_TYPE_OPENLOOP)
     {
-        if (ctx->openloop_state->phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
-        return (fabsf(ctx->openloop_state->mech_speed_rad_s) > threshold_rad_s) ? 1U : 0U;
+        if (ctx->ref->openloop_phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
+        return (fabsf(ctx->ref->openloop_mech_speed_rad_s) > threshold_rad_s) ? 1U : 0U;
     }
 #endif
 
@@ -243,7 +274,7 @@ static uint8_t SourceMgr_LowMotionAbove(const foc_source_mgr_ctx_t *ctx, uint8_t
         return (fabsf(speed) > threshold_rad_s) ? 1U : 0U;
     }
 
-    return (fabsf(ctx->outer_loop->ramped_speed_rad_s) > threshold_rad_s) ? 1U : 0U;
+    return (fabsf(ctx->ref->ramped_speed_rad_s) > threshold_rad_s) ? 1U : 0U;
 }
 
 static uint8_t SourceMgr_CandidateSpeedAbove(uint8_t speed_valid, float speed_abs,
@@ -270,8 +301,8 @@ uint8_t FOC_SourceMgr_ReadSourceAngle(const foc_source_read_ctx_t *ctx, uint8_t 
     {
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_ENCODER:
-        if (ctx->sensor->encoder_valid == 0U) return 0U;
-        mech_local = ctx->sensor->mech_angle_rad.output_value;
+        if (SourceMgr_EncoderValid(ctx) == 0U) return 0U;
+        mech_local = SourceMgr_EncoderAngleRad(ctx);
         elec_local = FOC_ControlMechanicalToElectricalAngle(ctx->params,
                                                             ctx->ctrl->electrical_angle_rad,
                                                             mech_local);
@@ -289,8 +320,8 @@ uint8_t FOC_SourceMgr_ReadSourceAngle(const foc_source_read_ctx_t *ctx, uint8_t 
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
-        if (ctx->openloop_state->phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
-        elec_local = ctx->openloop_state->virtual_angle_rad;
+        if (ctx->ref->openloop_phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
+        elec_local = ctx->ref->openloop_virtual_angle_rad;
         if (ctx->params->pole_pairs > 0U)
         {
             mech_local = (elec_local / (float)ctx->params->pole_pairs) * (float)ctx->params->direction;
@@ -343,7 +374,7 @@ static void SourceMgr_RebaseSource(foc_source_mgr_ctx_t *ctx, uint8_t new_source
         else
         {
             /* ramped_speed 为控制坐标系带符号，直接使用（保留符号） */
-            float fallback = ctx->outer_loop->ramped_speed_rad_s;
+            float fallback = ctx->ref->ramped_speed_rad_s;
             ctx->openloop_state->virtual_speed_rad_s = fallback * (float)ctx->params->pole_pairs;
             ctx->openloop_state->mech_speed_rad_s = fallback;
         }

@@ -18,6 +18,10 @@
 #include "L3_Hal/foc_math_types.h"
 #include "LS_Config/foc_config.h"
 
+/* 电流环 ISR 的控制参考快照：控制 ISR 单点发布 ctrl_ref 后，此处原子取走；
+ * 提交标志未置位（控制仍在写块/未发布）时复用上次快照，保证本 ISR 读到一致参考。 */
+static foc_control_ref_t s_ctrl_ref_snap;
+
 void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 {
     /* 清零控制输出 */
@@ -81,6 +85,14 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
 {
     uint32_t isr_start;
 
+    /* 获取控制参考：控制 ISR 单点发布，此处原子取走；未提交时复用上次快照 */
+    if (motor->ctrl_ref_ready != 0U)
+    {
+        s_ctrl_ref_snap = motor->ctrl_ref;
+        motor->ctrl_ref_ready = 0U;
+    }
+    motor->ctrl.iq_target = s_ctrl_ref_snap.iq_target;
+
     isr_start = FOC_Platform_ReadCycleCounter();
 
     {
@@ -133,6 +145,7 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
         sm_ctx.state = &motor->source_mgr_state;
         sm_ctx.active = &motor->active_source_state;
         sm_ctx.ctrl = &motor->ctrl;
+        sm_ctx.ref = &s_ctrl_ref_snap;
         sm_ctx.outer_loop = &motor->outer_loop;
         sm_ctx.speed_pid = &motor->speed_pid;
         sm_ctx.torque_current_pid = &motor->torque_current_pid;
@@ -391,4 +404,30 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec)
                                             motor->cogging_comp_status.speed_ref_rad_s);
     }
 #endif
+}
+
+/* ================================================================
+ * 控制参考单点发布（控制 ISR 过程末尾调用）。
+ * 写块 → MemoryBarrier → 置提交标志；电流环 ISR 在过程开头原子取走。
+ * 仅作"边界 A（控制→电流环）"的原子化，不改变任何算法计算内容。
+ * ================================================================ */
+void FOC_ControlExecutor_PublishControlRef(foc_motor_t *motor)
+{
+    if (motor == 0) return;
+
+    motor->ctrl_ref.iq_target = motor->ctrl.iq_target;
+    motor->ctrl_ref.ramped_speed_rad_s = motor->outer_loop.ramped_speed_rad_s;
+#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    motor->ctrl_ref.mech_angle_rad = motor->sensor.mech_angle_rad.output_value;
+    motor->ctrl_ref.mech_speed_rad_s = motor->sensor.mech_speed_rad_s;
+    motor->ctrl_ref.encoder_valid = motor->sensor.encoder_valid;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    motor->ctrl_ref.openloop_phase = motor->openloop_state.phase;
+    motor->ctrl_ref.openloop_virtual_angle_rad = motor->openloop_state.virtual_angle_rad;
+    motor->ctrl_ref.openloop_virtual_speed_rad_s = motor->openloop_state.virtual_speed_rad_s;
+    motor->ctrl_ref.openloop_mech_speed_rad_s = motor->openloop_state.mech_speed_rad_s;
+#endif
+    FOC_Platform_MemoryBarrier();
+    motor->ctrl_ref_ready = 1U;
 }

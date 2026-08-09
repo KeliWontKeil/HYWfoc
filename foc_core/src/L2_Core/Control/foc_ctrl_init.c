@@ -137,6 +137,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ctrl.ud = 0.0f;
     motor->ctrl.uq = 0.0f;
     motor->ctrl.max_phase_voltage = max_phase_voltage;
+    motor->ctrl_ref_ready = 0U;
     motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
     motor->active_source_state.state = FOC_SOURCE_STATE_INIT;
     motor->active_source_state.valid = 0U;

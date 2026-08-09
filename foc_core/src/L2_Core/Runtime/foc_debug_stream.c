@@ -58,6 +58,7 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     rctx.sensor = &motor->sensor;
     rctx.params = &motor->params;
     rctx.ctrl = &motor->ctrl;
+    rctx.ref = &motor->ctrl_ref;
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     rctx.smo_state = &motor->estim_smo_state;
 #endif
