@@ -122,19 +122,19 @@ uint8_t FOC_SourceMgr_ReadSourceSpeed(const foc_source_read_ctx_t *ctx, uint8_t 
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_ENCODER:
         if (ctx->sensor->encoder_valid == 0U) return 0U;
-        *speed_out = ctx->sensor->mech_speed_rad_s;
+        *speed_out = ctx->sensor->mech_speed_rad_s;   /* 物理坐标系 */
         return 1U;
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_SMO:
         if (SourceMgr_StateAcquireReady(SourceMgr_GetSourceState(ctx, FOC_SOURCE_TYPE_SMO)) == 0U) return 0U;
-        *speed_out = ctx->smo_state->mech_speed_rad_s;
+        *speed_out = ctx->smo_state->mech_speed_rad_s * (float)ctx->params->direction;
         return 1U;
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
         if (ctx->openloop_state->phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
-        *speed_out = ctx->openloop_state->mech_speed_rad_s;
+        *speed_out = ctx->openloop_state->mech_speed_rad_s * (float)ctx->params->direction;   /* 控制→物理 */
         return 1U;
 #endif
     default:
@@ -197,6 +197,33 @@ static uint8_t SourceMgr_GetSwitchSpeedAbs(const foc_source_mgr_ctx_t *ctx, floa
     return 0U;
 }
 
+/* 真实机械速度证据：Encoder 实测优先，无编码器时回退 SMO 估计；显式排除 OpenLoop 虚拟速度 */
+static uint8_t SourceMgr_GetRealSpeedAbs(const foc_source_mgr_ctx_t *ctx, float *speed_abs)
+{
+    float speed;
+    foc_source_read_ctx_t rctx = SourceMgr_ReadCtx(ctx);
+
+    if (speed_abs == 0) return 0U;
+
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    if (FOC_SourceMgr_ReadSourceSpeed(&rctx, FOC_SOURCE_TYPE_ENCODER, &speed) != 0U)
+    {
+        *speed_abs = fabsf(speed);
+        return 1U;
+    }
+#endif
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    if (FOC_SourceMgr_ReadSourceSpeed(&rctx, FOC_SOURCE_TYPE_SMO, &speed) != 0U)
+    {
+        *speed_abs = fabsf(speed);
+        return 1U;
+    }
+#endif
+
+    *speed_abs = 0.0f;
+    return 0U;
+}
+
 static uint8_t SourceMgr_LowMotionAbove(const foc_source_mgr_ctx_t *ctx, uint8_t low_source,
                                         float threshold_rad_s)
 {
@@ -225,6 +252,12 @@ static uint8_t SourceMgr_CandidateSpeedAbove(uint8_t speed_valid, float speed_ab
     return ((speed_valid != 0U) && (speed_abs > threshold_rad_s * FOC_SOURCE_SWITCH_SPEED_SCALE)) ? 1U : 0U;
 }
 
+static uint8_t SourceMgr_SpeedAbove(uint8_t speed_valid, float speed_abs,
+                                    float threshold_rad_s)
+{
+    return ((speed_valid != 0U) && (speed_abs > threshold_rad_s)) ? 1U : 0U;
+}
+
 uint8_t FOC_SourceMgr_ReadSourceAngle(const foc_source_read_ctx_t *ctx, uint8_t source,
                                       float *mech_out, float *elec_out)
 {
@@ -245,17 +278,23 @@ uint8_t FOC_SourceMgr_ReadSourceAngle(const foc_source_read_ctx_t *ctx, uint8_t 
         break;
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-    case FOC_SOURCE_TYPE_SMO:
+     case FOC_SOURCE_TYPE_SMO:
         if (SourceMgr_StateAcquireReady(SourceMgr_GetSourceState(ctx, FOC_SOURCE_TYPE_SMO)) == 0U) return 0U;
-        elec_local = ctx->smo_state->pll_angle_rad;
-        if (ctx->params->pole_pairs > 0U) mech_local = elec_local / (float)ctx->params->pole_pairs;
+        elec_local = ctx->smo_state->pll_angle_rad;// * (float)ctx->params->direction;
+        if (ctx->params->pole_pairs > 0U)
+        {
+            mech_local = ctx->smo_state->pll_angle_rad / (float)ctx->params->pole_pairs;   /* 物理直通 */
+        }
         break;
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_OPENLOOP:
         if (ctx->openloop_state->phase == FOC_OPENLOOP_STATE_FAILED) return 0U;
         elec_local = ctx->openloop_state->virtual_angle_rad;
-        if (ctx->params->pole_pairs > 0U) mech_local = elec_local / (float)ctx->params->pole_pairs;
+        if (ctx->params->pole_pairs > 0U)
+        {
+            mech_local = (elec_local / (float)ctx->params->pole_pairs) * (float)ctx->params->direction;
+        }
         break;
 #endif
     default:
@@ -296,12 +335,15 @@ static void SourceMgr_RebaseSource(foc_source_mgr_ctx_t *ctx, uint8_t new_source
         if ((ctx->params->pole_pairs > 0U) &&
             (FOC_SourceMgr_ReadSourceSpeed(&rctx, old_source, &old_speed) != 0U))
         {
-            ctx->openloop_state->virtual_speed_rad_s = old_speed * (float)ctx->params->pole_pairs;
-            ctx->openloop_state->mech_speed_rad_s = old_speed;
+            /* 只读窗返回物理速度，OpenLoop 虚拟状态需控制坐标系 */
+            float old_speed_ctl = old_speed * (float)ctx->params->direction;
+            ctx->openloop_state->virtual_speed_rad_s = old_speed_ctl * (float)ctx->params->pole_pairs;
+            ctx->openloop_state->mech_speed_rad_s = old_speed_ctl;
         }
         else
         {
-            float fallback = fabsf(ctx->outer_loop->ramped_speed_rad_s);
+            /* ramped_speed 为控制坐标系带符号，直接使用（保留符号） */
+            float fallback = ctx->outer_loop->ramped_speed_rad_s;
             ctx->openloop_state->virtual_speed_rad_s = fallback * (float)ctx->params->pole_pairs;
             ctx->openloop_state->mech_speed_rad_s = fallback;
         }
@@ -311,8 +353,9 @@ static void SourceMgr_RebaseSource(foc_source_mgr_ctx_t *ctx, uint8_t new_source
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     if (new_source == FOC_SOURCE_TYPE_SMO)
     {
+        /* pll_angle 物理系，old_elec 控制系 → 转物理后对齐 */
         ctx->smo_state->pll_angle_rad =
-            Math_WrapNearest(old_elec, ctx->smo_state->pll_angle_rad);
+            Math_WrapNearest((float)ctx->params->direction * old_elec, ctx->smo_state->pll_angle_rad);
     }
 #endif
 }
@@ -441,6 +484,17 @@ void FOC_SourceMgr_Init(foc_source_mgr_ctx_t *ctx, uint8_t low_source, uint8_t h
                   (SourceMgr_SourceCanLow(low_source) != 0U) &&
                   (SourceMgr_SourceCanHigh(high_source) != 0U)) ? 1U : 0U;
 
+    /* 滞回约束：升域进入门槛(high_th*SCALE)必须高于降级门槛(low_th)，非法配置禁用切换 */
+    if (switchable != 0U)
+    {
+        if ((FOC_SOURCE_SWITCH_SPEED_THRESH_HIGH_DEFAULT <= FOC_SOURCE_SWITCH_SPEED_THRESH_LOW_DEFAULT) ||
+            ((FOC_SOURCE_SWITCH_SPEED_THRESH_HIGH_DEFAULT * FOC_SOURCE_SWITCH_SPEED_SCALE) <=
+             FOC_SOURCE_SWITCH_SPEED_THRESH_LOW_DEFAULT))
+        {
+            switchable = 0U;
+        }
+    }
+
     ctx->state->active_source = low_source;
     ctx->state->standby_source = switchable ? high_source : FOC_SOURCE_TYPE_NONE;
     ctx->state->switch_in_progress = 0U;
@@ -475,6 +529,8 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
     uint8_t high_state;
     float speed_abs;
     uint8_t speed_valid;
+    float real_speed_abs;
+    uint8_t real_speed_valid;
     foc_source_read_ctx_t rctx = SourceMgr_ReadCtx(ctx);
 
     low = ctx->switch_cfg->low_source;
@@ -488,6 +544,7 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
 
     high_state = SourceMgr_GetSourceState(&rctx, high);
     speed_valid = SourceMgr_GetSwitchSpeedAbs(ctx, &speed_abs);
+    real_speed_valid = SourceMgr_GetRealSpeedAbs(ctx, &real_speed_abs);
 
     /* 非速度控制模式：锁定低速源，不做速域切换（角度模式依赖编码器可靠源） */
     if (SourceMgr_SpeedModeAllows(ctx) == 0U)
@@ -510,7 +567,7 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
         if ((SourceMgr_TargetInHighRegion(ctx) != 0U) &&
             (SourceMgr_LowMotionAbove(ctx, low,
                 ctx->switch_cfg->speed_threshold_high_rad_s) != 0U) &&
-            (SourceMgr_CandidateSpeedAbove(speed_valid, speed_abs,
+            (SourceMgr_CandidateSpeedAbove(real_speed_valid, real_speed_abs,
                 ctx->switch_cfg->speed_threshold_high_rad_s) != 0U) &&
             (SourceMgr_StateAcquireReady(high_state) != 0U) &&
             (SourceMgr_SourceValid(&rctx, high) != 0U))
@@ -529,7 +586,7 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
         if ((SourceMgr_TargetInHighRegion(ctx) == 0U) ||
             (SourceMgr_LowMotionAbove(ctx, low,
                 ctx->switch_cfg->speed_threshold_low_rad_s) == 0U) ||
-            (SourceMgr_CandidateSpeedAbove(speed_valid, speed_abs,
+            (SourceMgr_SpeedAbove(real_speed_valid, real_speed_abs,
                 ctx->switch_cfg->speed_threshold_low_rad_s) == 0U) ||
             (SourceMgr_StateAcquireReady(high_state) == 0U) ||
             (SourceMgr_SourceValid(&rctx, high) == 0U))

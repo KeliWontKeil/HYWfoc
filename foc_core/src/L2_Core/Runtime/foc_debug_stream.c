@@ -48,6 +48,10 @@ void DebugStream_Init(debug_stream_state_t *ds)
 void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t *motor)
 {
     foc_source_read_ctx_t rctx;
+    float active_elec = 0.0f;
+    float standby_elec = 0.0f;
+    uint8_t active_elec_ok = 0U;
+    uint8_t standby_elec_ok = 0U;
 
     if ((ds == 0) || (motor == 0)) return;
 
@@ -72,18 +76,20 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     {
         float mech = 0.0f;
         float elec = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.active_source,
-                                            &mech, &elec);
+        active_elec_ok = FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.active_source,
+                                                       &mech, &elec);
         ds->snapshot.channel[3]  = mech;
         ds->snapshot.channel[13] = elec;
+        active_elec = elec;
     }
     {
         float mech = 0.0f;
         float elec = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.standby_source,
-                                            &mech, &elec);
+        standby_elec_ok = FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.standby_source,
+                                                        &mech, &elec);
         ds->snapshot.channel[4]  = mech;
         ds->snapshot.channel[14] = elec;
+        standby_elec = elec;
     }
 
     ds->snapshot.channel[5] = (float)ds->last_exec_cycles / 120.0f;
@@ -109,7 +115,9 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
         ds->snapshot.channel[12] = speed;
     }
 
-    ds->snapshot.channel[15] = 0.0f;
+    /* bit 15: 主副源电角度相位差（standby - active，电弧度，环绕归一化） */
+    ds->snapshot.channel[15] = ((active_elec_ok != 0U) && (standby_elec_ok != 0U))
+                               ? Math_WrapRadDelta(standby_elec - active_elec) : 0.0f;
     ds->snapshot.valid = 1U;
 }
 

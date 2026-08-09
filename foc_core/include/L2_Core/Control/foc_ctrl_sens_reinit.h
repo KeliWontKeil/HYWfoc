@@ -1,4 +1,4 @@
-﻿#ifndef FOC_CTRL_REINIT_H
+#ifndef FOC_CTRL_REINIT_H
 #define FOC_CTRL_REINIT_H
 
 #include <stdint.h>

@@ -1,4 +1,4 @@
-#include "L2_Core/foc_motor_aggregate.h"
+﻿#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
 
 #include <math.h>
@@ -105,6 +105,7 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                       &motor->ctrl,
                       motor->source_mgr_state.active_source,
                       motor->source_mgr_state.control_region,
+                      motor->cfg.speed_only_rad_s,
                       current_loop_dt_sec);
 #endif
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)

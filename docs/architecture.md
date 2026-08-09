@@ -418,9 +418,9 @@ FOC_SourceMgr_Select(motor)
       ├── 读取低/高 source 配置、当前 active source、各 source 内部状态
       ├── 检查：控制模式门槛 + 目标速度域门槛 + 实测速度 + 候选高速源收敛状态
       ├── 如果 single source（low=high）→ 直接返回，control_region = FULL
-      ├── 低→高判断：TargetInHighRegion + LowMotionAbove(high_th) + CandidateSpeedAbove(high_th) + high 可获取
+      ├── 低→高判断：TargetInHighRegion + LowMotionAbove(high_th) + 真实速度(high_th×SCALE) + high 可获取
       │              （TargetInHighRegion：SPEED_ONLY 且 |speed_only| > high_th，目标低速域时禁止升域）
-      ├── 高速获取：使用 low_th 作为取消门限，避免 high_th 附近反复清零
+      ├── 高速获取：保持使用 low_th 作为取消门限（严格，不乘 SCALE），避免切到 HIGH 后立即触发降级
       ├── 高→低判断：目标不在高速域 / high 失效发散 / 速度低于 low_th 后进降级流程
       ├── 升域消抖：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交 HIGH
       ├── 降域消抖：恢复 HIGH 需连续满足 FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES（更敏捷），单拍尖峰不打断降级
@@ -436,6 +436,18 @@ FOC_SourceMgr_Publish(motor)
       ├── 统一写 motor->ctrl.electrical_angle_rad（电流环快路径角度）
       └── 更新 motor->encoder_services（calib/reinit/comp 可用性）
 ```
+
+### 源只读窗坐标系契约
+
+`FOC_SourceMgr_ReadSourceAngle` / `FOC_SourceMgr_ReadSourceSpeed` 是跨层统一源读取接口，**mech 输出统一为物理坐标系，elec 输出统一为控制坐标系**：
+
+| 输出 | 坐标系 | 转换 |
+|---|---|---|
+| `mech_angle_rad` / `mech_speed_rad_s` | 物理（编码器实测基准） | ENCODER 直接透传；SMO/OPENLOOP 内部为控制坐标系，输出前 `× direction` |
+| `elec_angle_rad` | 控制（`ctrl.electrical_angle_rad` / 电流环 / SVPWM 基准） | ENCODER 经 `FOC_ControlMechanicalToElectricalAngle`；SMO/OPENLOOP 直接透传 |
+
+消费者假设物理 mech：外环 `direction × mech_angle_rad`、`SyncOuterLoopOnSwitch` 重基准、`accum_rad` 累积、齿槽补偿 LUT（仅 ENCODER active）。
+切换回 OpenLoop 时 `SourceMgr_RebaseSource` 将只读窗物理速度 `× direction` 转回控制坐标系赋给虚拟状态，保证开环虚拟角度方向与物理方向一致（direction=-1 时不再反转）。
 
 ### Source 体系与预收敛机制
 
@@ -458,6 +470,12 @@ SMO 收敛状态定义：
   - `converge_counter > LOCK_CONSECUTIVE(100)` → `LOCKED`
   - `lock_counter > DIVERGE_CONSECUTIVE(200)` → `DIVERGED`
 
+SMO 角度/速度坐标系约定（`pll_angle_rad` / `pll_speed_rad_s` / `mech_speed_rad_s` 为**物理坐标系**，与观测器 BEMF/编码器物理量同系）：
+- BEMF 观测器输出 = 滑模等效控制 `z`（标准滑模观测器 `z ≈ BEMF` 同号），LPF 提取；观测器输入 `theta_voltage` 恒用 `ctrl->electrical_angle_rad`（与实际 SVPWM 施加同系）。
+- **负速度反相处理（目标速度方向归一化）**：物理 BEMF 相位依赖电角速度方向（`e = -λ·ωe·sinθe`），负速度时 BEMF 整体反相 180°。角度提取用目标速度方向符号 `sign = (speed_only_rad_s<0) ? -1 : +1` 在 BEMF 矢量源头归一化（`EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s)`），PLL 误差 `e_theta = (-na·cosθ − nb·sinθ)/B`、LPF_ATAN2 `atan2(−na, nb)` 共用。方向证据用控制指令（目标速度）而非估计速度/编码器，消除 sign 归一化的自锁与角度差 fold 的双稳态；不自锁、不依赖编码器（编码器仅在切换时对齐初始角）。正/负速度、direction=±1 均提取正确物理角 θp。
+- 接口方向处理（当前为调试期刻意调整状态）：`ReadSourceAngle` SMO 输出 `elec = pll_angle`（物理直通）、`mech = pll_angle/pp`（物理）；`ReadSourceSpeed` SMO 输出 `mech_speed_rad_s×direction`。正式化时需统一 mech/elec/speed 坐标系契约。
+- Init：定位后电机位于 `mech_zero`，物理系电角 = 0，`pll_angle` 从 0 起步，后台预收敛覆盖。
+
 ### Source Manager 切换状态机
 
 Source Manager 在 `Select` 阶段维护显式 `region_state`。状态字段只描述速域/source 切换过程，不替代顶层 `control_phase`。
@@ -468,19 +486,19 @@ FULL_ACTIVE
 
 LOW_ACTIVE
   active=low，control_region=LOW
-  -> HIGH_ACQUIRE 条件（五者全满足，使用 high_th）：
+  -> HIGH_ACQUIRE 条件（全部满足，速度门限用 high_th）：
        TargetInHighRegion（SPEED_ONLY 且目标速度 > high_th）
-       && LowMotionAbove(low, high_th)
-       && CandidateSpeedAbove(high_speed, high_th)
+       && LowMotionAbove(low, high_th)         （虚拟/低速源速度，控制意图）
+       && 真实速度 > high_th × SCALE           （Encoder 实测/SMO 估计，物理运动证据，带容差）
        && high_state >= CONVERGING
        && high source valid
 
 HIGH_ACQUIRE
   active 仍保持 low，switch_counter 连续累计
-  -> LOW_ACTIVE 条件（任一满足即回退，使用 low_th）：
+  -> LOW_ACTIVE 条件（任一满足即回退，速度门限用 low_th 严格比较）：
        TargetInHighRegion == false（等待期目标切回低速域即回退）
        || LowMotionAbove(low, low_th) == false
-       || CandidateSpeedAbove(high_speed, low_th) == false
+       || 真实速度 > low_th == false
        || high_state 不可获取
        || high source invalid
   -> HIGH_ACTIVE 条件（消抖达标后直接检查切入条件）：
@@ -517,15 +535,15 @@ LOW_RECOVERY
   （CommitSwitch 统一清零 degrade_hold_counter）
 ```
 
-低速侧升域授权规则：
-- `low=OPENLOOP`：只认 `openloop_state.mech_speed_rad_s`，外部拖动 encoder 速度不能单独触发升域。
-- `low` 有物理速度：使用该 source 的物理速度。
-- `low` 无物理速度：使用 `outer_loop.ramped_speed_rad_s` 作为控制意图。
+升域/保持速度证据（多源综合，全部满足）：
+- 虚拟/低速源速度（`LowMotionAbove`）：`low=OPENLOOP` 用 `openloop_state.mech_speed_rad_s`（控制意图）；`low` 有物理速度用该源速度；无源速度用 `outer_loop.ramped_speed_rad_s` 兜底。
+- 真实机械速度（`SourceMgr_GetRealSpeedAbs`）：Encoder 实测优先，无编码器时回退 SMO 估计（就绪时），显式排除 OpenLoop 虚拟速度。升域进入要求 `> high_th × SCALE`（容差带吸收 SMO 振荡/滤波滞后），HIGH_ACQUIRE 保持要求 `> low_th`（严格，防止切到 HIGH 后立即降级）。
+- 速域切换门限需满足滞回：`high_th > low_th` 且 `high_th × SCALE > low_th`（门限为浮点宏，预处理器无法比较，由 `FOC_SourceMgr_Init` 运行时校验，非法配置禁用切换）。
 
 切换提交同步：
-- 重基准 `outer_loop.accum_rad / prev_rad / prev_mech_signed_rad`。
+- 重基准 `outer_loop.accum_rad / prev_rad / prev_mech_signed_rad`（物理 mech `× direction` 得控制有符号角）。
 - 清 `speed_err_accum_rad` 并同步 `speed_state_valid`。
-- 使用新源或旧源物理速度同步 `outer_loop.ramped_speed_rad_s`。
+- 使用新源或旧源物理速度同步 `outer_loop.ramped_speed_rad_s`；切回 OpenLoop 时虚拟速度 = 物理速度 `× direction`（控制坐标系，保留符号）。
 - 按切换前 `iq_target/uq/iq_measured` 预置速度 PID 与电流 PID，避免闭环从零状态硬接管。
 
 ### 全局控制加速度与速域上限

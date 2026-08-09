@@ -257,14 +257,15 @@ aaPA3.14b
 | 12 | 0x1000 | speed_standby_mech | 是 |
 | 13 | 0x2000 | angle_active_elec | 是 |
 | 14 | 0x4000 | angle_standby_elec | 是 |
-| 15 | 0x8000 | （保留） | 否 |
+| 15 | 0x8000 | phase_lag_elec | 是 |
 
-默认掩码：由 `DEBUG_STREAM_OSC_DEFAULT_SHOW_*` 编译宏组合生成（当前默认含 bit3/bit4/bit7/bit11/bit12/bit13/bit14，即 `0x7898`）。
+默认掩码：由 `DEBUG_STREAM_OSC_DEFAULT_SHOW_*` 编译宏组合生成（当前默认含 bit3/bit4/bit7/bit11/bit12/bit13/bit14/bit15，即 `0xF898`）。
 
 说明：
 
 - `angle_*_mech`：活跃/备用源的机械角度（rad）
 - `angle_*_elec`：活跃/备用源的电角度（rad）
+- `phase_lag_elec`：主副源电角度相位差 = `angle_standby_elec − angle_active_elec`（环绕归一化到 `[−π, π]`，电弧度）。正值=副源超前，负值=副源滞后；常数值对应恒定相位偏移，随转速增大则对应 LPF/时间常数滞后（`Δt = Δθ / ωe`）。仅当两源均有效时输出有效值，否则输出 0。坐标系语义跟随各源 `ReadSourceAngle` 输出终点（当前 SMO 为物理系直通、ENCODER/OPENLOOP 为控制系；direction=+1 下可比，direction=-1 待正式化统一坐标系后校准）。
 - 不同源的原生角度类型由 Source Manager 统一封装（Encoder 原生机械角度、SMO/OpenLoop 原生电角度），示波器输出始终同时提供机械与电角度两种视图。
 
 ### 4.7 语义调试行说明
