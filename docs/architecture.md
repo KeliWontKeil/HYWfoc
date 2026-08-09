@@ -262,6 +262,11 @@ Control ISR（低频控制线，严格不做 source 选择）：
         根据 control_mode 选择外环 → FOC_SpeedOuterLoopStep / FOC_SpeedAngleOuterLoopStep
         → 齿槽补偿（FOC_ControlApplyCoggingCompensation，使用 active_source_state.mech_angle_rad）
     → COGGING_CALIB/REINIT：特殊状态机记录 `phase_output_state`
+  阶段3：控制参考单点发布
+    → FOC_ControlExecutor_PublishControlRef：把本过程产生的控制参考
+      （ctrl.iq_target、outer_loop.ramped_speed、编码器/开环快照）一次性写入
+      ctrl_ref → FOC_Platform_MemoryBarrier() → ctrl_ref_ready=1
+      供电流环 ISR 过程开头原子获取（见"控制参考单点原子发布"小节）
 
 PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   [L2 公共前导]
@@ -278,7 +283,10 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
         （ControlTrigger 的 RunStep 负责通过 RecordPhaseOutputDqAngle 设置输出）
     → control_phase != NORMAL：return（跳过所有管线）
 
-  [NORMAL 标准流程——电流分频控制]：
+  [NORMAL 标准流程——电流分频控制]（三 ISR 在独立电流环 ISR；双 ISR 在 PWM ISR 分频）：
+  阶段0：控制参考获取
+    → 原子取走控制 ISR 已提交的 ctrl_ref 快照（未提交时复用上次快照）
+    → 物化 motor->ctrl.iq_target；SourceMgr 对编码器/开环/外环斜坡的读取统一走该快照
   阶段1：硬件采样
     → [FAST] Sensor_ReadEncoder → Sensor_AccumulateEcycle
     → Sensor_ReadCurrent（若 current_loop_ready）
@@ -326,9 +334,20 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 - 电流环周期宏 `FOC_CURRENT_LOOP_DT_SEC` 随 `FOC_CURRENT_LOOP_ISR_MODE` 自动收敛：双 ISR 取 `1/(PWM_FREQ/DIVIDER)`，三 ISR 取 `1/FOC_CURRENT_LOOP_ISR_FREQ_HZ`（为 0 时退化为控制周期）。所有电流环 ISR 内模块（Estimator/电流环）统一使用该宏作为 dt 唯一真值。
 - SMO 测速尾链使用调用方每拍传入的 `dt_sec` 累计窗口时长，不依赖任何 ISR 频率宏，ISR 模式切换不改变测速尺度。
 - `FOC_SVPWM_INTERP_ENABLE` 插值开关两种模式可独立裁剪；禁用后 `FOC_ControlApplyElectricalAngleRuntime` 直接写占空比。
-- 三 ISR 模式 SVPWM 双写者保护：电流环 ISR 写 pending 字段 → `FOC_Platform_MemoryBarrier()` → commit 标志；PWM ISR 入口原子取走。
+- 三 ISR 模式 SVPWM 双写者保护：电流环 ISR 写 pending 目标 → `FOC_Platform_MemoryBarrier()` → commit 标志；PWM ISR 入口原子取走，并**按当时 `duty_current` 即时计算插值步长**（消除"电流环读 `duty_current` 算步长"的跨 ISR 步长基座竞态）。
 - 辅助定时器通过 `FOC_Platform_AuxTimerInit/Start/Stop/SetCallback` 映射空闲硬件定时器（GD32 实例 TIMER4，优先级 (2,0) 低于 PWM ISR）。
 - OSC 快照在三 ISR 模式移入电流环 ISR（反映控制环实际看到的数据）。
+- 三 ISR 模式 PWM ISR（插值）执行时间由 `motor->isr_timing.pwm_isr_cycles` 记录，经语义调试流行 9（`control.pwm_isr_execution_time_us`）输出，用于观测 PWM ISR 是否超时。
+
+### 控制参考单点原子发布（边界 A：控制 ISR → 电流环 ISR）
+
+控制 ISR（外环/开环）与电流环 ISR 之间的跨 ISR 控制数据（`ctrl.iq_target`、`outer_loop.ramped_speed_rad_s`、编码器角度/速度/有效性、OpenLoop 虚拟状态）通过 `foc_control_ref_t ctrl_ref` + `volatile ctrl_ref_ready` 标志实现**单点原子发布**：
+
+- **发布（控制 ISR 过程末尾）**：`FOC_ControlExecutor_PublishControlRef` 一次性写入块 → `FOC_Platform_MemoryBarrier()` → `ctrl_ref_ready=1`。
+- **获取（电流环 ISR 过程开头）**：见 `ctrl_ref_ready` 才原子取走为本地快照（未提交时复用上次快照），并物化 `ctrl.iq_target`；SourceMgr 的编码器/开环/外环斜坡读取统一走该快照。
+- **正确性前提**：写者（控制 ISR，低优先级）与读者（电流环 ISR，高优先级）方向与 SVPWM pending 一致——读者运行时写者不可能抢占，快照一致；写者不会在读者读取期间重写，故单缓冲 + 标志即足够，无需双缓冲。
+- **目的**：消除"控制 ISR 逐字段散写、电流环中途读到跨字段不一致中间态"的竞态（如新角度 + 旧 iq_target），使正确性不依赖中断优先级串行化，从而可将控制 ISR 置于低优先级恢复实时性。
+- 编码器字段仅在 `FOC_SENSOR_ANGLE_FAST_ENABLE == DISABLE`（控制 ISR 采样）时纳入；FAST 模式下编码器由电流环自持，读 `sensor`。
 
 ### FOC_ControlExecutor_FullStop — 统一安全归零
 

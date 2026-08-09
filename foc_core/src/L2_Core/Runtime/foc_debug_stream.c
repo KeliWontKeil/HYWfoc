@@ -9,10 +9,10 @@
 #include "L3_Hal/foc_platform_api.h"
 
 /*
- * 语义遥测最多生成 9 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
- * 各 invalid 行 + exec_time + current_loop_exec_time）
+ * 语义遥测最多生成 10 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
+ * 各 invalid 行 + exec_time + current_loop_exec_time + pwm_isr_exec_time）
  */
-#define SEMANTIC_LINE_COUNT 9U
+#define SEMANTIC_LINE_COUNT 10U
 
 /* 状态标记：已经过语义行数检查 */
 #define SEMANTIC_PHASE_COUNTER_CHECK 0xFFU
@@ -258,6 +258,13 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
                 elem_out->value = 0.0f;
             elem_out->aux = 2U;
             break;
+        case 9U:
+            if (motor != 0)
+                elem_out->value = (float)motor->isr_timing.pwm_isr_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
+            else
+                elem_out->value = 0.0f;
+            elem_out->aux = 2U;
+            break;
         default:
             break;
         }
@@ -411,7 +418,11 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
         break;
     case 8U:
         snprintf(line_out, line_max,
-            "control.current_loop_execution_time_us=%d.%03d\r\n\r\n", (int)ip, (int)fp);
+            "control.current_loop_execution_time_us=%d.%03d\r\n", (int)ip, (int)fp);
+        break;
+    case 9U:
+        snprintf(line_out, line_max,
+            "control.pwm_isr_execution_time_us=%d.%03d\r\n\r\n", (int)ip, (int)fp);
         break;
     default:
         snprintf(line_out, line_max, "measurement.status=invalid\r\n");

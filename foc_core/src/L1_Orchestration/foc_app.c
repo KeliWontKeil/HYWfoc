@@ -368,7 +368,11 @@ void FOC_App_OnPwmUpdateISR(void)
     if (motor.state.system_running == 0U) return;
 
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
-    FOC_ControlExecutor_RunISR_PwmOnly(&motor);
+    {
+        uint32_t pwm_start = FOC_Platform_ReadCycleCounter();
+        FOC_ControlExecutor_RunISR_PwmOnly(&motor);
+        motor.isr_timing.pwm_isr_cycles = FOC_Platform_ReadCycleCounter() - pwm_start;
+    }
 #else
     FOC_ControlExecutor_RunISR(&motor);
 #endif

@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
     uint8_t  fast_current_div_counter;
     uint32_t current_loop_cycles;
+    uint32_t pwm_isr_cycles;
 } foc_isr_timing_t;
 
 /* ========== Motor aggregate state ========== */

@@ -270,7 +270,7 @@ aaPA3.14b
 
 ### 4.7 语义调试行说明
 
-启用语义报告（`S:S=1`）后，调试流按周期输出以下行（行 0~8 共 9 行）：
+启用语义报告（`S:S=1`）后，调试流按周期输出以下行（行 0~9 共 10 行）：
 
 | 行 | 标签 | 输出格式示例 | 说明 |
 |----|------|-------------|------|
@@ -283,6 +283,7 @@ aaPA3.14b
 | 6 | vbus_filtered | `measurement.vbus_voltage_filtered_v=23.900` | VBUS 滤波后电压 |
 | 7 | exec_time | `control.execution_time_us=15.200` | 调度器 tick 执行时间 |
 | 8 | current_loop_time | `control.current_loop_execution_time_us=8.500` | 电流环 ISR 执行时间 |
+| 9 | pwm_isr_time | `control.pwm_isr_execution_time_us=2.300` | PWM ISR（三 ISR 插值）执行时间 |
 
 传感器无效时跳过对应行，末尾以一个空行结束帧。
 

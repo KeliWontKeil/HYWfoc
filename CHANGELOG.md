@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **示波器新增主副源相位差通道（bit15）**：`DebugStream_CaptureOscSnapshot` 输出 `phase_lag_elec = Math_WrapRadDelta(angle_standby_elec − angle_active_elec)`（电弧度，环绕归一化，两源均有效时输出，否则置 0）。新增 `DEBUG_STREAM_OSC_PARAM_PHASE_LAG (0x8000U)` 掩码位与 `DEBUG_STREAM_OSC_DEFAULT_SHOW_PHASE_LAG` 默认开关（默认启用）。用于采集 SMO 相位滞后数据。坐标系语义跟随各源 `ReadSourceAngle` 输出终点（SMO 物理直通、ENCODER/OPENLOOP 控制系），direction=+1 下可比；SMO 与其它源 elec 坐标系不一致点为已知调试期状态，正式化时统一，本轮不修。
+- **语义调试流新增 PWM ISR 执行时间（行 9，三 ISR 有效）**：`foc_isr_timing_t` 增 `pwm_isr_cycles`；`FOC_App_OnPwmUpdateISR` 在三 ISR 模式测 PWM ISR（插值）执行时长。语义流 `SEMANTIC_LINE_COUNT` 9→10，新增行 9 = `control.pwm_isr_execution_time_us`（末行带帧结束空行），用于观测 PWM ISR 是否超时；同步新增 `MONITOR_ELEM_SEMANTIC_9`、输出管理器语义行判断、格式化 case 9。
 
 ### Fixed
+- **多 ISR 数据竞争修复（边界 A 控制参考单点原子发布 + SVPWM 插值步长基座竞态）**：
+  - **边界 A（控制 ISR → 电流环 ISR）**：新增 `foc_control_ref_t ctrl_ref` + `volatile ctrl_ref_ready` 提交标志。控制 ISR 过程末尾 `FOC_ControlExecutor_PublishControlRef` 一次性写入控制参考（iq_target、外环斜坡、编码器/开环快照）→ `FOC_Platform_MemoryBarrier()` → 置标志；电流环 ISR 过程开头原子获取为快照并物化 `ctrl.iq_target`；SourceMgr 编码器/开环/外环斜坡读取统一走该快照。消除"控制 ISR 逐字段散写、电流环中途读到跨字段不一致中间态"竞态，正确性不再依赖中断优先级串行化。
+  - **优先级还原**：控制 ISR（TIMER1）优先级由实验性 group 2 还原为 group 3，电流环/PWM 优先级不变，恢复实时性。
+  - **SVPWM 插值步长基座竞态（三 ISR）**：原电流环 ISR 读 `duty_*_current`（正被 PWM ISR 推进）预计算 `pending_duty_*_step`，且 `interp_steps_total = FOC_PWM_FREQ_KHZ`(24) 与电流环 8kHz（3 PWM 周期）不匹配、插值每 3 步即被重启 → 步长基座不一致 → 8kHz 占空比锯齿/抖动。改为 pending 仅携带目标，`SVPWM_InterpolationISR` 取走时按当时 `duty_*_current` 即时计算步长；删除 `pending_duty_*_step` 字段。2-ISR 路径不变。
 - **SMO 负速度 180° 相位差修复（目标速度方向归一化）**：物理 BEMF 相位依赖速度方向，负速度时反相 180°。角度提取改用目标速度 `speed_only_rad_s` 符号在 BEMF 源头归一化（`sign=(speed_only_rad_s<0)?-1:+1`），PLL/ATAN2 共用；`FOC_EstimSMO_Step` 新增 `speed_cmd_rad_s` 参数（executor 传 `motor->cfg.speed_only_rad_s`）。方向证据用控制指令，消除按估计速度符号归一化的自锁（修复负速度不收敛）与角度差 fold 的双稳态（修复正速度 180° 相位差），不深度耦合编码器。正速度路径零回归。
 - **速域切换门控鲁棒性修复（open→ENCODER 高速域负载扰动导致降级敏感 + 反复升域振荡）**：
   - **滞回方向修正**：`FOC_SOURCE_SWITCH_SPEED_THRESH_LOW_DEFAULT` 由 `LIMIT_LOW−0.5`(19.5) 改为 `LIMIT_LOW−5.0`(15.0)，消除 `low_th > high_th` 的反滞回；`high_th(17.5) > low_th(15.0)` 形成正滞回带，降级不再贴顶敏感。
@@ -36,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - `docs/architecture.md` Source Manager 状态机判据、`Select` 伪码、升域/保持速度证据规则同步更新。
+- `docs/architecture.md` 新增"控制参考单点原子发布（边界 A）"小节，ISR 数据流同步（Control ISR 阶段3 单点发布 / 电流环阶段0 原子获取），SVPWM 双写者保护补"取走时即时计算步长"说明；`docs/protocol-parameters.md` 语义调试行扩展至 10 行（新增行 9 = PWM ISR 执行时间）。
 
 ## [2.1.0] - 2026-08-07
 
