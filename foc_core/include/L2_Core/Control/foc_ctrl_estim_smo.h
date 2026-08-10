@@ -57,6 +57,7 @@ void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
                        const foc_control_runtime_t *ctrl,
                        uint8_t active_source,
                        uint8_t control_region,
+                       float speed_cmd_rad_s,
                        float dt_sec);
 void FOC_EstimSMO_Init(foc_estim_smo_state_t *state, const foc_motor_params_t *params);
 #endif

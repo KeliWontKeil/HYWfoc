@@ -5,6 +5,56 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-10
+
+### Changed
+- **速度环重构为纯速度环（结构性修复，根因：旧"位置积分型速度环"绕过各源滤波速度、从原始角度差分自算速度并累积位置误差，导致异构源（编码器 vs SMO）下不稳定、各源速度滤波失效、有感→SMO 切换后发散/超速；无感问题为结构性问题，非估计侧）**：
+  - `foc_active_source_state_t` 增加 `mech_speed_rad_s`（物理系）；`FOC_SourceMgr_Publish` 发布各源滤波后机械速度。
+  - 外环 `FOC_SpeedOuterLoopStep` / `FOC_SpeedAngleOuterLoopStep` 改为 `PID(target=speed_ref, measurement=direction×active->mech_speed_rad_s)`，直接消费 source 层滤波速度，不再从角度差分自算速度、不再累积位置误差。
+  - 删除 `FOC_UpdateSpeedAngleError`、`FOC_ResetSpeedState`、`foc_outer_loop_private_t` 的 `speed_err_accum_rad`/`prev_mech_signed_rad`/`speed_state_valid`、`FOC_SPEED_ERR_ACCUM_LIMIT_RAD`。
+  - 切换重基准 `SourceMgr_SyncOuterLoopOnSwitch` 用新源滤波速度按当前速度误差预置速度 PID（无扰接管）。
+  - 编码器速度滤波 `FOC_FILTER_ENCODER_SPEED` 由 `NONE` → `KALMAN`（速度环真正消费滤波速度，滤波器从"摆设"变"参与控制"）。
+  - 速度 PID 默认值按速度环单位（rad/s）重标定。
+- **SMO `ReadSourceSpeed` 坐标系统一**：SMO 速度输出由 `mech_speed_rad_s × direction`（控制系）改为 `mech_speed_rad_s`（物理系），与 ENCODER/OPENLOOP 一致，消除"观测数据与控制器使用数据不一致"。
+
+### Added
+- **示波器新增主副源相位差通道（bit15）**：`DebugStream_CaptureOscSnapshot` 输出 `phase_lag_elec = Math_WrapRadDelta(angle_standby_elec − angle_active_elec)`（电弧度，环绕归一化，两源均有效时输出，否则置 0）。新增 `DEBUG_STREAM_OSC_PARAM_PHASE_LAG (0x8000U)` 掩码位与 `DEBUG_STREAM_OSC_DEFAULT_SHOW_PHASE_LAG` 默认开关（默认启用）。用于采集 SMO 相位滞后数据。坐标系语义跟随各源 `ReadSourceAngle` 输出终点（SMO 物理直通、ENCODER/OPENLOOP 控制系），direction=+1 下可比；SMO 与其它源 elec 坐标系不一致点为已知调试期状态，正式化时统一，本轮不修。
+- **语义调试流新增 PWM ISR 执行时间（行 9，三 ISR 有效）**：`foc_isr_timing_t` 增 `pwm_isr_cycles`；`FOC_App_OnPwmUpdateISR` 在三 ISR 模式测 PWM ISR（插值）执行时长。语义流 `SEMANTIC_LINE_COUNT` 9→10，新增行 9 = `control.pwm_isr_execution_time_us`（末行带帧结束空行），用于观测 PWM ISR 是否超时；同步新增 `MONITOR_ELEM_SEMANTIC_9`、输出管理器语义行判断、格式化 case 9。
+
+### Fixed
+- **启动假速度/假电角修复（角度滤波首样本吸附）**：`Sensor_ReadEncoder` 首个有效读用 `FOC_FilterGate_AngleReset` 把角度滤波吸附到实测角，避免 Kalman 从 0 收敛产生的假速度/假电角，消除启动瞬态（正向高速一小段或反向）；新增 `FOC_FilterMath_KalmanAngleReset`/`FOC_FilterMath_Lpf1Reset`/`FOC_FilterGate_AngleReset`。
+- **齿槽标定编译错误修复**：`FOC_CoggingCalib_RequestStart` 签名按头文件改为 `foc_motor_t*` 并补 `control_phase` 切换，消除启用 `FOC_COGGING_CALIB_ENABLE` 时的 `#147-D` 编译错误。
+- **多 ISR 数据竞争修复（边界 A 控制参考单点原子发布 + SVPWM 插值步长基座竞态）**：
+  - **边界 A（控制 ISR → 电流环 ISR）**：新增 `foc_control_ref_t ctrl_ref` + `volatile ctrl_ref_ready` 提交标志。控制 ISR 过程末尾 `FOC_ControlExecutor_PublishControlRef` 一次性写入控制参考（iq_target、外环斜坡、编码器/开环快照）→ `FOC_Platform_MemoryBarrier()` → 置标志；电流环 ISR 过程开头原子获取为快照并物化 `ctrl.iq_target`；SourceMgr 编码器/开环/外环斜坡读取统一走该快照。消除"控制 ISR 逐字段散写、电流环中途读到跨字段不一致中间态"竞态，正确性不再依赖中断优先级串行化。
+  - **优先级还原**：控制 ISR（TIMER1）优先级由实验性 group 2 还原为 group 3，电流环/PWM 优先级不变，恢复实时性。
+  - **SVPWM 插值步长基座竞态（三 ISR）**：原电流环 ISR 读 `duty_*_current`（正被 PWM ISR 推进）预计算 `pending_duty_*_step`，且 `interp_steps_total = FOC_PWM_FREQ_KHZ`(24) 与电流环 8kHz（3 PWM 周期）不匹配、插值每 3 步即被重启 → 步长基座不一致 → 8kHz 占空比锯齿/抖动。改为 pending 仅携带目标，`SVPWM_InterpolationISR` 取走时按当时 `duty_*_current` 即时计算步长；删除 `pending_duty_*_step` 字段。2-ISR 路径不变。
+- **SMO 负速度 180° 相位差修复（目标速度方向归一化）**：物理 BEMF 相位依赖速度方向，负速度时反相 180°。角度提取改用目标速度 `speed_only_rad_s` 符号在 BEMF 源头归一化（`sign=(speed_only_rad_s<0)?-1:+1`），PLL/ATAN2 共用；`FOC_EstimSMO_Step` 新增 `speed_cmd_rad_s` 参数（executor 传 `motor->cfg.speed_only_rad_s`）。方向证据用控制指令，消除按估计速度符号归一化的自锁（修复负速度不收敛）与角度差 fold 的双稳态（修复正速度 180° 相位差），不深度耦合编码器。正速度路径零回归。
+- **速域切换门控鲁棒性修复（open→ENCODER 高速域负载扰动导致降级敏感 + 反复升域振荡）**：
+  - **滞回方向修正**：`FOC_SOURCE_SWITCH_SPEED_THRESH_LOW_DEFAULT` 由 `LIMIT_LOW−0.5`(19.5) 改为 `LIMIT_LOW−5.0`(15.0)，消除 `low_th > high_th` 的反滞回；`high_th(17.5) > low_th(15.0)` 形成正滞回带，降级不再贴顶敏感。
+  - **SCALE 语义收敛**：`FOC_SOURCE_SWITCH_SPEED_SCALE` 0.6→0.9，仅作用于升域进入真实速度判据（`> high_th × SCALE`，容差带吸收 SMO 估计振荡/编码器滤波滞后），不再放宽虚拟速度判据。
+  - **升域多源综合**：新增 `SourceMgr_GetRealSpeedAbs`（Encoder 实测优先，无编码器回退 SMO 估计，显式排除 OpenLoop 虚拟速度）作为真实机械速度证据；`LOW_ACTIVE` 升域与 `HIGH_ACQUIRE` 保持同时要求虚拟速度 + 真实速度 + 目标源收敛状态，杜绝"按住电机仍尝试升域"。
+  - **保持门槛严格化**：`HIGH_ACQUIRE` 保持/取消门槛用原始 `low_th`（不乘 SCALE），与降级触发门槛一致，杜绝"保持消抖后切到 HIGH 立即降级"的边界漏洞。
+  - **滞回运行时校验**：`FOC_SourceMgr_Init` 校验 `high_th > low_th` 且 `high_th × SCALE > low_th`，非法配置禁用速域切换（门限为浮点宏，AC5 预处理器不支持浮点 `#if` 编译期比较）。
+- **交换线序（direction=-1）速域切换电机反转修复（源只读窗坐标系不统一）**：
+  - **根因**：`FOC_SourceMgr_ReadSourceAngle/Speed`（跨层只读窗）对 ENCODER 返回物理坐标系、对 SMO/OPENLOOP 返回控制坐标系，而消费者（外环 `direction × mech`、切换同步重基准）统一假设物理坐标系；`direction=-1` 时 SMO/OPENLOOP 的 mech 被多乘一次 direction → 双重修正 → 切回 OpenLoop 时虚拟速度方向与目标相反 → 电机反转。
+  - **接口契约收敛**：只读窗 mech 输出统一物理坐标系（SMO/OPENLOOP 输出前 `× direction`），elec 输出保持控制坐标系（电流环/Park/SVPWM 不受影响）；ENCODER 直通不变。
+  - **切换状态初始化**：`SourceMgr_RebaseSource` 切回 OpenLoop 时物理速度 `× direction` 转控制坐标系赋虚拟速度；fallback 移除 `fabsf`（`ramped_speed_rad_s` 为控制坐标系带符号，直接保留符号）。
+  - **接口一致性**：`SourceMgr_GetRealSpeedAbs` 改走 `ReadSourceSpeed` 统一取真实速度（行为等价，`fabsf` 坐标系无关）。
+  - **算法内部零改动**：外环、电流环、SMO 估计器、OpenLoop 生成器、`Publish` 均不修改，正向（direction=+1）路径数值不变。
+- **SMO 坐标系/极性修复（物理反接 direction=-1 时估计速度符号反、电角度增减方向反；两种接法均有 180° 相位差）**：
+  - **根因一（180° 相位差）**：观测器输出 `bemf = −z`，但标准滑模观测器等效控制 `z ≈ BEMF`（同号），BEMF 反号导致角度提取恒偏 180°。
+  - **根因二（direction=-1 方向反）**：PLL 误差 `e_theta = direction × sin(θp − pll_angle)` 中 `pll_angle` 未按 direction 投影；direction=-1 时稳定平衡点从 θp 偏移到 θp+π，导致估计角度增减方向反、速度符号反。
+  - **修复**：BEMF LPF 改 `+z`（消除 180°）；PLL 误差计算用 `theta_phys = direction × pll_angle` 投影（`pll_angle` 控制系存储，收敛到控制系电角）；Init `pll_angle` 控制系初始化为 0（删除 mech_zero 物理系镜像）。`pll_angle` / `pll_speed_rad_s` / `mech_speed_rad_s` 统一控制坐标系，与 LPF_ATAN2、RebaseSource、只读窗接口契约一致。
+  - **验证**：SMO 估计电角应与编码器电角同相（无 180° 差）；direction=±1 下估计速度符号均正确。若实机发现反向 180°（bemf=+z 反而引入差），说明该硬件 z 与 BEMF 反号，回退 `+z` 改为角度统一 `+π` 补偿。
+- **SMO 负速度 180° 反相修复（PLL 与 atan2 均存在，与 direction 无关）**：
+  - **根因**：物理 BEMF `e = -λ·ωe·sin(θe)` 的相位依赖电角速度方向（`ωe` 符号），负速度时 BEMF 整体反相 180°，导致 atan2 提取角、PLL 收敛角均偏 180°（纯速度方向相关，非 PLL/atan2 缺陷）。
+  - **修复**：用估计速度方向（`pll_speed_rad_s` 符号）归一化——PLL 误差 `e_theta = speed_sign×(-bemf_alpha·cosθ - bemf_beta·sinθ)/B`；LPF_ATAN2 在 `pll_speed<0` 时角度 `+π`。正/负速度均提取正确物理角 θp。
+  - **回归保障**：正速度时 `speed_sign=+1`、atan2 不补偿，行为不变。
+
+### Documentation
+- `docs/architecture.md` Source Manager 状态机判据、`Select` 伪码、升域/保持速度证据规则同步更新。
+- `docs/architecture.md` 新增"控制参考单点原子发布（边界 A）"小节，ISR 数据流同步（Control ISR 阶段3 单点发布 / 电流环阶段0 原子获取），SVPWM 双写者保护补"取走时即时计算步长"说明；`docs/protocol-parameters.md` 语义调试行扩展至 10 行（新增行 9 = PWM ISR 执行时间）。
+
 ## [2.1.0] - 2026-08-07
 
 ### Changed

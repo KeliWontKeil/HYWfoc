@@ -246,6 +246,11 @@ void Sensor_ReadEncoder(sensor_data_t *out, float dt_sec)
 
     if (FOC_Platform_ReadMechanicalAngleRad(&angle_rad) != 0U)
     {
+        /* 首样本：把角度滤波吸附到实测角，避免从 0 收敛产生启动假速度 */
+        if (out->mech_speed_valid == 0U)
+        {
+            FOC_FilterGate_AngleReset(&out->mech_angle_rad, angle_rad);
+        }
         angle_for_output = FOC_FilterGate_Angle(&out->mech_angle_rad, angle_rad);
         if ((out->mech_speed_valid != 0U) && (dt_sec > 0.0f))
         {

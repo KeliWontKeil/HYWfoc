@@ -17,8 +17,8 @@ typedef struct {
 
 /*
  * 调试流运行时状态（实例由 L1 在 foc_runtime_ctx_t 中分配）
- * 语义遥测行数：0~8 共 9 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
- * exec_time + current_loop_exec_time）
+ * 语义遥测行数：0~9 共 10 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
+ * exec_time + current_loop_exec_time + pwm_isr_exec_time）
  */
 typedef struct {
     uint16_t semantic_report_counter;

@@ -45,6 +45,7 @@ typedef struct {
 
     float    elec_angle_rad;
     float    mech_angle_rad;
+    float    mech_speed_rad_s;
 } foc_active_source_state_t;
 
 /* ========== Source/control region switch hint（跨域枚举） ========== */
@@ -134,6 +135,26 @@ typedef struct {
     float iq_target;
     float iq_measured;
 } foc_control_runtime_t;
+
+/* ========== 控制参考（控制 ISR → 电流环 ISR 单点原子发布块） ========== */
+/* 由控制 ISR 在过程末尾一次性写入并提交（写块 → MemoryBarrier → ctrl_ref_ready=1），
+ * 电流环 ISR 在过程开头原子获取为本地快照。编码器字段仅当控制 ISR 负责采样时
+ * （FOC_SENSOR_ANGLE_FAST_ENABLE == DISABLE）纳入；FAST 模式下编码器由电流环自持。 */
+typedef struct {
+    float iq_target;
+    float ramped_speed_rad_s;
+#if (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    float mech_angle_rad;
+    float mech_speed_rad_s;
+    uint8_t encoder_valid;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    uint8_t openloop_phase;
+    float openloop_virtual_angle_rad;
+    float openloop_virtual_speed_rad_s;
+    float openloop_mech_speed_rad_s;
+#endif
+} foc_control_ref_t;
 
 /* ========== 电机物理参数 ========== */
 typedef struct {

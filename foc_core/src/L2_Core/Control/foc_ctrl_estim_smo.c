@@ -89,13 +89,8 @@ void FOC_EstimSMO_Init(foc_estim_smo_state_t *state, const foc_motor_params_t *p
         (params->mech_angle_at_elec_zero_rad != FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) &&
         (params->pole_pairs > 0U))
     {
-        float mech_zero = params->mech_angle_at_elec_zero_rad;
-        if (params->direction == FOC_DIR_REVERSED)
-        {
-            mech_zero = FOC_MATH_TWO_PI - mech_zero;
-        }
-        state->pll_angle_rad = mech_zero * (float)params->pole_pairs;
-        state->pll_angle_rad = Math_WrapRad(state->pll_angle_rad);
+        /* pll_angle 存储控制系电角：定位后电机位于 mech_zero，控制系电角=0 */
+        state->pll_angle_rad = 0.0f;
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
         state->phase_comp_rad = state->pll_angle_rad;
 #endif
@@ -132,6 +127,7 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
     float uq_voltage;
 
     *bemf_mag_out = 0.0f;
+    (void)active_source;
 
     if (applied->valid != 0U)
     {
@@ -143,9 +139,9 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
     {
         ud_voltage = ctrl->ud;
         uq_voltage = ctrl->uq;
-        theta_voltage = (active_source == FOC_SOURCE_TYPE_OPENLOOP)
-            ? ctrl->electrical_angle_rad
-            : state->pll_angle_rad;
+        /* theta_voltage 须与实际 SVPWM 施加角度同系（控制系）；
+         * SMO active 时 ctrl->electrical_angle_rad = direction×pll_angle */
+        theta_voltage = ctrl->electrical_angle_rad;
     }
 
 #if (FOC_CURRENT_SENSE_PHASES == 2U)
@@ -193,14 +189,14 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
     state->ibeta_est  += dt_sec * inv_L *
         (u_beta  - Rs * state->ibeta_est  - state->z_beta);
 
-    /* BEMF LPF: 实际滑模注入 z 与物理 BEMF 反极性，这里统一输出物理 BEMF(=-z) */
+    /* BEMF LPF: 标准滑模观测器等效控制 z ≈ BEMF（同号），直接作为 BEMF 输出 */
     {
         float lpf_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_BEMF_LPF_FC, dt_sec);
 
         state->bemf_alpha += lpf_alpha *
-            (-state->z_alpha - state->bemf_alpha);
+            (state->z_alpha - state->bemf_alpha);
         state->bemf_beta  += lpf_alpha *
-            (-state->z_beta  - state->bemf_beta);
+            (state->z_beta  - state->bemf_beta);
     }
 
     *bemf_mag_out = sqrtf(state->bemf_alpha * state->bemf_alpha
@@ -261,21 +257,32 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
 /* ================================================================
  * PLL 角度提取（仅 PLL 方法编译）：跟踪 bemf 角，私有字段 pll_integral。
  * ================================================================ */
+static void EstimSMO_NormalizeBemf(const foc_estim_smo_state_t *state,
+                                   float *bemf_alpha_n, float *bemf_beta_n,
+                                   float speed_cmd_rad_s)
+{
+    float sign = (speed_cmd_rad_s < 0.0f) ? -1.0f : 1.0f;
+    *bemf_alpha_n = sign * state->bemf_alpha;
+    *bemf_beta_n  = sign * state->bemf_beta;
+}
+
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
 static void EstimSMO_ExtractAnglePLL(foc_estim_smo_state_t *state,
                                      const foc_motor_params_t *params,
+                                     float speed_cmd_rad_s,
                                      float dt_sec, float bemf_mag)
 {
     float e_theta;
     float pll_speed_limit;
+    float na, nb;
     float cos_theta = FOC_MathLut_Sin(state->pll_angle_rad + 0.5f * FOC_MATH_PI);
     float sin_theta = FOC_MathLut_Sin(state->pll_angle_rad);
 
+    EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s);
     if (bemf_mag > 1e-6f)
     {
-        /* bemf 为物理 BEMF，锁相需 sin 相关取负使 θe 为稳定平衡点 */
-        e_theta = (float)params->direction * (-state->bemf_alpha * cos_theta
-                   - state->bemf_beta  * sin_theta) / bemf_mag;
+        e_theta = (-na * cos_theta
+                   - nb  * sin_theta) / bemf_mag;
         e_theta = Math_ClampFloat(e_theta, -1.0f, 1.0f);
     }
     else
@@ -308,16 +315,19 @@ static void EstimSMO_ExtractAnglePLL(foc_estim_smo_state_t *state,
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
 static void EstimSMO_ExtractAngleAtan2(foc_estim_smo_state_t *state,
                                        const foc_motor_params_t *params,
+                                       float speed_cmd_rad_s,
                                        float dt_sec, float bemf_mag)
 {
+    float na, nb;
+    (void)params;
+
+    EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s);
     if (bemf_mag > 1e-6f)
     {
-        /* bemf 为物理 BEMF，atan2 标准式直接得物理电角 θe；
-         * 乘以 direction 归一化到 ctrl 参考系，与 encoder/电流环/源切换同系 */
-        float angle = FOC_MathLut_Atan2(-state->bemf_alpha,
-                                        state->bemf_beta);
+        /* pll_angle 存储物理系电角（atan2 标准式直接得物理 BEMF 角），
+         * 控制系转换在只读窗接口层统一完成 */
+        float angle = FOC_MathLut_Atan2(-na, nb);
 
-        angle = angle * (float)params->direction;
         angle = Math_WrapRad(angle);
         state->pll_angle_rad = angle;
         if (bemf_mag > FOC_ESTIM_SMO_CONVERGE_BEMF_V)
@@ -406,6 +416,7 @@ void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
                        const foc_control_runtime_t *ctrl,
                        uint8_t active_source,
                        uint8_t control_region,
+                       float speed_cmd_rad_s,
                        float dt_sec)
 {
     float bemf_mag;
@@ -418,9 +429,9 @@ void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
 
     /* 角度提取（编译期互斥） */
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
-    EstimSMO_ExtractAnglePLL(state, params, dt_sec, bemf_mag);
+    EstimSMO_ExtractAnglePLL(state, params, speed_cmd_rad_s, dt_sec, bemf_mag);
 #elif (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
-    EstimSMO_ExtractAngleAtan2(state, params, dt_sec, bemf_mag);
+    EstimSMO_ExtractAngleAtan2(state, params, speed_cmd_rad_s, dt_sec, bemf_mag);
 #else
 #error "Unsupported FOC_ESTIM_SMO_ANGLE_METHOD"
 #endif

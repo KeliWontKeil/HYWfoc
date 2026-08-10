@@ -26,7 +26,7 @@
  */
 /* Timer interrupt priorities */
 #define TIMER0_UP_PRIORITY_GROUP   1
-#define TIMER0_UP_PRIORITY_SUBGROUP 1
+#define TIMER0_UP_PRIORITY_SUBGROUP 0
 
 /* AUX timer priority: 低于 PWM ISR 与调度 ISR，三 ISR 模式电流环使用 */
 #define TIMER4_PRIORITY_GROUP      2

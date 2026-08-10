@@ -246,14 +246,11 @@ void SVPWM_SetRuntimeDutyTarget(svpwm_interp_state_t *svpwm,
     svpwm->output.duty_c = SVPWM_Clamp01(duty_c);
 
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
-    /* 三 ISR 模式：写端(电流环 ISR)仅写 pending，PWM ISR 入口原子取走 */
+    /* 三 ISR 模式：写端(电流环 ISR)仅写 pending 目标；步长由 PWM ISR 取走时按当时 duty_current 计算，
+     * 消除"电流环读 duty_current 算步长"的跨 ISR 步长基座竞态。 */
     svpwm->pending_duty_a_target = svpwm->output.duty_a;
     svpwm->pending_duty_b_target = svpwm->output.duty_b;
     svpwm->pending_duty_c_target = svpwm->output.duty_c;
-
-    svpwm->pending_duty_a_step = (svpwm->pending_duty_a_target - svpwm->duty_a_current) / (float)svpwm->interp_steps_total;
-    svpwm->pending_duty_b_step = (svpwm->pending_duty_b_target - svpwm->duty_b_current) / (float)svpwm->interp_steps_total;
-    svpwm->pending_duty_c_step = (svpwm->pending_duty_c_target - svpwm->duty_c_current) / (float)svpwm->interp_steps_total;
 
     FOC_Platform_MemoryBarrier();
     svpwm->target_pending = 1U;
@@ -297,9 +294,6 @@ void SVPWM_ApplyDirectDuty(svpwm_interp_state_t *svpwm,
     svpwm->pending_duty_a_target = svpwm->output.duty_a;
     svpwm->pending_duty_b_target = svpwm->output.duty_b;
     svpwm->pending_duty_c_target = svpwm->output.duty_c;
-    svpwm->pending_duty_a_step = 0.0f;
-    svpwm->pending_duty_b_step = 0.0f;
-    svpwm->pending_duty_c_step = 0.0f;
     FOC_Platform_MemoryBarrier();
     svpwm->target_pending = 1U;
 #endif
@@ -345,15 +339,16 @@ void SVPWM_Update(svpwm_interp_state_t *svpwm,
 void SVPWM_InterpolationISR(svpwm_interp_state_t *svpwm)
 {
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
-    /* 三 ISR 模式：PWM ISR 入口原子取走电流环 ISR 的 pending 目标 */
+    /* 三 ISR 模式：PWM ISR 入口原子取走 pending 目标，并基于当时 duty_current 即时计算步长，
+     * 保证每次重启插值都从真实当前占空比朝目标平滑过渡（消除跨 ISR 步长基座竞态）。 */
     if (svpwm->target_pending != 0U)
     {
         svpwm->duty_a_target = svpwm->pending_duty_a_target;
         svpwm->duty_b_target = svpwm->pending_duty_b_target;
         svpwm->duty_c_target = svpwm->pending_duty_c_target;
-        svpwm->duty_a_step = svpwm->pending_duty_a_step;
-        svpwm->duty_b_step = svpwm->pending_duty_b_step;
-        svpwm->duty_c_step = svpwm->pending_duty_c_step;
+        svpwm->duty_a_step = (svpwm->duty_a_target - svpwm->duty_a_current) / (float)svpwm->interp_steps_total;
+        svpwm->duty_b_step = (svpwm->duty_b_target - svpwm->duty_b_current) / (float)svpwm->interp_steps_total;
+        svpwm->duty_c_step = (svpwm->duty_c_target - svpwm->duty_c_current) / (float)svpwm->interp_steps_total;
         svpwm->interp_step_index = 0U;
         svpwm->target_pending = 0U;
     }

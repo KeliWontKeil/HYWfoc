@@ -9,10 +9,10 @@
 #include "L3_Hal/foc_platform_api.h"
 
 /*
- * 语义遥测最多生成 9 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
- * 各 invalid 行 + exec_time + current_loop_exec_time）
+ * 语义遥测最多生成 10 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
+ * 各 invalid 行 + exec_time + current_loop_exec_time + pwm_isr_exec_time）
  */
-#define SEMANTIC_LINE_COUNT 9U
+#define SEMANTIC_LINE_COUNT 10U
 
 /* 状态标记：已经过语义行数检查 */
 #define SEMANTIC_PHASE_COUNTER_CHECK 0xFFU
@@ -48,12 +48,17 @@ void DebugStream_Init(debug_stream_state_t *ds)
 void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t *motor)
 {
     foc_source_read_ctx_t rctx;
+    float active_elec = 0.0f;
+    float standby_elec = 0.0f;
+    uint8_t active_elec_ok = 0U;
+    uint8_t standby_elec_ok = 0U;
 
     if ((ds == 0) || (motor == 0)) return;
 
     rctx.sensor = &motor->sensor;
     rctx.params = &motor->params;
     rctx.ctrl = &motor->ctrl;
+    rctx.ref = &motor->ctrl_ref;
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     rctx.smo_state = &motor->estim_smo_state;
 #endif
@@ -72,18 +77,20 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     {
         float mech = 0.0f;
         float elec = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.active_source,
-                                            &mech, &elec);
+        active_elec_ok = FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.active_source,
+                                                       &mech, &elec);
         ds->snapshot.channel[3]  = mech;
         ds->snapshot.channel[13] = elec;
+        active_elec = elec;
     }
     {
         float mech = 0.0f;
         float elec = 0.0f;
-        (void)FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.standby_source,
-                                            &mech, &elec);
+        standby_elec_ok = FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.standby_source,
+                                                        &mech, &elec);
         ds->snapshot.channel[4]  = mech;
         ds->snapshot.channel[14] = elec;
+        standby_elec = elec;
     }
 
     ds->snapshot.channel[5] = (float)ds->last_exec_cycles / 120.0f;
@@ -109,7 +116,9 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
         ds->snapshot.channel[12] = speed;
     }
 
-    ds->snapshot.channel[15] = 0.0f;
+    /* bit 15: 主副源电角度相位差（standby - active，电弧度，环绕归一化） */
+    ds->snapshot.channel[15] = ((active_elec_ok != 0U) && (standby_elec_ok != 0U))
+                               ? Math_WrapRadDelta(standby_elec - active_elec) : 0.0f;
     ds->snapshot.valid = 1U;
 }
 
@@ -245,6 +254,13 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
         case 8U:
             if (motor != 0)
                 elem_out->value = (float)motor->isr_timing.current_loop_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
+            else
+                elem_out->value = 0.0f;
+            elem_out->aux = 2U;
+            break;
+        case 9U:
+            if (motor != 0)
+                elem_out->value = (float)motor->isr_timing.pwm_isr_cycles / ( FOC_PLATFORM_BASE_CLOCK_KHZ / 1000.0 );
             else
                 elem_out->value = 0.0f;
             elem_out->aux = 2U;
@@ -402,7 +418,11 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
         break;
     case 8U:
         snprintf(line_out, line_max,
-            "control.current_loop_execution_time_us=%d.%03d\r\n\r\n", (int)ip, (int)fp);
+            "control.current_loop_execution_time_us=%d.%03d\r\n", (int)ip, (int)fp);
+        break;
+    case 9U:
+        snprintf(line_out, line_max,
+            "control.pwm_isr_execution_time_us=%d.%03d\r\n\r\n", (int)ip, (int)fp);
         break;
     default:
         snprintf(line_out, line_max, "measurement.status=invalid\r\n");

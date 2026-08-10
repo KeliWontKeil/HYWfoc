@@ -113,6 +113,17 @@ float FOC_FilterMath_KalmanAngleStep(foc_filter_kalman_t *f, float input)
     return f->filtered_value;
 }
 
+/* 重锚定角度滤波到给定值（首样本吸附实测角，避免从 0 收敛产生假速度） */
+void FOC_FilterMath_KalmanAngleReset(foc_filter_kalman_t *f, float init_val)
+{
+    if (f == 0) return;
+
+    f->raw_value = init_val;
+    f->filtered_value = Math_WrapRad(init_val);
+    f->kalman_gain = 0.9f;
+    f->output_value = f->filtered_value;
+}
+
 /* ====== First-order LPF (standard) ====== */
 
 void FOC_FilterMath_Lpf1Init(foc_filter_lpf1_t *f, float init_val)
@@ -182,6 +193,17 @@ float FOC_FilterMath_Lpf1AngleStep(foc_filter_lpf1_t *f, float input, float alph
     f->output_value = f->state;
 
     return f->output_value;
+}
+
+/* 重锚定 LPF 到给定值（首样本吸附实测值） */
+void FOC_FilterMath_Lpf1Reset(foc_filter_lpf1_t *f, float init_val)
+{
+    if (f == 0) return;
+
+    f->raw_value = init_val;
+    f->state = Math_WrapRad(init_val);
+    f->output_value = f->state;
+    f->valid = 1U;
 }
 
 /* ====== Biquad IIR filter (skeleton, not yet implemented) ====== */

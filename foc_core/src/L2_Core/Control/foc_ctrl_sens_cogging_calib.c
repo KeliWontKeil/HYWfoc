@@ -46,9 +46,11 @@ uint8_t FOC_CoggingCalibIsBusy(const foc_cogging_calib_state_t *state)
            (state->request_start != 0U);
 }
 
-void FOC_CoggingCalib_RequestStart(foc_cogging_calib_state_t *state)
+void FOC_CoggingCalib_RequestStart(foc_motor_t *motor)
 {
-    state->request_start = 1U;
+    if (motor == 0) return;
+    motor->cogging_calib_state.request_start = 1U;
+    motor->state.control_phase = FOC_CONTROL_PHASE_COGGING_CALIB;
 }
 
 void FOC_CoggingCalib_Abort(foc_motor_t *motor)

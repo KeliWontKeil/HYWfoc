@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
     uint8_t  fast_current_div_counter;
     uint32_t current_loop_cycles;
+    uint32_t pwm_isr_cycles;
 } foc_isr_timing_t;
 
 /* ========== Motor aggregate state ========== */
@@ -94,6 +95,10 @@ typedef struct foc_motor_t {
 #if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
     foc_reinit_state_t reinit_state;
 #endif
+
+    /* ─── 控制参考（控制 ISR 单点发布，电流环 ISR 原子获取） ─── */
+    foc_control_ref_t ctrl_ref;
+    volatile uint8_t ctrl_ref_ready;
 } foc_motor_t;
 
 #endif /* FOC_MOTOR_AGGREGATE_H */

@@ -18,6 +18,7 @@ typedef enum {
     MONITOR_ELEM_SEMANTIC_6       = 0x06,
     MONITOR_ELEM_SEMANTIC_7       = 0x07,
     MONITOR_ELEM_SEMANTIC_8       = 0x08,
+    MONITOR_ELEM_SEMANTIC_9       = 0x09,
     MONITOR_ELEM_SEMANTIC_END     = 0x7F,
     MONITOR_ELEM_OSC_VALUE        = 0x80,
     MONITOR_ELEM_OSC_END          = 0x81,

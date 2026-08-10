@@ -140,7 +140,7 @@ L1 主循环（`FOC_App_Loop`）编排三个独立任务段，顺序无关：
 
 ## Documentation synchronization
 
-代码与文档必须同一次迭代同步。结构/依赖变化时必须更新：
+代码与文档需要同步，结构/依赖变化时必须更新，但是除开修改日志外，其他各种文档更新不应在未验证时进行，避免引入临时性修改/临时性架构，需要由用户报告完成验证后才能进行。
 1. `docs/architecture.md` — 唯一结构说明
 2. `docs/development.md` — 开发流程
 3. `docs/README.md` — 版本基线

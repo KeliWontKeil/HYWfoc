@@ -31,14 +31,11 @@ typedef struct {
     uint16_t interp_steps_total;
     uint16_t interp_step_index;
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
-    /* 三 ISR 模式双写者并发保护：写端(电流环 ISR)写 pending，PWM ISR 入口原子取走 */
+    /* 三 ISR 模式双写者并发保护：写端(电流环 ISR)写 pending 目标，PWM ISR 入口原子取走并即时计算步长 */
     volatile uint8_t target_pending;
     float pending_duty_a_target;
     float pending_duty_b_target;
     float pending_duty_c_target;
-    float pending_duty_a_step;
-    float pending_duty_b_step;
-    float pending_duty_c_step;
 #endif
 #endif
 } svpwm_interp_state_t;

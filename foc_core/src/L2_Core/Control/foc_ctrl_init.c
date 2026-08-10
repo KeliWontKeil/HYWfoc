@@ -137,6 +137,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ctrl.ud = 0.0f;
     motor->ctrl.uq = 0.0f;
     motor->ctrl.max_phase_voltage = max_phase_voltage;
+    motor->ctrl_ref_ready = 0U;
     motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
     motor->active_source_state.state = FOC_SOURCE_STATE_INIT;
     motor->active_source_state.valid = 0U;
@@ -272,9 +273,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mode_transition.prev_control_mode = 0U;
     motor->mode_transition.prev_control_mode_valid = 0U;
     motor->mode_transition.prev_control_mode_check = 0xFFU;
-    motor->outer_loop.speed_err_accum_rad = 0.0f;
-    motor->outer_loop.prev_mech_signed_rad = 0.0f;
-    motor->outer_loop.speed_state_valid = 0U;
 
     FOC_ControlExecutor_Init(motor);
 

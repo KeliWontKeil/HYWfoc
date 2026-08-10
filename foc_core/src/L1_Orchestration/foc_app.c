@@ -107,6 +107,7 @@ void FOC_App_Init(void)
         sm_ctx.state = &motor.source_mgr_state;
         sm_ctx.active = &motor.active_source_state;
         sm_ctx.ctrl = &motor.ctrl;
+        sm_ctx.ref = &motor.ctrl_ref;
         sm_ctx.outer_loop = &motor.outer_loop;
         sm_ctx.speed_pid = &motor.speed_pid;
         sm_ctx.torque_current_pid = &motor.torque_current_pid;
@@ -351,6 +352,9 @@ void FOC_App_ControlTrigger(void)
     default:
         break;
     }
+
+    /* 控制过程末尾：单点发布控制参考，供电流环 ISR 原子获取 */
+    FOC_ControlExecutor_PublishControlRef(&motor);
 }
 
 void FOC_App_OnPwmUpdateISR(void)
@@ -364,7 +368,11 @@ void FOC_App_OnPwmUpdateISR(void)
     if (motor.state.system_running == 0U) return;
 
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
-    FOC_ControlExecutor_RunISR_PwmOnly(&motor);
+    {
+        uint32_t pwm_start = FOC_Platform_ReadCycleCounter();
+        FOC_ControlExecutor_RunISR_PwmOnly(&motor);
+        motor.isr_timing.pwm_isr_cycles = FOC_Platform_ReadCycleCounter() - pwm_start;
+    }
 #else
     FOC_ControlExecutor_RunISR(&motor);
 #endif
