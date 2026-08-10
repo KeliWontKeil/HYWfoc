@@ -56,6 +56,20 @@ static inline float FOC_FilterGate_Angle(
 #endif
 }
 
+/* 把角度滤波重锚定到给定值（首样本吸附实测角，避免从 0 收敛产生假速度） */
+static inline void FOC_FilterGate_AngleReset(
+    FOC_FILTER_TYPEDEF(FOC_FILTER_SENSOR_ANGLE) *f, float init_val)
+{
+#if (FOC_FILTER_SENSOR_ANGLE == FOC_FILTER_TYPE_KALMAN)
+    FOC_FilterMath_KalmanAngleReset(f, init_val);
+#elif (FOC_FILTER_SENSOR_ANGLE == FOC_FILTER_TYPE_LPF1)
+    FOC_FilterMath_Lpf1Reset(f, init_val);
+#else
+    (void)f;
+    (void)init_val;
+#endif
+}
+
 static inline float FOC_FilterGate_EncoderSpeed(
     FOC_FILTER_TYPEDEF(FOC_FILTER_ENCODER_SPEED) *f, float input)
 {

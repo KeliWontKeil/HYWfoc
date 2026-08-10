@@ -158,7 +158,7 @@ uint8_t FOC_SourceMgr_ReadSourceSpeed(const foc_source_read_ctx_t *ctx, uint8_t 
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_SMO:
         if (SourceMgr_StateAcquireReady(SourceMgr_GetSourceState(ctx, FOC_SOURCE_TYPE_SMO)) == 0U) return 0U;
-        *speed_out = ctx->smo_state->mech_speed_rad_s * (float)ctx->params->direction;
+        *speed_out = ctx->smo_state->mech_speed_rad_s * (float)ctx->params->direction;   /* 物理坐标系（与 ENCODER/OPENLOOP 一致） */
         return 1U;
 #endif
 #if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
@@ -438,11 +438,18 @@ static void SourceMgr_SyncOuterLoopOnSwitch(foc_source_mgr_ctx_t *ctx, uint8_t n
     ctx->outer_loop->accum_rad = mech_angle;
     ctx->outer_loop->prev_rad = mech_angle;
     ctx->outer_loop->prev_valid = 1U;
-    ctx->outer_loop->prev_mech_signed_rad = (float)ctx->params->direction * mech_angle;
-    ctx->outer_loop->speed_err_accum_rad = 0.0f;
-    ctx->outer_loop->speed_state_valid = 1U;
 
-    SourceMgr_PrimePidOutput(ctx->speed_pid, ctx->ctrl->iq_target, 0.0f);
+    /* 速度环无扰接管：以新源滤波速度作为反馈，按当前速度误差预置速度 PID */
+    {
+        float new_speed = 0.0f;
+        float speed_error = 0.0f;
+        if (FOC_SourceMgr_ReadSourceSpeed(&rctx, new_source, &new_speed) != 0U)
+        {
+            speed_error = ctx->outer_loop->ramped_speed_rad_s
+                        - (float)ctx->params->direction * new_speed;
+        }
+        SourceMgr_PrimePidOutput(ctx->speed_pid, ctx->ctrl->iq_target, speed_error);
+    }
 }
 
 static void SourceMgr_SyncCurrentLoopOnSwitch(foc_source_mgr_ctx_t *ctx)
@@ -734,6 +741,13 @@ void FOC_SourceMgr_Publish(foc_source_mgr_ctx_t *ctx)
          ((ctx->active->state == FOC_SOURCE_STATE_LOCKED) ? 0.9f : 0.4f));
     ctx->active->mech_angle_rad = mech_angle;
     ctx->active->elec_angle_rad = elec_angle;
+
+    /* 发布 active source 滤波后机械速度（物理系，供速度环消费） */
+    {
+        float speed = 0.0f;
+        (void)FOC_SourceMgr_ReadSourceSpeed(&rctx, src, &speed);
+        ctx->active->mech_speed_rad_s = speed;
+    }
 
     if (valid != 0U)
     {

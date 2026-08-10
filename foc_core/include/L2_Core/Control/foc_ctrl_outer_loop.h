@@ -8,9 +8,6 @@
 
 /* ========== Outer-loop runtime state (private to outer_loop) ========== */
 typedef struct {
-    float  speed_err_accum_rad;
-    float  prev_mech_signed_rad;
-    uint8_t speed_state_valid;
     float  accum_rad;
     float  prev_rad;
     uint8_t prev_valid;

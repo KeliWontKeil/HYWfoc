@@ -101,13 +101,6 @@ static float FOC_AngleHoldPIDRun(foc_pid_t *pid,
     return output;
 }
 
-static void FOC_ResetSpeedState(foc_outer_loop_private_t *state)
-{
-    state->speed_err_accum_rad = 0.0f;
-    state->prev_mech_signed_rad = 0.0f;
-    state->speed_state_valid = 0U;
-}
-
 static void FOC_UpdateAccumulatedMechanicalAngle(foc_outer_loop_private_t *state,
                                                   const foc_control_cfg_t *cfg,
                                                   float mech_angle_rad)
@@ -130,36 +123,6 @@ static void FOC_UpdateAccumulatedMechanicalAngle(foc_outer_loop_private_t *state
     state->prev_rad = mech_angle_rad;
 }
 
-static float FOC_UpdateSpeedAngleError(foc_outer_loop_private_t *state,
-                                       const foc_motor_params_t *params,
-                                       float mech_angle_rad,
-                                       float speed_ref_rad_s, float dt_sec)
-{
-    float mech_signed_rad;
-    float mech_delta_rad;
-    float speed_cmd_delta_rad;
-
-    dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
-    mech_signed_rad = params->direction * mech_angle_rad;
-
-    if (state->speed_state_valid == 0U)
-    {
-        state->prev_mech_signed_rad = mech_signed_rad;
-        state->speed_err_accum_rad = 0.0f;
-        state->speed_state_valid = 1U;
-        return 0.0f;
-    }
-
-    mech_delta_rad = Math_WrapRadDelta(mech_signed_rad - state->prev_mech_signed_rad);
-    state->prev_mech_signed_rad = mech_signed_rad;
-    speed_cmd_delta_rad = speed_ref_rad_s * dt_sec;
-    state->speed_err_accum_rad += speed_cmd_delta_rad - mech_delta_rad;
-    state->speed_err_accum_rad = Math_ClampFloat(state->speed_err_accum_rad,
-                                                    -FOC_SPEED_ERR_ACCUM_LIMIT_RAD,
-                                                    FOC_SPEED_ERR_ACCUM_LIMIT_RAD);
-    return state->speed_err_accum_rad;
-}
-
 void FOC_SpeedOuterLoopStep(foc_outer_loop_private_t *state,
                             foc_pid_t *speed_pid,
                             foc_control_runtime_t *ctrl,
@@ -169,8 +132,7 @@ void FOC_SpeedOuterLoopStep(foc_outer_loop_private_t *state,
                             uint8_t control_region,
                             float speed_ref_rad_s, float dt_sec)
 {
-    float speed_angle_error_rad;
-    float mech_angle_rad;
+    float measured_speed_ctl;
     float ramp_rate;
     float speed_limit;
 
@@ -192,10 +154,9 @@ void FOC_SpeedOuterLoopStep(foc_outer_loop_private_t *state,
 
     speed_ref_rad_s = FOC_Accel_ApplySpeedLimit(state, speed_ref_rad_s, ramp_rate, speed_limit, dt_sec);
 
-    mech_angle_rad = active->mech_angle_rad;
-    speed_angle_error_rad = FOC_UpdateSpeedAngleError(state, params, mech_angle_rad,
-                                                       speed_ref_rad_s, dt_sec);
-    ctrl->iq_target = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
+    /* 纯速度环：反馈取 source 层滤波后机械速度（物理→控制系），不再从角度差分自算速度 */
+    measured_speed_ctl = (float)params->direction * active->mech_speed_rad_s;
+    ctrl->iq_target = FOC_PIDRunCore(speed_pid, speed_ref_rad_s, measured_speed_ctl, dt_sec);
     (void)cfg;
 }
 
@@ -219,7 +180,7 @@ void FOC_SpeedAngleOuterLoopStep(foc_outer_loop_private_t *state,
     float transition_span_rad;
     float speed_blend;
     float speed_ref_rad_s;
-    float speed_angle_error_rad;
+    float measured_speed_ctl;
 
     if ((state == 0) || (speed_pid == 0) || (angle_hold_pid == 0) ||
         (ctrl == 0) || (active == 0) || (cfg == 0) || (params == 0)) return;
@@ -248,14 +209,12 @@ void FOC_SpeedAngleOuterLoopStep(foc_outer_loop_private_t *state,
     if (speed_blend < 1e-4f)
     {
         FOC_PIDReset(speed_pid);
-        FOC_ResetSpeedState(state);
         torque_ref_speed = 0.0f;
     }
     else
     {
-        speed_angle_error_rad = FOC_UpdateSpeedAngleError(state, params, mech_angle_rad,
-                                                           speed_ref_rad_s, dt_sec);
-        torque_ref_speed = FOC_PIDRunCore(speed_pid, speed_angle_error_rad, 0.0f, dt_sec);
+        measured_speed_ctl = (float)params->direction * active->mech_speed_rad_s;
+        torque_ref_speed = FOC_PIDRunCore(speed_pid, speed_ref_rad_s, measured_speed_ctl, dt_sec);
     }
 
     torque_ref_hold = FOC_AngleHoldPIDRun(angle_hold_pid, cfg,

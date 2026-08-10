@@ -45,6 +45,7 @@ typedef struct {
 
     float    elec_angle_rad;
     float    mech_angle_rad;
+    float    mech_speed_rad_s;
 } foc_active_source_state_t;
 
 /* ========== Source/control region switch hint（跨域枚举） ========== */

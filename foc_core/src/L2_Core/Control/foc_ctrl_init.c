@@ -273,9 +273,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mode_transition.prev_control_mode = 0U;
     motor->mode_transition.prev_control_mode_valid = 0U;
     motor->mode_transition.prev_control_mode_check = 0xFFU;
-    motor->outer_loop.speed_err_accum_rad = 0.0f;
-    motor->outer_loop.prev_mech_signed_rad = 0.0f;
-    motor->outer_loop.speed_state_valid = 0U;
 
     FOC_ControlExecutor_Init(motor);
 

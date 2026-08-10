@@ -39,8 +39,6 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
     motor->outer_loop.prev_rad = 0.0f;
     motor->outer_loop.prev_valid = 0U;
     motor->outer_loop.ramped_speed_rad_s = 0.0f;
-    motor->outer_loop.speed_state_valid = 0U;
-    motor->outer_loop.speed_err_accum_rad = 0.0f;
 
     /* 复位模式切换状态，使下次 RunCycle 重新初始化 */
     motor->mode_transition.prev_control_mode_valid = 0U;
@@ -318,9 +316,6 @@ static void Executor_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t 
     motor->outer_loop.prev_valid = 1U;
 
     motor->outer_loop.ramped_speed_rad_s = 0.0f;
-
-    motor->outer_loop.speed_state_valid = 0U;
-    motor->outer_loop.speed_err_accum_rad = 0.0f;
 
     FOC_PIDReset(&motor->speed_pid);
     FOC_PIDReset(&motor->angle_pid);
