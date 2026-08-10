@@ -355,7 +355,7 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 
 - 清零控制输出：`ctrl.ud = 0`, `ctrl.uq = 0`, `ctrl.iq_target = 0`
 - 清零全部 PID：`torque_current_pid`、`speed_pid`、`angle_pid`（integral + prev_error）
-- 清零外环累积状态：`outer_loop.accum_rad`、`prev_rad`、`prev_valid`、`ramped_speed_rad_s`、`speed_state_valid`、`speed_err_accum_rad`
+- 清零外环累积状态：`outer_loop.accum_rad`、`prev_rad`、`prev_valid`、`ramped_speed_rad_s`
 - 复位模式切换标记：`mode_transition.prev_control_mode_valid = 0`（使下次 RunCycle 重新初始化外环）
 - 阻断 ISR 控制链：`current_loop_ready = 0`
 - 清零软切换状态（条件编译）
@@ -451,7 +451,7 @@ FOC_SourceMgr_Publish(motor)
       │   ├── ENCODER → sensor.mech_angle_rad
       │   ├── SMO → estim_smo_state.pll_angle_rad / pll_speed_rad_s
       │   └── OPENLOOP → openloop_state.virtual_angle_rad / mech_speed_rad_s
-      ├── 填入 motor->active_source_state（source、state、valid、confidence、角度）
+      ├── 填入 motor->active_source_state（source、state、valid、confidence、角度、滤波后速度）
       ├── 统一写 motor->ctrl.electrical_angle_rad（电流环快路径角度）
       └── 更新 motor->encoder_services（calib/reinit/comp 可用性）
 ```
@@ -462,7 +462,7 @@ FOC_SourceMgr_Publish(motor)
 
 | 输出 | 坐标系 | 转换 |
 |---|---|---|
-| `mech_angle_rad` / `mech_speed_rad_s` | 物理（编码器实测基准） | ENCODER 直接透传；SMO/OPENLOOP 内部为控制坐标系，输出前 `× direction` |
+| `mech_angle_rad` / `mech_speed_rad_s` | 物理（编码器实测基准） | ENCODER 直接透传；SMO 物理直通（`pll_angle/pp`、`mech_speed_rad_s`）；OPENLOOP 输出前 `× direction` |
 | `elec_angle_rad` | 控制（`ctrl.electrical_angle_rad` / 电流环 / SVPWM 基准） | ENCODER 经 `FOC_ControlMechanicalToElectricalAngle`；SMO/OPENLOOP 直接透传 |
 
 消费者假设物理 mech：外环 `direction × mech_angle_rad`、`SyncOuterLoopOnSwitch` 重基准、`accum_rad` 累积、齿槽补偿 LUT（仅 ENCODER active）。
@@ -492,7 +492,7 @@ SMO 收敛状态定义：
 SMO 角度/速度坐标系约定（`pll_angle_rad` / `pll_speed_rad_s` / `mech_speed_rad_s` 为**物理坐标系**，与观测器 BEMF/编码器物理量同系）：
 - BEMF 观测器输出 = 滑模等效控制 `z`（标准滑模观测器 `z ≈ BEMF` 同号），LPF 提取；观测器输入 `theta_voltage` 恒用 `ctrl->electrical_angle_rad`（与实际 SVPWM 施加同系）。
 - **负速度反相处理（目标速度方向归一化）**：物理 BEMF 相位依赖电角速度方向（`e = -λ·ωe·sinθe`），负速度时 BEMF 整体反相 180°。角度提取用目标速度方向符号 `sign = (speed_only_rad_s<0) ? -1 : +1` 在 BEMF 矢量源头归一化（`EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s)`），PLL 误差 `e_theta = (-na·cosθ − nb·sinθ)/B`、LPF_ATAN2 `atan2(−na, nb)` 共用。方向证据用控制指令（目标速度）而非估计速度/编码器，消除 sign 归一化的自锁与角度差 fold 的双稳态；不自锁、不依赖编码器（编码器仅在切换时对齐初始角）。正/负速度、direction=±1 均提取正确物理角 θp。
-- 接口方向处理（当前为调试期刻意调整状态）：`ReadSourceAngle` SMO 输出 `elec = pll_angle`（物理直通）、`mech = pll_angle/pp`（物理）；`ReadSourceSpeed` SMO 输出 `mech_speed_rad_s×direction`。正式化时需统一 mech/elec/speed 坐标系契约。
+- 接口方向处理：`ReadSourceAngle` SMO 输出 `elec = pll_angle`（物理直通）、`mech = pll_angle/pp`（物理）；`ReadSourceSpeed` SMO 输出 `mech_speed_rad_s`（物理直通，v2.2.0 统一，与 ENCODER/OPENLOOP 一致）。
 - Init：定位后电机位于 `mech_zero`，物理系电角 = 0，`pll_angle` 从 0 起步，后台预收敛覆盖。
 
 ### Source Manager 切换状态机
@@ -560,8 +560,8 @@ LOW_RECOVERY
 - 速域切换门限需满足滞回：`high_th > low_th` 且 `high_th × SCALE > low_th`（门限为浮点宏，预处理器无法比较，由 `FOC_SourceMgr_Init` 运行时校验，非法配置禁用切换）。
 
 切换提交同步：
-- 重基准 `outer_loop.accum_rad / prev_rad / prev_mech_signed_rad`（物理 mech `× direction` 得控制有符号角）。
-- 清 `speed_err_accum_rad` 并同步 `speed_state_valid`。
+- 重基准 `outer_loop.accum_rad / prev_rad`（物理 mech `× direction` 得控制有符号角）。
+- 速度环无扰接管：用新源滤波速度按当前速度误差预置速度 PID。
 - 使用新源或旧源物理速度同步 `outer_loop.ramped_speed_rad_s`；切回 OpenLoop 时虚拟速度 = 物理速度 `× direction`（控制坐标系，保留符号）。
 - 按切换前 `iq_target/uq/iq_measured` 预置速度 PID 与电流 PID，避免闭环从零状态硬接管。
 

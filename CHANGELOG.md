@@ -5,13 +5,25 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2026-08-10
+
+### Changed
+- **速度环重构为纯速度环（结构性修复，根因：旧"位置积分型速度环"绕过各源滤波速度、从原始角度差分自算速度并累积位置误差，导致异构源（编码器 vs SMO）下不稳定、各源速度滤波失效、有感→SMO 切换后发散/超速；无感问题为结构性问题，非估计侧）**：
+  - `foc_active_source_state_t` 增加 `mech_speed_rad_s`（物理系）；`FOC_SourceMgr_Publish` 发布各源滤波后机械速度。
+  - 外环 `FOC_SpeedOuterLoopStep` / `FOC_SpeedAngleOuterLoopStep` 改为 `PID(target=speed_ref, measurement=direction×active->mech_speed_rad_s)`，直接消费 source 层滤波速度，不再从角度差分自算速度、不再累积位置误差。
+  - 删除 `FOC_UpdateSpeedAngleError`、`FOC_ResetSpeedState`、`foc_outer_loop_private_t` 的 `speed_err_accum_rad`/`prev_mech_signed_rad`/`speed_state_valid`、`FOC_SPEED_ERR_ACCUM_LIMIT_RAD`。
+  - 切换重基准 `SourceMgr_SyncOuterLoopOnSwitch` 用新源滤波速度按当前速度误差预置速度 PID（无扰接管）。
+  - 编码器速度滤波 `FOC_FILTER_ENCODER_SPEED` 由 `NONE` → `KALMAN`（速度环真正消费滤波速度，滤波器从"摆设"变"参与控制"）。
+  - 速度 PID 默认值按速度环单位（rad/s）重标定。
+- **SMO `ReadSourceSpeed` 坐标系统一**：SMO 速度输出由 `mech_speed_rad_s × direction`（控制系）改为 `mech_speed_rad_s`（物理系），与 ENCODER/OPENLOOP 一致，消除"观测数据与控制器使用数据不一致"。
 
 ### Added
 - **示波器新增主副源相位差通道（bit15）**：`DebugStream_CaptureOscSnapshot` 输出 `phase_lag_elec = Math_WrapRadDelta(angle_standby_elec − angle_active_elec)`（电弧度，环绕归一化，两源均有效时输出，否则置 0）。新增 `DEBUG_STREAM_OSC_PARAM_PHASE_LAG (0x8000U)` 掩码位与 `DEBUG_STREAM_OSC_DEFAULT_SHOW_PHASE_LAG` 默认开关（默认启用）。用于采集 SMO 相位滞后数据。坐标系语义跟随各源 `ReadSourceAngle` 输出终点（SMO 物理直通、ENCODER/OPENLOOP 控制系），direction=+1 下可比；SMO 与其它源 elec 坐标系不一致点为已知调试期状态，正式化时统一，本轮不修。
 - **语义调试流新增 PWM ISR 执行时间（行 9，三 ISR 有效）**：`foc_isr_timing_t` 增 `pwm_isr_cycles`；`FOC_App_OnPwmUpdateISR` 在三 ISR 模式测 PWM ISR（插值）执行时长。语义流 `SEMANTIC_LINE_COUNT` 9→10，新增行 9 = `control.pwm_isr_execution_time_us`（末行带帧结束空行），用于观测 PWM ISR 是否超时；同步新增 `MONITOR_ELEM_SEMANTIC_9`、输出管理器语义行判断、格式化 case 9。
 
 ### Fixed
+- **启动假速度/假电角修复（角度滤波首样本吸附）**：`Sensor_ReadEncoder` 首个有效读用 `FOC_FilterGate_AngleReset` 把角度滤波吸附到实测角，避免 Kalman 从 0 收敛产生的假速度/假电角，消除启动瞬态（正向高速一小段或反向）；新增 `FOC_FilterMath_KalmanAngleReset`/`FOC_FilterMath_Lpf1Reset`/`FOC_FilterGate_AngleReset`。
+- **齿槽标定编译错误修复**：`FOC_CoggingCalib_RequestStart` 签名按头文件改为 `foc_motor_t*` 并补 `control_phase` 切换，消除启用 `FOC_COGGING_CALIB_ENABLE` 时的 `#147-D` 编译错误。
 - **多 ISR 数据竞争修复（边界 A 控制参考单点原子发布 + SVPWM 插值步长基座竞态）**：
   - **边界 A（控制 ISR → 电流环 ISR）**：新增 `foc_control_ref_t ctrl_ref` + `volatile ctrl_ref_ready` 提交标志。控制 ISR 过程末尾 `FOC_ControlExecutor_PublishControlRef` 一次性写入控制参考（iq_target、外环斜坡、编码器/开环快照）→ `FOC_Platform_MemoryBarrier()` → 置标志；电流环 ISR 过程开头原子获取为快照并物化 `ctrl.iq_target`；SourceMgr 编码器/开环/外环斜坡读取统一走该快照。消除"控制 ISR 逐字段散写、电流环中途读到跨字段不一致中间态"竞态，正确性不再依赖中断优先级串行化。
   - **优先级还原**：控制 ISR（TIMER1）优先级由实验性 group 2 还原为 group 3，电流环/PWM 优先级不变，恢复实时性。
