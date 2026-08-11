@@ -88,6 +88,8 @@ static uint8_t SourceMgr_StateHoldValid(uint8_t state)
             (state == FOC_SOURCE_STATE_LOCKED)) ? 1U : 0U;
 }
 
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+
 /* 编码器采样位置决定其读取源：
  * - ANGLE_FAST == DISABLE：编码器由控制 ISR 采样，经 ctrl_ref 原子发布 → 读 ref。
  * - ANGLE_FAST == ENABLE ：编码器由电流环 ISR 采样，自持于 sensor → 读 sensor。 */
@@ -117,6 +119,8 @@ static float SourceMgr_EncoderSpeed(const foc_source_read_ctx_t *ctx)
     return ctx->sensor->mech_speed_rad_s;
 #endif
 }
+
+#endif
 
 static uint8_t SourceMgr_SourceValid(const foc_source_read_ctx_t *rctx, uint8_t source)
 {
