@@ -16,6 +16,7 @@
 #include "L3_Hal/foc_svpwm.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "L3_Hal/foc_math_types.h"
+#include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
 /* 电流环 ISR 的控制参考快照：控制 ISR 单点发布 ctrl_ref 后，此处原子取走；
@@ -104,6 +105,23 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
     {
         Sensor_ReadCurrent(&motor->sensor);
         if (motor->sensor.adc_valid == 0U) return;
+
+        /* 阶段1b：电流 Clarke 单点化（供 SMO 与电流环共用，消除重复变换） */
+        {
+            float ic_comp;
+#if (FOC_CURRENT_SENSE_PHASES == 2U)
+            ic_comp = -(motor->sensor.current_a.output_value + motor->sensor.current_b.output_value);
+            Math_ClarkeTransform(motor->sensor.current_a.output_value,
+                                 motor->sensor.current_b.output_value,
+                                 ic_comp,
+                                 &motor->ctrl.ialpha, &motor->ctrl.ibeta);
+#elif (FOC_CURRENT_SENSE_PHASES == 3U)
+            Math_ClarkeTransform(motor->sensor.current_a.output_value,
+                                 motor->sensor.current_b.output_value,
+                                 motor->sensor.current_c.output_value,
+                                 &motor->ctrl.ialpha, &motor->ctrl.ibeta);
+#endif
+        }
     }
 
     /* 阶段2：各 Estimator 数值迭代（读 sensor_fast，只写内部状态） */
@@ -112,6 +130,7 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                       &motor->params,
                       &motor->sensor,
                       &motor->applied_output,
+                      &motor->alpha_beta,
                       &motor->ctrl,
                       motor->source_mgr_state.active_source,
                       motor->source_mgr_state.control_region,

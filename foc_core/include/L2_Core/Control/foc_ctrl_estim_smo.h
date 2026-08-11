@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "L2_Core/foc_ctrl_types.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
 #include "LS_Config/foc_config.h"
 #include "L3_Hal/foc_filter_types.h"
@@ -32,28 +33,20 @@ typedef struct {
     float    phase_comp_rad;
 #endif
 
-    /* 收敛/方向判定（两路径共用） */
-    uint16_t converge_counter;
-    uint16_t lock_counter;
-    uint16_t rot_dir_counter;
+    /* 收敛/失锁判定（两路径共用） */
     uint8_t  initialized;
-    uint8_t  rot_dir_last;
-    uint8_t  converged_once;
+    uint8_t  converged;
+    uint16_t lost_count;
 
-    /* 测速链（两路径共用） */
+    /* 测速链（两路径共用）：速度直接取自 PLL/ATAN2 自带电速，经最终 LPF 平滑 */
     FOC_FILTER_TYPEDEF(FOC_FILTER_SMO_SPEED) smo_speed_filter;
-    float    pll_angle_history[FOC_SMO_ANGLE_HISTORY_SIZE];
-    uint8_t  angle_history_idx;
-    float    speed_window[FOC_SMO_SPEED_WINDOW_SIZE];
-    uint8_t  speed_window_pos;
-    uint8_t  speed_window_count;
-    float    speed_dt_accum;
 } foc_estim_smo_state_t;
 
 void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
                        const foc_motor_params_t *params,
                        const sensor_data_t *sensor,
                        const foc_applied_output_state_t *applied,
+                       const foc_alpha_beta_phase_t *alpha_beta,
                        const foc_control_runtime_t *ctrl,
                        uint8_t active_source,
                        uint8_t control_region,
