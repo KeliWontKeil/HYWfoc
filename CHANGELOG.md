@@ -5,6 +5,38 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.2] - 2026-08-12
+
+### Changed
+- **SMO 坏样本隔离（失效窗口内偶发毛刺不进入控制链）**：`sample_ok` 同时作为角度提取的数据隔离门控，失效窗口内不再把被毛刺污染的原始角度直通电流环，从源头切断"错误角度→错误电压→观测再恶化"的正反馈：
+  - PLL 分支：积分/速度冻结，角度按最后有效速度惯性外推；
+  - ATAN2 分支：角度保持，速度衰减向 0；
+  - 好样本锁相逻辑不变（零回归），`lost_count` 去抖状态判定不变。
+
+### Fixed
+- **SMO 坏样本隔离自锁**：隔离门控由 `sample_ok` 收窄为 `converged && !sample_ok && lost_count < LOST_THRESHOLD`，避免未收敛阶段（升域前 LOW 运行、LOW 低速门控使 `sample_ok` 恒 0）PLL 被冻结而永远无法锁相/升域，以及已收敛真失锁后 `converged` 残留导致降级后无法重新锁相的双重自锁。未收敛与降级后重新锁相均恢复为正常锁相路径。
+
+### Documentation
+- `docs/architecture.md` SMO 收敛/有效判定补充坏样本隔离描述。
+
+## [2.2.1] - 2026-08-11
+
+### Changed
+- **SMO 收敛机制重设计（区分"收敛"与"有效"，允许偶发毛刺）**：
+  - 删除 `converge_counter`/`lock_counter`/`rot_dir_counter`/`converged_once` 双计数（`lock_counter` 的 DIVERGED 判据因封顶与阈值不一致恒不触发，为死逻辑），改为 `converged`（曾建立）+ `lost_count`（连续失锁计数）。
+  - 状态映射简化为 `!converged→INIT`、`lost_count≥阈值→DIVERGED`（真正可达）、其余→LOCKED；`CONVERGING` 不再由 SMO 产生（枚举保留兼容）。
+  - `sample_ok` 追加 bemf–速度一致性判据（`bemf_mag ≥ RATIO·|pll_speed|`），区分"真收敛"（bemf=Ke·ω）与"假收敛"（堵转时 bemf 极小但 pll_speed 虚高导致控制器基于无效角度自激振荡），不依赖外部参考源。
+- **降级去抖对称化**：`HIGH_SUSPECT` 一拍恢复即清零降级累计，降域与升域统一为连续判据（仅失效次数宏不同），消除"累计失效漏桶 + 严格连续恢复"不对称导致的反复升降域极限环。
+- **SMO 速度源收口**：删除 `StepTail` 角度历史差分测速链（对 PLL 为第二套测速、对 ATAN2 为双重差分），`mech_speed_rad_s` 直接取自 PLL/ATAN2 自带电速并经最终 LPF；bemf 不足时输入 0 衰减向 0（解决 PLL 堵转速度冻结）。速度与角度同源自洽。
+- **电流采样 Clarke 单点化（架构去冗余）**：`foc_control_runtime_t` 增 `ialpha/ibeta`；executor 阶段1 采样后单点 `Math_ClarkeTransform`，SMO 与电流环 `ComputeIqMeasured` 复用，消除重复 Clarke（PWM ISR 执行时间缩短约 4us）。Park 因依赖当前周期电角度仍留在电流环阶段。
+- **SMO 逆 Park 复用**：SMO 消费上一周期 SVPWM 逆 Park 输出的 `motor->alpha_beta` 电压 αβ（更贴近真实施加电压），删除内部逆 Park。
+
+### Fixed
+- **高速域按死转子"假收敛"振荡卡死**：SMO 在堵转/近零速时 bemf 极小但可能被判收敛（LOCKED），控制器基于无效角度引发高频低幅自激振荡。新增 bemf–速度一致性有效性判据，堵转时持续不一致→`lost_count` 累积→DIVERGED→降级/停车，不再驻留振荡（根因为 SMO 反电动势法固有低速失效，判据不依赖外部参考源）。
+
+### Documentation
+- `docs/architecture.md` SMO 收敛/有效判定、降域消抖对称、ISR 阶段1b Clarke 单点化、SMO 测速源更新。
+
 ## [2.2.0] - 2026-08-10
 
 ### Changed

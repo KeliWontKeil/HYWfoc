@@ -36,13 +36,11 @@ static uint8_t SourceMgr_GetSourceState(const foc_source_read_ctx_t *rctx, uint8
 #endif
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_SMO:
-        if (rctx->smo_state->lock_counter > FOC_ESTIM_SMO_DIVERGE_CONSECUTIVE)
+        if (rctx->smo_state->converged == 0U)
+            return FOC_SOURCE_STATE_INIT;
+        if (rctx->smo_state->lost_count >= FOC_ESTIM_SMO_LOST_THRESHOLD)
             return FOC_SOURCE_STATE_DIVERGED;
-        if (rctx->smo_state->converge_counter > FOC_ESTIM_SMO_LOCK_CONSECUTIVE)
-            return FOC_SOURCE_STATE_LOCKED;
-        if (rctx->smo_state->converge_counter > FOC_ESTIM_SMO_CONVERGE_CONSECUTIVE)
-            return FOC_SOURCE_STATE_CONVERGING;
-        return FOC_SOURCE_STATE_INIT;
+        return FOC_SOURCE_STATE_LOCKED;
 #endif
 #if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE)
     case FOC_SOURCE_TYPE_HFI:
@@ -88,6 +86,8 @@ static uint8_t SourceMgr_StateHoldValid(uint8_t state)
             (state == FOC_SOURCE_STATE_LOCKED)) ? 1U : 0U;
 }
 
+#if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+
 /* 编码器采样位置决定其读取源：
  * - ANGLE_FAST == DISABLE：编码器由控制 ISR 采样，经 ctrl_ref 原子发布 → 读 ref。
  * - ANGLE_FAST == ENABLE ：编码器由电流环 ISR 采样，自持于 sensor → 读 sensor。 */
@@ -117,6 +117,8 @@ static float SourceMgr_EncoderSpeed(const foc_source_read_ctx_t *ctx)
     return ctx->sensor->mech_speed_rad_s;
 #endif
 }
+
+#endif
 
 static uint8_t SourceMgr_SourceValid(const foc_source_read_ctx_t *rctx, uint8_t source)
 {
@@ -522,17 +524,6 @@ void FOC_SourceMgr_Init(foc_source_mgr_ctx_t *ctx, uint8_t low_source, uint8_t h
                   (SourceMgr_SourceCanLow(low_source) != 0U) &&
                   (SourceMgr_SourceCanHigh(high_source) != 0U)) ? 1U : 0U;
 
-    /* 滞回约束：升域进入门槛(high_th*SCALE)必须高于降级门槛(low_th)，非法配置禁用切换 */
-    if (switchable != 0U)
-    {
-        if ((FOC_SOURCE_SWITCH_SPEED_THRESH_HIGH_DEFAULT <= FOC_SOURCE_SWITCH_SPEED_THRESH_LOW_DEFAULT) ||
-            ((FOC_SOURCE_SWITCH_SPEED_THRESH_HIGH_DEFAULT * FOC_SOURCE_SWITCH_SPEED_SCALE) <=
-             FOC_SOURCE_SWITCH_SPEED_THRESH_LOW_DEFAULT))
-        {
-            switchable = 0U;
-        }
-    }
-
     ctx->state->active_source = low_source;
     ctx->state->standby_source = switchable ? high_source : FOC_SOURCE_TYPE_NONE;
     ctx->state->switch_in_progress = 0U;
@@ -673,8 +664,8 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
 
     case FOC_REGION_STATE_HIGH_SUSPECT:
         /*
-         * 降级恢复要求：目标在高速域 且 实测速度 ≥ high 门限 连续 DEGRADE_CONFIRM_CYCLES 拍，
-         * 单拍尖峰或速度读取失败不能打断敏捷降级。
+         * 降级恢复要求：目标在高速域 且 实测速度 ≥ high 门限 连续 DEGRADE_CONFIRM_CYCLES 拍；
+         * 一拍恢复即清零降级累计（与升域连续判据对称），仅持续失效达阈值才降级。
          */
         if ((SourceMgr_TargetInHighRegion(ctx) != 0U) &&
             (high_state != FOC_SOURCE_STATE_DIVERGED) &&
@@ -684,6 +675,8 @@ void FOC_SourceMgr_Select(foc_source_mgr_ctx_t *ctx)
             (speed_abs >= ctx->switch_cfg->speed_threshold_high_rad_s))
         {
             ctx->state->degrade_hold_counter++;
+            /* 恢复即打断降级累计（对称：降级要求连续失效） */
+            ctx->state->switch_counter = 0U;
             if (ctx->state->degrade_hold_counter >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES)
             {
                 ctx->state->region_state = FOC_REGION_STATE_HIGH_ACTIVE;

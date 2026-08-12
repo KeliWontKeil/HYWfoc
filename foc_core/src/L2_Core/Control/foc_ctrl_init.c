@@ -241,6 +241,7 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->speed_pid.kp = COMMAND_MANAGER_DEFAULT_PID_SPEED_KP;
     motor->speed_pid.ki = COMMAND_MANAGER_DEFAULT_PID_SPEED_KI;
     motor->speed_pid.kd = COMMAND_MANAGER_DEFAULT_PID_SPEED_KD;
+    motor->speed_pid.integral_limit = FOC_SPEED_PID_INTEGRAL_LIMIT_DEFAULT;
     motor->cfg.min_mech_angle_accum_delta_rad = FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD;
     motor->cfg.angle_hold_integral_limit = FOC_DEFAULT_ANGLE_HOLD_INTEGRAL_LIMIT;
     motor->cfg.angle_hold_pid_deadband_rad = FOC_DEFAULT_ANGLE_HOLD_PID_DEADBAND_RAD;

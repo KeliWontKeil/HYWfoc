@@ -290,8 +290,11 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   阶段1：硬件采样
     → [FAST] Sensor_ReadEncoder → Sensor_AccumulateEcycle
     → Sensor_ReadCurrent（若 current_loop_ready）
+    → 阶段1b：电流 Clarke 单点化（`Math_ClarkeTransform` → motor->ctrl.ialpha/ibeta），
+      SMO 与电流环共用，消除重复变换（Clarke 不依赖角度，可在采样后立即计算）
   阶段2：Estimator 数值迭代（后台运行，所有启用的 Estimator 都执行）
-    → FOC_EstimSMO_Step（更新内部 bemf、PLL、收敛计数器）
+    → FOC_EstimSMO_Step（消费阶段1b 的 ialpha/ibeta 与上一周期 SVPWM 逆 Park 电压 αβ，
+      更新内部 bemf、PLL、收敛/失锁状态；mech_speed 直接取自 PLL/ATAN2 自带电速）
     → FOC_EstimHFI_Step（更新内部高频注入解调状态）
     → [注] 无论 active source 是否为 SMO/HFI，均执行迭代——预收敛机制
   阶段3：Source Manager
@@ -305,9 +308,10 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
       派生写 motor->ctrl.electrical_angle_rad
       更新 encoder_services
   阶段4：NORMAL 电流环
-    → FOC_CurrentControlStep（Clarke/Park → PID → ud/uq）
+    → FOC_CurrentControlStep（复用阶段1b 的 αβ 做 Park → PID → ud/uq）
   阶段5：SVPWM 输出
-    → FOC_ControlApplyElectricalAngleRuntime
+    → FOC_ControlApplyElectricalAngleRuntime（逆 Park → 逆 Clarke → 三相占空比，
+      逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ）
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -332,7 +336,7 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 
 - 三 ISR 模式电流环频率由 `FOC_CURRENT_LOOP_ISR_FREQ_HZ` 独立配置（与 PWM 解耦，值由配置宏决定）。
 - 电流环周期宏 `FOC_CURRENT_LOOP_DT_SEC` 随 `FOC_CURRENT_LOOP_ISR_MODE` 自动收敛：双 ISR 取 `1/(PWM_FREQ/DIVIDER)`，三 ISR 取 `1/FOC_CURRENT_LOOP_ISR_FREQ_HZ`（为 0 时退化为控制周期）。所有电流环 ISR 内模块（Estimator/电流环）统一使用该宏作为 dt 唯一真值。
-- SMO 测速尾链使用调用方每拍传入的 `dt_sec` 累计窗口时长，不依赖任何 ISR 频率宏，ISR 模式切换不改变测速尺度。
+- SMO 机械速度直接取自 PLL/ATAN2 自带电速（`pll_speed_rad_s / pole_pairs`）并经最终 LPF 平滑，不依赖 ISR 频率宏与角度差分，ISR 模式切换不改变测速尺度。
 - `FOC_SVPWM_INTERP_ENABLE` 插值开关两种模式可独立裁剪；禁用后 `FOC_ControlApplyElectricalAngleRuntime` 直接写占空比。
 - 三 ISR 模式 SVPWM 双写者保护：电流环 ISR 写 pending 目标 → `FOC_Platform_MemoryBarrier()` → commit 标志；PWM ISR 入口原子取走，并**按当时 `duty_current` 即时计算插值步长**（消除"电流环读 `duty_current` 算步长"的跨 ISR 步长基座竞态）。
 - 辅助定时器通过 `FOC_Platform_AuxTimerInit/Start/Stop/SetCallback` 映射空闲硬件定时器（GD32 实例 TIMER4，优先级 (2,0) 低于 PWM ISR）。
@@ -442,7 +446,8 @@ FOC_SourceMgr_Select(motor)
       ├── 高速获取：保持使用 low_th 作为取消门限（严格，不乘 SCALE），避免切到 HIGH 后立即触发降级
       ├── 高→低判断：目标不在高速域 / high 失效发散 / 速度低于 low_th 后进降级流程
       ├── 升域消抖：条件连续满足 FOC_SOURCE_SWITCH_SETTLE_CYCLES 后才提交 HIGH
-      ├── 降域消抖：恢复 HIGH 需连续满足 FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES（更敏捷），单拍尖峰不打断降级
+      ├── 降域消抖：降级要求连续失效达 FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES（一拍恢复即清零累计，
+          与升域连续判据对称）；恢复 HIGH 需连续满足 DEGRADE_CONFIRM_CYCLES
       └── 切换提交：修改 active_source、standby_source、control_region，并同步外环/电流环状态
 
 FOC_SourceMgr_Publish(motor)
@@ -476,18 +481,23 @@ FOC_SourceMgr_Publish(motor)
 |--------|--------|----------|----------|----------|
 | OPENLOOP | `FOC_SOURCE_TYPE_OPENLOOP` | `openloop_state` | Control ISR 积分虚拟角度，PWM ISR Publish 读取 | 非 FAILED 即有效 |
 | ENCODER | `FOC_SOURCE_TYPE_ENCODER` | `estim_encoder_state` | Control ISR 或 PWM ISR（由 FAST 宏控制） | 硬件有效即 LOCKED |
-| SMO | `FOC_SOURCE_TYPE_SMO` | `estim_smo_state` | PWM ISR 阶段2（每周期迭代） | converge_counter / lock_counter 三段状态 |
+| SMO | `FOC_SOURCE_TYPE_SMO` | `estim_smo_state` | PWM ISR 阶段2（每周期迭代） | converged / lost_count 简化状态 |
 | HFI | `FOC_SOURCE_TYPE_HFI` | `estim_hfi_state` | PWM ISR 阶段2（每周期迭代） | 预留 |
 | FLUX | `FOC_SOURCE_TYPE_FLUX` | 预留 | 预留 | 预留 |
 
-SMO 收敛状态定义：
-- `converge_counter`：反电势幅值超过阈值时的连续计数
-- `lock_counter`：锁相环误差持续低于门限时的连续计数
-- `rot_dir_counter`：旋转方向一致性计数
-- 状态映射：`converge_counter < CONVERGE_CONSECUTIVE(50)` → `INIT`
-  - `converge_counter > CONVERGE(50)` → `CONVERGING`
-  - `converge_counter > LOCK_CONSECUTIVE(100)` → `LOCKED`
-  - `lock_counter > DIVERGE_CONSECUTIVE(200)` → `DIVERGED`
+SMO 收敛/有效判定（v2.2.2 简化，允许偶发毛刺 + 坏样本隔离）：
+- `converged`：观测器曾正常锁相建立（`sample_ok` 曾为真即置位）
+- `lost_count`：已收敛后 `sample_ok` 连续失败计数，达阈值判失效
+- `sample_ok`：bemf 幅值 > 阈值 且 bemf 与估计速度一致（`bemf_mag ≥ RATIO·|pll_speed|`，
+  区分"真收敛"（bemf=Ke·ω）与"假收敛"（堵转时 bemf 极小但 pll_speed 虚高），不依赖外部参考源）
+  且 非 LOW 低速门控
+- 状态映射：`!converged` → `INIT`；`lost_count ≥ 阈值` → `DIVERGED`（真正可达）；其余 → `LOCKED`
+- 删除原 converge_counter/lock_counter/rot_dir_counter 双计数（lock_counter 的 DIVERGED 判据因封顶与阈值不一致恒不触发，为死逻辑），方向异常并入 bemf 幅值变化吸收
+- **坏样本隔离（v2.2.2 新增）**：`sample_ok` 同时作为角度提取的数据隔离门控，隔离条件
+  `isolate = converged && !sample_ok && lost_count < LOST_THRESHOLD`（仅"已收敛后的失效窗口"内隔离）。
+  隔离期间 PLL 积分/速度冻结、角度按最后有效速度惯性外推，ATAN2 角度保持、速度衰减——错误样本不
+  直通电流环，从源头切断"错误角度→错误电压→观测再恶化"的正反馈；未收敛（锁相中）与降级后
+  （`lost_count` 达阈值）不隔离，恢复正常锁相，避免未收敛无法升域/降级后无法重新锁相的自锁。
 
 SMO 角度/速度坐标系约定（`pll_angle_rad` / `pll_speed_rad_s` / `mech_speed_rad_s` 为**物理坐标系**，与观测器 BEMF/编码器物理量同系）：
 - BEMF 观测器输出 = 滑模等效控制 `z`（标准滑模观测器 `z ≈ BEMF` 同号），LPF 提取；观测器输入 `theta_voltage` 恒用 `ctrl->electrical_angle_rad`（与实际 SVPWM 施加同系）。
@@ -544,10 +554,10 @@ HIGH_SUSPECT
        && high_state 可保持
        && high source valid
        && speed 有效 && speed_abs >= high_th
-      （单拍尖峰或速度读取失败不打断降级）
+      （一拍恢复即清零降级累计——降级与升域同为连续判据，仅次数宏不同）
   -> LOW_RECOVERY 条件：
        high_state == DIVERGED（立即）
-       || degrade 消抖计数 >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES
+       || 连续失效计数 >= FOC_SOURCE_SWITCH_DEGRADE_CONFIRM_CYCLES
 
 LOW_RECOVERY
   low source valid 或 low=OPENLOOP 时 CommitSwitch(low) 并回到 LOW_ACTIVE

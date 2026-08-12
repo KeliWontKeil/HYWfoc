@@ -121,46 +121,24 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_control_runtime_t *c
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
 
-static void FOC_CurrentLoopComputeIqMeasured(const sensor_data_t *sensor,
+static void FOC_CurrentLoopComputeIqMeasured(const foc_control_runtime_t *ctrl,
                                              float electrical_angle,
                                              float *iq_out)
 {
-    float ia_comp;
-    float ib_comp;
-    float ic_comp;
-    float i_alpha;
-    float i_beta;
     float id_measured;
 
-    if ((sensor == 0) || (iq_out == 0))
+    if ((ctrl == 0) || (iq_out == 0))
     {
         return;
     }
 
-    /* Apply Clarke/Park transform. Static zero offsets already applied in sensor layer. */
-#if (FOC_CURRENT_SENSE_PHASES == 2U)
-    {
-        ia_comp = sensor->current_a.output_value;
-        ib_comp = sensor->current_b.output_value;
-        ic_comp = -(ia_comp + ib_comp);
-    }
-#else
-    {
-        ia_comp = sensor->current_a.output_value;
-        ib_comp = sensor->current_b.output_value;
-        ic_comp = sensor->current_c.output_value;
-    }
-#endif
-
-    Math_ClarkeTransform(ia_comp, ib_comp, ic_comp, &i_alpha, &i_beta);
-
-    Math_ParkTransform(i_alpha,
-                       i_beta,
+    /* Park 变换复用 executor 阶段1b 单点化的 αβ 结果（消除重复 Clarke） */
+    Math_ParkTransform(ctrl->ialpha,
+                       ctrl->ibeta,
                        electrical_angle,
                        &id_measured,
                        iq_out);
     (void)id_measured;
-
 }
 
 static void FOC_CurrentControlClosedLoopStep(foc_control_runtime_t *ctrl,
@@ -172,7 +150,9 @@ static void FOC_CurrentControlClosedLoopStep(foc_control_runtime_t *ctrl,
     float iq_measured;
     float uq_cmd;
 
-    FOC_CurrentLoopComputeIqMeasured(sensor,
+    (void)sensor;
+
+    FOC_CurrentLoopComputeIqMeasured(ctrl,
                                      electrical_angle,
                                      &iq_measured);
 
@@ -274,7 +254,7 @@ static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
         if (sensor->adc_valid != 0U)
         {
-            FOC_CurrentLoopComputeIqMeasured(sensor,
+            FOC_CurrentLoopComputeIqMeasured(ctrl,
                                              electrical_angle,
                                              &closed_iq);
         }
@@ -372,7 +352,7 @@ void FOC_CurrentControlStep(foc_control_runtime_t *ctrl,
             soft_switch->blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(ctrl, params, ctrl->iq_target, 0.0f);
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
-            FOC_CurrentLoopComputeIqMeasured(sensor,
+            FOC_CurrentLoopComputeIqMeasured(ctrl,
                                              local_angle,
                                              &ctrl->iq_measured);
 #endif
