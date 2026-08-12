@@ -5,6 +5,20 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.2] - 2026-08-12
+
+### Changed
+- **SMO 坏样本隔离（失效窗口内偶发毛刺不进入控制链）**：`sample_ok` 同时作为角度提取的数据隔离门控，失效窗口内不再把被毛刺污染的原始角度直通电流环，从源头切断"错误角度→错误电压→观测再恶化"的正反馈：
+  - PLL 分支：积分/速度冻结，角度按最后有效速度惯性外推；
+  - ATAN2 分支：角度保持，速度衰减向 0；
+  - 好样本锁相逻辑不变（零回归），`lost_count` 去抖状态判定不变。
+
+### Fixed
+- **SMO 坏样本隔离自锁**：隔离门控由 `sample_ok` 收窄为 `converged && !sample_ok && lost_count < LOST_THRESHOLD`，避免未收敛阶段（升域前 LOW 运行、LOW 低速门控使 `sample_ok` 恒 0）PLL 被冻结而永远无法锁相/升域，以及已收敛真失锁后 `converged` 残留导致降级后无法重新锁相的双重自锁。未收敛与降级后重新锁相均恢复为正常锁相路径。
+
+### Documentation
+- `docs/architecture.md` SMO 收敛/有效判定补充坏样本隔离描述。
+
 ## [2.2.1] - 2026-08-11
 
 ### Changed

@@ -47,22 +47,32 @@ static float FOC_PIDRunCore(foc_pid_t *pid, float target, float measurement, flo
 {
     float error;
     float derivative;
+    float u_pd;
     float output;
+    float integral_limit;
 
     dt_sec = Math_NormalizeDt(dt_sec, FOC_CONTROL_DT_SEC);
     error = target - measurement;
-    pid->integral += error * dt_sec;
     derivative = (error - pid->prev_error) / dt_sec;
-    output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
-    output = Math_ClampFloat(output, pid->out_min, pid->out_max);
 
-    if ((pid->ki > 1e-6f) &&
-        ((output <= pid->out_min + 1e-6f) || (output >= pid->out_max - 1e-6f)))
+    u_pd = pid->kp * error + pid->kd * derivative;
+    output = u_pd + pid->ki * pid->integral;
+
+    /* 条件积分：未饱和则正常积分；饱和且误差加剧饱和时停止，否则按误差回退积分 */
+    if ((output <= pid->out_max) && (output >= pid->out_min))
     {
-        float i_min = (pid->out_min - pid->kp * error - pid->kd * derivative) / pid->ki;
-        float i_max = (pid->out_max - pid->kp * error - pid->kd * derivative) / pid->ki;
-        pid->integral = Math_ClampFloat(pid->integral, i_min, i_max);
+        pid->integral += error * dt_sec;
     }
+    else if ((pid->ki * error) < 0.0f)
+    {
+        pid->integral += error * dt_sec;
+    }
+
+    integral_limit = (pid->integral_limit > 0.0f) ? pid->integral_limit
+                 : ((pid->ki > 1e-6f) ? ((pid->out_max - pid->out_min) / pid->ki) : 0.0f);
+    pid->integral = Math_ClampFloat(pid->integral, -integral_limit, integral_limit);
+
+    output = Math_ClampFloat(output, pid->out_min, pid->out_max);
     pid->prev_error = error;
     return output;
 }

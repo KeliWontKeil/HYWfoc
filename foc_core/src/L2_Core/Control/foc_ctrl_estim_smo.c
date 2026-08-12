@@ -102,13 +102,15 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
                               uint8_t active_source,
                               uint8_t control_region,
                               float dt_sec,
-                              float *bemf_mag_out)
+                              float *bemf_mag_out,
+                              uint8_t *sample_ok_out)
 {
     float i_alpha_meas, i_beta_meas;
     float err_alpha, err_beta;
     float z_alpha_raw, z_beta_raw;
     float sat_current;
     float Rs, Ls, inv_L;
+    uint8_t sample_ok;
 
     *bemf_mag_out = 0.0f;
     (void)active_source;
@@ -166,7 +168,7 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
      * - 观测器/PLL 始终运行，仅状态判定被门控。
      */
     {
-        uint8_t sample_ok = 1U;
+        sample_ok = 1U;
 
         if (control_region == FOC_CONTROL_REGION_LOW)
         {
@@ -202,6 +204,11 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
             }
         }
     }
+
+    if (sample_ok_out != 0)
+    {
+        *sample_ok_out = sample_ok;
+    }
 }
 
 /* ================================================================
@@ -220,39 +227,53 @@ static void EstimSMO_NormalizeBemf(const foc_estim_smo_state_t *state,
 static void EstimSMO_ExtractAnglePLL(foc_estim_smo_state_t *state,
                                      const foc_motor_params_t *params,
                                      float speed_cmd_rad_s,
-                                     float dt_sec, float bemf_mag)
+                                     float dt_sec, float bemf_mag,
+                                     uint8_t sample_ok)
 {
-    float e_theta;
     float pll_speed_limit;
-    float na, nb;
-    float cos_theta = FOC_MathLut_Sin(state->pll_angle_rad + 0.5f * FOC_MATH_PI);
-    float sin_theta = FOC_MathLut_Sin(state->pll_angle_rad);
+    uint8_t isolate;
 
-    EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s);
-    if (bemf_mag > 1e-6f)
+    /* 数据隔离仅针对"已收敛后的偶发失效窗口"；未收敛锁相与降级后重新锁相不隔离，
+     * 否则 PLL 冻结会使 SMO 永远无法收敛/恢复（自锁）。 */
+    isolate = (uint8_t)((state->converged != 0U) &&
+                        (sample_ok == 0U) &&
+                        (state->lost_count < FOC_ESTIM_SMO_LOST_THRESHOLD));
+
+    if (isolate == 0U)
     {
-        e_theta = (-na * cos_theta
-                   - nb  * sin_theta) / bemf_mag;
-        e_theta = Math_ClampFloat(e_theta, -1.0f, 1.0f);
-    }
-    else
-    {
-        e_theta = 0.0f;
+        float e_theta;
+        float na, nb;
+        float cos_theta = FOC_MathLut_Sin(state->pll_angle_rad + 0.5f * FOC_MATH_PI);
+        float sin_theta = FOC_MathLut_Sin(state->pll_angle_rad);
+
+        EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s);
+        if (bemf_mag > 1e-6f)
+        {
+            e_theta = (-na * cos_theta
+                       - nb  * sin_theta) / bemf_mag;
+            e_theta = Math_ClampFloat(e_theta, -1.0f, 1.0f);
+        }
+        else
+        {
+            e_theta = 0.0f;
+        }
+
+        state->pll_integral += FOC_ESTIM_SMO_PLL_KI_DEFAULT * e_theta * dt_sec;
+        pll_speed_limit = smo_pll_speed_limit_elec(params);
+        state->pll_integral =
+            Math_ClampFloat(state->pll_integral,
+                            -pll_speed_limit,
+                             pll_speed_limit);
+        state->pll_speed_rad_s =
+            FOC_ESTIM_SMO_PLL_KP_DEFAULT * e_theta + state->pll_integral;
+        state->pll_speed_rad_s =
+            Math_ClampFloat(state->pll_speed_rad_s,
+                            -pll_speed_limit,
+                             pll_speed_limit);
     }
 
-    state->pll_integral += FOC_ESTIM_SMO_PLL_KI_DEFAULT * e_theta * dt_sec;
-    pll_speed_limit = smo_pll_speed_limit_elec(params);
-    state->pll_integral =
-        Math_ClampFloat(state->pll_integral,
-                        -pll_speed_limit,
-                         pll_speed_limit);
-    state->pll_speed_rad_s =
-        FOC_ESTIM_SMO_PLL_KP_DEFAULT * e_theta + state->pll_integral;
-    state->pll_speed_rad_s =
-        Math_ClampFloat(state->pll_speed_rad_s,
-                        -pll_speed_limit,
-                         pll_speed_limit);
-
+    /* 好样本由上面锁相积分更新；失效窗口内积分/速度冻结，角度仅按最后有效速度惯性外推，
+     * 坏样本不拉偏角度，从源头切断"错误角度→错误电压→观测再恶化"的正反馈。 */
     state->pll_angle_rad += state->pll_speed_rad_s * dt_sec;
     state->pll_angle_rad = Math_WrapRad(state->pll_angle_rad);
 }
@@ -266,10 +287,24 @@ static void EstimSMO_ExtractAnglePLL(foc_estim_smo_state_t *state,
 static void EstimSMO_ExtractAngleAtan2(foc_estim_smo_state_t *state,
                                        const foc_motor_params_t *params,
                                        float speed_cmd_rad_s,
-                                       float dt_sec, float bemf_mag)
+                                       float dt_sec, float bemf_mag,
+                                       uint8_t sample_ok)
 {
     float na, nb;
+    uint8_t isolate;
     (void)params;
+
+    /* 与 PLL 分支一致：仅"已收敛后的偶发失效窗口"隔离，避免未收敛锁相/降级后恢复自锁 */
+    isolate = (uint8_t)((state->converged != 0U) &&
+                        (sample_ok == 0U) &&
+                        (state->lost_count < FOC_ESTIM_SMO_LOST_THRESHOLD));
+
+    if (isolate != 0U)
+    {
+        /* 失效窗口：无速度记忆，角度保持（避免 bemf 尖峰直跳角），速度衰减向 0 */
+        state->pll_speed_rad_s = 0.0f;
+        return;
+    }
 
     EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s);
     if (bemf_mag > 1e-6f)
@@ -316,6 +351,7 @@ void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
     float bemf_mag;
     float u_alpha;
     float u_beta;
+    uint8_t sample_ok;
 
     if (dt_sec <= 0.0f) return;
     (void)sensor;
@@ -326,13 +362,13 @@ void FOC_EstimSMO_Step(foc_estim_smo_state_t *state,
 
     /* 观测器核心 */
     EstimSMO_StepCore(state, params, ctrl, u_alpha, u_beta, active_source,
-                      control_region, dt_sec, &bemf_mag);
+                      control_region, dt_sec, &bemf_mag, &sample_ok);
 
-    /* 角度提取（编译期互斥） */
+    /* 角度提取（编译期互斥）：坏样本被隔离，仅好样本拉偏角度，切断正反馈 */
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
-    EstimSMO_ExtractAnglePLL(state, params, speed_cmd_rad_s, dt_sec, bemf_mag);
+    EstimSMO_ExtractAnglePLL(state, params, speed_cmd_rad_s, dt_sec, bemf_mag, sample_ok);
 #elif (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
-    EstimSMO_ExtractAngleAtan2(state, params, speed_cmd_rad_s, dt_sec, bemf_mag);
+    EstimSMO_ExtractAngleAtan2(state, params, speed_cmd_rad_s, dt_sec, bemf_mag, sample_ok);
 #else
 #error "Unsupported FOC_ESTIM_SMO_ANGLE_METHOD"
 #endif

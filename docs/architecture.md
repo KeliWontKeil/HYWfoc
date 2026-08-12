@@ -485,7 +485,7 @@ FOC_SourceMgr_Publish(motor)
 | HFI | `FOC_SOURCE_TYPE_HFI` | `estim_hfi_state` | PWM ISR 阶段2（每周期迭代） | 预留 |
 | FLUX | `FOC_SOURCE_TYPE_FLUX` | 预留 | 预留 | 预留 |
 
-SMO 收敛/有效判定（v2.2.1 简化，允许偶发毛刺）：
+SMO 收敛/有效判定（v2.2.2 简化，允许偶发毛刺 + 坏样本隔离）：
 - `converged`：观测器曾正常锁相建立（`sample_ok` 曾为真即置位）
 - `lost_count`：已收敛后 `sample_ok` 连续失败计数，达阈值判失效
 - `sample_ok`：bemf 幅值 > 阈值 且 bemf 与估计速度一致（`bemf_mag ≥ RATIO·|pll_speed|`，
@@ -493,6 +493,11 @@ SMO 收敛/有效判定（v2.2.1 简化，允许偶发毛刺）：
   且 非 LOW 低速门控
 - 状态映射：`!converged` → `INIT`；`lost_count ≥ 阈值` → `DIVERGED`（真正可达）；其余 → `LOCKED`
 - 删除原 converge_counter/lock_counter/rot_dir_counter 双计数（lock_counter 的 DIVERGED 判据因封顶与阈值不一致恒不触发，为死逻辑），方向异常并入 bemf 幅值变化吸收
+- **坏样本隔离（v2.2.2 新增）**：`sample_ok` 同时作为角度提取的数据隔离门控，隔离条件
+  `isolate = converged && !sample_ok && lost_count < LOST_THRESHOLD`（仅"已收敛后的失效窗口"内隔离）。
+  隔离期间 PLL 积分/速度冻结、角度按最后有效速度惯性外推，ATAN2 角度保持、速度衰减——错误样本不
+  直通电流环，从源头切断"错误角度→错误电压→观测再恶化"的正反馈；未收敛（锁相中）与降级后
+  （`lost_count` 达阈值）不隔离，恢复正常锁相，避免未收敛无法升域/降级后无法重新锁相的自锁。
 
 SMO 角度/速度坐标系约定（`pll_angle_rad` / `pll_speed_rad_s` / `mech_speed_rad_s` 为**物理坐标系**，与观测器 BEMF/编码器物理量同系）：
 - BEMF 观测器输出 = 滑模等效控制 `z`（标准滑模观测器 `z ≈ BEMF` 同号），LPF 提取；观测器输入 `theta_voltage` 恒用 `ctrl->electrical_angle_rad`（与实际 SVPWM 施加同系）。

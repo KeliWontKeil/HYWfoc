@@ -24,6 +24,7 @@ typedef struct {
     float prev_error;
     float out_min;
     float out_max;
+    float integral_limit;   /* 速度环积分限幅（宏配置，不进入运行时） */
 } foc_pid_t;
 
 #endif /* FOC_MATH_TYPES_H */
