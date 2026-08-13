@@ -23,25 +23,25 @@
 #define ADC2_RCU              RCU_ADC2
 
 /* ADC channel definitions */
-#define ADC_CHANNEL_PA6       ADC_CHANNEL_6     /* Phase A current */
-#define ADC_CHANNEL_PA7       ADC_CHANNEL_7     /* Phase B current */
+#define ADC_CHANNEL_PHASE_A   ADC_CHANNEL_0     /* Phase A current, PA0 */
+#define ADC_CHANNEL_PHASE_B   ADC_CHANNEL_1     /* Phase B current, PA1 */
 #define CURRENT_DIR_A         -1.0f             /* Phase A current direction multiplier */
 #define CURRENT_DIR_B         -1.0f             /* Phase B current direction multiplier */
 
-#define ADC_CHANNEL_PA1       ADC_CHANNEL_1     /* VBUS voltage (ADC2) */
+#define ADC_CHANNEL_VBUS      ADC_CHANNEL_3     /* VBUS voltage (ADC2), PA3 */
 
 /* ADC GPIO definitions */
-#define ADC_GPIO_PA6_RCU      RCU_GPIOA
-#define ADC_GPIO_PA6_PORT     GPIOA
-#define ADC_GPIO_PA6_PIN      GPIO_PIN_6
+#define ADC_GPIO_PHASE_A_RCU  RCU_GPIOA
+#define ADC_GPIO_PHASE_A_PORT GPIOA
+#define ADC_GPIO_PHASE_A_PIN  GPIO_PIN_0
 
-#define ADC_GPIO_PA7_RCU      RCU_GPIOA
-#define ADC_GPIO_PA7_PORT     GPIOA
-#define ADC_GPIO_PA7_PIN      GPIO_PIN_7
+#define ADC_GPIO_PHASE_B_RCU  RCU_GPIOA
+#define ADC_GPIO_PHASE_B_PORT GPIOA
+#define ADC_GPIO_PHASE_B_PIN  GPIO_PIN_1
 
-#define ADC_GPIO_PA1_RCU      RCU_GPIOA
-#define ADC_GPIO_PA1_PORT     GPIOA
-#define ADC_GPIO_PA1_PIN      GPIO_PIN_1
+#define ADC_GPIO_VBUS_RCU     RCU_GPIOA
+#define ADC_GPIO_VBUS_PORT    GPIOA
+#define ADC_GPIO_VBUS_PIN     GPIO_PIN_3
 
 
 #define FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE 1U
@@ -72,7 +72,7 @@
  * higher PWM frequencies or slower control rates.
  */
 #define ADC_BUFFER_SIZE       64U
-#define ADC_CHANNEL_COUNT     2       /* Number of channels: PA6 and PA7 */
+#define ADC_CHANNEL_COUNT     2       /* Number of channels: PA0 (A) and PA1 (B) */
 
 /* Current calculation constants */
 #define ADC_VREF              3.28f    /* Reference voltage (V) */
@@ -81,12 +81,12 @@
 
 /* Phase A current sensor parameters */
 #define ADC_ZERO_CURRENT_VOLTAGE_A 1.64f  /* Voltage at zero current, phase A */
-#define CURRENT_RANGE_A            3.3f               /* ±3.3A current range, phase A */
+#define CURRENT_RANGE_A            16.5f               /* ±16.5A current range, phase A */
 #define CURRENT_SCALE_FACTOR_A     (CURRENT_RANGE_A / (ADC_VREF / 2.0f))
 
 /* Phase B current sensor parameters */
 #define ADC_ZERO_CURRENT_VOLTAGE_B 1.64f  /* Voltage at zero current, phase B */
-#define CURRENT_RANGE_B            3.3f               /* ±3.3A current range, phase B */
+#define CURRENT_RANGE_B            16.5f               /* ±16.5A current range, phase B */
 #define CURRENT_SCALE_FACTOR_B     (CURRENT_RANGE_B / (ADC_VREF / 2.0f))
 
 /* Data structures */

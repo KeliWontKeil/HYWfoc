@@ -3,7 +3,7 @@
 
 #include "systick.h"
 #include "LED.h"
-#include "usart1.h"
+#include "usart0.h"
 #include "usart2.h"
 #include "timer1.h"
 #include "timer2.h"
@@ -128,7 +128,7 @@ void FOC_Platform_SetIndicator(uint8_t led_index, uint8_t on)
 
 void FOC_Platform_CommInit(void)
 {
-    USART1_Init();
+    USART0_Init();
     USART2_Init();
 }
 
@@ -139,7 +139,7 @@ uint16_t FOC_Platform_CommSource_ReadFrame(FOC_Platform_CommSourceId_t id,
     switch (id)
     {
     case FOC_COMM_SOURCE_0:
-        return USART1_ReadFrame(buffer, max_len);
+        return USART0_ReadFrame(buffer, max_len);
     case FOC_COMM_SOURCE_1:
         return USART2_ReadFrame(buffer, max_len);
     default:
@@ -152,17 +152,17 @@ uint16_t FOC_Platform_CommSource_ReadFrame(FOC_Platform_CommSourceId_t id,
 
 void FOC_Platform_WriteDebugText(const char *str)
 {
-    USART1_SlowWriter_SendData((const uint8_t *)str, (uint16_t)strlen(str));
+    USART0_SlowWriter_SendData((const uint8_t *)str, (uint16_t)strlen(str));
 }
 
 void FOC_Platform_WriteDebugFast(const char *str)
 {
-    USART1_FastWriter_PutString(str);
+    USART0_FastWriter_PutString(str);
 }
 
 void FOC_Platform_WriteStatusByte(uint8_t status_code)
 {
-    USART1_FastWriter_PutByte(status_code);
+    USART0_FastWriter_PutByte(status_code);
 }
 
 /*****************************************************************************

@@ -50,8 +50,8 @@
 #define ADC_DMA_PRIORITY_SUBGROUP  0
 
 /* USART interrupt priorities */
-#define USART1_PRIORITY_GROUP      3
-#define USART1_PRIORITY_SUBGROUP   0
+#define USART0_PRIORITY_GROUP      3
+#define USART0_PRIORITY_SUBGROUP   0
 
 /* USART interrupt priorities */
 #define USART2_PRIORITY_GROUP      4

@@ -158,14 +158,14 @@ void TIMER0_UP_IRQHandler(void)
 }
 
 /*!
-    \brief      USART1 interrupt service routine
+    \brief      USART0 interrupt service routine
     \param[in]  none
     \param[out] none
     \retval     none
 */
-void USART1_IRQHandler(void)
+void USART0_IRQHandler(void)
 {
-    USART1_IRQHandler_Internal();
+    USART0_IRQHandler_Internal();
 }
 
 void USART2_IRQHandler(void)

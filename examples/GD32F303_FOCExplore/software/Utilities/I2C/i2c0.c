@@ -15,6 +15,8 @@ static i2c_status_t I2C0_SendAddress(uint8_t address, uint32_t direction);
 
 void I2C0_Init(void)
 {
+    /* I2C0 remap to PB8/PB9 (default PB6/PB7 now used by USART0). */
+    gpio_pin_remap_config(GPIO_I2C0_REMAP, ENABLE);
     I2C0_GPIO_Config();
     I2C0_Config();
 }

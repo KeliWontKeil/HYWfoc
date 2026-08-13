@@ -589,11 +589,6 @@
               <FilePath>.\Utilities\I2C\i2c0.c</FilePath>
             </File>
             <File>
-              <FileName>usart1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\USART\usart1.c</FilePath>
-            </File>
-            <File>
               <FileName>usart2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart2.c</FilePath>
@@ -607,6 +602,11 @@
               <FileName>auxtimer.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\AUXTIMER\auxtimer.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart0.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1342,11 +1342,6 @@
               <FilePath>.\Utilities\I2C\i2c0.c</FilePath>
             </File>
             <File>
-              <FileName>usart1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\USART\usart1.c</FilePath>
-            </File>
-            <File>
               <FileName>usart2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart2.c</FilePath>
@@ -1360,6 +1355,11 @@
               <FileName>auxtimer.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\AUXTIMER\auxtimer.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart0.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2096,11 +2096,6 @@
               <FilePath>.\Utilities\I2C\i2c0.c</FilePath>
             </File>
             <File>
-              <FileName>usart1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Utilities\USART\usart1.c</FilePath>
-            </File>
-            <File>
               <FileName>usart2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart2.c</FilePath>
@@ -2114,6 +2109,11 @@
               <FileName>auxtimer.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\AUXTIMER\auxtimer.c</FilePath>
+            </File>
+            <File>
+              <FileName>usart0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\USART\usart0.c</FilePath>
             </File>
           </Files>
         </Group>

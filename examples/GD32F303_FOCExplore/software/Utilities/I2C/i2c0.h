@@ -6,8 +6,8 @@
 /* I2C peripheral definitions */
 #define I2C0_PERIPH           I2C0
 #define I2C0_RCU              RCU_I2C0
-#define I2C0_SCL_PIN          GPIO_PIN_6
-#define I2C0_SDA_PIN          GPIO_PIN_7
+#define I2C0_SCL_PIN          GPIO_PIN_8
+#define I2C0_SDA_PIN          GPIO_PIN_9
 #define I2C0_GPIO_PORT        GPIOB
 #define I2C0_GPIO_RCU         RCU_GPIOB
 

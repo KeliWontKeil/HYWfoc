@@ -9,7 +9,7 @@
 
 /*PWM initialization defaults.*/
 #define FOC_PWM_FREQ_KHZ                24U
-#define FOC_SENSOR_SAMPLE_FREQ_KHZ      FOC_PWM_FREQ_KHZ
+#define FOC_SENSOR_SAMPLE_FREQ_KHZ      (FOC_PWM_FREQ_KHZ / 3)
 #define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
 
 /* Scheduler rates. */
@@ -43,13 +43,13 @@
  /* ── 电机模型参数 ── */
 #define FOC_MOTOR_MEASUREMENT_TYPE     FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT
 #define FOC_MOTOR_INIT_STATOR_INDUCTANCE_HENRY   0.001f
-#define FOC_MOTOR_INIT_RESISTANCE_OHM 3.0f
+#define FOC_MOTOR_INIT_RESISTANCE_OHM 6.0f
 
 /* Alignment/calibration voltage is derived from max_phase_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
-#define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 11U
-#define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD 2.9146f
-#define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_REVERSED
+#define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT FOC_POLE_PAIRS_UNDEFINED//11U
+#define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED//2.9146f
+#define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED//FOC_DIR_REVERSED
 
 /* Motor initialization parameters. */
 #define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
@@ -199,8 +199,8 @@
 #define FOC_COMM_MAX_FRAMES_PER_SERVICE  0U
 
 /*LED initialization defaults. */
-#define FOC_LED_RUN_INDEX 2U
-#define FOC_LED_COMM_INDEX 1U
+#define FOC_LED_RUN_INDEX 1U
+#define FOC_LED_COMM_INDEX 2U
 #define FOC_LED_ERROR_INDEX 3U
 #define FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS 1000U
 #define FOC_LED_COMM_PULSE_TICKS 10U
@@ -223,7 +223,7 @@
 
 
 /* ── OpenLoop angle source / low-speed policy defaults ── */
-#define FOC_OPENLOOP_CURRENT_A                   0.4f
+#define FOC_OPENLOOP_CURRENT_A                   0.3f
 
 /* ── Source Manager 低/高速 source 切换默认参数/门限 ── */
 #define FOC_ACCEL_SPEED_LIMIT_LOW_RAD_S      20.0f   /* LOW 区域速度上限 */
