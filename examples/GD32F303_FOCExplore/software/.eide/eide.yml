@@ -60,6 +60,7 @@ virtualFolder:
         - path: Utilities/ADC/adc.c
         - path: Utilities/I2C/i2c0.c
         - path: Utilities/TIMER3/timer3.c
+        - path: Utilities/TIMER5/timer5.c
         - path: Utilities/AUXTIMER/auxtimer.c
         - path: Utilities/USART/usart2.c
         - path: Utilities/USART/usart0.c
@@ -120,6 +121,7 @@ targets:
         - Utilities/LED
         - Utilities/PWM
         - Utilities/TIMER1
+        - Utilities/TIMER5
         - Utilities/USART
         - Utilities/TIMER2
         - Utilities/AS5600

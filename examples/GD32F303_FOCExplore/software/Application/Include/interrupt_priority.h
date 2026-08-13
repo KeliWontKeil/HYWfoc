@@ -14,12 +14,13 @@
 #define NVIC_PRIORITY_GROUPING NVIC_PRIGROUP_PRE4_SUB0
 
 /* ── 定时器映射关系（配置优先级前请确认） ──
- * TIMER0 : PWM 输出 + PWM 更新 ISR
+ * TIMER5 : 控制调度节拍 ISR（1kHz，外环/服务/监控）
+ * TIMER1 : 同步主定时器（master TRGO=UPDATE，频率=采样频率）
+ * TIMER2 : HALL 输入捕获（预留，未实现）
+ * TIMER0 : PWM 输出（从机，由 TIMER1 同步）+ PWM 更新 ISR
  *          - 双 ISR 模式：插值 + 守卫 + 电流环
  *          - 三 ISR 模式：仅插值 + 守卫
- * TIMER1 : 控制调度节拍 ISR（1kHz，外环/服务/监控）
- * TIMER2 : PWM 同步主定时器（24kHz 自由更新，从机重启源）
- * TIMER3 : ADC 采样触发（同步 TIMER2，CH3 比较事件）
+ * TIMER3 : ADC 采样触发（从属 TIMER1，CH3 比较事件定采样点）
  * TIMER4 : AUX 辅助定时器（三 ISR 模式电流环 ISR）
  *          - L3 API: FOC_Platform_AuxTimerId_t::FOC_AUX_TIMER_CURRENT_LOOP
  *          - 实例层: Utilities/AUXTIMER/auxtimer.h
@@ -34,6 +35,10 @@
 
 #define TIMER1_PRIORITY_GROUP      3
 #define TIMER1_PRIORITY_SUBGROUP   0
+
+/* TIMER5（控制调度节拍，接管原 TIMER1 功能） */
+#define TIMER5_PRIORITY_GROUP      3
+#define TIMER5_PRIORITY_SUBGROUP   0
 
 #define TIMER2_PRIORITY_GROUP      0
 #define TIMER2_PRIORITY_SUBGROUP   3

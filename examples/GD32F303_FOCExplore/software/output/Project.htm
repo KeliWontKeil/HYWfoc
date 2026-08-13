@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\output\Project.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\output\Project.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Thu Aug 13 19:22:23 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Thu Aug 13 21:33:38 2026
 <BR><P>
 <H3>Maximum Stack Usage =        560 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -78,11 +78,11 @@ Function Pointers
  <LI><a href="#[25]">TIMER0_Channel_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[24]">TIMER0_TRG_CMT_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[23]">TIMER0_UP_IRQHandler</a> from gd32f30x_it.o(i.TIMER0_UP_IRQHandler) referenced from startup_gd32f30x_hd.o(RESET)
- <LI><a href="#[26]">TIMER1_IRQHandler</a> from gd32f30x_it.o(i.TIMER1_IRQHandler) referenced from startup_gd32f30x_hd.o(RESET)
+ <LI><a href="#[26]">TIMER1_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[27]">TIMER2_IRQHandler</a> from gd32f30x_it.o(i.TIMER2_IRQHandler) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[28]">TIMER3_IRQHandler</a> from timer3.o(i.TIMER3_IRQHandler) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[3c]">TIMER4_IRQHandler</a> from gd32f30x_it.o(i.TIMER4_IRQHandler) referenced from startup_gd32f30x_hd.o(RESET)
- <LI><a href="#[40]">TIMER5_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
+ <LI><a href="#[40]">TIMER5_IRQHandler</a> from gd32f30x_it.o(i.TIMER5_IRQHandler) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[41]">TIMER6_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[35]">TIMER7_BRK_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
  <LI><a href="#[38]">TIMER7_Channel_IRQHandler</a> from startup_gd32f30x_hd.o(.text) referenced from startup_gd32f30x_hd.o(RESET)
@@ -250,7 +250,7 @@ Global Symbols
 <P><STRONG><a name="[24]"></a>TIMER0_TRG_CMT_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, startup_gd32f30x_hd.o(.text))
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
 </UL>
-<P><STRONG><a name="[40]"></a>TIMER5_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, startup_gd32f30x_hd.o(.text))
+<P><STRONG><a name="[26]"></a>TIMER1_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, startup_gd32f30x_hd.o(.text))
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
 </UL>
 <P><STRONG><a name="[41]"></a>TIMER6_IRQHandler</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, startup_gd32f30x_hd.o(.text))
@@ -789,7 +789,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> foc_app.o(i.FOC_App_Init)
 </UL>
 <P><STRONG><a name="[e9]"></a>FOC_App_Start</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, foc_app.o(i.FOC_App_Start))
-<BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = FOC_App_Start &rArr; FOC_Platform_SetControlInterruptsEnabled &rArr; Timer1_SetUpdateInterruptEnabled &rArr; nvic_irq_enable
+<BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = FOC_App_Start &rArr; FOC_Platform_SetControlInterruptsEnabled &rArr; Timer5_SetUpdateInterruptEnabled &rArr; nvic_irq_enable
 </UL>
 <BR>[Calls]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_StartControlTickSource
 <LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetControlInterruptsEnabled
@@ -840,7 +840,7 @@ Global Symbols
 <LI><a href="#[e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlExecutor_FullStop
 </UL>
 
-<P><STRONG><a name="[132]"></a>FOC_ControlConfigResetDefault</STRONG> (Thumb, 74 bytes, Stack size 0 bytes, foc_ctrl_cfg.o(i.FOC_ControlConfigResetDefault))
+<P><STRONG><a name="[132]"></a>FOC_ControlConfigResetDefault</STRONG> (Thumb, 78 bytes, Stack size 0 bytes, foc_ctrl_cfg.o(i.FOC_ControlConfigResetDefault))
 <BR><BR>[Called By]<UL><LI><a href="#[11f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MotorInit
 </UL>
 
@@ -1037,13 +1037,13 @@ Global Symbols
 <LI><a href="#[120]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_ControlTickSourceInit
 <LI><a href="#[123]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_CommInit
 <LI><a href="#[129]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_AuxTimerInit
-<LI><a href="#[125]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Init
 <LI><a href="#[124]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_Init
 <LI><a href="#[10b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlPlatform_InitHardware
 <LI><a href="#[126]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_Init
 <LI><a href="#[122]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ControlScheduler_SetCallback
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ControlScheduler_Init
 <LI><a href="#[127]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_Init
+<LI><a href="#[125]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[cf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
 </UL>
@@ -1097,14 +1097,14 @@ Global Symbols
 <P><STRONG><a name="[d9]"></a>FOC_OutputMgr_ProcessMonitorElements</STRONG> (Thumb, 268 bytes, Stack size 128 bytes, foc_output_mgr.o(i.FOC_OutputMgr_ProcessMonitorElements))
 <BR><BR>[Stack]<UL><LI>Max Depth = 192<LI>Call Chain = FOC_OutputMgr_ProcessMonitorElements &rArr; DebugStream_FormatSemanticLine &rArr; __2snprintf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
+<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Enqueue
+<LI><a href="#[c2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Dequeue
+<LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatInvalidLine
 <LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
-<LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Enqueue
-<LI><a href="#[c2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Dequeue
-<LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 <LI><a href="#[134]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 <LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy
+<LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Loop
 </UL>
@@ -1121,8 +1121,8 @@ Global Symbols
 <P><STRONG><a name="[d7]"></a>FOC_OutputMgr_WriteStartupInfo</STRONG> (Thumb, 168 bytes, Stack size 256 bytes, foc_output_mgr.o(i.FOC_OutputMgr_WriteStartupInfo))
 <BR><BR>[Stack]<UL><LI>Max Depth = 320<LI>Call Chain = FOC_OutputMgr_WriteStartupInfo &rArr; FOC_OutputMgr_WriteDirect &rArr; FOC_Platform_WriteDebugText &rArr; USART0_SlowWriter_SendData &rArr; dma_transfer_number_config
 </UL>
-<BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
-<LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
+<BR>[Calls]<UL><LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteDirect
+<LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[cf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Init
@@ -1168,9 +1168,9 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[120]"></a>FOC_Platform_ControlTickSourceInit</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_ControlTickSourceInit))
-<BR><BR>[Stack]<UL><LI>Max Depth = 68<LI>Call Chain = FOC_Platform_ControlTickSourceInit &rArr; Timer1_Init &rArr; gpio_init
+<BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = FOC_Platform_ControlTickSourceInit &rArr; Timer5_Init &rArr; timer_init
 </UL>
-<BR>[Calls]<UL><LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
+<BR>[Calls]<UL><LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_Init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
@@ -1259,8 +1259,8 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[14b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Start
 <LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Start
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
+<LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Start
+<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AS5600_Init
 <LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Start
 <LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Init
@@ -1269,9 +1269,9 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[ec]"></a>FOC_Platform_SetControlInterruptsEnabled</STRONG> (Thumb, 24 bytes, Stack size 8 bytes, foc_platform_api.o(i.FOC_Platform_SetControlInterruptsEnabled))
-<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = FOC_Platform_SetControlInterruptsEnabled &rArr; Timer1_SetUpdateInterruptEnabled &rArr; nvic_irq_enable
+<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = FOC_Platform_SetControlInterruptsEnabled &rArr; Timer5_SetUpdateInterruptEnabled &rArr; nvic_irq_enable
 </UL>
-<BR>[Calls]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetUpdateInterruptEnabled
+<BR>[Calls]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_SetUpdateInterruptEnabled
 <LI><a href="#[14d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateInterruptEnabled
 <LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_SetUpdateInterruptEnabled
 </UL>
@@ -1280,7 +1280,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[121]"></a>FOC_Platform_SetControlTickCallback</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_SetControlTickCallback))
-<BR><BR>[Calls]<UL><LI><a href="#[14e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetCallback
+<BR><BR>[Calls]<UL><LI><a href="#[14e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_SetCallback
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Init_Runtime
 </UL>
@@ -1305,7 +1305,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[eb]"></a>FOC_Platform_StartControlTickSource</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, foc_platform_api.o(i.FOC_Platform_StartControlTickSource))
-<BR><BR>[Calls]<UL><LI><a href="#[153]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Start
+<BR><BR>[Calls]<UL><LI><a href="#[153]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_Start
 </UL>
 <BR>[Called By]<UL><LI><a href="#[e9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_Start
 </UL>
@@ -1606,8 +1606,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[ee]"></a>Math_ClampFloat</STRONG> (Thumb, 32 bytes, Stack size 0 bytes, foc_math_transforms.o(i.Math_ClampFloat))
-<BR><BR>[Called By]<UL><LI><a href="#[186]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FirstOrderLpf
-<LI><a href="#[135]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_PIDRunCore
+<BR><BR>[Called By]<UL><LI><a href="#[135]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_PIDRunCore
 <LI><a href="#[11f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_MotorInit
 <LI><a href="#[ed]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CalibrateElectricalAngleAndDirection
 <LI><a href="#[119]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentSoftSwitchUpdateBlend
@@ -1616,6 +1615,7 @@ Global Symbols
 <LI><a href="#[118]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentLoopEstimateOpenLoopResistanceModel
 <LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlApplyElectricalAngleCore
 <LI><a href="#[1a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SourceMgr_PrimePidOutput
+<LI><a href="#[186]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FirstOrderLpf
 </UL>
 
 <P><STRONG><a name="[105]"></a>Math_ClarkeTransform</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, foc_math_transforms.o(i.Math_ClarkeTransform))
@@ -1633,12 +1633,12 @@ Global Symbols
 <P><STRONG><a name="[aa]"></a>Math_FloatToFixed</STRONG> (Thumb, 152 bytes, Stack size 8 bytes, foc_math_transforms.o(i.Math_FloatToFixed))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = Math_FloatToFixed
 </UL>
-<BR>[Called By]<UL><LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
-<LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
-<LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
+<BR>[Called By]<UL><LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
 <LI><a href="#[159]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatParamLine
 <LI><a href="#[158]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatConfigLine
 <LI><a href="#[15c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;QueueSystemInfoFloatLine
+<LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
+<LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
 </UL>
 
 <P><STRONG><a name="[f8]"></a>Math_InverseClarkeTransform</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, foc_math_transforms.o(i.Math_InverseClarkeTransform))
@@ -1671,13 +1671,13 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[f5]"></a>Math_WrapRad</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, foc_math_transforms.o(i.Math_WrapRad))
-<BR><BR>[Called By]<UL><LI><a href="#[11e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleStep
-<LI><a href="#[11d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleReset
-<LI><a href="#[11c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleInit
-<LI><a href="#[108]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentControlStep
+<BR><BR>[Called By]<UL><LI><a href="#[108]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_CurrentControlStep
 <LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_SampleLockedMechanicalAngle
 <LI><a href="#[10a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlMechanicalToElectricalAngle
 <LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlApplyElectricalAngleCore
+<LI><a href="#[11e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleStep
+<LI><a href="#[11d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleReset
+<LI><a href="#[11c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleInit
 </UL>
 
 <P><STRONG><a name="[af]"></a>Math_WrapRadDelta</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, foc_math_transforms.o(i.Math_WrapRadDelta))
@@ -1812,9 +1812,9 @@ Global Symbols
 <P><STRONG><a name="[158]"></a>ProtocolText_FormatConfigLine</STRONG> (Thumb, 106 bytes, Stack size 32 bytes, foc_protocol_parser.o(i.ProtocolText_FormatConfigLine))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = ProtocolText_FormatConfigLine &rArr; __2snprintf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
-<LI><a href="#[19d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_IsIntegerConfigParam
+<BR>[Calls]<UL><LI><a href="#[19d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_IsIntegerConfigParam
 <LI><a href="#[19e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_GetConfigName
+<LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[de]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueConfigs
@@ -1824,9 +1824,9 @@ Global Symbols
 <P><STRONG><a name="[159]"></a>ProtocolText_FormatParamLine</STRONG> (Thumb, 106 bytes, Stack size 32 bytes, foc_protocol_parser.o(i.ProtocolText_FormatParamLine))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = ProtocolText_FormatParamLine &rArr; __2snprintf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
-<LI><a href="#[19f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_IsIntegerParam
+<BR>[Calls]<UL><LI><a href="#[19f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_IsIntegerParam
 <LI><a href="#[1a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_GetParamName
+<LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueParams
@@ -1940,9 +1940,9 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 232<LI>Call Chain = Sensor_ReadEncoder &rArr; FOC_Platform_ReadMechanicalAngleRad &rArr; AS5600_ReadAngleRadOk &rArr; AS5600_ReadAngleOk &rArr; AS5600_ReadAngle &rArr; AS5600_ReadRegister16 &rArr; I2C0_ReadBytes &rArr; I2C0_SendAddress &rArr; I2C0_WaitFlag &rArr; I2C0_Config &rArr; i2c_clock_config &rArr; rcu_clock_freq_get
 </UL>
 <BR>[Calls]<UL><LI><a href="#[143]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_ReadMechanicalAngleRad
+<LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_WrapRadDelta
 <LI><a href="#[11e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleStep
 <LI><a href="#[11d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_FilterMath_KalmanAngleReset
-<LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_WrapRadDelta
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_App_ControlTrigger
 <LI><a href="#[10b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_ControlPlatform_InitHardware
@@ -1992,27 +1992,17 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
 </UL>
-<P><STRONG><a name="[26]"></a>TIMER1_IRQHandler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gd32f30x_it.o(i.TIMER1_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = TIMER1_IRQHandler &rArr; Timer1_IRQHandler_Internal
-</UL>
-<BR>[Calls]<UL><LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_IRQHandler_Internal
-</UL>
-<BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
-</UL>
 <P><STRONG><a name="[27]"></a>TIMER2_IRQHandler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gd32f30x_it.o(i.TIMER2_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = TIMER2_IRQHandler &rArr; Timer2_IRQHandler_Internal
 </UL>
-<BR>[Calls]<UL><LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_IRQHandler_Internal
+<BR>[Calls]<UL><LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_IRQHandler_Internal
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
 </UL>
-<P><STRONG><a name="[28]"></a>TIMER3_IRQHandler</STRONG> (Thumb, 62 bytes, Stack size 16 bytes, timer3.o(i.TIMER3_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = TIMER3_IRQHandler
+<P><STRONG><a name="[28]"></a>TIMER3_IRQHandler</STRONG> (Thumb, 30 bytes, Stack size 8 bytes, timer3.o(i.TIMER3_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = TIMER3_IRQHandler
 </UL>
-<BR>[Calls]<UL><LI><a href="#[7b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_output_bit_get
-<LI><a href="#[7d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_bit_set
-<LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_bit_reset
-<LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_get
+<BR>[Calls]<UL><LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_get
 <LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_clear
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
@@ -2024,55 +2014,32 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
 </UL>
-<P><STRONG><a name="[1ac]"></a>Timer1_IRQHandler_Internal</STRONG> (Thumb, 70 bytes, Stack size 16 bytes, timer1.o(i.Timer1_IRQHandler_Internal))
-<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = Timer1_IRQHandler_Internal
+<P><STRONG><a name="[40]"></a>TIMER5_IRQHandler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gd32f30x_it.o(i.TIMER5_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = TIMER5_IRQHandler &rArr; Timer5_IRQHandler_Internal
 </UL>
-<BR>[Calls]<UL><LI><a href="#[7b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_output_bit_get
-<LI><a href="#[7d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_bit_set
-<LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_bit_reset
-<LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_get
-<LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_clear
+<BR>[Calls]<UL><LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_IRQHandler_Internal
 </UL>
-<BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER1_IRQHandler
+<BR>[Address Reference Count : 1]<UL><LI> startup_gd32f30x_hd.o(RESET)
 </UL>
-
-<P><STRONG><a name="[13b]"></a>Timer1_Init</STRONG> (Thumb, 124 bytes, Stack size 40 bytes, timer1.o(i.Timer1_Init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 68<LI>Call Chain = Timer1_Init &rArr; gpio_init
+<P><STRONG><a name="[148]"></a>Timer1_Init</STRONG> (Thumb, 80 bytes, Stack size 32 bytes, timer1.o(i.Timer1_Init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = Timer1_Init &rArr; timer_init
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
-<LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_init
-<LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_bit_reset
-<LI><a href="#[192]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_slave_mode_select
 <LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_master_slave_mode_config
-<LI><a href="#[194]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_input_trigger_source_select
+<LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_master_output_trigger_source_select
 <LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_init
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_deinit
 </UL>
-<BR>[Called By]<UL><LI><a href="#[120]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_ControlTickSourceInit
+<BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SensorInputInit
 </UL>
 
-<P><STRONG><a name="[14e]"></a>Timer1_SetCallback</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, timer1.o(i.Timer1_SetCallback))
-<BR><BR>[Called By]<UL><LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetControlTickCallback
-</UL>
-
-<P><STRONG><a name="[14c]"></a>Timer1_SetUpdateInterruptEnabled</STRONG> (Thumb, 48 bytes, Stack size 8 bytes, timer1.o(i.Timer1_SetUpdateInterruptEnabled))
-<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = Timer1_SetUpdateInterruptEnabled &rArr; nvic_irq_enable
-</UL>
-<BR>[Calls]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_enable
-<LI><a href="#[a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_disable
-<LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_enable
-<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_disable
-</UL>
-<BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetControlInterruptsEnabled
-</UL>
-
-<P><STRONG><a name="[153]"></a>Timer1_Start</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, timer1.o(i.Timer1_Start))
+<P><STRONG><a name="[149]"></a>Timer1_Start</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, timer1.o(i.Timer1_Start))
 <BR><BR>[Calls]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_enable
 </UL>
-<BR>[Called By]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_StartControlTickSource
+<BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SensorInputInit
 </UL>
 
-<P><STRONG><a name="[1ad]"></a>Timer2_IRQHandler_Internal</STRONG> (Thumb, 40 bytes, Stack size 8 bytes, timer2.o(i.Timer2_IRQHandler_Internal))
+<P><STRONG><a name="[1ac]"></a>Timer2_IRQHandler_Internal</STRONG> (Thumb, 40 bytes, Stack size 8 bytes, timer2.o(i.Timer2_IRQHandler_Internal))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = Timer2_IRQHandler_Internal
 </UL>
 <BR>[Calls]<UL><LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_get
@@ -2081,34 +2048,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[27]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER2_IRQHandler
 </UL>
 
-<P><STRONG><a name="[148]"></a>Timer2_Init</STRONG> (Thumb, 96 bytes, Stack size 32 bytes, timer2.o(i.Timer2_Init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 52<LI>Call Chain = Timer2_Init &rArr; nvic_irq_enable
+<P><STRONG><a name="[14a]"></a>Timer3_Init</STRONG> (Thumb, 200 bytes, Stack size 56 bytes, timer3.o(i.Timer3_Init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 76<LI>Call Chain = Timer3_Init &rArr; nvic_irq_enable
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
 <LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_enable
-<LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_master_slave_mode_config
-<LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_master_output_trigger_source_select
-<LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_enable
-<LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_init
-<LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_deinit
-</UL>
-<BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SensorInputInit
-</UL>
-
-<P><STRONG><a name="[149]"></a>Timer2_Start</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, timer2.o(i.Timer2_Start))
-<BR><BR>[Calls]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_enable
-</UL>
-<BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SensorInputInit
-</UL>
-
-<P><STRONG><a name="[14a]"></a>Timer3_Init</STRONG> (Thumb, 234 bytes, Stack size 56 bytes, timer3.o(i.Timer3_Init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 84<LI>Call Chain = Timer3_Init &rArr; gpio_init
-</UL>
-<BR>[Calls]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
-<LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_init
-<LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gpio_bit_reset
-<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_enable
-<LI><a href="#[195]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_config
 <LI><a href="#[1b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_auto_reload_shadow_enable
 <LI><a href="#[192]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_slave_mode_select
 <LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_master_slave_mode_config
@@ -2121,6 +2065,7 @@ Global Symbols
 <LI><a href="#[197]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_shadow_config
 <LI><a href="#[18f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_pulse_value_config
 <LI><a href="#[196]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_mode_config
+<LI><a href="#[195]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_config
 </UL>
 <BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SensorInputInit
 </UL>
@@ -2135,6 +2080,46 @@ Global Symbols
 <BR><BR>[Calls]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_enable
 </UL>
 <BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SensorInputInit
+</UL>
+
+<P><STRONG><a name="[1ad]"></a>Timer5_IRQHandler_Internal</STRONG> (Thumb, 40 bytes, Stack size 8 bytes, timer5.o(i.Timer5_IRQHandler_Internal))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = Timer5_IRQHandler_Internal
+</UL>
+<BR>[Calls]<UL><LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_get
+<LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_flag_clear
+</UL>
+<BR>[Called By]<UL><LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER5_IRQHandler
+</UL>
+
+<P><STRONG><a name="[13b]"></a>Timer5_Init</STRONG> (Thumb, 62 bytes, Stack size 32 bytes, timer5.o(i.Timer5_Init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = Timer5_Init &rArr; timer_init
+</UL>
+<BR>[Calls]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
+<LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_init
+<LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_deinit
+</UL>
+<BR>[Called By]<UL><LI><a href="#[120]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_ControlTickSourceInit
+</UL>
+
+<P><STRONG><a name="[14e]"></a>Timer5_SetCallback</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, timer5.o(i.Timer5_SetCallback))
+<BR><BR>[Called By]<UL><LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetControlTickCallback
+</UL>
+
+<P><STRONG><a name="[14c]"></a>Timer5_SetUpdateInterruptEnabled</STRONG> (Thumb, 46 bytes, Stack size 8 bytes, timer5.o(i.Timer5_SetUpdateInterruptEnabled))
+<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = Timer5_SetUpdateInterruptEnabled &rArr; nvic_irq_enable
+</UL>
+<BR>[Calls]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_enable
+<LI><a href="#[a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;nvic_irq_disable
+<LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_enable
+<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_interrupt_disable
+</UL>
+<BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_SetControlInterruptsEnabled
+</UL>
+
+<P><STRONG><a name="[153]"></a>Timer5_Start</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, timer5.o(i.Timer5_Start))
+<BR><BR>[Calls]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_enable
+</UL>
+<BR>[Called By]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Platform_StartControlTickSource
 </UL>
 
 <P><STRONG><a name="[1b2]"></a>USART0_ClearBuffers</STRONG> (Thumb, 84 bytes, Stack size 16 bytes, usart0.o(i.USART0_ClearBuffers))
@@ -2302,10 +2287,7 @@ Global Symbols
 <P><STRONG><a name="[ab]"></a>__2snprintf</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, printf8.o(i.__0snprintf$8))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = __2snprintf
 </UL>
-<BR>[Called By]<UL><LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
-<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatInvalidLine
-<LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
-<LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueSystemInfo
+<BR>[Called By]<UL><LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueSystemInfo
 <LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_FormatSummaryLine
 <LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_WriteStartupInfo
 <LI><a href="#[d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_OutputMgr_ProcessMonitorElements
@@ -2314,6 +2296,9 @@ Global Symbols
 <LI><a href="#[158]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ProtocolText_FormatConfigLine
 <LI><a href="#[157]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_OutputDiag
 <LI><a href="#[15c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;QueueSystemInfoFloatLine
+<LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatSemanticLine
+<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_FormatInvalidLine
+<LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DebugStream_AppendOscValue
 </UL>
 
 <P><STRONG><a name="[c6]"></a>__hardfp_fmaxf</STRONG> (Thumb, 72 bytes, Stack size 16 bytes, fmaxf.o(i.__hardfp_fmaxf))
@@ -2595,19 +2580,13 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[7c]"></a>gpio_bit_reset</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gd32f30x_gpio.o(i.gpio_bit_reset))
-<BR><BR>[Called By]<UL><LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_IRQHandler_Internal
-<LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_IRQHandler_Internal
-<LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
+<BR><BR>[Called By]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_IRQHandler_Internal
 <LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Init
-<LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER3_IRQHandler
 <LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C0_Unlock
 </UL>
 
 <P><STRONG><a name="[7d]"></a>gpio_bit_set</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gd32f30x_gpio.o(i.gpio_bit_set))
-<BR><BR>[Called By]<UL><LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_IRQHandler_Internal
-<LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_IRQHandler_Internal
-<LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER3_IRQHandler
+<BR><BR>[Called By]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_IRQHandler_Internal
 <LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C0_Unlock
 </UL>
 
@@ -2620,8 +2599,6 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[138]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART2_Init
 <LI><a href="#[137]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART0_Init
-<LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[13c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LED_Init
 <LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Init
 <LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC2_ReadVbus
@@ -2631,9 +2608,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[7b]"></a>gpio_output_bit_get</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, gd32f30x_gpio.o(i.gpio_output_bit_get))
-<BR><BR>[Called By]<UL><LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_IRQHandler_Internal
-<LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_IRQHandler_Internal
-<LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER3_IRQHandler
+<BR><BR>[Called By]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_IRQHandler_Internal
 </UL>
 
 <P><STRONG><a name="[172]"></a>gpio_pin_remap_config</STRONG> (Thumb, 82 bytes, Stack size 20 bytes, gd32f30x_gpio.o(i.gpio_pin_remap_config))
@@ -2724,7 +2699,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
 <P><STRONG><a name="[a0]"></a>nvic_irq_disable</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, gd32f30x_misc.o(i.nvic_irq_disable))
-<BR><BR>[Called By]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetUpdateInterruptEnabled
+<BR><BR>[Called By]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_SetUpdateInterruptEnabled
 <LI><a href="#[14d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateInterruptEnabled
 <LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_SetUpdateInterruptEnabled
 </UL>
@@ -2736,9 +2711,8 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[138]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART2_Init
 <LI><a href="#[137]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART0_Init
+<LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_SetUpdateInterruptEnabled
 <LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
-<LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetUpdateInterruptEnabled
 <LI><a href="#[14d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateInterruptEnabled
 <LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_SetUpdateInterruptEnabled
 <LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_DMA_Config
@@ -2760,9 +2734,9 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[138]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART2_Init
 <LI><a href="#[137]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART0_Init
+<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_Init
 <LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
+<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[13c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LED_Init
 <LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_Init
 <LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Init
@@ -2852,17 +2826,17 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[1d3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_reset_enable
 <LI><a href="#[1d4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_reset_disable
 </UL>
-<BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
+<BR>[Called By]<UL><LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_Init
+<LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
+<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_Init
 <LI><a href="#[18a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer_Config
 </UL>
 
 <P><STRONG><a name="[a2]"></a>timer_enable</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_enable))
-<BR><BR>[Called By]<UL><LI><a href="#[14b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Start
-<LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Start
-<LI><a href="#[153]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Start
+<BR><BR>[Called By]<UL><LI><a href="#[153]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_Start
+<LI><a href="#[14b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Start
+<LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Start
 <LI><a href="#[142]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Start
 <LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_Start
 </UL>
@@ -2870,57 +2844,54 @@ Global Symbols
 <P><STRONG><a name="[9c]"></a>timer_init</STRONG> (Thumb, 120 bytes, Stack size 12 bytes, gd32f30x_timer.o(i.timer_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = timer_init
 </UL>
-<BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
+<BR>[Called By]<UL><LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_Init
+<LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
+<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_Init
 <LI><a href="#[18a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer_Config
 </UL>
 
 <P><STRONG><a name="[194]"></a>timer_input_trigger_source_select</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_input_trigger_source_select))
 <BR><BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[18a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer_Config
 </UL>
 
 <P><STRONG><a name="[9f]"></a>timer_interrupt_disable</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_interrupt_disable))
-<BR><BR>[Called By]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetUpdateInterruptEnabled
+<BR><BR>[Called By]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_SetUpdateInterruptEnabled
 <LI><a href="#[14d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateInterruptEnabled
 <LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_SetUpdateInterruptEnabled
 </UL>
 
 <P><STRONG><a name="[9e]"></a>timer_interrupt_enable</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_interrupt_enable))
-<BR><BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
-<LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_SetUpdateInterruptEnabled
+<BR><BR>[Called By]<UL><LI><a href="#[14c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_SetUpdateInterruptEnabled
+<LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
 <LI><a href="#[14d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetUpdateInterruptEnabled
 <LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_SetUpdateInterruptEnabled
 </UL>
 
 <P><STRONG><a name="[99]"></a>timer_interrupt_flag_clear</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_interrupt_flag_clear))
-<BR><BR>[Called By]<UL><LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_IRQHandler_Internal
-<LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_IRQHandler_Internal
+<BR><BR>[Called By]<UL><LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_IRQHandler_Internal
+<LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_IRQHandler_Internal
 <LI><a href="#[191]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer0Update_IRQHandler_Internal
 <LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_IRQHandler_Internal
 <LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER3_IRQHandler
 </UL>
 
 <P><STRONG><a name="[98]"></a>timer_interrupt_flag_get</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_interrupt_flag_get))
-<BR><BR>[Called By]<UL><LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_IRQHandler_Internal
-<LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_IRQHandler_Internal
+<BR><BR>[Called By]<UL><LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer5_IRQHandler_Internal
+<LI><a href="#[1ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_IRQHandler_Internal
 <LI><a href="#[191]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer0Update_IRQHandler_Internal
 <LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AuxTimer_IRQHandler_Internal
 <LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMER3_IRQHandler
 </UL>
 
 <P><STRONG><a name="[1ae]"></a>timer_master_output_trigger_source_select</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_master_output_trigger_source_select))
-<BR><BR>[Called By]<UL><LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
+<BR><BR>[Called By]<UL><LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 </UL>
 
 <P><STRONG><a name="[193]"></a>timer_master_slave_mode_config</STRONG> (Thumb, 24 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_master_slave_mode_config))
 <BR><BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer2_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
+<LI><a href="#[148]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[18a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer_Config
 </UL>
 
@@ -2930,7 +2901,6 @@ Global Symbols
 
 <P><STRONG><a name="[192]"></a>timer_slave_mode_select</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, gd32f30x_timer.o(i.timer_slave_mode_select))
 <BR><BR>[Called By]<UL><LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer3_Init
-<LI><a href="#[13b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Timer1_Init
 <LI><a href="#[18a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Timer_Config
 </UL>
 
@@ -3075,7 +3045,6 @@ Local Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 80<LI>Call Chain = PWM_Timer_Config &rArr; PWM_SetDeadTime &rArr; timer_break_config
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rcu_periph_clock_enable
-<LI><a href="#[195]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_config
 <LI><a href="#[18b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_SetDeadTime
 <LI><a href="#[192]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_slave_mode_select
 <LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_master_slave_mode_config
@@ -3084,6 +3053,7 @@ Local Symbols
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_deinit
 <LI><a href="#[197]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_shadow_config
 <LI><a href="#[196]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_mode_config
+<LI><a href="#[195]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;timer_channel_output_config
 </UL>
 <BR>[Called By]<UL><LI><a href="#[13e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Init
 </UL>
@@ -3351,8 +3321,8 @@ Local Symbols
 <P><STRONG><a name="[15c]"></a>QueueSystemInfoFloatLine</STRONG> (Thumb, 54 bytes, Stack size 40 bytes, foc_protocol_handler.o(i.QueueSystemInfoFloatLine))
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = QueueSystemInfoFloatLine &rArr; __2snprintf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
-<LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Enqueue
+<BR>[Calls]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FIFO_Enqueue
+<LI><a href="#[aa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Math_FloatToFixed
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2snprintf
 </UL>
 <BR>[Called By]<UL><LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_Protocol_QueueSystemInfo
@@ -3690,9 +3660,9 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[1ce]"></a>_printf_core</STRONG> (Thumb, 996 bytes, Stack size 104 bytes, printf8.o(i._printf_core), UNUSED)
-<BR><BR>[Calls]<UL><LI><a href="#[1d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_pre_padding
+<BR><BR>[Calls]<UL><LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
+<LI><a href="#[1d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_pre_padding
 <LI><a href="#[1d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_post_padding
-<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
 </UL>
 <BR>[Called By]<UL><LI><a href="#[1cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__0snprintf$8
 </UL>

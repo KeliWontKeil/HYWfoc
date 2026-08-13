@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>USE_STDPERIPH_DRIVER,GD32F30X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc_core\include\L1_Orchestration;..\..\..\foc_core\include\L2_Core;..\..\..\foc_core\include\L3_Hal;..\..\..\foc_core\include\LS_Config;..\..\..\foc_core\include;.\Utilities\AUXTIMER</IncludePath>
+              <IncludePath>.\Firmware\CMSIS;.\Firmware\CMSIS\GD\GD32F30x\Include;.\Firmware\GD32F30x_standard_peripheral\Include;.\Utilities;.\Application\Include;.\Utilities\LED;.\Utilities\PWM;.\Utilities\TIMER1;.\Utilities\TIMER2;.\Utilities\USART;.\Utilities\AS5600;.\Utilities\I2C;.\Utilities\ADC;.\Utilities\TIMER3;..\..\..\foc_core\include\L1_Orchestration;..\..\..\foc_core\include\L2_Core;..\..\..\foc_core\include\L3_Hal;..\..\..\foc_core\include\LS_Config;..\..\..\foc_core\include;.\Utilities\AUXTIMER;.\Utilities\TIMER5</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -607,6 +607,11 @@
               <FileName>usart0.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart0.c</FilePath>
+            </File>
+            <File>
+              <FileName>timer5.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\TIMER5\timer5.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1361,6 +1366,11 @@
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart0.c</FilePath>
             </File>
+            <File>
+              <FileName>timer5.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\TIMER5\timer5.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2114,6 +2124,11 @@
               <FileName>usart0.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Utilities\USART\usart0.c</FilePath>
+            </File>
+            <File>
+              <FileName>timer5.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utilities\TIMER5\timer5.c</FilePath>
             </File>
           </Files>
         </Group>

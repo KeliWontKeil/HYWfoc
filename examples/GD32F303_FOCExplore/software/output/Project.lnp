@@ -40,6 +40,7 @@
 ".\output\timer3.o"
 ".\output\auxtimer.o"
 ".\output\usart0.o"
+".\output\timer5.o"
 ".\output\foc_app.o"
 ".\output\foc_output_mgr.o"
 ".\output\foc_debug_stream.o"

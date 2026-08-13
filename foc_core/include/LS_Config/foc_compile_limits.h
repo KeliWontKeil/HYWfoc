@@ -245,6 +245,12 @@ FOC_CFG_HINT("FOC_CFG_HINT_FEATURE_DEFAULT: current soft-switch default state is
 #if ((FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR) && (FOC_CURRENT_LOOP_ISR_FREQ_HZ == 0U))
 #error "FOC_CURRENT_LOOP_ISR_FREQ_HZ must be non-zero in 3-ISR mode (aux timer would not start)"
 #endif
+#if (FOC_CURRENT_LOOP_FREQ_HZ == 0U)
+#error "FOC_CURRENT_LOOP_FREQ_HZ must be non-zero"
+#endif
+#if ((FOC_SENSOR_SAMPLE_FREQ_KHZ * 1000U) % FOC_CURRENT_LOOP_FREQ_HZ) != 0U
+#error "FOC_SENSOR_SAMPLE_FREQ_KHZ must be an integer multiple of FOC_CURRENT_LOOP_FREQ_HZ (PWM/电流环须为整数)"
+#endif
 
 #if ((FOC_PROTOCOL_LOCAL_DRIVER_ID_DEFAULT != FOC_PROTOCOL_DRIVER_ID_BROADCAST) && \
      ((FOC_PROTOCOL_LOCAL_DRIVER_ID_DEFAULT < FOC_PROTOCOL_DRIVER_ID_MIN) || \

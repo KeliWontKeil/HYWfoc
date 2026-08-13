@@ -24,6 +24,7 @@
         "Utilities/LED",
         "Utilities/PWM",
         "Utilities/TIMER1",
+        "Utilities/TIMER5",
         "Utilities/USART",
         "Utilities/TIMER2",
         "Utilities/AS5600",
@@ -109,6 +110,7 @@
         "Utilities/TIMER1/timer1.c",
         "Utilities/TIMER2/timer2.c",
         "Utilities/TIMER3/timer3.c",
+        "Utilities/TIMER5/timer5.c",
         "Utilities/USART/usart0.c",
         "Utilities/USART/usart2.c"
     ],

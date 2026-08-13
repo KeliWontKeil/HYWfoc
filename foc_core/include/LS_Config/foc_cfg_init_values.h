@@ -9,8 +9,12 @@
 
 /*PWM initialization defaults.*/
 #define FOC_PWM_FREQ_KHZ                24U
-#define FOC_SENSOR_SAMPLE_FREQ_KHZ      (FOC_PWM_FREQ_KHZ / 3)
+/* 采样频率 = PWM/N（N 为整数）：同步主设计下受 PWM 整除约束，采样点位置由 TIMER3 偏移调 */
+#define FOC_SENSOR_SAMPLE_FREQ_KHZ      (FOC_PWM_FREQ_KHZ)
 #define FOC_SVPWM_DEADTIME_PERCENT_DEFAULT 5U
+
+/* Sensor and filter initialization defaults. */
+#define FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 48.0f
 
 /* Scheduler rates. */
 #define FOC_SCHEDULER_TICK_HZ 1000U
@@ -39,6 +43,17 @@
 #else
 #error "FOC_CURRENT_LOOP_ISR_MODE must be FOC_ISR_MODE_2ISR or FOC_ISR_MODE_3ISR"
 #endif
+
+/* 电流环频率（Hz）唯一真值：2ISR = PWM/分频，3ISR = FOC_CURRENT_LOOP_ISR_FREQ_HZ */
+#if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_2ISR)
+#define FOC_CURRENT_LOOP_FREQ_HZ        (FOC_CURRENT_LOOP_ISR_FREQ * 1000U)
+#else
+#define FOC_CURRENT_LOOP_FREQ_HZ        FOC_CURRENT_LOOP_ISR_FREQ_HZ
+#endif
+
+/* 电流环每次读取对最近 N 次 PWM 周期中心锁定采样求平均，N = 采样率 / 电流环率（须整数，见编译期约束）。
+ * 例：24k PWM / 8k 电流环 → 对最近 3 次采样平均。 */
+#define FOC_CURRENT_LOOP_ADC_AVG_COUNT  (FOC_SENSOR_SAMPLE_FREQ_KHZ * 1000U / FOC_CURRENT_LOOP_FREQ_HZ)
 
  /* ── 电机模型参数 ── */
 #define FOC_MOTOR_MEASUREMENT_TYPE     FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT
@@ -134,9 +149,6 @@
 #define DEBUG_STREAM_OSC_DEFAULT_SHOW_ANGLE_ACTIVE_ELEC  FOC_CFG_ENABLE
 #define DEBUG_STREAM_OSC_DEFAULT_SHOW_ANGLE_STANDBY_ELEC FOC_CFG_ENABLE
 #define DEBUG_STREAM_OSC_DEFAULT_SHOW_PHASE_LAG FOC_CFG_DISABLE
-
-/* Sensor and filter initialization defaults. */
-#define FOC_SENSOR_SAMPLE_OFFSET_PERCENT_DEFAULT 48.0f
 
 /* Sensor zero-calibration defaults (stationary current offset sampling). */
 #define SENSOR_ZERO_CALIB_SAMPLES            200U

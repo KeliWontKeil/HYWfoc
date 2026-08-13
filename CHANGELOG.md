@@ -5,6 +5,33 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.3] - 2026-08-13
+
+### Changed
+- **新硬件 GD32F303_FOCExplore 引脚适配（实例 L4 层）**：
+  - 主串口 USART1 → **USART0**（PB6/PB7，remap）：新增 `usart0.c/h`、删除 `usart1.c/h`；debug 快/慢路径、状态码与协议源 0 均改走 USART0。
+  - I2C0（AS5600）移至 **PB8/PB9**（`GPIO_I2C0_REMAP`）。
+  - LED 三色：**LEDR=PB1、LEDB=PB2、LEDG=PA7**，逻辑索引→颜色映射（1 蓝/COMM、2 绿/RUN、3 红/ERROR）。
+  - ADC 相电流 **PA0(相A)/PA1(相B)**、VBUS **PA3**；`adc.h` 通道/GPIO 宏语义化（`PHASE_A/B`、`VBUS`）。
+  - `main.c` 使能 `GPIO_USART0_REMAP`、`GPIO_I2C0_REMAP`。
+  - TIMER2 预留为 HALL 输入捕获（未实现）。
+- **定时器组织重构（实例 L4 层，处理采样频率耦合）**：
+  - TIMER1 由控制调度节拍改为**同步主**（master TRGO=UPDATE，频率=采样频率），同步 PWM(TIMER0) 与 TIMER3(ADC)。
+  - 控制调度节拍移至基本定时器 **TIMER5**（新增 `timer5.c/h`，1kHz）。
+  - PWM(TIMER0) 与 TIMER3 由 TIMER1(ITI1) 同步；TIMER3 CH3 比较定位采样点。
+  - 弃用此前"PWM 主 TRGO=UPDATE"方案（中心对齐 update 每周期双触发，导致 2×PWM 采样、控制异常）。
+- **自适应电流采样均值（LS 层）**：新增 `FOC_CURRENT_LOOP_FREQ_HZ`（统一 2ISR/3ISR 电流环频率）与 `FOC_CURRENT_LOOP_ADC_AVG_COUNT = 采样率/电流环率`；`FOC_Platform_ReadPhaseCurrent` 传自适应均值（24k PWM / 8k 电流环 → N=3）。`foc_compile_limits.h` 增加 PWM 为电流环频率整数倍约束。
+
+### Fixed
+- **`FOC_SENSOR_SAMPLE_FREQ_KHZ` 无法自由调整的问题**：根因为 PWM(TIMER0) 原从属采样定时器，PWM 同步节奏被采样频率钳制，仅 PWM/N 与 PWM 时控制正常。经定时器组织重构（TIMER1 同步主 + TIMER5 调度 + TIMER2 留 HALL）恢复可工作基线（采样 = PWM/3 = 8k）；采样频率仍受 PWM/N 整除约束（同步主设计固有特性，待硬件验证）。
+
+### Removed
+- `usart1.c/h`（新硬件 USART1 引脚 PA2/PA3 已被 ADC 占用）。
+- 原 TIMER1 作为控制调度节拍的职责（移至 TIMER5）。
+
+### Documentation
+- `docs/README.md` 版本基线更新至 v2.2.3；`NEXT_MISSION.md` 新硬件适配/采样频率问题状态更新。
+
 ## [2.2.2] - 2026-08-12
 
 ### Changed

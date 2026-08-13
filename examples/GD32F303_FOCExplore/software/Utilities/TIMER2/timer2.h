@@ -9,12 +9,8 @@
 #define TIMER2_RCU              RCU_TIMER2
 #define TIMER2_IRQn             TIMER2_IRQn
 
-/* Synchronization: lock TIMER2 phase to PWM timer (TIMER0) */
-#define TIMER2_SYNC_WITH_PWM_ENABLE      1U
-#define TIMER2_SYNC_TRIGGER_SOURCE       TIMER_SMCFG_TRGSEL_ITI0
-
-/* ADC trigger fine tuning around center point, unit: TIMER2 ticks */
-#define TIMER2_ADC_TRIGGER_OFFSET_TICKS  0
+/* TIMER2 已从 PWM/ADC 采样同步链退出（PWM 现为主定时器，TIMER3 从属 PWM 触发 ADC）。
+ * 本定时器预留为 HALL 传感器输入捕获（CH0/1/2），暂未实现。 */
 
 /* Interrupt handler callback type */
 typedef void (*timer2_callback_t)(void);

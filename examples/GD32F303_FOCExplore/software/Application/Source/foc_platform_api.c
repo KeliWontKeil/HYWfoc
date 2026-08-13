@@ -6,7 +6,7 @@
 #include "usart0.h"
 #include "usart2.h"
 #include "timer1.h"
-#include "timer2.h"
+#include "timer5.h"
 #include "timer3.h"
 #include "auxtimer.h"
 #include "adc.h"
@@ -29,24 +29,24 @@ void FOC_Platform_SetPwmUpdateCallback(FOC_Platform_IsrCallback_t callback)
 
 void FOC_Platform_ControlTickSourceInit(void)
 {
-    /* TIMER1 control tick frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
-    Timer1_Init(9U,
+    /* TIMER5 control tick frequency: F = base_clk_khz / ((PSC + 1) * (ARR + 1)). */
+    Timer5_Init(9U,
                 (FOC_PLATFORM_BASE_CLOCK_KHZ / (10U * FOC_SCHEDULER_TICK_HZ / 1000U)) - 1U);
 }
 
 void FOC_Platform_SetControlTickCallback(FOC_Platform_IsrCallback_t callback)
 {
-    Timer1_SetCallback(callback);
+    Timer5_SetCallback(callback);
 }
 
 void FOC_Platform_StartControlTickSource(void)
 {
-    Timer1_Start();
+    Timer5_Start();
 }
 
 void FOC_Platform_SetControlInterruptsEnabled(uint8_t enable)
 {
-    Timer1_SetUpdateInterruptEnabled(enable);
+    Timer5_SetUpdateInterruptEnabled(enable);
     PWM_SetUpdateInterruptEnabled(enable);
 #if (FOC_CURRENT_LOOP_ISR_MODE == FOC_ISR_MODE_3ISR)
     AuxTimer_SetUpdateInterruptEnabled(enable);
@@ -177,9 +177,10 @@ void FOC_Platform_SensorInputInit(void)
 
     AS5600_Init();
 
-    /* TIMER2 is the sync master; TIMER0(PWM) and TIMER3(ADC trigger) restart from its update event. */
-    Timer2_Init(9U, timer_period);
-    Timer2_Start();
+    /* TIMER1 作同步主（频率=采样频率），触发 PWM(TIMER0) 与 TIMER3(ADC 采样)。
+     * 采样点位置由 Timer3_SetSampleOffsetPercent 调；TIMER2 预留为 HALL。 */
+    Timer1_Init(9U, timer_period);
+    Timer1_Start();
 
     Timer3_Init(9U, timer_period);
     Timer3_Start();
@@ -197,7 +198,7 @@ uint8_t FOC_Platform_ReadPhaseCurrent(float *phase_current_a, float *phase_curre
 {
     return ADC_ReadPhaseCurrentABOk(phase_current_a,
                                     phase_current_b,
-                                    1U);
+                                    FOC_CURRENT_LOOP_ADC_AVG_COUNT);
 }
 
 uint8_t FOC_Platform_ReadMechanicalAngleRad(float *angle_rad)
