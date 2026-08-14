@@ -75,7 +75,6 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_cogging_calib.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_compensation.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_current_loop.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_encoder.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_smo.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_hfi.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_executor.c
@@ -98,7 +97,7 @@ virtualFolder:
         - path: ../../../foc_core/src/L3_Hal/foc_filter_math.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_openloop.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_source_mgr.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_transition.c
+        - path: ../../../foc_core/src/L3_Hal/foc_codec.c
       folders: []
 dependenceList: []
 outDir: build

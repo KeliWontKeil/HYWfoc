@@ -5,6 +5,26 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.4] - 2026-08-14
+
+### Added
+- **L3 协议编解码层（`foc_codec.h/.c`）**：新增纯数据/字符串封装 seam，覆盖三类可被不同上位机/传输协议替换的帧，接口契约对齐 `foc_platform_api`（接口面稳定、可替换、无业务类型依赖）：
+  - **指令帧（RX）**：`Codec_ParseCommandFrame`（原始字节 → driver/cmd/sub/param 文本 + has_param，单一可替换入口，内部含帧提取与编址策略）。
+  - **OSC 回报帧（TX）**：`Codec_OscEncodeFrame`（**float 值数组 + bit 通道数组** → 完整帧文本），示波器格式可单点修改。
+  - **短回报行（TX）**：`Codec_FormatValueLine` / `Codec_FormatStateLine`（`parameter./config./state.` 行，业务名由 L2 传入）。
+  - 每类帧头文件标注 `in/out 数据格式` 与 `【修改指导】`。
+
+### Changed
+- **协议解析下沉 L3（wire 语法与语义分离）**：`foc_protocol_parser.c` 的 `ProtocolCore_ParseFrame` 改为调 `Codec_ParseCommandFrame`，`Format*Line` 改为 L3 短回报行薄封装；`foc_protocol_handler.c` 去掉单独 `ExtractFrame`，统一走 `ParseCommandFrame`。L2 收敛为命令语义执行层，`Execute{P,C,S,Y}`/`Write*` 零改动。
+- **osc 回报数据流改 float 数组**：`foc_system_types.h` 的 `osc_collect_buf(char[80])` → `osc_collect_val[16]+osc_collect_bit[16]+count`；`foc_output_mgr.c` 收集 float 后 OSC_END 一次性调 `Codec_OscEncodeFrame`。
+- **osc 通道数收敛 LS**：新增 `FOC_OSC_CHANNEL_COUNT`（16），`OSC_SNAPSHOT_CHANNEL_COUNT` 改为其别名；codec 不再依赖 L2/Runtime 类型。
+
+### Fixed
+- **osc 帧越界读**：osc 输出改用 `FOC_OUTPUT_FRAME_MAX_LEN`(96) 缓冲，消除原 80 字节缓冲入 96 字节 TX 槽的越界读（既有隐患）。
+
+### Documentation
+- `docs/README.md` 版本基线更新至 v2.2.4；`NEXT_MISSION.md` 基线同步。
+
 ## [2.2.3] - 2026-08-13
 
 ### Changed

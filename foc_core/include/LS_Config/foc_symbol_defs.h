@@ -192,6 +192,7 @@
 #define COMMAND_MANAGER_REPLY_BUFFER_LEN 72U
 
 /* Telemetry protocol bytes and payload symbols. */
+#define FOC_OSC_CHANNEL_COUNT 16U
 #define DEBUG_STREAM_OSC_PAYLOAD_LEN 80U
 
 /* Telemetry parameter mask bits. */

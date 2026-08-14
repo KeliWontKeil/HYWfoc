@@ -11,6 +11,7 @@
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L3_Hal/foc_math_transforms.h"
+#include "L3_Hal/foc_codec.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -623,7 +624,7 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
 
     if (cmd->has_param != 0U)
     {
-        if (ProtocolCore_ParseStateValue(cmd->param_value, &state_val) == 0U)
+        if (Codec_ParseStateValue(cmd->param_value, &state_val) == 0U)
         {
             FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
             res.needs_status = 1U;
@@ -785,26 +786,13 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 
 static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, const uint8_t *frame, uint16_t len)
 {
-    const uint8_t *payload = 0;
-    uint16_t payload_len = 0U;
     protocol_core_frame_parse_result_t parse_result;
     protocol_command_t command;
     foc_protocol_frame_result_t res = {0, 0, 0, 0};
 
     if (len == 0U) return res;
-    if (ProtocolCore_ExtractFrame(frame, len, &payload, &payload_len) == 0U)
-    {
-        if (motor->state.protocol_error_count < UINT32_MAX)
-        {
-            motor->state.protocol_error_count++;
-        }
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_PROTOCOL_FRAME;
-        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_FRAME_ERROR_CHAR);
-        res.needs_status = 1U;
-        return res;
-    }
 
-    parse_result = ProtocolCore_ParseFrame(payload, payload_len, &command);
+    parse_result = ProtocolCore_ParseFrame(frame, len, &command);
     if (parse_result == PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH) return res;
     if (parse_result != PROTOCOL_CORE_FRAME_PARSE_OK)
     {

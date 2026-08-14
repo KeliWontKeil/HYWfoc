@@ -8,7 +8,7 @@
 #include "L2_Core/Runtime/foc_monitor_queue_types.h"
 #include "LS_Config/foc_config.h"
 
-#define OSC_SNAPSHOT_CHANNEL_COUNT 16U
+#define OSC_SNAPSHOT_CHANNEL_COUNT FOC_OSC_CHANNEL_COUNT
 
 typedef struct {
     float    channel[OSC_SNAPSHOT_CHANNEL_COUNT];
@@ -44,8 +44,7 @@ typedef struct {
  *
  * 2. 主循环级（L1 FOC_App_Loop Monitor 段调用）
  *    DebugStream_FormatSemanticLine — 格式化一条语义行 → 文本
- *    DebugStream_FormatOscLine     — 根据之前 append 的值组装示波器帧
- *    DebugStream_AppendOscValue   — 追加一个示波器参数值
+ *    示波器帧封装已下沉至 L3 codec（Codec_OscEncodeFrame），L1 直接调用。
  *
  * 原有 DebugStream_GenerateLine 保留为向后兼容的封装。
  */
@@ -77,12 +76,5 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
 
 /* 格式化语义无效行（aux==0 时），返回 1=已输出，0=跳过 */
 uint8_t DebugStream_FormatInvalidLine(uint8_t tag, char *line_out, uint16_t line_max);
-
-/* 追加一个示波器参数值（内部维护 buffer，由 FormatOscLine 完成） */
-void DebugStream_AppendOscValue(char *osc_buffer, uint16_t *offset,
-                                 float value);
-
-/* 组装示波器行（加头尾标记），完成行。返回写入的总字符数。 */
-uint16_t DebugStream_FormatOscLine(char *osc_buffer, uint16_t max_len);
 
 #endif /* FOC_DEBUG_STREAM_H */

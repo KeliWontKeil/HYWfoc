@@ -9,6 +9,7 @@
 #include "L2_Core/Runtime/foc_monitor_queue_types.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
+#include "L3_Hal/foc_codec.h"
 #include "LS_Config/foc_config.h"
 
 void FOC_OutputMgr_Init(foc_system_t *sys)
@@ -186,45 +187,28 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
         {
             if (collecting_osc == 0U)
             {
-                sys->runtime.monitor.osc_collect_offset = 0U;
-                sys->runtime.monitor.osc_collect_buf[0] = '\0';
+                sys->runtime.monitor.osc_collect_count = 0U;
                 collecting_osc = 1U;
             }
-            DebugStream_AppendOscValue(sys->runtime.monitor.osc_collect_buf,
-                                        &sys->runtime.monitor.osc_collect_offset,
-                                        elem.value);
+            if (sys->runtime.monitor.osc_collect_count < OSC_SNAPSHOT_CHANNEL_COUNT)
+            {
+                uint8_t idx = sys->runtime.monitor.osc_collect_count;
+                sys->runtime.monitor.osc_collect_val[idx] = elem.value;
+                sys->runtime.monitor.osc_collect_bit[idx] = elem.aux;
+                sys->runtime.monitor.osc_collect_count++;
+            }
             continue;
         }
 
         if (elem.tag == MONITOR_ELEM_OSC_END)
         {
-            char line[DEBUG_STREAM_OSC_PAYLOAD_LEN];
-            uint16_t off = 0U;
-            int written;
+            char out[FOC_OUTPUT_FRAME_MAX_LEN];
 
-            written = snprintf(line, sizeof(line), "%c", (char)DEBUG_STREAM_OSC_HEAD_BYTE);
-            if (written > 0) off = (uint16_t)written;
-
-            if ((int)(sizeof(line)) > (int)(off + 1))
-            {
-                uint16_t copy_len = (uint16_t)(sizeof(line) - off - 1);
-                uint16_t src_len = (uint16_t)strlen(sys->runtime.monitor.osc_collect_buf);
-                if (copy_len > src_len) copy_len = src_len;
-                if (copy_len > 0U)
-                {
-                    (void)memcpy(line + off, sys->runtime.monitor.osc_collect_buf, copy_len);
-                    off += copy_len;
-                    line[off] = '\0';
-                }
-            }
-
-            if ((off + 6U) < sizeof(line))
-            {
-                written = snprintf(line + off, sizeof(line) - off,
-                                   " %c ", (char)DEBUG_STREAM_OSC_TAIL_BYTE);
-                if (written > 0) off += (uint16_t)written;
-            }
-            (void)FIFO_Enqueue(&sys->runtime.output.tx_fifo, (uint8_t *)line);
+            (void)Codec_OscEncodeFrame(sys->runtime.monitor.osc_collect_bit,
+                                       sys->runtime.monitor.osc_collect_val,
+                                       sys->runtime.monitor.osc_collect_count,
+                                       out, sizeof(out));
+            (void)FIFO_Enqueue(&sys->runtime.output.tx_fifo, (uint8_t *)out);
             collecting_osc = 0U;
             in_frame = 0U;
             continue;

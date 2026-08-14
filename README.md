@@ -7,7 +7,7 @@
 - English Name：HYW FOC（想不到怎么翻译好，先这样用首字母吧）
 
 - 当前项目状态：单电机 FOC 驱动库（有感+无感）
-- 当前稳定基线：v2.2.3
+- 当前稳定基线：v2.2.4
 - 下一活跃目标版本：v2.3.x
 
 ## 何意味？（这个项目是什么）
@@ -91,11 +91,11 @@ FOC_VSCODE/
 │   │   ├── LS_Config/         # 配置宏、类型定义、数据表
 │   │   ├── L1_Orchestration/  # 编排层头文件
 │   │   ├── L2_Core/           # 控制/协议/运行时子模块头文件
-│   │   └── L3_Hal/            # 数学/平台抽象/传感器/SVPWM头文件
+│   │   └── L3_Hal/            # 数学/平台抽象/传感器/SVPWM/协议编解码头文件
 │   ├── src/
 │   │   ├── L1_Orchestration/  # 启动流程、主循环编排
 │   │   ├── L2_Core/           # Control/Protocol/Runtime 子目录
-│   │   ├── L3_Hal/            # 数学变换、传感器、SVPWM
+│   │   ├── L3_Hal/            # 数学变换、传感器、SVPWM、协议编解码
 │   │   └── foc_platform_api_empty.c  # 新平台适配模板
 │   └── ...
 ├── examples/                  # 平台/板级参考实例

@@ -69,6 +69,7 @@
         "../../../foc_core/src/L2_Core/Runtime/foc_task_scheduler.c",
         "../../../foc_core/src/L3_Hal/foc_filter_math.c",
         "../../../foc_core/src/L3_Hal/foc_math_transforms.c",
+        "../../../foc_core/src/L3_Hal/foc_codec.c",
         "../../../foc_core/src/L3_Hal/foc_sensor.c",
         "../../../foc_core/src/L3_Hal/foc_svpwm.c",
         "Application/Source/foc_platform_api.c",

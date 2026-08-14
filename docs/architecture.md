@@ -22,7 +22,7 @@ FOC_VSCODE/
 │   │   │   ├── Control/         ← 控制算法（Source Manager、Source、估计器、外环/电流环、特殊模式）
 │   │   │   ├── Protocol/        ← 协议帧解析、命令执行、输出适配
 │   │   │   └── Runtime/         ← 调度器、环形队列、调试流生成器
-│   │   └── L3_Hal/              ← 数学变换、平台抽象API、传感器采样、SVPWM、滤波器数学
+│   │   └── L3_Hal/              ← 数学变换、平台抽象API、传感器采样、SVPWM、滤波器数学、协议编解码（codec）
 │   └── src/
 │       ├── L1_Orchestration/
 │       └── L2_Core/
@@ -46,9 +46,9 @@ FOC_VSCODE/
 | `LS` 配置层 | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
 | `L1` 编排层 | `foc_core/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（comm RX FIFO、output TX FIFO、monitor element FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
 | `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source 与 low-speed policy、估计器体系（编码器/SMO/HFI/FLUX）、外环、电流环、参数学习、补偿、有感齿槽标定、有感重初始化、执行输出、**FullStop 安全归零** | 不持实例，操作传入的 `foc_motor_t` 指针 |
-| `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **单帧处理**：解析一帧 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（系统 report 配置） |
+| `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **命令语义执行**：L3 codec（`foc_codec.h`）产出命令 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（系统 report 配置） |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（提供 PollNextValue + 格式化接口，由 L1 双上下文调用） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
-| `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、滤波器数学 | 无实例（纯函数或操作 motor 中的字段） |
+| `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、滤波器数学、**协议编解码（codec，`foc_codec.h/.c`）** | 无实例（纯函数或操作 motor 中的字段） |
 | `L4` 板级驱动层 | `examples/.../software/Utilities/`、`Firmware/` | 外设驱动与芯片库实现 | 芯片固有实例 |
 
 ### 分层约束
@@ -64,6 +64,7 @@ FOC_VSCODE/
 9. **L1 不直接调用 Sensor_* / SVPWM_* 等 L3 硬件初始化方法**——硬件初始化统一通过 L2 的 `FOC_ControlPlatform_InitHardware()` 收口。平台管理类（`FOC_Platform_*`、回调注册）和输出封装（`FOC_OutputMgr_*`）仍由 L1 直调 L3。
 10. **传感器硬件存在性与算法使用分离**：`FOC_SENSOR_ENCODER_ENABLE` 控制编码器硬件层，`FOC_ESTIMATOR_ENCODER_ENABLE` 控制是否使用编码器作为反馈源。齿槽补偿/标定依赖 `FOC_SENSOR_ENCODER_ENABLE`。
 11. **有效性检查收口单一检查点**：传感器有效性检查仅在 L1 `FOC_App_ControlTrigger` 中执行，L2 `RunCycle` 不再重复检查。
+12. **L3 协议编解码（`foc_codec.h`）为可替换 seam**：只做 wire 语法 ↔ 裸数据的无业务语义转换，不 include 任何 L2/L1 业务类型；换接口/上位机只需改该模块，L2 语义层与 L1 编排零改动。
 
 ### 平台 API 契约（foc_platform_api.h）
 
@@ -158,8 +159,9 @@ FIFO_Enqueue(runtime.comm.rx_fifo)   ← L2/Runtime 队列方法，操作 L1 的
 FIFO_Dequeue(runtime.comm.rx_fifo)   ← L2/Runtime 队列方法
   │
   ▼
-FOC_Protocol_ProcessSingle() ← L2/Protocol 单帧处理
-  │   解析帧 → 修改 motor 字段 → 返回结果结构体
+FOC_Protocol_ProcessSingle() ← L2/Protocol 命令语义执行
+  │   L3 codec（Codec_ParseCommandFrame）拆信封 → 填 protocol_command_t
+  │   → 修改 motor 字段 → 返回结果结构体
   │
   ├── [comm_active]  → 更新 LED 指示器
   ├── [needs_summary] → L1 生成摘要文本 →
@@ -199,8 +201,8 @@ MonitorTrigger ISR:
       FRAME_START → 丢弃上一帧残余，开始新帧
       SEMANTIC_0~7 → FormatSemanticLine → TX FIFO
       SEMANTIC_END → 帧结束
-      OSC_VALUE → AppendOscValue 累积
-      OSC_END → FormatOscLine（加头尾） → TX FIFO
+      OSC_VALUE → 累积 float 到 osc_collect_val/bit（L1，不转字符串）
+      OSC_END → Codec_OscEncodeFrame（float 数组 → 帧） → TX FIFO
       PROTOCOL_SUMMARY → 格式化摘要 → TX FIFO
 ```
 
@@ -213,6 +215,7 @@ MonitorTrigger ISR:
 3. **L1 是唯一编排者**。ISR 读帧→入 comm RX 队列、ISR 快照→入 monitor element 队列、主循环出队→处理→入 output TX 队列、TX 出队→发送，全由 L1 控制。
 4. **DebugStream 双接口**：`PollNextValue`（ISR 上下文调用，跑 state machine 取值）和 `Format*` 函数（主循环上下文调用，格式化字符串），两者分离确保采样时机正确。
 5. **DebugStream 数据源**：控制角度从 `active_source_state.mech_angle_rad` 读取，原始编码器角度仍从 `sensor.mech_angle_rad` 读取。
+6. **L3 codec 为可替换 seam**：wire 语法（指令帧/OSC 帧/短回报行）封装在 L3 codec（`foc_codec.h`），L2 语义层与 L1 编排不依赖具体格式。
 
 ## 控制算法链
 

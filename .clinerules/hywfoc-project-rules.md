@@ -31,9 +31,9 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 | `LS` | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
 | `L1` | `foc_core/src/L1_Orchestration/` | 启动流程、主循环编排、实例化核心数据结构 | **持有所有运行时实例**（foc_motor_t、foc_system_t、队列缓冲区） |
 | `L2/Control` | `foc_core/src/L2_Core/Control/foc_ctrl_*.c` | 控制算法（执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出） | 不持实例，操作传入的 `foc_motor_t` 指针 |
-| `L2/Protocol` | `foc_core/src/L2_Core/Protocol/foc_protocol_*.c` | **单帧处理**：解析一帧→修改 motor→返回结果。不读帧、不入队、不轮询 | 不持实例，指针由 L1 传入 |
+| `L2/Protocol` | `foc_core/src/L2_Core/Protocol/foc_protocol_*.c` | **命令语义执行**：L3 codec 产出命令→修改 motor→返回结果。不读帧、不入队、不轮询 | 不持实例，指针由 L1 传入 |
 | `L2/Runtime` | `foc_core/src/L2_Core/Runtime/` | 调度器、环形队列（**纯方法模块**）、调试流生成器（逐行生成，不写队列） | 队列类型可实例化，但实例在 L1 分配 |
-| `L3` | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM | 无实例（纯函数） |
+| `L3` | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、协议编解码（codec） | 无实例（纯函数） |
 | `L4` | `examples/.../software/Utilities/` | 外设驱动与芯片库实现 | 芯片固有实例 |
 
 **关键约束**：

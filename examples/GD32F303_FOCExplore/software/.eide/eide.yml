@@ -90,6 +90,7 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_output.c
         - path: ../../../foc_core/src/L3_Hal/foc_sensor.c
         - path: ../../../foc_core/src/L3_Hal/foc_svpwm.c
+- path: ../../../foc_core/src/L3_Hal/foc_codec.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_output_mgr.c
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_queue.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_app.c
