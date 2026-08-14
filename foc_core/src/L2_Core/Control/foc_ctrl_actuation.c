@@ -21,6 +21,8 @@ static void FOC_ControlApplyElectricalAngleCore(foc_control_runtime_t *ctrl,
     float voltage_command;
     float ud_applied;
     float uq_applied;
+    float sin_theta;
+    float cos_theta;
 
     electrical_angle = Math_WrapRad(electrical_angle);
 
@@ -55,19 +57,14 @@ static void FOC_ControlApplyElectricalAngleCore(foc_control_runtime_t *ctrl,
     applied->uq = uq_applied;
     applied->electrical_angle_rad = electrical_angle;
 
-    /* 逆Park变换：dq -> alpha-beta */
-    Math_InverseParkTransform(ud_applied,
-                              uq_applied,
-                              electrical_angle,
-                              &alpha_beta->alpha,
-                              &alpha_beta->beta);
-
-    /* 逆Clarke变换：alpha-beta -> 三相电压 */
-    Math_InverseClarkeTransform(alpha_beta->alpha,
-                                alpha_beta->beta,
-                                &alpha_beta->phase_a,
-                                &alpha_beta->phase_b,
-                                &alpha_beta->phase_c);
+    /* 逆Park变换：dq -> alpha-beta（sin/cos 联合查表一次取得） */
+    FOC_MathLut_SinCos(electrical_angle, &sin_theta, &cos_theta);
+    Math_InverseParkTransformSC(ud_applied,
+                                uq_applied,
+                                sin_theta,
+                                cos_theta,
+                                &alpha_beta->alpha,
+                                &alpha_beta->beta);
 
     voltage_command = Math_ClampFloat(dq_magnitude, 0.0f, voltage_limit);
 
@@ -108,11 +105,10 @@ static void FOC_ControlApplyElectricalAngleCore(foc_control_runtime_t *ctrl,
     }
 #endif
 
-    /* 正常SVPWM输出 */
+    /* 正常SVPWM输出：αβ 直通（逆 Park 结果即 SVPWM 输入，不再经三相往返） */
     SVPWM_Update(svpwm,
-                 alpha_beta->phase_a,
-                 alpha_beta->phase_b,
-                 alpha_beta->phase_c,
+                 alpha_beta->alpha,
+                 alpha_beta->beta,
                  voltage_command,
                  params->vbus_voltage,
                  direct_output);

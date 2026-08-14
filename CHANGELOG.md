@@ -1,9 +1,29 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to the HYWfoc (何易位FOC) project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.2.5] - 2026-08-14
+
+### Changed
+- **SVPWM 输入改 αβ 静止坐标系直通（消除冗余往返）**：`SVPWM_Update` 由三相入口改为 αβ 入口。原执行器 `FOC_ControlApplyElectricalAngleCore` 先逆 Clarke（αβ→三相）再交给 SVPWM，SVPWM 内部又 `alpha=phase_a; beta=(phase_b-phase_c)/SQRT3` 还原 αβ——两步互为逆运算，每电流环周期白做逆 Clarke 3 次乘加 + 内部 2 次减法 + 1 次除法。现执行器跳过逆 Clarke 与 `alpha_beta.phase_*` 填充，SVPWM 直接消费逆 Park 的 αβ 结果（数学位级等价）。
+- **SVPWM 归一化 sqrt/除法消除**：`SVPWM_CalculateDuty` 删除 `sqrtf(α²+β²)` 与 2 次幅值归一化除法（atan2 按比值查表、扇区按符号判定，均不随同号缩放变化，输出位级一致）。
+- **三角函数联合查表（`FOC_MathLut_SinCos`）**：新增 sin/cos 单次联合查表（一次 wrap/象限/索引计算同时返回两值，与分别查 `FOC_MathLut_Sin` 位级一致）。电流环 Park、执行器逆 Park、SMO PLL 提取三处由 6 次独立查表收敛为 3 次联合查表，每次省一次 wrap 循环 + 象限除法 + 索引计算。新增 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体。
+- **LUT 象限除法改乘法**：`FOC_MathLut_Sin` 象限判定 `wrapped / half_pi` → `wrapped * FOC_MATH_INV_HALF_PI`（新增常量），消除每次查表的浮点除法。
+- **Clarke 除法改乘倒数**：`Math_ClarkeTransform` 的 `(b - c) / FOC_MATH_SQRT3` → `(b - c) * FOC_MATH_INV_SQRT3`（新增常量）。
+- **SMO 运行期不变派生量缓存**：`foc_estim_smo_state_t` 新增 `rs_ohms` / `inv_l_1h` / `sat_current_a` / `bemf_lpf_alpha`（+ATAN2 分支 `speed_lpf_alpha`），`FOC_EstimSMO_Init` 一次计算，替代每 PWM 周期的 `fabsf` ×2 + `1/Ls` 除法 + LPF alpha 重算。**pll_speed_limit 不缓存**（依赖 `pole_pairs`，REINIT 会修改该字段，保持每周期计算）。
+- **Source Manager 上下文构建收敛**：新增 `FOC_ControlExecutor_BuildSourceMgrCtx`，executor 电流环 ISR 与 L1 `FOC_App_Init` 两处约 20 行重复的 `foc_source_mgr_ctx_t` 填充收敛为单函数（`ref` 参数化：ISR 用静态快照、初始化用 `ctrl_ref`）。
+
+### Fixed
+- **SVPWM 近零矢量 NaN 输出（既有 UB）**：原判零分支 `magnitude < FOC_MATH_EPSILON` 因 `FOC_MATH_EPSILON == 0.0f` 恒不触发，αβ 全零时执行 `alpha/0` 归一化产生 NaN 占空比。改为幅值平方判零 `(α²+β²) < 1e-12` 输出中点（符合该分支注释原意），正常路径行为不变。
+
+### Performance
+- 电流环 ISR（8kHz）每周期减少：1 次浮点除法 + 1 次 sqrtf + 6 次减法/乘加 + 3 次 LUT 三角函数查表（含各自 wrap 循环与象限除法）；SMO 每周期减少 1 次除法 + 2 次 fabsf + 2 次乘加。已硬件验证：控制效果无误，中断实际执行时间减少。
+
+### Documentation
+- `README.md` / `docs/README.md` / `NEXT_MISSION.md` 版本基线更新至 v2.2.5；`docs/architecture.md` SVPWM 输出链、数学变换、SMO 状态描述同步。
 
 ## [2.2.4] - 2026-08-14
 

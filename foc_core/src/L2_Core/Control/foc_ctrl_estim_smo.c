@@ -42,6 +42,8 @@ static float smo_pll_speed_limit_elec(const foc_motor_params_t *params)
 
 void FOC_EstimSMO_Init(foc_estim_smo_state_t *state, const foc_motor_params_t *params)
 {
+    float ls;
+
     state->ialpha_est     = 0.0f;
     state->ibeta_est      = 0.0f;
     state->bemf_alpha     = 0.0f;
@@ -53,6 +55,24 @@ void FOC_EstimSMO_Init(foc_estim_smo_state_t *state, const foc_motor_params_t *p
     state->k_slide        = FOC_ESTIM_SMO_K_SLIDE_DEFAULT;
     state->converged      = 0U;
     state->lost_count     = 0U;
+
+    /* 运行期不变派生量缓存（替代每周期重算的除法/乘加） */
+    state->rs_ohms = fabsf(params->phase_resistance);
+    ls = fabsf(params->stator_inductance);
+    if (ls < 1e-9f)
+    {
+        ls = 1e-9f;
+    }
+    state->inv_l_1h = 1.0f / ls;
+    state->sat_current_a = fabsf(FOC_ESTIM_SMO_SAT_CURRENT_A);
+    if (state->sat_current_a < 1e-6f)
+    {
+        state->sat_current_a = 1e-6f;
+    }
+    state->bemf_lpf_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_BEMF_LPF_FC, FOC_CURRENT_LOOP_DT_SEC);
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
+    state->speed_lpf_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_SPEED_LPF_FC, FOC_CURRENT_LOOP_DT_SEC);
+#endif
 
 #if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_PLL)
     state->pll_integral   = 0.0f;
@@ -109,7 +129,7 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
     float err_alpha, err_beta;
     float z_alpha_raw, z_beta_raw;
     float sat_current;
-    float Rs, Ls, inv_L;
+    float inv_L;
     uint8_t sample_ok;
 
     *bemf_mag_out = 0.0f;
@@ -119,18 +139,15 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
     i_alpha_meas = ctrl->ialpha;
     i_beta_meas  = ctrl->ibeta;
 
-    Rs    = fabsf(params->phase_resistance);
-    Ls    = fabsf(params->stator_inductance);
-    if (Ls < 1e-9f) Ls = 1e-9f;
-    inv_L = 1.0f / Ls;
+    /* Rs/Ls/inv_L/sat_current 为运行期不变派生量，Init 时缓存（消除每周期重算） */
+    inv_L = state->inv_l_1h;
 
     if (dt_sec <= 0.0f) return;
 
     err_alpha = state->ialpha_est - i_alpha_meas;
     err_beta  = state->ibeta_est  - i_beta_meas;
 
-    sat_current = fabsf(FOC_ESTIM_SMO_SAT_CURRENT_A);
-    if (sat_current < 1e-6f) sat_current = 1e-6f;
+    sat_current = state->sat_current_a;
 
     z_alpha_raw = state->k_slide *
         smo_sat(err_alpha / sat_current);
@@ -141,13 +158,13 @@ static void EstimSMO_StepCore(foc_estim_smo_state_t *state,
     state->z_beta  = z_beta_raw;
 
     state->ialpha_est += dt_sec * inv_L *
-        (u_alpha - Rs * state->ialpha_est - state->z_alpha);
+        (u_alpha - state->rs_ohms * state->ialpha_est - state->z_alpha);
     state->ibeta_est  += dt_sec * inv_L *
-        (u_beta  - Rs * state->ibeta_est  - state->z_beta);
+        (u_beta  - state->rs_ohms * state->ibeta_est  - state->z_beta);
 
     /* BEMF LPF: 标准滑模观测器等效控制 z ≈ BEMF（同号），直接作为 BEMF 输出 */
     {
-        float lpf_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_BEMF_LPF_FC, dt_sec);
+        float lpf_alpha = state->bemf_lpf_alpha;
 
         state->bemf_alpha += lpf_alpha *
             (state->z_alpha - state->bemf_alpha);
@@ -243,8 +260,10 @@ static void EstimSMO_ExtractAnglePLL(foc_estim_smo_state_t *state,
     {
         float e_theta;
         float na, nb;
-        float cos_theta = FOC_MathLut_Sin(state->pll_angle_rad + 0.5f * FOC_MATH_PI);
-        float sin_theta = FOC_MathLut_Sin(state->pll_angle_rad);
+        float cos_theta;
+        float sin_theta;
+
+        FOC_MathLut_SinCos(state->pll_angle_rad, &sin_theta, &cos_theta);
 
         EstimSMO_NormalizeBemf(state, &na, &nb, speed_cmd_rad_s);
         if (bemf_mag > 1e-6f)
@@ -319,7 +338,7 @@ static void EstimSMO_ExtractAngleAtan2(foc_estim_smo_state_t *state,
         {
             float delta = Math_WrapRadDelta(angle - state->phase_comp_rad);
             float raw_speed = delta / dt_sec;
-            float speed_alpha = smo_lpf_alpha(FOC_ESTIM_SMO_SPEED_LPF_FC, dt_sec);
+            float speed_alpha = state->speed_lpf_alpha;
 
             state->pll_speed_rad_s += speed_alpha *
                 (raw_speed - state->pll_speed_rad_s);

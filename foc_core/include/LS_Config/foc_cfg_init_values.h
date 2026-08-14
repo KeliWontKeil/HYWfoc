@@ -57,8 +57,8 @@
 
  /* ── 电机模型参数 ── */
 #define FOC_MOTOR_MEASUREMENT_TYPE     FOC_MOTOR_MEASUREMENT_TYPE_PHASE_DIRECT
-#define FOC_MOTOR_INIT_STATOR_INDUCTANCE_HENRY   0.001f
-#define FOC_MOTOR_INIT_RESISTANCE_OHM 6.0f
+#define FOC_MOTOR_INIT_STATOR_INDUCTANCE_HENRY   0.0015f
+#define FOC_MOTOR_INIT_RESISTANCE_OHM 3.0f
 
 /* Alignment/calibration voltage is derived from max_phase_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
@@ -224,7 +224,7 @@
 #define FOC_ESTIM_SMO_PLL_KP_DEFAULT         140.0f
 #define FOC_ESTIM_SMO_PLL_KI_DEFAULT         450.0f
 #define FOC_ESTIM_SMO_CONVERGE_BEMF_V        0.1f
-#define FOC_ESTIM_SMO_LOST_THRESHOLD         50U
+#define FOC_ESTIM_SMO_LOST_THRESHOLD         20U
 #define FOC_ESTIM_SMO_BEMF_SPEED_RATIO       0.0005f  /* 反电动势/电角速度宽松下限（Ke 下限，按电机标定，仅抓极端不一致） */
 #define FOC_ESTIM_SMO_DQ_TRACKING_THRESHOLD  0.1f
 #define FOC_ESTIM_SMO_SAT_CURRENT_A          0.10f

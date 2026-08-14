@@ -1,4 +1,4 @@
-﻿# 架构与结构总览（唯一结构说明）
+# 架构与结构总览（唯一结构说明）
 
 ## 文档定位
 
@@ -57,7 +57,7 @@ FOC_VSCODE/
 2. 公共头文件不得暴露 `gd32f30x_*` 设备头。
 3. L4 不得反向依赖 `foc_core/src/*` 业务逻辑。
 4. 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值。
-5. **L2 传参规范**：算法模块函数只收"自有私有状态 + 最小跨域子结构 + 必要标量"，禁止传整个 `foc_motor_t`；数据由 L1/Executor 从聚合体拆包分发，L2 各块间禁止跨块直接调用。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛。**聚合访问权唯一化**：`foc_motor_t` 完整类型仅保留给 L1 编排、L2 Executor（facade）、协议/调试只读链（`const foc_motor_t *`）、冷路径状态机（init/标定/重初始化）；`foc_motor_aggregate.h` 物理路径暂留 `L2_Core/`（阶段 1b 上移 L1 需 Executor 上下文视图化后实施，见 `结构优化重构.md`）。
+5. **L2 传参规范**：算法模块函数只收"自有私有状态 + 最小跨域子结构 + 必要标量"，禁止传整个 `foc_motor_t`；数据由 L1/Executor 从聚合体拆包分发，L2 各块间禁止跨块直接调用。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛，视图构建统一走 `FOC_ControlExecutor_BuildSourceMgrCtx`（L1 初始化与 executor ISR 共用，`ref` 参数化区分初始化快照与 ISR 静态快照）。**聚合访问权唯一化**：`foc_motor_t` 完整类型仅保留给 L1 编排、L2 Executor（facade）、协议/调试只读链（`const foc_motor_t *`）、冷路径状态机（init/标定/重初始化）；`foc_motor_aggregate.h` 物理路径暂留 `L2_Core/`（阶段 1b 上移 L1 需 Executor 上下文视图化后实施，见 `结构优化重构.md`）。
 6. **L2 任何模块不得包含 `L1_Orchestration/` 头文件**。
 7. **L2 任何模块不得持有队列实例**——队列存储由 L1 在 `foc_runtime_ctx_t` 中分配，L2 通过指针参数操作。
 8. L1 编排负责检测 dirty 标志、转发系统命令、管理初始化流程。
@@ -313,8 +313,9 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   阶段4：NORMAL 电流环
     → FOC_CurrentControlStep（复用阶段1b 的 αβ 做 Park → PID → ud/uq）
   阶段5：SVPWM 输出
-    → FOC_ControlApplyElectricalAngleRuntime（逆 Park → 逆 Clarke → 三相占空比，
-      逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ）
+    → FOC_ControlApplyElectricalAngleRuntime（逆 Park → αβ 直通 SVPWM，
+      逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ；
+      不再经逆 Clarke 转三相——SVPWM 直接消费 αβ，消除冗余往返）
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -508,6 +509,11 @@ SMO 角度/速度坐标系约定（`pll_angle_rad` / `pll_speed_rad_s` / `mech_s
 - 接口方向处理：`ReadSourceAngle` SMO 输出 `elec = pll_angle`（物理直通）、`mech = pll_angle/pp`（物理）；`ReadSourceSpeed` SMO 输出 `mech_speed_rad_s`（物理直通，v2.2.0 统一，与 ENCODER/OPENLOOP 一致）。
 - Init：定位后电机位于 `mech_zero`，物理系电角 = 0，`pll_angle` 从 0 起步，后台预收敛覆盖。
 
+SMO 运行期不变派生量缓存（v2.2.5）：
+- `foc_estim_smo_state_t` 缓存 `rs_ohms` / `inv_l_1h` / `sat_current_a` / `bemf_lpf_alpha`（+ATAN2 分支 `speed_lpf_alpha`），由 `FOC_EstimSMO_Init` 一次计算，替代每 PWM 周期的 `fabsf` ×2 + `1/Ls` 除法 + LPF alpha 重算。
+- **pll_speed_limit 不缓存**：依赖 `pole_pairs`，REINIT 流程会修改该字段，保持每周期计算（仅 2 次乘法成本）。
+- R/L 等电机参数运行期仅初始化/重初始化更新，协议只读，故缓存无需随 REINIT 刷新。
+
 ### Source Manager 切换状态机
 
 Source Manager 在 `Select` 阶段维护显式 `region_state`。状态字段只描述速域/source 切换过程，不替代顶层 `control_phase`。
@@ -672,6 +678,12 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
    - SMO 需至少一种低速角度 source（当编码器不可用时）
    - Source 切换配置需满足 low/high source 组合约束
 4. **角度模式 source 兼容性约束**：`FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(src)` 宏判断 source 是否提供可靠的绝对位置（ENCODER 或 HFI）。`SPEED_ANGLE_ONLY` 构建要求两个 source 均为 ANGLE_CAPABLE；`FULL` 构建可在运行时切到 `SPEED_ANGLE`，运行时 Source Manager 会锁定 LOW 源不作速域切换（角度模式依赖编码器可靠源），因此 `FULL` 构建要求 LOW source 为 ANGLE_CAPABLE（HIGH 可为 SMO，仅服务速度模式的高速无感段）。
+
+## 数学变换与 SVPWM（ISR 快线热点优化约束）
+
+- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。
+- **SVPWM 输入为 αβ 静止坐标系**：`SVPWM_Update` 直接消费逆 Park 的 αβ 结果，不再经逆 Clarke 转三相（v2.2.5 起，消除往返冗余）；SVPWM 内部按 αβ 判扇区（符号）与查角度（比值），不依赖矢量幅值归一化，近零矢量判零直接以幅值平方阈值输出中点。
+- **运行期不变常量缓存**：SMO 等模块将 `Rs`/`inv_L`/LPF alpha 等派生量在 Init 时缓存，避免每周期重算除法；依赖 REINIT 可变字段（如 `pole_pairs`）的派生量不缓存。
 
 ## 滤波器子系统
 

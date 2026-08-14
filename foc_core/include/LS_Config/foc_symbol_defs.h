@@ -8,6 +8,9 @@
 #define FOC_MATH_SQRT3_BY_2 0.8660254f
 #define FOC_MATH_PI_BY_3    1.0471975f
 #define FOC_MATH_EPSILON    0.0f
+/* 常量倒数：避免 ISR 快线中的浮点除法（软件除法代价高） */
+#define FOC_MATH_INV_SQRT3    0.5773503f
+#define FOC_MATH_INV_HALF_PI  0.6366198f
 
 /* ISR 架构模式枚举值 */
 #define FOC_ISR_MODE_2ISR 0U

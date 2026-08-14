@@ -1,4 +1,4 @@
-﻿#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
 
 #include <math.h>
@@ -80,6 +80,37 @@ void FOC_ControlExecutor_Init(foc_motor_t *motor)
  * 电流环核心阶段：采样 → Estimator → Select → Publish → 电流环 → SVPWM。
  * 双 ISR 模式由 PWM ISR 调用；三 ISR 模式由独立电流环 ISR 调用。
  * ================================================================ */
+void FOC_ControlExecutor_BuildSourceMgrCtx(foc_motor_t *motor,
+                                           const foc_control_ref_t *ref,
+                                           foc_source_mgr_ctx_t *ctx)
+{
+    ctx->sensor = &motor->sensor;
+    ctx->params = &motor->params;
+    ctx->cfg = &motor->cfg;
+    ctx->control_mode = motor->state.control_mode;
+    ctx->switch_cfg = &motor->source_switch_state;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    ctx->smo_state = &motor->estim_smo_state;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    ctx->openloop_state = &motor->openloop_state;
+#endif
+#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
+    ctx->cogging_status = &motor->cogging_comp_status;
+#endif
+    ctx->state = &motor->source_mgr_state;
+    ctx->active = &motor->active_source_state;
+    ctx->ctrl = &motor->ctrl;
+    ctx->ref = ref;
+    ctx->outer_loop = &motor->outer_loop;
+    ctx->speed_pid = &motor->speed_pid;
+    ctx->torque_current_pid = &motor->torque_current_pid;
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    ctx->soft_switch = &motor->current_soft_switch_status;
+#endif
+    ctx->encoder_services = &motor->encoder_services;
+}
+
 static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float current_loop_dt_sec)
 {
     uint32_t isr_start;
@@ -145,31 +176,7 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
     {
         foc_source_mgr_ctx_t sm_ctx;
 
-        sm_ctx.sensor = &motor->sensor;
-        sm_ctx.params = &motor->params;
-        sm_ctx.cfg = &motor->cfg;
-        sm_ctx.control_mode = motor->state.control_mode;
-        sm_ctx.switch_cfg = &motor->source_switch_state;
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.smo_state = &motor->estim_smo_state;
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.openloop_state = &motor->openloop_state;
-#endif
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.cogging_status = &motor->cogging_comp_status;
-#endif
-        sm_ctx.state = &motor->source_mgr_state;
-        sm_ctx.active = &motor->active_source_state;
-        sm_ctx.ctrl = &motor->ctrl;
-        sm_ctx.ref = &s_ctrl_ref_snap;
-        sm_ctx.outer_loop = &motor->outer_loop;
-        sm_ctx.speed_pid = &motor->speed_pid;
-        sm_ctx.torque_current_pid = &motor->torque_current_pid;
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.soft_switch = &motor->current_soft_switch_status;
-#endif
-        sm_ctx.encoder_services = &motor->encoder_services;
+        FOC_ControlExecutor_BuildSourceMgrCtx(motor, &s_ctrl_ref_snap, &sm_ctx);
         FOC_SourceMgr_Select(&sm_ctx);
         FOC_SourceMgr_Publish(&sm_ctx);
     }
