@@ -464,8 +464,10 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
                                 &motor->cfg,
                                 &motor->params);
 
+        /* 重建运行期控制基准（源获取/电角度/反馈链/外环/滤波），使重初始化后从干净基准运行 */
+        FOC_Control_RebuildControlBasis(motor);
+
         motor->state.system_running = 1U;
-        motor->state.current_loop_ready = 0U;
         motor->state.system_fault = 0U;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
 

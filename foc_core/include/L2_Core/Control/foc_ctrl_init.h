@@ -20,4 +20,8 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor);
  * Sensor_*, SVPWM_*, FOC_ControlExecutor_Init directly. */
 void FOC_ControlPlatform_InitHardware(foc_motor_t *motor);
 
+/* 重建"运行期控制基准"：从停止态恢复（使能/错误复位/abort/重初始化）时统一调用。
+ * 只重建运行期状态，不触碰用户配置/电机参数/源配置。须在电机停止态调用（无 ISR 竞态）。 */
+void FOC_Control_RebuildControlBasis(foc_motor_t *motor);
+
 #endif /* FOC_CONTROL_C12_INIT_H */

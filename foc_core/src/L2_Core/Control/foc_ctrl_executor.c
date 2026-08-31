@@ -48,9 +48,12 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
     motor->state.current_loop_ready = 0U;
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    motor->current_soft_switch_status.enabled = 0U;
-    motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+    /* 仅复位软切换运行时瞬态；保留用户配置 enabled/configured_mode，避免恢复后电流环退化为开环 */
+    motor->current_soft_switch_status.active_mode = motor->current_soft_switch_status.configured_mode;
+    motor->current_soft_switch_status.blend_factor =
+        (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
     motor->current_soft_switch_status.blend_initialized = 0U;
+    motor->current_soft_switch_status.prev_active_mode = 0xFFU;
 #endif
 
     /* 归零 PWM */
@@ -347,9 +350,12 @@ static void Executor_OnModeSwitch(foc_motor_t *motor, uint8_t new_mode, uint8_t 
     FOC_PIDReset(&motor->angle_pid);
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-    motor->current_soft_switch_status.enabled = 0U;
-    motor->current_soft_switch_status.configured_mode = FOC_CURRENT_SOFT_SWITCH_MODE_OPEN;
+    /* 仅复位软切换运行时瞬态；保留用户配置 enabled/configured_mode */
+    motor->current_soft_switch_status.active_mode = motor->current_soft_switch_status.configured_mode;
+    motor->current_soft_switch_status.blend_factor =
+        (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
     motor->current_soft_switch_status.blend_initialized = 0U;
+    motor->current_soft_switch_status.prev_active_mode = 0xFFU;
 #endif
 
     (void)old_mode;

@@ -250,6 +250,11 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
        → FOC_SourceMgr_Init(LOW_SOURCE, HIGH_SOURCE)
        → FOC_ControlExecutor_Init → FOC_Control_ApplyConfig
 
+恢复链（从停止态）：禁能→使能 / 错误复位 Y:C / phase-abort / aaYI
+       → FOC_Control_RebuildControlBasis（重建运行期控制基准）
+       → RunCycle "源无效"分支 → 电流环 ISR 重新 Select/Publish
+       （详见下方"恢复路径统一软初始化"小节）
+
 Control ISR（低频控制线，严格不做 source 选择）：
   阶段0：L1 系统守卫
     → system_fault 检查 → return
@@ -366,10 +371,33 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 - 清零外环累积状态：`outer_loop.accum_rad`、`prev_rad`、`prev_valid`、`ramped_speed_rad_s`
 - 复位模式切换标记：`mode_transition.prev_control_mode_valid = 0`（使下次 RunCycle 重新初始化外环）
 - 阻断 ISR 控制链：`current_loop_ready = 0`
-- 清零软切换状态（条件编译）
+- 复位软切换运行时瞬态、保留用户配置 `enabled`/`configured_mode`（条件编译）
 - 归零 PWM：`RecordPhaseOutputZero` + `ApplyPhaseOutputRuntime` → `SVPWM_ApplyDirectDuty(0,0,0)`
 
 调用方：`L1 OnPwmUpdateISR`（system_fault 时）、`L2 RunISR`（motor_enabled==0 时）、`L1 AbortSpecialPhase`（退出特殊状态时）。`SafeOutput` 和 `Stop` 均委托至 `FullStop`。
+
+### FOC_Control_RebuildControlBasis — 恢复路径统一软初始化
+
+`FullStop` 只做"安全归零输出 + 阻断电流环（`current_loop_ready=0`）"，**不重建**源获取、电角度、传感器滤波、SMO 等运行期控制基准。为使能/错误复位/abort 等"从停止态恢复"场景不依赖被停止打断的残留状态，引入统一控制基准重建函数 `FOC_Control_RebuildControlBasis`（`foc_ctrl_init`）：
+
+- **源获取**：`active_source_state.valid=0`、`source_mgr_state` 重置到初始(low/full)配置 → 使能后由电流环 ISR 重新 Select/Publish 获取真实反馈
+- **电角度**：`ctrl.electrical_angle_rad` 由源重建；编码器 `mech_speed_valid=0` 触发首样本吸附；SMO `FOC_EstimSMO_Init` 重对齐
+- **反馈链**：PID 清零、soft_switch 重建运行时态（**保留用户配置 `enabled`/`configured_mode`**）
+- **外环**：`accum_rad`/`prev_rad`/`prev_valid`/`ramped_speed_rad_s` 清零（加速度机制从 0 平滑重建）
+- **传感器滤波**：速度累积与速度滤波复位
+- **门控**：`current_loop_ready=0`、`mode_transition.prev_control_mode_valid=0`、`ctrl_ref_ready=0`
+
+调用时机须在**电机停止态**（`motor_enabled==0` / `system_fault!=0` / `control_phase!=NORMAL`），此时控制/电流环 ISR 均不消费这些控制基准，无数据竞争。触发点（显式、非门控）：
+
+| 场景 | 触发点 |
+|---|---|
+| 禁能→使能（0→1） | `WriteState MOTOR_ENABLE` |
+| 错误复位 `Y:C` | `HandleSystemCommand FAULT_CLEAR_REINIT` |
+| phase-abort | `FOC_App_AbortSpecialPhase` |
+| 重初始化 `aaYI` | `FOC_ReInit_RunStep` FINALIZE（复用） |
+
+- 不依赖 `FOC_REINIT_ENABLE`（任何配置下均为正常控制状态）。
+- 只重建运行期基准，**不触碰**用户配置/电机参数/源配置。
 
 ### 采样路径规则
 
