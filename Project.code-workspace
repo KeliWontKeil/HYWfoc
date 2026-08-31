@@ -33,7 +33,8 @@
                 "approve": true,
                 "matchCommandLine": true
             }
-        }
+        },
+        "window.zoomLevel": -0.1
     },
     "extensions": {
         "recommendations": [
