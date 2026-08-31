@@ -1,4 +1,4 @@
-#include "L2_Core/foc_motor_aggregate.h"
+﻿#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 
 #include <stdio.h>
@@ -7,6 +7,7 @@
 #include "L1_Orchestration/foc_app.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
+#include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Runtime/foc_queue.h"
@@ -443,6 +444,11 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
     switch (subcommand)
     {
     case COMMAND_MANAGER_STATE_SUBCMD_MOTOR_ENABLE:
+        /* 从禁能态恢复（0→1）时先重建控制基准，避免从残留状态续用 */
+        if ((normalized != 0U) && (motor->state.motor_enabled == 0U))
+        {
+            FOC_Control_RebuildControlBasis(motor);
+        }
         motor->state.motor_enabled = normalized; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
@@ -707,12 +713,15 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT)
     {
+        /* 错误复位前重建控制基准（此时 system_fault 仍为 1，ISR 走 FullStop，无竞态） */
+        FOC_Control_RebuildControlBasis(motor);
         motor->state.sensor_invalid_consecutive = 0U;
         motor->state.protocol_error_count = 0U;
         motor->state.param_error_count = 0U;
         motor->state.control_skip_count = 0U;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
         motor->state.system_fault = 0U;
+        motor->state.system_running = 1U;
         motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
         motor->state.current_loop_ready = 0U;
         motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;

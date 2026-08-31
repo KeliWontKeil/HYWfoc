@@ -5,6 +5,16 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0]
+
+### Changed
+- **恢复路径统一为"软初始化"重构（使能/错误复位/abort/重初始化共用控制基准重建）**：新增 `FOC_Control_RebuildControlBasis`（`foc_ctrl_init`），重建源获取、电角度、电流反馈链、外环、传感器滤波等运行期控制基准，不触碰用户配置/电机参数/源配置。使能 0→1、错误复位 `Y:C`、phase-abort 退出均在停止态显式调用，重初始化 `aaYI` FINALIZE 复用，消除"从残留状态续用导致电角度/电流反馈链基准错位"的持续抖动/电流直线上升。
+- **`FullStop`/`OnModeSwitch` 保留软切换用户配置**：仅复位软切换运行时瞬态（`active_mode`/`blend_factor`/`blend_initialized`/`prev_active_mode`），不再清零 `enabled`/`configured_mode`，避免重新使能后电流环永久退化为开环电阻模型。
+
+### Fixed
+- 禁能→使能 / `Y:C` 错误复位后持续控制抖动、电流直线上升（恢复时未重建控制基准）。
+- `Y:C` 错误复位后电机不恢复转动：fault 触发时 `system_running` 被 `FOC_App_HandleResult` 置 0，`Y:C` 未恢复，导致 PWM/电流环 ISR 被 `system_running==0` 拦截、源无法重新获取；`Y:C` 补回 `system_running = 1U`（与 `aaYI` FINALIZE 一致）。
+
 ## [2.2.5] - 2026-08-14
 
 ### Changed

@@ -317,6 +317,78 @@ void FOC_MotorInit(foc_motor_t *motor,
 
 }
 
+/* 重建"运行期控制基准"：从停止态恢复（使能/错误复位/abort/重初始化）时统一调用。
+ * 只重建运行期状态，不触碰用户配置（cfg、soft_switch enabled/configured_mode、源配置）。
+ * 调用时机须在电机停止态（motor_enabled==0 / system_fault!=0 / phase!=NORMAL），
+ * 此时控制/电流环 ISR 均不消费本函数写入的控制基准，无数据竞争。
+ * 使能后由 RunCycle 的"源无效"分支重新获取源、首个 RunCycle 恢复 current_loop_ready。 */
+void FOC_Control_RebuildControlBasis(foc_motor_t *motor)
+{
+    uint8_t low_source;
+    uint8_t high_source;
+    uint8_t switchable;
+
+    if (motor == 0) return;
+
+    low_source = motor->source_switch_state.low_source;
+    high_source = motor->source_switch_state.high_source;
+    switchable = motor->source_mgr_state.config_valid;
+
+    /* 源获取：重置到初始(low/full)配置，使能后由电流环 ISR 重新 Select/Publish 获取 */
+    motor->source_mgr_state.active_source = low_source;
+    motor->source_mgr_state.standby_source = (switchable != 0U) ? high_source : (uint8_t)FOC_SOURCE_TYPE_NONE;
+    motor->source_mgr_state.control_region = (switchable != 0U) ? (uint8_t)FOC_CONTROL_REGION_LOW : (uint8_t)FOC_CONTROL_REGION_FULL;
+    motor->source_mgr_state.region_state = (switchable != 0U) ? (uint8_t)FOC_REGION_STATE_LOW_ACTIVE : (uint8_t)FOC_REGION_STATE_FULL_ACTIVE;
+    motor->source_mgr_state.switch_in_progress = 0U;
+    motor->source_mgr_state.switch_counter = 0U;
+    motor->source_mgr_state.degrade_hold_counter = 0U;
+
+    motor->active_source_state.source = low_source;
+    motor->active_source_state.state = (uint8_t)FOC_SOURCE_STATE_INIT;
+    motor->active_source_state.valid = 0U;
+    motor->active_source_state.confidence = 0.0f;
+    motor->active_source_state.elec_angle_rad = 0.0f;
+    motor->active_source_state.mech_angle_rad = 0.0f;
+    motor->active_source_state.mech_speed_rad_s = 0.0f;
+
+    /* 电角度：由源重建（使能后 SourceMgr_Publish 用当前编码器/估计器角度覆盖） */
+    motor->ctrl.electrical_angle_rad = 0.0f;
+
+    /* 反馈链：PID 清零、soft_switch 重建运行时态（保留用户配置 enabled/configured_mode） */
+    FOC_PIDReset(&motor->torque_current_pid);
+    FOC_PIDReset(&motor->speed_pid);
+    FOC_PIDReset(&motor->angle_pid);
+#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
+    motor->current_soft_switch_status.active_mode = motor->current_soft_switch_status.configured_mode;
+    motor->current_soft_switch_status.blend_factor =
+        (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
+    motor->current_soft_switch_status.blend_initialized = 0U;
+    motor->current_soft_switch_status.prev_active_mode = 0xFFU;
+#endif
+
+    /* 外环：清零累积（加速度机制从 0 平滑重建） */
+    motor->outer_loop.accum_rad = 0.0f;
+    motor->outer_loop.prev_rad = 0.0f;
+    motor->outer_loop.prev_valid = 0U;
+    motor->outer_loop.ramped_speed_rad_s = 0.0f;
+
+    /* 传感器滤波：速度累积清零，置 mech_speed_valid=0 使下次 Sensor_ReadEncoder 首样本吸附 */
+    motor->sensor.mech_speed_valid = 0U;
+    motor->sensor.mech_speed_rad_s = 0.0f;
+    motor->sensor.speed_window_count = 0U;
+    motor->sensor.speed_window_pos = 0U;
+    motor->sensor.encoder_speed_filter.output_value = 0.0f;
+
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    FOC_EstimSMO_Init(&motor->estim_smo_state, &motor->params);
+#endif
+
+    /* 外环重初始化标记 + 门控：重建完成前阻塞电流环 ISR，由首个 RunCycle 恢复 */
+    motor->mode_transition.prev_control_mode_valid = 0U;
+    motor->state.current_loop_ready = 0U;
+    motor->ctrl_ref_ready = 0U;
+}
+
 /* L2 硬件初始化收口：封装 Sensor/SVPWM/ControlExecutor 初始化序列 */
 void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
 {

@@ -12,6 +12,7 @@
 #include "L2_Core/Runtime/foc_task_scheduler.h"
 #include "L2_Core/Runtime/foc_debug_stream.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
+#include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
@@ -244,6 +245,7 @@ void FOC_App_AbortSpecialPhase(void)
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
     motor.mode_transition.prev_control_mode_check = motor.state.control_mode;
     FOC_ControlExecutor_FullStop(&motor);
+    FOC_Control_RebuildControlBasis(&motor);
 }
 #endif
 
