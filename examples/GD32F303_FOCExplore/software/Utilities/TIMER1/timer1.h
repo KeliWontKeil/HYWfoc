@@ -4,18 +4,14 @@
 #include "gd32f30x.h"
 #include "interrupt_priority.h"
 
-/* TIMER1 peripheral definitions */
+/* TIMER1：同步主定时器，TRGO=UPDATE 同步 PWM(TIMER0) 与 TIMER3(ADC 采样触发)。
+ * 原控制调度节拍功能已移至 TIMER5（基本定时器）。 */
 #define TIMER1_PERIPH           TIMER1
 #define TIMER1_RCU              RCU_TIMER1
 #define TIMER1_IRQn             TIMER1_IRQn
 
-#define FOC_ISR_VIS_TIMER1_GPIO_RCU RCU_GPIOB
-#define FOC_ISR_VIS_TIMER1_GPIO_PORT GPIOB
-#define FOC_ISR_VIS_TIMER1_GPIO_PIN GPIO_PIN_9
-
 /* Interrupt handler callback type */
-#define TIMER1_CALLBACK_TYPE(name) void (*name)(void)
-typedef TIMER1_CALLBACK_TYPE(timer1_callback_t);
+typedef void (*timer1_callback_t)(void);
 
 /* Function prototypes */
 void Timer1_Init(uint32_t prescaler, uint32_t period);

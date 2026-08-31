@@ -1,5 +1,4 @@
 #include "timer2.h"
-#include "timer3.h"
 
 /* Private variables */
 static timer2_callback_t timer2_callback = 0;
@@ -33,9 +32,7 @@ void Timer2_Init(uint32_t prescaler, uint32_t period)
     timer_interrupt_enable(TIMER2_PERIPH, TIMER_INT_UP);
     NVIC_CONFIG(TIMER2_IRQn, TIMER2_PRIORITY_GROUP, TIMER2_PRIORITY_SUBGROUP);
     
-    /* Configure TIMER2 as master to trigger TIMER0 and ADC */
-    timer_master_slave_mode_config(TIMER2_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
-    timer_master_output_trigger_source_select(TIMER2_PERIPH, TIMER_TRI_OUT_SRC_UPDATE);
+    /* TIMER2 预留为 HALL 输入捕获，已退出 PWM/ADC 采样同步链（当前不进初始化）。 */
     
     /* Mark as initialized */
     timer2_initialized = 1;

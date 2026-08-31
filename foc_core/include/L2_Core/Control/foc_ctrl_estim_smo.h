@@ -38,6 +38,16 @@ typedef struct {
     uint8_t  converged;
     uint16_t lost_count;
 
+    /* 运行期不变派生量缓存（FOC_EstimSMO_Init 计算；R/L 等参数运行期仅初始化/重初始化更新，
+     * REINIT 流程不修改 R/L，故无需随 REINIT 刷新；依赖 pole_pairs 的 pll_speed_limit 不缓存） */
+    float    rs_ohms;
+    float    inv_l_1h;
+    float    sat_current_a;
+    float    bemf_lpf_alpha;
+#if (FOC_ESTIM_SMO_ANGLE_METHOD == FOC_ESTIM_SMO_ANGLE_METHOD_LPF_ATAN2)
+    float    speed_lpf_alpha;
+#endif
+
     /* 测速链（两路径共用）：速度直接取自 PLL/ATAN2 自带电速，经最终 LPF 平滑 */
     FOC_FILTER_TYPEDEF(FOC_FILTER_SMO_SPEED) smo_speed_filter;
 } foc_estim_smo_state_t;

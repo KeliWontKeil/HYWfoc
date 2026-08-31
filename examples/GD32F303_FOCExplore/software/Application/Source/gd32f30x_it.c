@@ -158,14 +158,14 @@ void TIMER0_UP_IRQHandler(void)
 }
 
 /*!
-    \brief      USART1 interrupt service routine
+    \brief      USART0 interrupt service routine
     \param[in]  none
     \param[out] none
     \retval     none
 */
-void USART1_IRQHandler(void)
+void USART0_IRQHandler(void)
 {
-    USART1_IRQHandler_Internal();
+    USART0_IRQHandler_Internal();
 }
 
 void USART2_IRQHandler(void)
@@ -174,14 +174,14 @@ void USART2_IRQHandler(void)
 }
 
 /*!
-    \brief      TIMER1 interrupt service routine
+    \brief      TIMER5 interrupt service routine (control scheduler tick)
     \param[in]  none
     \param[out] none
     \retval     none
 */
-void TIMER1_IRQHandler(void)
+void TIMER5_IRQHandler(void)
 {
-    Timer1_IRQHandler_Internal();
+    Timer5_IRQHandler_Internal();
 }
 
 void TIMER2_IRQHandler(void)

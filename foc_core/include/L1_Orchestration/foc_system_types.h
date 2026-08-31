@@ -45,8 +45,9 @@ typedef struct {
     volatile uint8_t frame_active;
     fifo_queue_t elem_fifo;
     uint8_t elem_buffer[FOC_MONITOR_ELEM_QUEUE_DEPTH][sizeof(monitor_element_t)];
-    char osc_collect_buf[DEBUG_STREAM_OSC_PAYLOAD_LEN];
-    uint16_t osc_collect_offset;
+    float  osc_collect_val[OSC_SNAPSHOT_CHANNEL_COUNT];
+    uint8_t osc_collect_bit[OSC_SNAPSHOT_CHANNEL_COUNT];
+    uint8_t osc_collect_count;
 #else
     uint8_t reserved;
 #endif

@@ -42,12 +42,13 @@ typedef struct {
 
 /*
  * SVPWM API
+ * 注意：SVPWM_Update 直接接收 αβ 静止坐标系电压矢量（调用方逆 Park 后的结果），
+ * 不再经过"逆 Clarke 转三相 → 内部再还原 αβ"的冗余往返（历史实现已移除）。
  */
 void SVPWM_Init(svpwm_interp_state_t *svpwm);
 void SVPWM_Update(svpwm_interp_state_t *svpwm,
-                  float phase_a,
-                  float phase_b,
-                  float phase_c,
+                  float alpha,
+                  float beta,
                   float voltage_command,
                   float vbus_voltage,
                   uint8_t direct_output);

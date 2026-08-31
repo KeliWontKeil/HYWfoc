@@ -12,9 +12,9 @@
 #include "main.h"
 #include "systick.h"
 #include "LED.h"
-#include "usart1.h"
+#include "usart0.h"
 #include "usart2.h"
-#include "timer1.h"
+#include "timer5.h"
 #include "timer2.h"
 #include "auxtimer.h"
 #include "adc.h"
@@ -43,12 +43,12 @@ void SysTick_Handler(void);
 void ADC0_1_IRQHandler(void);
 /* this function handles TIMER0 update interrupt */
 void TIMER0_UP_IRQHandler(void);
-/* this function handles USART1 interrupt */
-void USART1_IRQHandler(void);
+/* this function handles USART0 interrupt */
+void USART0_IRQHandler(void);
 /* this function handles USART2 interrupt */
 void USART2_IRQHandler(void);
-/* this function handles TIMER1 interrupt */
-void TIMER1_IRQHandler(void);
+/* this function handles TIMER5 interrupt (control scheduler tick) */
+void TIMER5_IRQHandler(void);
 /* this function handles TIMER2 interrupt */
 void TIMER2_IRQHandler(void);
 /* this function handles TIMER4 interrupt */

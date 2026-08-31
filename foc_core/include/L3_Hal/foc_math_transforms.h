@@ -18,6 +18,10 @@ void Math_FloatToFixed(float value, uint8_t decimals, int32_t *ipart_out, int32_
 void Math_ClarkeTransform(float a, float b, float c, float *alpha, float *beta);
 void Math_InverseClarkeTransform(float alpha, float beta, float *a, float *b, float *c);
 void Math_ParkTransform(float alpha, float beta, float theta, float *d, float *q);
+void Math_ParkTransformSC(float alpha, float beta, float sin_theta, float cos_theta,
+                          float *d, float *q);
 void Math_InverseParkTransform(float d, float q, float theta, float *alpha, float *beta);
+void Math_InverseParkTransformSC(float d, float q, float sin_theta, float cos_theta,
+                                 float *alpha, float *beta);
 
 #endif /* FOC_MATH_TRANSFORMS_H */

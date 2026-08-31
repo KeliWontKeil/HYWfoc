@@ -1,9 +1,76 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to the HYWfoc (何易位FOC) project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.2.5] - 2026-08-14
+
+### Changed
+- **SVPWM 输入改 αβ 静止坐标系直通（消除冗余往返）**：`SVPWM_Update` 由三相入口改为 αβ 入口。原执行器 `FOC_ControlApplyElectricalAngleCore` 先逆 Clarke（αβ→三相）再交给 SVPWM，SVPWM 内部又 `alpha=phase_a; beta=(phase_b-phase_c)/SQRT3` 还原 αβ——两步互为逆运算，每电流环周期白做逆 Clarke 3 次乘加 + 内部 2 次减法 + 1 次除法。现执行器跳过逆 Clarke 与 `alpha_beta.phase_*` 填充，SVPWM 直接消费逆 Park 的 αβ 结果（数学位级等价）。
+- **SVPWM 归一化 sqrt/除法消除**：`SVPWM_CalculateDuty` 删除 `sqrtf(α²+β²)` 与 2 次幅值归一化除法（atan2 按比值查表、扇区按符号判定，均不随同号缩放变化，输出位级一致）。
+- **三角函数联合查表（`FOC_MathLut_SinCos`）**：新增 sin/cos 单次联合查表（一次 wrap/象限/索引计算同时返回两值，与分别查 `FOC_MathLut_Sin` 位级一致）。电流环 Park、执行器逆 Park、SMO PLL 提取三处由 6 次独立查表收敛为 3 次联合查表，每次省一次 wrap 循环 + 象限除法 + 索引计算。新增 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体。
+- **LUT 象限除法改乘法**：`FOC_MathLut_Sin` 象限判定 `wrapped / half_pi` → `wrapped * FOC_MATH_INV_HALF_PI`（新增常量），消除每次查表的浮点除法。
+- **Clarke 除法改乘倒数**：`Math_ClarkeTransform` 的 `(b - c) / FOC_MATH_SQRT3` → `(b - c) * FOC_MATH_INV_SQRT3`（新增常量）。
+- **SMO 运行期不变派生量缓存**：`foc_estim_smo_state_t` 新增 `rs_ohms` / `inv_l_1h` / `sat_current_a` / `bemf_lpf_alpha`（+ATAN2 分支 `speed_lpf_alpha`），`FOC_EstimSMO_Init` 一次计算，替代每 PWM 周期的 `fabsf` ×2 + `1/Ls` 除法 + LPF alpha 重算。**pll_speed_limit 不缓存**（依赖 `pole_pairs`，REINIT 会修改该字段，保持每周期计算）。
+- **Source Manager 上下文构建收敛**：新增 `FOC_ControlExecutor_BuildSourceMgrCtx`，executor 电流环 ISR 与 L1 `FOC_App_Init` 两处约 20 行重复的 `foc_source_mgr_ctx_t` 填充收敛为单函数（`ref` 参数化：ISR 用静态快照、初始化用 `ctrl_ref`）。
+
+### Fixed
+- **SVPWM 近零矢量 NaN 输出（既有 UB）**：原判零分支 `magnitude < FOC_MATH_EPSILON` 因 `FOC_MATH_EPSILON == 0.0f` 恒不触发，αβ 全零时执行 `alpha/0` 归一化产生 NaN 占空比。改为幅值平方判零 `(α²+β²) < 1e-12` 输出中点（符合该分支注释原意），正常路径行为不变。
+
+### Performance
+- 电流环 ISR（8kHz）每周期减少：1 次浮点除法 + 1 次 sqrtf + 6 次减法/乘加 + 3 次 LUT 三角函数查表（含各自 wrap 循环与象限除法）；SMO 每周期减少 1 次除法 + 2 次 fabsf + 2 次乘加。已硬件验证：控制效果无误，中断实际执行时间减少。
+
+### Documentation
+- `README.md` / `docs/README.md` / `NEXT_MISSION.md` 版本基线更新至 v2.2.5；`docs/architecture.md` SVPWM 输出链、数学变换、SMO 状态描述同步。
+
+## [2.2.4] - 2026-08-14
+
+### Added
+- **L3 协议编解码层（`foc_codec.h/.c`）**：新增纯数据/字符串封装 seam，覆盖三类可被不同上位机/传输协议替换的帧，接口契约对齐 `foc_platform_api`（接口面稳定、可替换、无业务类型依赖）：
+  - **指令帧（RX）**：`Codec_ParseCommandFrame`（原始字节 → driver/cmd/sub/param 文本 + has_param，单一可替换入口，内部含帧提取与编址策略）。
+  - **OSC 回报帧（TX）**：`Codec_OscEncodeFrame`（**float 值数组 + bit 通道数组** → 完整帧文本），示波器格式可单点修改。
+  - **短回报行（TX）**：`Codec_FormatValueLine` / `Codec_FormatStateLine`（`parameter./config./state.` 行，业务名由 L2 传入）。
+  - 每类帧头文件标注 `in/out 数据格式` 与 `【修改指导】`。
+
+### Changed
+- **协议解析下沉 L3（wire 语法与语义分离）**：`foc_protocol_parser.c` 的 `ProtocolCore_ParseFrame` 改为调 `Codec_ParseCommandFrame`，`Format*Line` 改为 L3 短回报行薄封装；`foc_protocol_handler.c` 去掉单独 `ExtractFrame`，统一走 `ParseCommandFrame`。L2 收敛为命令语义执行层，`Execute{P,C,S,Y}`/`Write*` 零改动。
+- **osc 回报数据流改 float 数组**：`foc_system_types.h` 的 `osc_collect_buf(char[80])` → `osc_collect_val[16]+osc_collect_bit[16]+count`；`foc_output_mgr.c` 收集 float 后 OSC_END 一次性调 `Codec_OscEncodeFrame`。
+- **osc 通道数收敛 LS**：新增 `FOC_OSC_CHANNEL_COUNT`（16），`OSC_SNAPSHOT_CHANNEL_COUNT` 改为其别名；codec 不再依赖 L2/Runtime 类型。
+
+### Fixed
+- **osc 帧越界读**：osc 输出改用 `FOC_OUTPUT_FRAME_MAX_LEN`(96) 缓冲，消除原 80 字节缓冲入 96 字节 TX 槽的越界读（既有隐患）。
+
+### Documentation
+- `docs/README.md` 版本基线更新至 v2.2.4；`NEXT_MISSION.md` 基线同步。
+
+## [2.2.3] - 2026-08-13
+
+### Changed
+- **新硬件 GD32F303_FOCExplore 引脚适配（实例 L4 层）**：
+  - 主串口 USART1 → **USART0**（PB6/PB7，remap）：新增 `usart0.c/h`、删除 `usart1.c/h`；debug 快/慢路径、状态码与协议源 0 均改走 USART0。
+  - I2C0（AS5600）移至 **PB8/PB9**（`GPIO_I2C0_REMAP`）。
+  - LED 三色：**LEDR=PB1、LEDB=PB2、LEDG=PA7**，逻辑索引→颜色映射（1 蓝/COMM、2 绿/RUN、3 红/ERROR）。
+  - ADC 相电流 **PA0(相A)/PA1(相B)**、VBUS **PA3**；`adc.h` 通道/GPIO 宏语义化（`PHASE_A/B`、`VBUS`）。
+  - `main.c` 使能 `GPIO_USART0_REMAP`、`GPIO_I2C0_REMAP`。
+  - TIMER2 预留为 HALL 输入捕获（未实现）。
+- **定时器组织重构（实例 L4 层，处理采样频率耦合）**：
+  - TIMER1 由控制调度节拍改为**同步主**（master TRGO=UPDATE，频率=采样频率），同步 PWM(TIMER0) 与 TIMER3(ADC)。
+  - 控制调度节拍移至基本定时器 **TIMER5**（新增 `timer5.c/h`，1kHz）。
+  - PWM(TIMER0) 与 TIMER3 由 TIMER1(ITI1) 同步；TIMER3 CH3 比较定位采样点。
+  - 弃用此前"PWM 主 TRGO=UPDATE"方案（中心对齐 update 每周期双触发，导致 2×PWM 采样、控制异常）。
+- **自适应电流采样均值（LS 层）**：新增 `FOC_CURRENT_LOOP_FREQ_HZ`（统一 2ISR/3ISR 电流环频率）与 `FOC_CURRENT_LOOP_ADC_AVG_COUNT = 采样率/电流环率`；`FOC_Platform_ReadPhaseCurrent` 传自适应均值（24k PWM / 8k 电流环 → N=3）。`foc_compile_limits.h` 增加 PWM 为电流环频率整数倍约束。
+
+### Fixed
+- **`FOC_SENSOR_SAMPLE_FREQ_KHZ` 无法自由调整的问题**：根因为 PWM(TIMER0) 原从属采样定时器，PWM 同步节奏被采样频率钳制，仅 PWM/N 与 PWM 时控制正常。经定时器组织重构（TIMER1 同步主 + TIMER5 调度 + TIMER2 留 HALL）恢复可工作基线（采样 = PWM/3 = 8k）；采样频率仍受 PWM/N 整除约束（同步主设计固有特性，待硬件验证）。
+
+### Removed
+- `usart1.c/h`（新硬件 USART1 引脚 PA2/PA3 已被 ADC 占用）。
+- 原 TIMER1 作为控制调度节拍的职责（移至 TIMER5）。
+
+### Documentation
+- `docs/README.md` 版本基线更新至 v2.2.3；`NEXT_MISSION.md` 新硬件适配/采样频率问题状态更新。
 
 ## [2.2.2] - 2026-08-12
 

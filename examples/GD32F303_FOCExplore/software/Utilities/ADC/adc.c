@@ -231,12 +231,12 @@ float ADC_VoltageToCurrentPhaseB(float voltage)
 static void ADC_GPIO_Config(void)
 {
     /* Enable GPIO clock */
-    rcu_periph_clock_enable(ADC_GPIO_PA6_RCU);
-    rcu_periph_clock_enable(ADC_GPIO_PA7_RCU);
+    rcu_periph_clock_enable(ADC_GPIO_PHASE_A_RCU);
+    rcu_periph_clock_enable(ADC_GPIO_PHASE_B_RCU);
     
-    /* Configure PA6 and PA7 as analog inputs */
-    gpio_init(ADC_GPIO_PA6_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_PA6_PIN);
-    gpio_init(ADC_GPIO_PA7_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_PA7_PIN);
+    /* Configure PA0 and PA1 as analog inputs */
+    gpio_init(ADC_GPIO_PHASE_A_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_PHASE_A_PIN);
+    gpio_init(ADC_GPIO_PHASE_B_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_PHASE_B_PIN);
 }
 
 /*!
@@ -313,10 +313,10 @@ static void ADC_Config(void)
     
     
     /* Configure regular channel sequence for ADC0 */
-    adc_routine_channel_config(ADC0_PERIPH, 0, ADC_CHANNEL_PA6, ADC_SAMPLE_TIME);
+    adc_routine_channel_config(ADC0_PERIPH, 0, ADC_CHANNEL_PHASE_A, ADC_SAMPLE_TIME);
     
     /* Configure regular channel sequence for ADC1 */
-    adc_routine_channel_config(ADC1_PERIPH, 0, ADC_CHANNEL_PA7, ADC_SAMPLE_TIME);
+    adc_routine_channel_config(ADC1_PERIPH, 0, ADC_CHANNEL_PHASE_B, ADC_SAMPLE_TIME);
     
     /* Set regular channel sequence length (1 channel each) */
     adc_channel_length_config(ADC0_PERIPH, ADC_ROUTINE_CHANNEL, 1);
@@ -378,8 +378,8 @@ static uint8_t g_adc2_initialized = 0U;
 
 static void ADC2_GPIO_Config(void)
 {
-    rcu_periph_clock_enable(ADC_GPIO_PA1_RCU);
-    gpio_init(ADC_GPIO_PA1_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_PA1_PIN);
+    rcu_periph_clock_enable(ADC_GPIO_VBUS_RCU);
+    gpio_init(ADC_GPIO_VBUS_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, ADC_GPIO_VBUS_PIN);
 }
 
 static void ADC2_Config(void)
@@ -392,7 +392,7 @@ static void ADC2_Config(void)
 
     /* Single channel, software trigger, no scan mode. */
     adc_channel_length_config(ADC2_PERIPH, ADC_ROUTINE_CHANNEL, 1U);
-    adc_routine_channel_config(ADC2_PERIPH, 0U, ADC_CHANNEL_PA1, ADC_SAMPLETIME_55POINT5);
+    adc_routine_channel_config(ADC2_PERIPH, 0U, ADC_CHANNEL_VBUS, ADC_SAMPLETIME_55POINT5);
 
     /* ADC trigger config */
     adc_external_trigger_source_config(ADC2, ADC_ROUTINE_CHANNEL, ADC0_1_2_EXTTRIG_ROUTINE_NONE); 

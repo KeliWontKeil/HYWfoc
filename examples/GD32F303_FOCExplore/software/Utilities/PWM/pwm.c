@@ -290,10 +290,10 @@ static void PWM_Timer_Config(uint32_t prescaler, uint32_t period)
     timer_initpara.repetitioncounter = 0;
     timer_init(PWM_TIMER0_PERIPH, &timer_initpara);
     
-    /* Configure TIMER0 as slave mode - triggered by TIMER2 */
+    /* 配置 TIMER0 为从机：由同步主 TIMER1(ITI1) 的 TRGO 重启。 */
     timer_slave_mode_select(PWM_TIMER0_PERIPH, TIMER_SLAVE_MODE_RESTART);
     timer_master_slave_mode_config(PWM_TIMER0_PERIPH, TIMER_MASTER_SLAVE_MODE_ENABLE);
-    timer_input_trigger_source_select(PWM_TIMER0_PERIPH, TIMER_SMCFG_TRGSEL_ITI2);  /* Trigger from TIMER2 (ITI2) */
+    timer_input_trigger_source_select(PWM_TIMER0_PERIPH, TIMER_SMCFG_TRGSEL_ITI1);  /* Trigger from TIMER1 (ITI1) */
     
     timer_ocintpara.outputstate  = TIMER_CCX_ENABLE;
     timer_ocintpara.outputnstate = TIMER_CCXN_ENABLE;

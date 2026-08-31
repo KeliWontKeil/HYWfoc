@@ -1,225 +1,56 @@
 #include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
 
-#include <stdio.h>
-#include <string.h>
-
 #include "LS_Config/foc_config.h"
-#include "L3_Hal/foc_math_transforms.h"
+#include "L3_Hal/foc_codec.h"
 
 protocol_core_frame_parse_result_t ProtocolCore_ParseFrame(const uint8_t *frame,
                                                            uint16_t len,
                                                            protocol_command_t *out_cmd)
 {
-    uint16_t param_len;
     uint8_t driver_id;
+    uint8_t cmd;
+    uint8_t sub;
+    uint8_t has_param;
+    foc_codec_frame_parse_result_t codec_res;
 
-    if ((frame == 0) || (out_cmd == 0) || (len < PROTOCOL_PARSER_MIN_FRAME_LEN))
+    if (out_cmd == 0)
     {
         return PROTOCOL_CORE_FRAME_PARSE_INVALID;
     }
 
-    if ((frame[0] != (uint8_t)FOC_PROTOCOL_FRAME_HEAD_CHAR) ||
-        (frame[len - 1U] != (uint8_t)FOC_PROTOCOL_FRAME_TAIL_CHAR))
-    {
-        return PROTOCOL_CORE_FRAME_PARSE_INVALID;
-    }
-
-    driver_id = frame[1];
-    if (ProtocolCore_IsDriverIdFormatValid(driver_id) == 0U)
-    {
-        return PROTOCOL_CORE_FRAME_PARSE_INVALID;
-    }
-
-    if (ProtocolCore_IsDriverAddressedToLocal(driver_id) == 0U)
+    codec_res = Codec_ParseCommandFrame(frame, len,
+                                        &driver_id, &cmd, &sub,
+                                        out_cmd->param_text, sizeof(out_cmd->param_text),
+                                        &has_param);
+    if (codec_res == FOC_CODEC_FRAME_PARSE_ADDRESS_MISMATCH)
     {
         return PROTOCOL_CORE_FRAME_PARSE_ADDRESS_MISMATCH;
     }
-
-    if ((frame[2] < 'A') || (frame[2] > 'Z') || (frame[3] < 'A') || (frame[3] > 'Z'))
+    if (codec_res != FOC_CODEC_FRAME_PARSE_OK)
     {
         return PROTOCOL_CORE_FRAME_PARSE_INVALID;
     }
 
     out_cmd->driver_id = driver_id;
-    out_cmd->command = (char)frame[2];
-    out_cmd->subcommand = (char)frame[3];
-    out_cmd->param_value = 0.0f;
-    out_cmd->has_param = 0U;
+    out_cmd->command = (char)cmd;
+    out_cmd->subcommand = (char)sub;
+    out_cmd->has_param = has_param;
     out_cmd->frame_valid = 1U;
 
-    param_len = (uint16_t)(len - PROTOCOL_PARSER_MIN_FRAME_LEN);
-    if (param_len >= sizeof(out_cmd->param_text))
+    if (has_param != 0U)
     {
-        return PROTOCOL_CORE_FRAME_PARSE_INVALID;
-    }
-
-    if (param_len > 0U)
-    {
-        memcpy(out_cmd->param_text, &frame[4], param_len);
-        out_cmd->param_text[param_len] = '\0';
-
-        if (ProtocolCore_ParseSignedFloat(out_cmd->param_text, &out_cmd->param_value) == 0U)
+        if (Codec_ParseSignedFloat(out_cmd->param_text, &out_cmd->param_value) == 0U)
         {
             return PROTOCOL_CORE_FRAME_PARSE_INVALID;
         }
-
-        out_cmd->has_param = 1U;
     }
     else
     {
-        out_cmd->param_text[0] = '\0';
+        out_cmd->param_value = 0.0f;
     }
 
     return PROTOCOL_CORE_FRAME_PARSE_OK;
-}
-
-uint8_t ProtocolCore_IsDriverIdFormatValid(uint8_t driver_id)
-{
-    if (driver_id == FOC_PROTOCOL_DRIVER_ID_BROADCAST)
-    {
-        return 1U;
-    }
-
-    if ((driver_id >= FOC_PROTOCOL_DRIVER_ID_MIN) &&
-        (driver_id <= FOC_PROTOCOL_DRIVER_ID_MAX))
-    {
-        return 1U;
-    }
-
-    return 0U;
-}
-
-uint8_t ProtocolCore_IsDriverAddressedToLocal(uint8_t driver_id)
-{
-    if (driver_id == FOC_PROTOCOL_DRIVER_ID_BROADCAST)
-    {
-        return 1U;
-    }
-
-    if (driver_id == FOC_PROTOCOL_LOCAL_DRIVER_ID_DEFAULT)
-    {
-        return 1U;
-    }
-
-    return 0U;
-}
-
-uint8_t ProtocolCore_ExtractFrame(const uint8_t *rx_data,
-                                  uint16_t rx_len,
-                                  const uint8_t **frame_start,
-                                  uint16_t *frame_len)
-{
-    uint16_t i;
-    uint16_t j;
-
-    if ((rx_data == 0) || (frame_start == 0) || (frame_len == 0) || (rx_len < PROTOCOL_PARSER_MIN_FRAME_LEN))
-    {
-        return 0U;
-    }
-
-    for (i = 0U; i < rx_len; i++)
-    {
-        if (rx_data[i] != (uint8_t)FOC_PROTOCOL_FRAME_HEAD_CHAR)
-        {
-            continue;
-        }
-
-        for (j = (uint16_t)(i + PROTOCOL_PARSER_MIN_FRAME_LEN - 1U); j < rx_len; j++)
-        {
-            if (rx_data[j] == (uint8_t)FOC_PROTOCOL_FRAME_TAIL_CHAR)
-            {
-                *frame_start = &rx_data[i];
-                *frame_len = (uint16_t)(j - i + 1U);
-                return 1U;
-            }
-        }
-        return 0U;
-    }
-
-    return 0U;
-}
-
-uint8_t ProtocolCore_ParseSignedFloat(const char *text, float *value_out)
-{
-    uint8_t i = 0U;
-    uint8_t has_digit = 0U;
-    uint8_t has_dot = 0U;
-    float value = 0.0f;
-    float frac_scale = 0.1f;
-    int8_t sign = 1;
-
-    if ((text == 0) || (value_out == 0) || (text[0] == '\0'))
-    {
-        return 0U;
-    }
-
-    if (text[i] == '+')
-    {
-        i++;
-    }
-    else if (text[i] == '-')
-    {
-        sign = -1;
-        i++;
-    }
-
-    for (; text[i] != '\0'; i++)
-    {
-        char ch = text[i];
-
-        if ((ch >= '0') && (ch <= '9'))
-        {
-            has_digit = 1U;
-            if (has_dot == 0U)
-            {
-                value = value * 10.0f + (float)(ch - '0');
-            }
-            else
-            {
-                value += (float)(ch - '0') * frac_scale;
-                frac_scale *= 0.1f;
-            }
-        }
-        else if ((ch == '.') && (has_dot == 0U))
-        {
-            has_dot = 1U;
-        }
-        else
-        {
-            return 0U;
-        }
-    }
-
-    if (has_digit == 0U)
-    {
-        return 0U;
-    }
-
-    *value_out = (float)sign * value;
-    return 1U;
-}
-
-uint8_t ProtocolCore_ParseStateValue(float value, uint8_t *state_out)
-{
-    if (state_out == 0)
-    {
-        return 0U;
-    }
-
-    if (value == 0.0f)
-    {
-        *state_out = COMMAND_MANAGER_ENABLED_DISABLE;
-        return 1U;
-    }
-
-    if (value == 1.0f)
-    {
-        *state_out = COMMAND_MANAGER_ENABLED_ENABLE;
-        return 1U;
-    }
-
-    return 0U;
 }
 
 /* ========== P 组参数名映射 ========== */
@@ -382,25 +213,9 @@ void ProtocolText_FormatParamLine(char *out,
         return;
     }
 
-    if (ProtocolText_IsIntegerParam(subcommand) != 0U)
-    {
-        snprintf(out,
-                 out_len,
-                 "parameter.%s=%u\r\n",
-                 ProtocolText_GetParamName(subcommand),
-                 (unsigned int)((value < 0.0f) ? 0U : (uint16_t)value));
-    }
-    else
-    {
-        int32_t ip;
-        int32_t fp;
-        Math_FloatToFixed(value, 3, &ip, &fp);
-        snprintf(out,
-                 out_len,
-                 "parameter.%s=%d.%03d\r\n",
-                 ProtocolText_GetParamName(subcommand),
-                 (int)ip, (int)fp);
-    }
+    (void)Codec_FormatValueLine(out, out_len, "parameter",
+                                ProtocolText_GetParamName(subcommand),
+                                value, ProtocolText_IsIntegerParam(subcommand));
 }
 
 /* ========== C 组格式化输出 ========== */
@@ -415,25 +230,9 @@ void ProtocolText_FormatConfigLine(char *out,
         return;
     }
 
-    if (ProtocolText_IsIntegerConfigParam(subcommand) != 0U)
-    {
-        snprintf(out,
-                 out_len,
-                 "config.%s=%u\r\n",
-                 ProtocolText_GetConfigName(subcommand),
-                 (unsigned int)((value < 0.0f) ? 0U : (uint16_t)value));
-    }
-    else
-    {
-        int32_t ip;
-        int32_t fp;
-        Math_FloatToFixed(value, 3, &ip, &fp);
-        snprintf(out,
-                 out_len,
-                 "config.%s=%d.%03d\r\n",
-                 ProtocolText_GetConfigName(subcommand),
-                 (int)ip, (int)fp);
-    }
+    (void)Codec_FormatValueLine(out, out_len, "config",
+                                ProtocolText_GetConfigName(subcommand),
+                                value, ProtocolText_IsIntegerConfigParam(subcommand));
 }
 
 /* ========== S 组格式化输出 ========== */
@@ -448,9 +247,6 @@ void ProtocolText_FormatStateLine(char *out,
         return;
     }
 
-    snprintf(out,
-             out_len,
-             "state.%s=%s\r\n",
-             ProtocolText_GetStateName(subcommand),
-             (value != 0U) ? "ENABLE" : "DISABLE");
+    (void)Codec_FormatStateLine(out, out_len,
+                                ProtocolText_GetStateName(subcommand), value);
 }

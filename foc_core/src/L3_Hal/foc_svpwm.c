@@ -1,15 +1,8 @@
 #include "L3_Hal/foc_svpwm.h"
 
-#include <math.h>
-
 #include "L3_Hal/foc_math_lut.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
-
-static float SVPWM_Sqrt(float value)
-{
-    return sqrtf(value);
-}
 
 static float SVPWM_Sin(float value)
 {
@@ -70,9 +63,8 @@ static uint8_t SVPWM_DetermineSector(float alpha, float beta)
     }
 }
 
-static void SVPWM_CalculateDuty(float phase_a,
-                                float phase_b,
-                                float phase_c,
+static void SVPWM_CalculateDuty(float alpha,
+                                float beta,
                                 float voltage_command,
                                 float vbus_voltage,
                                 uint8_t *sector_out,
@@ -80,10 +72,7 @@ static void SVPWM_CalculateDuty(float phase_a,
                                 float *duty_b,
                                 float *duty_c)
 {
-    float alpha;
-    float beta;
     float modulation;
-    float magnitude;
     float theta;
     float theta_sector;
     float t_sum;
@@ -116,11 +105,9 @@ static void SVPWM_CalculateDuty(float phase_a,
         modulation = 1.0f;
     }
 
-    alpha = phase_a;
-    beta = (phase_b - phase_c) / FOC_MATH_SQRT3;
-    magnitude = SVPWM_Sqrt(alpha * alpha + beta * beta);
-
-    if (magnitude < FOC_MATH_EPSILON)
+    /* 近零矢量输出中点（原实现 magnitude < EPSILON 因 EPSILON=0 恒不触发，
+     * 且 0/0 归一化产生 NaN；此处以幅值平方 1e-12（≈1e-6）判零，修复 UB 且不改变正常路径） */
+    if ((alpha * alpha + beta * beta) < 1e-12f)
     {
         *sector_out = 0U;
         *duty_a = 0.5f;
@@ -128,10 +115,6 @@ static void SVPWM_CalculateDuty(float phase_a,
         *duty_c = 0.5f;
         return;
     }
-
-    alpha /= magnitude;
-    beta /= magnitude;
-    magnitude = modulation;
 
     theta = SVPWM_Atan2(beta, alpha);
     if (theta < 0.0f)
@@ -151,8 +134,8 @@ static void SVPWM_CalculateDuty(float phase_a,
 
     theta_sector = theta - (float)(sector_id - 1U) * FOC_MATH_PI_BY_3;
 
-    t1 = magnitude * SVPWM_Sin(FOC_MATH_PI_BY_3 - theta_sector);
-    t2 = magnitude * SVPWM_Sin(theta_sector);
+    t1 = modulation * SVPWM_Sin(FOC_MATH_PI_BY_3 - theta_sector);
+    t2 = modulation * SVPWM_Sin(theta_sector);
 
     if (t1 < 0.0f)
     {
@@ -305,9 +288,8 @@ void SVPWM_ApplyDirectDuty(svpwm_interp_state_t *svpwm,
 }
 
 void SVPWM_Update(svpwm_interp_state_t *svpwm,
-                  float phase_a,
-                  float phase_b,
-                  float phase_c,
+                  float alpha,
+                  float beta,
                   float voltage_command,
                   float vbus_voltage,
                   uint8_t direct_output)
@@ -315,7 +297,7 @@ void SVPWM_Update(svpwm_interp_state_t *svpwm,
     uint8_t sector;
     float duty_a, duty_b, duty_c;
 
-    SVPWM_CalculateDuty(phase_a, phase_b, phase_c,
+    SVPWM_CalculateDuty(alpha, beta,
                         voltage_command, vbus_voltage,
                         &sector, &duty_a, &duty_b, &duty_c);
 

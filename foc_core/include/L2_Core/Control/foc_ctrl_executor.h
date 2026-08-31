@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "L2_Core/foc_ctrl_types.h"
+#include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "LS_Config/foc_config.h"
 
 /** RunCycle return codes */
@@ -48,5 +49,10 @@ void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec);
 
 /** @brief 控制参考单点发布（控制 ISR 过程末尾调用，供电流环 ISR 原子获取）。 */
 void FOC_ControlExecutor_PublishControlRef(foc_motor_t *motor);
+
+/** @brief 构建 Source Manager 上下文视图（L1 初始化与 ISR 快线共用，消除重复填充）。 */
+void FOC_ControlExecutor_BuildSourceMgrCtx(foc_motor_t *motor,
+                                           const foc_control_ref_t *ref,
+                                           foc_source_mgr_ctx_t *ctx);
 
 #endif /* FOC_CTRL_EXECUTOR_H */

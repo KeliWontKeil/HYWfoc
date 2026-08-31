@@ -36,8 +36,7 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
      (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
     sys->runtime.monitor.frame_active = 0U;
-    sys->runtime.monitor.osc_collect_offset = 0U;
-    sys->runtime.monitor.osc_collect_buf[0] = '\0';
+    sys->runtime.monitor.osc_collect_count = 0U;
 #endif
 
     FOC_Platform_ControlTickSourceInit();

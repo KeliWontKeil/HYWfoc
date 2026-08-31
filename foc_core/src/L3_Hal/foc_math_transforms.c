@@ -1,10 +1,5 @@
-﻿#include "L3_Hal/foc_math_transforms.h"
+#include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_math_lut.h"
-
-static float Math_CosLut(float angle)
-{
-    return FOC_MathLut_Sin(angle + (0.5f * FOC_MATH_PI));
-}
 
 float Math_WrapRad(float angle)
 {
@@ -130,7 +125,7 @@ float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_
 void Math_ClarkeTransform(float a, float b, float c, float *alpha, float *beta)
 {
     *alpha = a;
-    *beta = (b - c) / FOC_MATH_SQRT3;
+    *beta = (b - c) * FOC_MATH_INV_SQRT3;
 }
 
 void Math_InverseClarkeTransform(float alpha, float beta, float *a, float *b, float *c)
@@ -140,18 +135,36 @@ void Math_InverseClarkeTransform(float alpha, float beta, float *a, float *b, fl
     *c = -0.5f * alpha - FOC_MATH_SQRT3_BY_2 * beta;
 }
 
-void Math_ParkTransform(float alpha, float beta, float theta,float *d, float *q)
+void Math_ParkTransform(float alpha, float beta, float theta, float *d, float *q)
 {
-    float sin_theta = FOC_MathLut_Sin(theta);
-    float cos_theta = Math_CosLut(theta);
+    float sin_theta;
+    float cos_theta;
+
+    FOC_MathLut_SinCos(theta, &sin_theta, &cos_theta);
+    *d = alpha * cos_theta + beta * sin_theta;
+    *q = -alpha * sin_theta + beta * cos_theta;
+}
+
+void Math_ParkTransformSC(float alpha, float beta, float sin_theta, float cos_theta,
+                          float *d, float *q)
+{
     *d = alpha * cos_theta + beta * sin_theta;
     *q = -alpha * sin_theta + beta * cos_theta;
 }
 
 void Math_InverseParkTransform(float d, float q, float theta, float *alpha, float *beta)
 {
-    float sin_theta = FOC_MathLut_Sin(theta);
-    float cos_theta = Math_CosLut(theta);
+    float sin_theta;
+    float cos_theta;
+
+    FOC_MathLut_SinCos(theta, &sin_theta, &cos_theta);
+    *alpha = d * cos_theta - q * sin_theta;
+    *beta = d * sin_theta + q * cos_theta;
+}
+
+void Math_InverseParkTransformSC(float d, float q, float sin_theta, float cos_theta,
+                                 float *alpha, float *beta)
+{
     *alpha = d * cos_theta - q * sin_theta;
     *beta = d * sin_theta + q * cos_theta;
 }

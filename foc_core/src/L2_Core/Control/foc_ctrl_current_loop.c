@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "L3_Hal/foc_math_lut.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
 
@@ -126,18 +127,23 @@ static void FOC_CurrentLoopComputeIqMeasured(const foc_control_runtime_t *ctrl,
                                              float *iq_out)
 {
     float id_measured;
+    float sin_theta;
+    float cos_theta;
 
     if ((ctrl == 0) || (iq_out == 0))
     {
         return;
     }
 
-    /* Park 变换复用 executor 阶段1b 单点化的 αβ 结果（消除重复 Clarke） */
-    Math_ParkTransform(ctrl->ialpha,
-                       ctrl->ibeta,
-                       electrical_angle,
-                       &id_measured,
-                       iq_out);
+    /* Park 变换复用 executor 阶段1b 单点化的 αβ 结果（消除重复 Clarke）；
+     * sin/cos 联合查表一次取得（消除重复三角函数查表）。 */
+    FOC_MathLut_SinCos(electrical_angle, &sin_theta, &cos_theta);
+    Math_ParkTransformSC(ctrl->ialpha,
+                         ctrl->ibeta,
+                         sin_theta,
+                         cos_theta,
+                         &id_measured,
+                         iq_out);
     (void)id_measured;
 }
 

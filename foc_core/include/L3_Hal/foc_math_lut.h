@@ -267,7 +267,7 @@ static inline float FOC_MathLut_Sin(float angle)
 
     half_pi = 0.5f * FOC_MATH_PI;
     wrapped = FOC_MathLut_Wrap0ToTwoPi(angle);
-    quadrant = (uint8_t)(wrapped / half_pi);
+    quadrant = (uint8_t)(wrapped * FOC_MATH_INV_HALF_PI);
     if (quadrant > 3U)
     {
         quadrant = 3U;
@@ -296,6 +296,73 @@ static inline float FOC_MathLut_Sin(float angle)
     }
 
     return sample / FOC_MATH_LUT_SIN_SCALE;
+}
+
+/* 联合查表：同一次 wrap/象限/索引计算同时返回 sin 与 cos。
+ * cos(θ) = sin(θ + π/2)：象限 (q+1)%4，local 索引不变；
+ * 与分别调用 FOC_MathLut_Sin 位级一致，但省一次 wrap + 象限除法 + 索引计算。 */
+static inline void FOC_MathLut_SinCos(float angle, float *sin_out, float *cos_out)
+{
+    float wrapped;
+    float half_pi;
+    float local;
+    uint8_t quadrant;
+    uint8_t cos_quadrant;
+    uint16_t idx;
+    uint16_t mirrored_idx;
+    float s;
+    float c;
+
+    half_pi = 0.5f * FOC_MATH_PI;
+    wrapped = FOC_MathLut_Wrap0ToTwoPi(angle);
+    quadrant = (uint8_t)(wrapped * FOC_MATH_INV_HALF_PI);
+    if (quadrant > 3U)
+    {
+        quadrant = 3U;
+    }
+
+    local = wrapped - ((float)quadrant * half_pi);
+    idx = FOC_MathLut_ClampIndex((int32_t)(local * FOC_MATH_LUT_INV_STEP + 0.5f),
+                                 FOC_MATH_LUT_SIN_Q_MAX_INDEX);
+    mirrored_idx = (uint16_t)(FOC_MATH_LUT_SIN_Q_MAX_INDEX - idx);
+
+    if (quadrant == 0U)
+    {
+        s = (float)g_foc_math_lut_sin_quarter[idx];
+    }
+    else if (quadrant == 1U)
+    {
+        s = (float)g_foc_math_lut_sin_quarter[mirrored_idx];
+    }
+    else if (quadrant == 2U)
+    {
+        s = -(float)g_foc_math_lut_sin_quarter[idx];
+    }
+    else
+    {
+        s = -(float)g_foc_math_lut_sin_quarter[mirrored_idx];
+    }
+
+    cos_quadrant = (uint8_t)((quadrant + 1U) & 3U);
+    if (cos_quadrant == 0U)
+    {
+        c = (float)g_foc_math_lut_sin_quarter[idx];
+    }
+    else if (cos_quadrant == 1U)
+    {
+        c = (float)g_foc_math_lut_sin_quarter[mirrored_idx];
+    }
+    else if (cos_quadrant == 2U)
+    {
+        c = -(float)g_foc_math_lut_sin_quarter[idx];
+    }
+    else
+    {
+        c = -(float)g_foc_math_lut_sin_quarter[mirrored_idx];
+    }
+
+    if (sin_out != 0) *sin_out = s / FOC_MATH_LUT_SIN_SCALE;
+    if (cos_out != 0) *cos_out = c / FOC_MATH_LUT_SIN_SCALE;
 }
 
 static inline float FOC_MathLut_Atan2(float y, float x)

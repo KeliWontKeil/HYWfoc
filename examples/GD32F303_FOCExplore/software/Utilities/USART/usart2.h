@@ -19,7 +19,7 @@
 #define USART2_RX_PIN          GPIO_PIN_11
 #define USART2_IRQn            USART2_IRQn
 
-/* USART configuration (same as USART1 for consistency) */
+/* USART configuration (same as USART0 for consistency) */
 #define USART2_BAUDRATE        115200U
 #define USART2_WORD_LENGTH     USART_WL_8BIT
 #define USART2_STOP_BITS       USART_STB_1BIT

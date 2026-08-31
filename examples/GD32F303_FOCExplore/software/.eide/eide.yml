@@ -59,10 +59,11 @@ virtualFolder:
         - path: Utilities/AS5600/as5600.c
         - path: Utilities/ADC/adc.c
         - path: Utilities/I2C/i2c0.c
-        - path: Utilities/USART/usart1.c
         - path: Utilities/TIMER3/timer3.c
+        - path: Utilities/TIMER5/timer5.c
         - path: Utilities/AUXTIMER/auxtimer.c
         - path: Utilities/USART/usart2.c
+        - path: Utilities/USART/usart0.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -75,7 +76,6 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_cogging_calib.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_compensation.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_current_loop.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_encoder.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_smo.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_hfi.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_executor.c
@@ -90,6 +90,7 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Protocol/foc_protocol_output.c
         - path: ../../../foc_core/src/L3_Hal/foc_sensor.c
         - path: ../../../foc_core/src/L3_Hal/foc_svpwm.c
+        - path: ../../../foc_core/src/L3_Hal/foc_codec.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_output_mgr.c
         - path: ../../../foc_core/src/L2_Core/Runtime/foc_queue.c
         - path: ../../../foc_core/src/L1_Orchestration/foc_app.c
@@ -98,7 +99,6 @@ virtualFolder:
         - path: ../../../foc_core/src/L3_Hal/foc_filter_math.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_openloop.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_source_mgr.c
-        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_transition.c
       folders: []
 dependenceList: []
 outDir: build
@@ -122,6 +122,7 @@ targets:
         - Utilities/LED
         - Utilities/PWM
         - Utilities/TIMER1
+        - Utilities/TIMER5
         - Utilities/USART
         - Utilities/TIMER2
         - Utilities/AS5600

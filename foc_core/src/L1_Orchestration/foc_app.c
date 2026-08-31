@@ -90,31 +90,7 @@ void FOC_App_Init(void)
     {
         foc_source_mgr_ctx_t sm_ctx;
 
-        sm_ctx.sensor = &motor.sensor;
-        sm_ctx.params = &motor.params;
-        sm_ctx.cfg = &motor.cfg;
-        sm_ctx.control_mode = motor.state.control_mode;
-        sm_ctx.switch_cfg = &motor.source_switch_state;
-#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.smo_state = &motor.estim_smo_state;
-#endif
-#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.openloop_state = &motor.openloop_state;
-#endif
-#if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.cogging_status = &motor.cogging_comp_status;
-#endif
-        sm_ctx.state = &motor.source_mgr_state;
-        sm_ctx.active = &motor.active_source_state;
-        sm_ctx.ctrl = &motor.ctrl;
-        sm_ctx.ref = &motor.ctrl_ref;
-        sm_ctx.outer_loop = &motor.outer_loop;
-        sm_ctx.speed_pid = &motor.speed_pid;
-        sm_ctx.torque_current_pid = &motor.torque_current_pid;
-#if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
-        sm_ctx.soft_switch = &motor.current_soft_switch_status;
-#endif
-        sm_ctx.encoder_services = &motor.encoder_services;
+        FOC_ControlExecutor_BuildSourceMgrCtx(&motor, &motor.ctrl_ref, &sm_ctx);
         FOC_SourceMgr_Init(&sm_ctx,
                            (uint8_t)FOC_CONTROL_LOW_SOURCE,
                            (uint8_t)FOC_CONTROL_HIGH_SOURCE);
