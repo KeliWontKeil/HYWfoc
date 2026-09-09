@@ -69,7 +69,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             motor->outer_loop.accum_rad = 0.0f;
             motor->outer_loop.prev_rad = 0.0f;
             motor->outer_loop.prev_valid = 0U;
-            FOC_Platform_WriteDebugText("init.calib: zero-lock sampling failed, keep zero as undefined\r\n");
+            FOC_Platform_WriteDebugText("init: zero-lock sampling failed, mech zero left undefined\r\n");
         }
     }
     else
@@ -106,7 +106,7 @@ void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
             {
                 motor->params.pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
             }
-            FOC_Platform_WriteDebugText("init.calib: direction/pole-pairs estimation failed, keep as undefined\r\n");
+            FOC_Platform_WriteDebugText("init: direction/pole-pairs estimation failed, values left undefined\r\n");
         }
     }
 
@@ -306,11 +306,11 @@ void FOC_MotorInit(foc_motor_t *motor,
 
         if (table_defined != 0U)
         {
-            FOC_Platform_WriteDebugText("init.cogging: static table defined, compensation ready\r\n");
+            FOC_Platform_WriteDebugText("init: cogging static table defined, compensation ready\r\n");
         }
         else
         {
-            FOC_Platform_WriteDebugText("init.cogging: no table defined, use Y:G to calibrate or set static table\r\n");
+            FOC_Platform_WriteDebugText("init: no cogging table defined, run Y:G to calibrate or set static table\r\n");
         }
     }
 #endif

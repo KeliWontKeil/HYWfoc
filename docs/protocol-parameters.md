@@ -324,7 +324,7 @@ aaPA3.14b
 parameter.pid_speed_kp=3.000
 config.pid_speed_kp=3.000
 state.semantic_report_enabled=ENABLE
-STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
+STATE RUN=1 FLT=0 CODE=NONE INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
 ```
 
 文本前缀规则：
@@ -357,6 +357,7 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 
 - 在 FAULT 状态下，调试流定期语义/示波输出被抑制。
 - 命令路径诊断和显式查询/清除命令仍可用。
+- 故障/恢复/初始化等生命周期事件以**人读文本行**输出（`fault:` / `recovery:` / `init:` / `cogging:` 前缀，统一小写自然句）；fault 突发另有 fast 短码（`FAULT ENC/ADC/UV`）。不做 `diag=...` 机读三段式——机器协议反馈仅用 §6.1 单字节回执。
 
 ## 7. 常见错误与原因
 

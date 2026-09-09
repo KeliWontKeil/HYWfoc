@@ -29,15 +29,12 @@ void FOC_OutputMgr_Init(foc_system_t *sys)
               FOC_RX_QUEUE_DEPTH);
 }
 
-void FOC_OutputMgr_WriteDirect(const char *text)
+void FOC_OutputMgr_WriteFastEvent(const char *text)
 {
+    /* 突发一次性事件通告：底层 fast 通道。调用方须保证文本简短、关键字段前置、
+     * 允许尾部截断；常规长文本禁用本通道（走主循环慢路径）。 */
     if (text == 0) return;
-    FOC_Platform_WriteDebugText(text);
-}
-
-void FOC_OutputMgr_WriteStatus(uint8_t status)
-{
-    FOC_Platform_WriteStatusByte(status);
+    FOC_Platform_WriteDebugFast(text);
 }
 
 void FOC_OutputMgr_FlushQueue(foc_system_t *sys)
@@ -121,7 +118,7 @@ void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
     Math_FloatToFixed(motor->sensor.vbus.filtered, 2, &ip_true_vbus, &fp_true_vbus);
 
     snprintf(buf, sizeof(buf),
-             "mech zero at elec0: %d.%04d rad, direction: %d, pole pairs: %d, vbus: %d.%02dV, max_phase_voltage: %d.%02dV, duty_max: %d.%02d\r\n true_vbus: %d.%02dV\r\n",
+             "init: mech zero at elec0 %d.%04d rad, direction %d, poles %d, vbus %d.%02d V, max phase %d.%02d V, duty max %d.%02d\r\n true vbus %d.%02d V\r\n",
              (int)ip_mech_zero, (int)fp_mech_zero,
              (int)motor->params.direction,
              (int)motor->params.pole_pairs,
@@ -129,7 +126,7 @@ void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
              (int)ip_max_phase, (int)fp_max_phase,
              (int)ip_duty, (int)fp_duty,
              (int)ip_true_vbus, (int)fp_true_vbus);
-    FOC_OutputMgr_WriteDirect(buf);
+    FOC_Platform_WriteDebugText(buf);
 }
 
 void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)

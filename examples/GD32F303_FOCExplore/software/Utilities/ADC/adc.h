@@ -23,7 +23,7 @@
 #define ADC2_RCU              RCU_ADC2
 
 /* ADC channel definitions */
-#define ADC_CHANNEL_PHASE_A   ADC_CHANNEL_0     /* Phase A current, PA0 */
+#define ADC_CHANNEL_PHASE_A   ADC_CHANNEL_2     /* Phase A current, PA2 */
 #define ADC_CHANNEL_PHASE_B   ADC_CHANNEL_1     /* Phase B current, PA1 */
 #define CURRENT_DIR_A         -1.0f             /* Phase A current direction multiplier */
 #define CURRENT_DIR_B         -1.0f             /* Phase B current direction multiplier */
@@ -33,7 +33,7 @@
 /* ADC GPIO definitions */
 #define ADC_GPIO_PHASE_A_RCU  RCU_GPIOA
 #define ADC_GPIO_PHASE_A_PORT GPIOA
-#define ADC_GPIO_PHASE_A_PIN  GPIO_PIN_0
+#define ADC_GPIO_PHASE_A_PIN  GPIO_PIN_2
 
 #define ADC_GPIO_PHASE_B_RCU  RCU_GPIOA
 #define ADC_GPIO_PHASE_B_PORT GPIOA
@@ -44,12 +44,12 @@
 #define ADC_GPIO_VBUS_PIN     GPIO_PIN_3
 
 
-#define FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE 1U
+#define FOC_ISR_VIS_ADC_DMA_TOGGLE_ENABLE 0U
 #define FOC_ISR_VIS_ADC_DMA_GPIO_RCU RCU_GPIOC
 #define FOC_ISR_VIS_ADC_DMA_GPIO_PORT GPIOC
 #define FOC_ISR_VIS_ADC_DMA_GPIO_PIN GPIO_PIN_13
 
-#define ADC2_VBUS_DIVIDER_RATIO 0.1935f
+#define ADC2_VBUS_DIVIDER_RATIO 0.0909f
 #define ADC2_VBUS_CONVERSION_K  (1.0f / ADC2_VBUS_DIVIDER_RATIO)
 #define ADC2_VBUS_EOC_TIMEOUT_LOOPS 10000U
 

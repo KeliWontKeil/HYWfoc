@@ -5,6 +5,24 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1]
+
+### Changed
+- **输出通道语义分层与去耦**：删除 `FOC_OutputMgr_WriteDirect` / `FOC_OutputMgr_WriteStatus` 两个「假通用转发」（把主循环长文本与 ISR 突发文本压到单一底层通道，造成上电长行在 16B fast 环形缓冲被截断、通道语义错位）。平台三条通道（慢文本=主循环可靠、快文本=ISR 突发可截断、单字节=ISR-safe 回执）由上层按语义类别**显式**选择：
+  - 新增 `FOC_OutputMgr_WriteFastEvent`（突发一次性通告，走 fast）；
+  - 新增 `FOC_Protocol_WriteLog`（人读日志，走主循环慢路径），取消 `FOC_Protocol_OutputDiag` 的 `diag.level/module/detail` 机读三段式；
+  - 长文本一律主循环；ISR 不做长文本。
+- **人读文本统一风格**：L 日志统一「前缀命名空间 + 小写自然句 + 固定数值格式」；独立子类（cogging C 代码导出/LUT dump = 数据导出、参数/配置/状态/摘要行 = 协议查询数据、单字节回执、示波器帧）各自保持，不做日志化。
+- **fault 运行结果处置下沉 L2**：新增 `FOC_ControlExecutor_OnCycleResult(motor, code)`（executor），统一收口运行状态迁移 + `SafeOutput` + fault 突发短码（由 `last_fault_code` 单一派生 `FAULT ENC/ADC/UV`）。L1 仍负责传感器采样与阈值判定（架构约束 #11），仅产出结果码后转调；`FOC_App_HandleResult` 删除，消除 ISR 内重复判定 `adc_valid`。
+
+### Fixed
+- fault 触发在 ISR 调用被禁用的阻塞慢路径文本（`WriteDebugText`），拔传感器后 `Y:C` 复位（物理故障未除→再次 fault）时 ISR 死锁/慢路径与快缓冲冲突，导致整套协议卡死、无法接收新消息。改为 ISR 只锁存 + fast 短码，完整详情由主循环补发。
+- 上电/初始化长文本（`WriteStartupInfo`、init 失败明细行）误走 16B fast 环形缓冲被截断（如 `mech zero at elec0...`），回归主循环慢路径后完整。
+- `FOC_App_AbortSpecialPhase` 内 `OutputDiag`（慢路径）在 Control ISR 自动退出路径被调用（同款 ISR 慢文本风险），改走 fast 突发通告 `abort:<phase>`。
+
+### Removed
+- `FOC_OutputMgr_WriteDirect`、`FOC_OutputMgr_WriteStatus`、`FOC_Protocol_OutputDiag`（替代为 `WriteFastEvent`/`WriteLog`）、上电 `FOC_Protocol_Init` 的 `diag ... READY` 噪音输出。
+
 ## [2.3.0]
 
 ### Changed

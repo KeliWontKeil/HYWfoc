@@ -482,7 +482,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             Math_FloatToFixed(motor->params.vbus_voltage, 2, &ip_vbus, &fp_vbus);
 
             snprintf(info, sizeof(info),
-                     "reinit done: mech_zero=%d.%04d rad, dir=%d, poles=%d, vbus=%d.%02dV\r\n",
+                     "reinit: done, mech zero %d.%04d rad, direction %d, poles %d, vbus %d.%02d V\r\n",
                      (int)ip_mech, (int)fp_mech,
                      (int)motor->params.direction,
                      (int)motor->params.pole_pairs,

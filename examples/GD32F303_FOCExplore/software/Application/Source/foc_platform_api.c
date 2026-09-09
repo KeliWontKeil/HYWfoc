@@ -152,17 +152,17 @@ uint16_t FOC_Platform_CommSource_ReadFrame(FOC_Platform_CommSourceId_t id,
 
 void FOC_Platform_WriteDebugText(const char *str)
 {
-    USART0_SlowWriter_SendData((const uint8_t *)str, (uint16_t)strlen(str));
+    USART2_SendData((const uint8_t *)str, (uint16_t)strlen(str));
 }
 
 void FOC_Platform_WriteDebugFast(const char *str)
 {
-    USART0_FastWriter_PutString(str);
+    USART2_FastWriter_PutString(str);
 }
 
 void FOC_Platform_WriteStatusByte(uint8_t status_code)
 {
-    USART0_FastWriter_PutByte(status_code);
+    USART2_FastWriter_PutByte(status_code);
 }
 
 /*****************************************************************************

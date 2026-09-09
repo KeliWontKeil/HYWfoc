@@ -277,7 +277,7 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     }
 
     (void)snprintf(buf, sizeof(buf),
-                   "CALIB DONE: %u bins, sum=%ld\r\n",
+                   "cogging: done, %u bins collected, sum %ld\r\n",
                    (unsigned)FOC_COGGING_LUT_POINT_COUNT,
                    (long)sum);
     FOC_Platform_WriteDebugFast(buf);
@@ -318,7 +318,7 @@ static void CoggingCalib_Finish(foc_motor_t *motor)
     motor->cogging_calib_state.progress_percent  = 100U;
     motor->cogging_calib_state.point_index       = CALIB_PHASE_DONE;
 
-    FOC_Platform_WriteDebugFast("COGGING CALIB FINISHED\r\n");
+    FOC_Platform_WriteDebugFast("cogging: calibration finished\r\n");
 
     /* 由主循环输出 dump 表（不阻塞 ISR） */
     motor->cogging_calib_state.request_dump = 1U;
@@ -356,7 +356,7 @@ static uint8_t CoggingCalib_Start(foc_motor_t *motor)
     motor->cogging_calib_state.saved_softswitch_mode    = motor->current_soft_switch_status.configured_mode;
 #endif
 
-    FOC_Platform_WriteDebugFast("COGGING CALIB START\r\n");
+    FOC_Platform_WriteDebugFast("cogging: calibration started\r\n");
 
     return 1U;
 }
@@ -409,7 +409,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
 
             motor->cogging_calib_state.point_index = CALIB_PHASE_SETTLE;
 
-            FOC_Platform_WriteDebugFast("entering settle\r\n");
+            FOC_Platform_WriteDebugFast("cogging: entering settle\r\n");
 
             return 1U;
         }
@@ -436,12 +436,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                 motor->cogging_calib_state.bins_collected    = 0U;
                 motor->cogging_calib_state.last_reported_progress = 0U;
 
-                {
-                    char buf[48];
-                    (void)snprintf(buf, sizeof(buf),
-                                  "starting scan\r\n");
-                    FOC_Platform_WriteDebugFast(buf);
-                }
+                FOC_Platform_WriteDebugFast("cogging: starting scan\r\n");
             }
 
             return 1U;
@@ -552,7 +547,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
                     {
                         char buf[48];
                         (void)snprintf(buf, sizeof(buf),
-                                      "CALIB:%u/%u,%u%%\r\n",
+                                      "cog:%u/%u %u%%\r\n",
                                       (unsigned)(motor->cogging_calib_state.pass_num + 1U),
                                       (unsigned)FOC_COGGING_CALIB_NUM_PASSES,
                                       (unsigned)motor->cogging_calib_state.progress_percent);
@@ -584,7 +579,7 @@ uint8_t FOC_CoggingCalib_RunStep(foc_motor_t *motor,
             else
             {
                 motor->cogging_calib_state.point_index = CALIB_PHASE_FINISH;
-                FOC_Platform_WriteDebugFast("CALIB: all passes done, computing table\r\n");
+                FOC_Platform_WriteDebugFast("cogging: all passes done, computing table\r\n");
             }
 
             return 1U;

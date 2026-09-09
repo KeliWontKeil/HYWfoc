@@ -62,7 +62,7 @@
 
 /* Alignment/calibration voltage is derived from max_phase_voltage. */
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFINED FOC_CFG_ENABLE
-#define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 11U//FOC_POLE_PAIRS_UNDEFINED
+#define FOC_MOTOR_INIT_POLE_PAIRS_DEFAULT 11U
 #define FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD 5.1954
 #define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_NORMAL
 
@@ -124,7 +124,7 @@
 /* Runtime default flags and rates. */
 #define COMMAND_MANAGER_DEFAULT_SEMANTIC_ENABLED FOC_CFG_DISABLE
 #define COMMAND_MANAGER_DEFAULT_OSC_ENABLED FOC_CFG_DISABLE
-#define COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE FOC_CFG_ENABLE
+#define COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE FOC_CFG_DISABLE
 #define COMMAND_MANAGER_DEFAULT_SEMANTIC_FREQ_HZ 2U
 #define COMMAND_MANAGER_DEFAULT_OSC_FREQ_HZ 100U
 
@@ -237,7 +237,7 @@
 /* ── OpenLoop angle source / low-speed policy defaults ── */
 #define FOC_OPENLOOP_CURRENT_A                   0.3f
 
-/* ── Source Manager 低/高速 source 切换默认参数/门限 ── */
+/* ── 低/高速速域切换参数 ── */
 #define FOC_ACCEL_SPEED_LIMIT_LOW_RAD_S      20.0f   /* LOW 区域速度上限 */
 #define FOC_ACCEL_SPEED_LIMIT_HIGH_RAD_S     50.0f   /* HIGH/FULL 区域速度上限 */
 

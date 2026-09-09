@@ -726,7 +726,7 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
         motor->state.current_loop_ready = 0U;
         motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
 
-        FOC_Protocol_OutputDiag("INFO", "fault_recovery", "system reset completed");
+        FOC_Protocol_WriteLog("recovery: system fault cleared, control basis rebuilt\r\n");
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
         res.needs_status = 1U;
@@ -846,7 +846,6 @@ void FOC_Protocol_Init(foc_report_config_t *report)
         report->reserved = 0U;
 #endif
     }
-    FOC_Protocol_OutputDiag("INFO", "protocol", "READY");
 }
 
 foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(

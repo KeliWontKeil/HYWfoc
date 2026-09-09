@@ -3,18 +3,17 @@
 
 #include "gd32f30x.h"
 
-/* 三色 LED 引脚：红=PB1、蓝=PB2、绿=PA7 */
-#define LEDR_GPIO_RCU RCU_GPIOB
-#define LEDR_GPIO GPIOB
-#define LEDR_GPIO_PIN GPIO_PIN_2
+#define LEDR_GPIO_RCU RCU_GPIOC
+#define LEDR_GPIO GPIOC
+#define LEDR_GPIO_PIN GPIO_PIN_15
 
-#define LEDB_GPIO_RCU RCU_GPIOB
-#define LEDB_GPIO GPIOB
-#define LEDB_GPIO_PIN GPIO_PIN_1
+#define LEDB_GPIO_RCU RCU_GPIOC
+#define LEDB_GPIO GPIOC
+#define LEDB_GPIO_PIN GPIO_PIN_13
 
-#define LEDG_GPIO_RCU RCU_GPIOA
-#define LEDG_GPIO GPIOA
-#define LEDG_GPIO_PIN GPIO_PIN_7
+#define LEDG_GPIO_RCU RCU_GPIOC
+#define LEDG_GPIO GPIOC
+#define LEDG_GPIO_PIN GPIO_PIN_14
 
 void LED_Init(void);
 void Set_LED(uint8_t LEDX);

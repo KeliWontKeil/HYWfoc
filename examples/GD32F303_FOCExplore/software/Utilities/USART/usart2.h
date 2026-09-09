@@ -3,7 +3,7 @@
 
 /*!
     \file    usart2.h
-    \brief   USART2 module for basic serial communication
+    \brief   USART2 module for serial communication (main debug/protocol TX + RX input source)
 
     \version 2026-3-11, V1.0.0
 */
@@ -42,6 +42,9 @@
 #define USART2_RX_BUFFER_SIZE  128
 #define USART2_TX_BUFFER_SIZE  128
 
+/* Fast path ring buffer size (ISR-safe, TXE interrupt driven) */
+#define USART2_FAST_RING_SIZE  16U
+
 /* USART status flags */
 typedef enum {
     USART2_STATUS_OK = 0,
@@ -58,6 +61,12 @@ usart2_status_t USART2_SendData(const uint8_t *data, uint16_t len);
 uint8_t USART2_IsFrameReady(void);
 uint16_t USART2_ReadFrame(uint8_t *buffer, uint16_t max_len);
 void USART2_ClearBuffers(void);
+
+/* ===== TX: Fast Writer (ISR-safe, non-blocking, TXE interrupt driven) ===== */
+void USART2_FastWriter_PutByte(uint8_t byte);
+void USART2_FastWriter_PutString(const char *str);
+uint8_t USART2_FastWriter_IsEmpty(void);
+void USART2_FastWriter_Flush(void);
 
 /* Interrupt callback type */
 typedef void (*usart2_idle_callback_t)(void);

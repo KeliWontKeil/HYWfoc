@@ -171,15 +171,31 @@ FOC_Protocol_ProcessSingle() ← L2/Protocol 命令语义执行
 参数写入语义：协议（主循环单写者）直接写 motor 字段，**写入即生效**（下一次控制 ISR 拍生效）；
 无运行时派生重算（`FOC_Control_ApplyConfig` 仅冷路径调用，见"配置应用"节）。
 
-### 双输出路径
+### 双输出路径与文本分层
 
-| 路径 | 机制 | 用途 | 执行位置 |
-|------|------|------|---------|
-| **快路径**（直写） | 直接调用 L3 平台 API（`FOC_Platform_Write*`） | 状态码、参数行、错误回报等短数据 | ISR 或协议处理函数内部 |
-| **慢路径**（队列） | ISR: FIFO_Enqueue(runtime.monitor.elem_fifo) → 主循环: FIFO_Dequeue → 格式化(tag switch) → FIFO_Enqueue(runtime.output.tx_fifo) → 平台发送 | 语义遥测、示波器帧、协议摘要等多行数据 | 入队在 MonitorTrigger ISR（快照 + PollNextValue），格式化+入 TX 在主循环 Monitor 段，出 TX 由 L1 统一消费 |
+**平台输出通道**（物理共享串口，语义各异，`foc_platform_api.h`）：
 
-**快路径的特点**：短小、可打断队列输出、不在乎阻塞（因为很短）。
-**慢路径的特点**：大数据量、需要缓冲、通过队列解耦生产者与消费者。
+| 通道 | 机制 | 契约 | 承载 |
+|------|------|------|------|
+| `FOC_Platform_WriteDebugText`（慢） | 主循环阻塞 DMA | 仅主循环；可靠完整 | 常规日志、协议文本行、TX 队列出队发送 |
+| `FOC_Platform_WriteDebugFast`（快） | 环形缓冲（小、满即丢） | ISR-safe；突发/短文本 | fault/abort 突发通告短码 |
+| `FOC_Platform_WriteStatusByte`（快·1B） | 环形缓冲 | ISR-safe；单字节 | 协议 `O/P/I/E` 回执 |
+
+**人读文本按语义类别分层**，上层经明确入口选择通道（已移除 `WriteDirect`/`WriteStatus` 假通用转发）：
+
+| 类别 | 说明 | 输出 |
+|------|------|------|
+| **L 日志/诊断** | 常规人读 | 主循环慢路径（`FOC_Protocol_WriteLog` / `WriteDebugText`） |
+| **突发一次性通告** | 重要事件保底直达，允许截断 | fast（`FOC_OutputMgr_WriteFastEvent` / `WriteDebugFast`） |
+| **D 数据导出** | cogging C 代码 / LUT dump | 主循环，保留精确结构化语法 |
+| **Q 协议查询数据** | 参数/配置/状态/摘要行 | 主循环文本行 |
+| **B 单字节回执** | 协议机器反馈 | `WriteStatusByte` |
+| **示波器帧** | 二进制遥测 | 主循环编码输出（除外） |
+
+**规则**：
+- 长文本（无论快慢通道）一律以可读性优先、不供其它设备处理；机器协议反馈只用单字节回执。
+- ISR 不做长文本：fault 在 ISR 只锁存 + fast 短码，完整详情由主循环补发。
+- Monitor 语义/示波器等大文本走 `elem_fifo → TX FIFO → WriteDebugText` 的**队列慢路径**（见下节），入队在 MonitorTrigger ISR、格式化+出 TX 在主循环，由 L1 统一消费。
 
 ### Monitor 元素队列机制
 
@@ -376,6 +392,15 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 
 调用方：`L1 OnPwmUpdateISR`（system_fault 时）、`L2 RunISR`（motor_enabled==0 时）、`L1 AbortSpecialPhase`（退出特殊状态时）。`SafeOutput` 和 `Stop` 均委托至 `FullStop`。
 
+### 运行周期结果处理（fault 锁存/通告）— 结果处置收口 L2
+
+L1 负责传感器采样与阈值判定（架构约束 #11），产出 `FOC_CYCLE_*` 结果码后统一转调 `FOC_ControlExecutor_OnCycleResult(motor, code)`（L2 executor，替换原 L1 `FOC_App_HandleResult`）：
+
+- `OK` → 维持 `system_running = 1`；
+- `FAULT_SENSOR` / `FAULT_UVLO` → 锁存 `system_fault = 1`、`system_running = 0` + `SafeOutput` + 突发短码（由 `last_fault_code` 单一派生 `FAULT ENC/ADC/UV`，经平台 `WriteDebugFast`）。
+
+fault 完整可读详情由主循环 `FOC_App_ReportFaultTransition` 检测 `system_fault` 0→1 跃迁后经慢路径补发（如 `fault: encoder feedback invalid`）；ISR 内不做长文本。
+
 ### FOC_Control_RebuildControlBasis — 恢复路径统一软初始化
 
 `FullStop` 只做"安全归零输出 + 阻断电流环（`current_loop_ready=0`）"，**不重建**源获取、电角度、传感器滤波、SMO 等运行期控制基准。为使能/错误复位/abort 等"从停止态恢复"场景不依赖被停止打断的残留状态，引入统一控制基准重建函数 `FOC_Control_RebuildControlBasis`（`foc_ctrl_init`）：
@@ -434,7 +459,7 @@ typedef enum {
 | **禁能自动** | `S:M=0`（motor_enabled=0） | ControlTrigger 检测 → `AbortSpecialPhase` |
 | **模式切换自动** | `P:D=xxx`（control_mode 变化） | ControlTrigger 检测 → `AbortSpecialPhase` |
 
-退出时通过 `FOC_Protocol_OutputDiag("INFO", "abort", <phase_name>)` 输出诊断日志。
+退出时经突发通告（fast，`FOC_OutputMgr_WriteFastEvent`）输出 `abort:<phase>`——`AbortSpecialPhase` 可由 Control ISR 自动退出触发，禁用主循环慢文本。
 
 模块级 Abort 函数（`FOC_CoggingCalib_Abort` / `FOC_ReInit_Abort`）重置对应模块的内部状态机，不清除已采集的数据以便下次启动时恢复。
 

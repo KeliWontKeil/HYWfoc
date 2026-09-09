@@ -29,6 +29,8 @@ static void I2C0_GPIO_Config(void)
     /* Configure SCL and SDA as alternate function open-drain */
     gpio_init(I2C0_GPIO_PORT, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, I2C0_SCL_PIN);
 	gpio_init(I2C0_GPIO_PORT, GPIO_MODE_AF_OD, GPIO_OSPEED_50MHZ, I2C0_SDA_PIN);
+    
+    gpio_pin_remap_config(GPIO_I2C0_REMAP, ENABLE);
 }
 
 static void I2C0_Config(void)
