@@ -1,6 +1,8 @@
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_math_lut.h"
 
+#include <stdio.h>
+
 float Math_WrapRad(float angle)
 {
     while (angle >= FOC_MATH_TWO_PI)
@@ -98,6 +100,42 @@ void Math_FloatToFixed(float value, uint8_t decimals, int32_t *ipart_out, int32_
     {
         *fpart_out = -*fpart_out;
     }
+}
+
+uint16_t Math_FormatFixed(char *out, uint16_t max_len, float value, uint8_t decimals)
+{
+    int32_t ip;
+    int32_t fp;
+    int written;
+    const char *sign;
+
+    if ((out == 0) || (max_len == 0U))
+    {
+        return 0U;
+    }
+    if (decimals > 6U)
+    {
+        decimals = 6U;
+    }
+
+    /* 符号与幅值分离：|value|<1 的负值若走 Math_FloatToFixed + "%d.%0Nd" 会丢负号 */
+    sign = (value < 0.0f) ? "-" : "";
+    Math_FloatToFixed((value < 0.0f) ? -value : value, decimals, &ip, &fp);
+
+    if (decimals == 0U)
+    {
+        written = snprintf(out, max_len, "%s%d", sign, (int)ip);
+    }
+    else
+    {
+        written = snprintf(out, max_len, "%s%d.%0*d", sign, (int)ip, (int)decimals, (int)fp);
+    }
+
+    if ((written < 0) || ((uint16_t)written >= max_len))
+    {
+        return 0U;
+    }
+    return (uint16_t)written;
 }
 
 float Math_FirstOrderLpf(float input, float *state, float alpha, uint8_t *state_valid)

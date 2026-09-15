@@ -7,29 +7,29 @@ Some files in the repository are third-party vendor components under their own l
 ## Component Inventory
 
 1. Arm CMSIS (legacy CMSIS core headers)
-- Path scope: `examples/GD32F303_FOCExplore/software/Firmware/CMSIS/`
+- Path scope: `examples/HYWFOC_Explorer/software/Firmware/CMSIS/`
 - Typical license style in headers: 3-clause BSD-like text
-- Example file: `examples/GD32F303_FOCExplore/software/Firmware/CMSIS/core_cm4.h`
+- Example file: `examples/HYWFOC_Explorer/software/Firmware/CMSIS/core_cm4.h`
 
 2. Arm CMSIS (modern helper headers)
-- Path scope: `examples/GD32F303_FOCExplore/software/.cmsis/include/`
+- Path scope: `examples/HYWFOC_Explorer/software/.cmsis/include/`
 - Typical license style in headers: Apache-2.0 (`SPDX-License-Identifier: Apache-2.0`)
-- Example file: `examples/GD32F303_FOCExplore/software/.cmsis/include/cmsis_gcc.h`
+- Example file: `examples/HYWFOC_Explorer/software/.cmsis/include/cmsis_gcc.h`
 
 3. GigaDevice GD32 standard peripheral firmware
-- Path scope: `examples/GD32F303_FOCExplore/software/Firmware/GD32F30x_standard_peripheral/`
+- Path scope: `examples/HYWFOC_Explorer/software/Firmware/GD32F30x_standard_peripheral/`
 - Typical license style in headers: 3-clause BSD-like text
-- Example file: `examples/GD32F303_FOCExplore/software/Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_adc.c`
+- Example file: `examples/HYWFOC_Explorer/software/Firmware/GD32F30x_standard_peripheral/Source/gd32f30x_adc.c`
 
 4. GigaDevice GD32 USB device library
-- Path scope: `examples/GD32F303_FOCExplore/software/Firmware/GD32F30x_usbd_library/`
+- Path scope: `examples/HYWFOC_Explorer/software/Firmware/GD32F30x_usbd_library/`
 - Typical license style in headers: 3-clause BSD-like text
-- Example file: `examples/GD32F303_FOCExplore/software/Firmware/GD32F30x_usbd_library/usbd/Source/usbd_lld_core.c`
+- Example file: `examples/HYWFOC_Explorer/software/Firmware/GD32F30x_usbd_library/usbd/Source/usbd_lld_core.c`
 
 5. GigaDevice GD32 USB FS library
-- Path scope: `examples/GD32F303_FOCExplore/software/Firmware/GD32F30x_usbfs_library/`
+- Path scope: `examples/HYWFOC_Explorer/software/Firmware/GD32F30x_usbfs_library/`
 - Typical license style in headers: 3-clause BSD-like text
-- Example file: `examples/GD32F303_FOCExplore/software/Firmware/GD32F30x_usbfs_library/ustd/common/usb_ch9_std.h`
+- Example file: `examples/HYWFOC_Explorer/software/Firmware/GD32F30x_usbfs_library/ustd/common/usb_ch9_std.h`
 
 ## Compliance Notes
 

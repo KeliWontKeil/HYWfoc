@@ -5,6 +5,25 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-09-15
+
+### Changed
+- **新硬件适配（HYWFOC_Explorer）——相标签与驱动腿映射收敛为宏**：实例 `pwm.h` 新增 `PWM_PHASE_A/B/C_CHANNEL`（相 -> TIMER0 通道，含通道范围与"三相须为 0/1/2 的一个排列"编译期校验）；`PWM_SetDutyCycleTripleFloat` 与上电默认占空比按该映射写入。`pwm.c` 内所有占空比写入收敛到单一入口 `PWM_WriteDutyChannel`，三处重复的 channel->`TIMER_CH_x` 分支收敛为一张表，内部原型统一为 `static`，并移除被占空比换算取代的整数版比较值换算。
+  - 相标签由电流采样链定义（`adc.h` 的 `ADC_CHANNEL_PHASE_A/B` 即 `current_a/current_b`，第三相由 `ic = -(ia+ib)` 重建），PWM 输出腿必须与"采样相"同相。两链相差奇置换（镜像）时测量帧与施加帧互为镜像，表现为 iq 以 2 倍电频率正弦波动、SMO 不收敛。映射真值见实例 `pwm.h` 与 `hardware/hardware.md`。
+- **死区唯一配置源收敛**：移除 `pwm.h` 的独立死区宏（定时器周期单位）与 `PWM_Timer_Config` 内第二处死区写入（该写入位于 `PWM_Init` 之前、执行后被覆盖）；死区只在 `PWM_Init` 由 LS 配置的周期百分比参数设置一处，`PWM_SetDeadTime` 明确为低层周期接口。
+- **实例 ADC 相标签与电流方向宏按新硬件实测校正**（`adc.h`）；`examples/HYWFOC_Explorer_old` 电流量程宏同步对齐；`hardware/hardware.md` 更新 ADC 相标签与 PWM 引脚/通道映射。
+- **默认值与开关调整**：欠压保护默认启用（`FOC_FEATURE_UNDERVOLTAGE_PROTECTION`）；电机默认使能（`COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE`）；电机零点与方向默认改为未定义（`FOC_MOTOR_INIT_MECH_ZERO_DEFAULT_RAD` / `FOC_MOTOR_INIT_DIRECTION_DEFAULT`），上电由初始化标定流程实测填充；示波器默认通道掩码调整（三相电流与 `iq_measured` 默认开启，备用源/速域/电角度通道默认关闭）。
+
+### Fixed
+- **上报数值文本化错误（通信）**：原 `Math_FloatToFixed` + `"%d.%0Nd"` 组合在 `|value| < 1` 的负值上整数部分为 0、`%d` 无法表达负号，负小数丢符号；`Codec_FormatValueLine` 整型分支用 `%u` 且把负值钳到 0，有符号字段（方向、角度差等）回报错误。上述缺陷直接表现为**示波器回报值错误**，并同时影响语义行、系统参数回读、上电信息与重初始化日志。
+  - 新增 L3 `Math_FormatFixed`（符号与幅值分离的定点文本化，`foc_math_transforms.h/.c`），迁移全部上报点：`Codec_OscEncodeFrame`、`Codec_FormatValueLine`（整型改 `%d`）、`FOC_Protocol_QueueSystemInfo`（含齿槽 LSB 行）、`DebugStream_FormatSemanticLine`、`FOC_OutputMgr_WriteStartupInfo`、`FOC_ReInit_RunStep` 完成日志。
+  - 帧格式不变（空格分隔十进制文本），仅数值内容修正。
+
+### Documentation
+- `docs/architecture.md`：平台 API 契约新增"相标签一致性"约束（采样相 <-> 驱动腿）；输出文本分层新增"数值文本化统一走 `Math_FormatFixed`"规则。
+- `docs/protocol-parameters.md`：整数参数格式化规则更正为有符号十进制文本。
+- 版本基线统一至 v2.4.0：`README.md`、`docs/README.md`、`NEXT_MISSION.md`。
+
 ## [2.3.1]
 
 ### Changed
@@ -76,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.2.3] - 2026-08-13
 
 ### Changed
-- **新硬件 GD32F303_FOCExplore 引脚适配（实例 L4 层）**：
+- **新硬件 HYWFOC_Explorer 引脚适配（实例 L4 层）**：
   - 主串口 USART1 → **USART0**（PB6/PB7，remap）：新增 `usart0.c/h`、删除 `usart1.c/h`；debug 快/慢路径、状态码与协议源 0 均改走 USART0。
   - I2C0（AS5600）移至 **PB8/PB9**（`GPIO_I2C0_REMAP`）。
   - LED 三色：**LEDR=PB1、LEDB=PB2、LEDG=PA7**，逻辑索引→颜色映射（1 蓝/COMM、2 绿/RUN、3 红/ERROR）。
@@ -918,7 +937,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - Updated protocol bilingual guide and GD32F303 instance adaptation examples to the new driver-id command format.
 - Reworked root `README.md` as external-facing Chinese project introduction with unified naming baseline (HYWfoc / 何易位FOC).
-- Reworked instance `examples/GD32F303_FOCExplore/README.md` into platform usage guide and aligned links to detailed instance docs.
+- Reworked instance `examples/HYWFOC_Explorer/README.md` into platform usage guide and aligned links to detailed instance docs.
 - Updated `docs/README.md` and `NEXT_MISSION.md` (P3.5) for document-role boundary and naming/task consistency.
 - Updated repository workflow and initialization docs to repository-level governance (`AI_INITIALIZATION.md`, `copilot-instructions.md`, `docs/development.md`, and workflow rules in `docs/engineering/dev-guidelines/rules/`).
 - Added third-party dependency and license notice inventory in `THIRD_PARTY_NOTICES.md`.

@@ -977,11 +977,10 @@ static void QueueSystemInfoFloatLine(fifo_queue_t *tx_fifo,
                                      const char *name,
                                      float value)
 {
-    int32_t ip;
-    int32_t fp;
+    char num[24];
 
-    Math_FloatToFixed(value, 3, &ip, &fp);
-    snprintf(out, out_size, "system.%s=%d.%03d\r\n", name, (int)ip, (int)fp);
+    if (Math_FormatFixed(num, sizeof(num), value, 3U) == 0U) return;
+    snprintf(out, out_size, "system.%s=%s\r\n", name, num);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
 }
 
@@ -1066,11 +1065,13 @@ void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fif
              (unsigned int)motor->cogging_comp_status.point_count);
     (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
     {
-        int32_t ip;
-        int32_t fp;
-        Math_FloatToFixed(motor->cogging_comp_status.iq_lsb_a, 5, &ip, &fp);
-        snprintf(out, sizeof(out), "system.cogging_iq_lsb_a=%d.%05d\r\n", (int)ip, (int)fp);
-        (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+        char num[24];
+
+        if (Math_FormatFixed(num, sizeof(num), motor->cogging_comp_status.iq_lsb_a, 5U) != 0U)
+        {
+            snprintf(out, sizeof(out), "system.cogging_iq_lsb_a=%s\r\n", num);
+            (void)FIFO_Enqueue(tx_fifo, (uint8_t *)out);
+        }
     }
 #endif
 }

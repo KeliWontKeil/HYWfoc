@@ -30,9 +30,13 @@ FOC_VSCODE/
 │           ├── Protocol/
 │           └── Runtime/
 │       └── L3_Hal/
-├── examples/GD32F303_FOCExplore/
-│   ├── hardware/
-│   └── software/
+├── examples/
+│   ├── HYWFOC_Explorer/          ← 当前实例（新硬件）
+│   │   ├── hardware/
+│   │   └── software/
+│   └── HYWFOC_Explorer_old/      ← 旧硬件实例
+│       ├── hardware/
+│       └── software/
 ├── docs/
 └── .github/
 ```
@@ -75,6 +79,7 @@ FOC_VSCODE/
   - 【可选】可空实现：`CommSource` 源 2/3、`EnableCycleCounter/ReadCycleCounter`。
 - **参数约定**：编译期固定配置（`FOC_PWM_FREQ_KHZ`、`FOC_SENSOR_SAMPLE_FREQ_KHZ`、`FOC_SCHEDULER_TICK_HZ`、`FOC_SVPWM_DEADTIME_PERCENT_DEFAULT`）由平台实现内部读取，不进入接口签名；仅运行时参数（辅助定时器频率、采样偏移）显式传参。
 - **回调统一**：`FOC_Platform_IsrCallback_t` 为唯一无参中断回调类型（PWM ISR / 控制节拍 / 辅助定时器共用）。
+- **相标签一致性（平台实现契约）**：`FOC_Platform_ReadPhaseCurrent` 的 a/b（以及由 `ic = -(ia+ib)` 重建的 c）必须与 `FOC_Platform_PWMSetDutyCycleTripleFloat` 的 a/b/c 指向**同一物理相**；相标签由电流采样链定义，PWM 驱动腿按实例板级映射宏对齐（实例 `pwm.h` / `hardware.md`）。两链相差奇置换（镜像）时测量帧与施加帧互为镜像，直接表现为 iq 以 2 倍电频率正弦波动、SMO 不收敛。
 - **通信源枚举**：`FOC_Platform_CommSourceId_t`（源 0/1 必须，2/3 可选）；`FOC_Platform_CommSource_ReadFrame(id, ...)` 返回 0 表示无帧或未支持该源。
 
 ## 核心数据结构
@@ -196,6 +201,7 @@ FOC_Protocol_ProcessSingle() ← L2/Protocol 命令语义执行
 - 长文本（无论快慢通道）一律以可读性优先、不供其它设备处理；机器协议反馈只用单字节回执。
 - ISR 不做长文本：fault 在 ISR 只锁存 + fast 短码，完整详情由主循环补发。
 - Monitor 语义/示波器等大文本走 `elem_fifo → TX FIFO → WriteDebugText` 的**队列慢路径**（见下节），入队在 MonitorTrigger ISR、格式化+出 TX 在主循环，由 L1 统一消费。
+- **数值文本化统一走 L3 `Math_FormatFixed`**（符号与幅值分离）：禁止 `Math_FloatToFixed` + "%d.%0Nd" 组合输出（`|value| < 1` 的负值整数部分为 0，`%d` 无法表达负号）；整型字段用 `%d` 输出，负值不得被 `%u` 钳位/回绕。
 
 ### Monitor 元素队列机制
 

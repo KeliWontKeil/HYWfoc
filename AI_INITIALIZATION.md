@@ -46,7 +46,7 @@
 ## 工作区职责
 
 1. 根工作区 `Project.code-workspace`：代码审查、架构治理、文档维护。
-2. 实例工作区（如 `examples/GD32F303_FOCExplore/software/Project.code-workspace`）：构建、烧录、调试。
+2. 实例工作区（如 `examples/HYWFOC_Explorer/software/Project.code-workspace`）：构建、烧录、调试。
 
 ## 强制分层约束
 

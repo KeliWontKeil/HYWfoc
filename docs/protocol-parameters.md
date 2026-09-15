@@ -1,4 +1,4 @@
-﻿# 协议参数与测试指南
+# 协议参数与测试指南
 
 本文件面向上位机调试和联调测试，描述当前固件实际实现的协议规则。
 
@@ -350,7 +350,7 @@ STATE RUN=1 FLT=0 CODE=NONE INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=
 格式化规则：
 
 - 浮点参数：3 位小数
-- 整数参数：无符号十进制文本
+- 整数参数：有符号十进制文本（负值原样输出，不回绕、不钳位）
 - 状态输出：`ENABLE` 或 `DISABLE`
 
 故障状态行为：
@@ -384,7 +384,7 @@ STATE RUN=1 FLT=0 CODE=NONE INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=
 6. 发送 `aaYCb` 确认故障计数器已清除。
 
 实例特定的串口终端设置和通道布线文档见：
-- `../examples/GD32F303_FOCExplore/README.md`（硬件章节）
+- `../examples/HYWFOC_Explorer/README.md`（硬件章节）
 
 最佳实践：
 

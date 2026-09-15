@@ -98,34 +98,32 @@ void FOC_OutputMgr_PollSources(foc_system_t *sys)
 void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
 {
     char buf[160];
-    int32_t ip_mech_zero;
-    int32_t fp_mech_zero;
-    int32_t ip_vbus;
-    int32_t fp_vbus;
-    int32_t ip_max_phase;
-    int32_t fp_max_phase;
-    int32_t ip_duty;
-    int32_t fp_duty;
-    int32_t ip_true_vbus;
-    int32_t fp_true_vbus;
+    char num_mech_zero[24];
+    char num_vbus[24];
+    char num_max_phase[24];
+    char num_duty[24];
+    char num_true_vbus[24];
 
-    Math_FloatToFixed(motor->params.mech_angle_at_elec_zero_rad, 4, &ip_mech_zero, &fp_mech_zero);
-    Math_FloatToFixed(motor->params.vbus_voltage, 2, &ip_vbus, &fp_vbus);
-    Math_FloatToFixed(motor->ctrl.max_phase_voltage, 2, &ip_max_phase, &fp_max_phase);
-    Math_FloatToFixed((motor->params.vbus_voltage > 0.0f) ?
-                      (motor->ctrl.max_phase_voltage / motor->params.vbus_voltage) : 0.0f,
-                      2, &ip_duty, &fp_duty);
-    Math_FloatToFixed(motor->sensor.vbus.filtered, 2, &ip_true_vbus, &fp_true_vbus);
+    (void)Math_FormatFixed(num_mech_zero, sizeof(num_mech_zero),
+                           motor->params.mech_angle_at_elec_zero_rad, 4U);
+    (void)Math_FormatFixed(num_vbus, sizeof(num_vbus), motor->params.vbus_voltage, 2U);
+    (void)Math_FormatFixed(num_max_phase, sizeof(num_max_phase),
+                           motor->ctrl.max_phase_voltage, 2U);
+    (void)Math_FormatFixed(num_duty, sizeof(num_duty),
+                           (motor->params.vbus_voltage > 0.0f) ?
+                               (motor->ctrl.max_phase_voltage / motor->params.vbus_voltage) : 0.0f,
+                           2U);
+    (void)Math_FormatFixed(num_true_vbus, sizeof(num_true_vbus), motor->sensor.vbus.filtered, 2U);
 
     snprintf(buf, sizeof(buf),
-             "init: mech zero at elec0 %d.%04d rad, direction %d, poles %d, vbus %d.%02d V, max phase %d.%02d V, duty max %d.%02d\r\n true vbus %d.%02d V\r\n",
-             (int)ip_mech_zero, (int)fp_mech_zero,
+             "init: mech zero at elec0 %s rad, direction %d, poles %d, vbus %s V, max phase %s V, duty max %s\r\n true vbus %s V\r\n",
+             num_mech_zero,
              (int)motor->params.direction,
              (int)motor->params.pole_pairs,
-             (int)ip_vbus, (int)fp_vbus,
-             (int)ip_max_phase, (int)fp_max_phase,
-             (int)ip_duty, (int)fp_duty,
-             (int)ip_true_vbus, (int)fp_true_vbus);
+             num_vbus,
+             num_max_phase,
+             num_duty,
+             num_true_vbus);
     FOC_Platform_WriteDebugText(buf);
 }
 
