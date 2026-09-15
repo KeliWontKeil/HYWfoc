@@ -1,13 +1,13 @@
 # 库文档索引
 
-> 版本基线：v2.3.0
+> 版本基线：v2.4.0
 > 项目命名：HYW FOC（中文名：何易位FOC）
 
 ## 作用范围
 
 本目录只放置"库级通用文档"：架构、接口契约、开发流程、协议定义。
 
-实例/板级文档放在各实例目录下（例如 `../examples/GD32F303_FOCExplore/`）。
+实例/板级文档放在各实例目录下（例如 `../examples/HYWFOC_Explorer/`）。
 
 ## 文档分层边界
 
@@ -27,15 +27,15 @@
 
 ## 当前基线
 
-- 版本基线：v2.3.0
+- 版本基线：v2.4.0
 - 项目名称：HYW FOC（何易位FOC）
 - 任务目标：下一目标版本见 [NEXT_MISSION.md](../NEXT_MISSION.md)
 - 第三方许可证声明：见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
 
 ## 相关实例文档（GD32F303）
 
-- [../examples/GD32F303_FOCExplore/README.md](../examples/GD32F303_FOCExplore/README.md)
-- [../examples/GD32F303_FOCExplore/hardware/hardware.md](../examples/GD32F303_FOCExplore/hardware/hardware.md)
+- [../examples/HYWFOC_Explorer/README.md](../examples/HYWFOC_Explorer/README.md)
+- [../examples/HYWFOC_Explorer/hardware/hardware.md](../examples/HYWFOC_Explorer/hardware/hardware.md)
 
 ## 推荐阅读顺序
 

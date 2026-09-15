@@ -19,11 +19,10 @@ void FOC_OutputMgr_Init(foc_system_t *sys);
 void FOC_OutputMgr_FlushQueue(foc_system_t *sys);
 uint8_t FOC_OutputMgr_GetOverflowCount(const foc_system_t *sys);
 
-/* 直写（无缓冲，通过 L3 平台 API 立即输出） */
-void FOC_OutputMgr_WriteDirect(const char *text);
-
-/* 写状态字节（直写） */
-void FOC_OutputMgr_WriteStatus(uint8_t status);
+/* 突发一次性事件通告：底层 fast 通道，主循环/ISR 均可调用。
+ * 约束：仅突发/一次性信息使用；文本须简短、关键字段前置、允许尾部截断；
+ *      常规长文本禁用（走主循环慢路径）。 */
+void FOC_OutputMgr_WriteFastEvent(const char *text);
 
 /* 轮询所有通信源帧数据，入 RX 队列 */
 void FOC_OutputMgr_PollSources(foc_system_t *sys);

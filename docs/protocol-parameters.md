@@ -1,4 +1,4 @@
-﻿# 协议参数与测试指南
+# 协议参数与测试指南
 
 本文件面向上位机调试和联调测试，描述当前固件实际实现的协议规则。
 
@@ -324,7 +324,7 @@ aaPA3.14b
 parameter.pid_speed_kp=3.000
 config.pid_speed_kp=3.000
 state.semantic_report_enabled=ENABLE
-STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
+STATE RUN=1 FLT=0 CODE=NONE INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKIP=0
 ```
 
 文本前缀规则：
@@ -350,13 +350,14 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 格式化规则：
 
 - 浮点参数：3 位小数
-- 整数参数：无符号十进制文本
+- 整数参数：有符号十进制文本（负值原样输出，不回绕、不钳位）
 - 状态输出：`ENABLE` 或 `DISABLE`
 
 故障状态行为：
 
 - 在 FAULT 状态下，调试流定期语义/示波输出被抑制。
 - 命令路径诊断和显式查询/清除命令仍可用。
+- 故障/恢复/初始化等生命周期事件以**人读文本行**输出（`fault:` / `recovery:` / `init:` / `cogging:` 前缀，统一小写自然句）；fault 突发另有 fast 短码（`FAULT ENC/ADC/UV`）。不做 `diag=...` 机读三段式——机器协议反馈仅用 §6.1 单字节回执。
 
 ## 7. 常见错误与原因
 
@@ -383,7 +384,7 @@ STATE RUN=1 FLT=0 INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=0 CTRL_SKI
 6. 发送 `aaYCb` 确认故障计数器已清除。
 
 实例特定的串口终端设置和通道布线文档见：
-- `../examples/GD32F303_FOCExplore/README.md`（硬件章节）
+- `../examples/HYWFOC_Explorer/README.md`（硬件章节）
 
 最佳实践：
 

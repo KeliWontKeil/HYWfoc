@@ -373,12 +373,11 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
                                      char *line_out, uint16_t line_max)
 {
     uint8_t idx;
-    int32_t ip;
-    int32_t fp;
+    char num[24];
 
     if ((line_out == 0) || (line_max == 0U)) return;
 
-    Math_FloatToFixed(value, 3, &ip, &fp);
+    if (Math_FormatFixed(num, sizeof(num), value, 3U) == 0U) return;
 
     idx = tag & 0x0FU;
 
@@ -386,43 +385,43 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
     {
     case 0U:
         snprintf(line_out, line_max,
-            "measurement.phase_current_a_ampere=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.phase_current_a_ampere=%s\r\n", num);
         break;
     case 1U:
         snprintf(line_out, line_max,
-            "measurement.phase_current_b_ampere=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.phase_current_b_ampere=%s\r\n", num);
         break;
     case 2U:
         snprintf(line_out, line_max,
-            "measurement.phase_current_c_ampere=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.phase_current_c_ampere=%s\r\n", num);
         break;
     case 3U:
         snprintf(line_out, line_max,
-            "measurement.mech_angle_raw_rad=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.mech_angle_raw_rad=%s\r\n", num);
         break;
     case 4U:
         snprintf(line_out, line_max,
-            "measurement.mech_angle_filtered_rad=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.mech_angle_filtered_rad=%s\r\n", num);
         break;
     case 5U:
         snprintf(line_out, line_max,
-            "measurement.vbus_voltage_raw_v=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.vbus_voltage_raw_v=%s\r\n", num);
         break;
     case 6U:
         snprintf(line_out, line_max,
-            "measurement.vbus_voltage_filtered_v=%d.%03d\r\n", (int)ip, (int)fp);
+            "measurement.vbus_voltage_filtered_v=%s\r\n", num);
         break;
     case 7U:
         snprintf(line_out, line_max,
-            "control.execution_time_us=%d.%03d\r\n", (int)ip, (int)fp);
+            "control.execution_time_us=%s\r\n", num);
         break;
     case 8U:
         snprintf(line_out, line_max,
-            "control.current_loop_execution_time_us=%d.%03d\r\n", (int)ip, (int)fp);
+            "control.current_loop_execution_time_us=%s\r\n", num);
         break;
     case 9U:
         snprintf(line_out, line_max,
-            "control.pwm_isr_execution_time_us=%d.%03d\r\n\r\n", (int)ip, (int)fp);
+            "control.pwm_isr_execution_time_us=%s\r\n\r\n", num);
         break;
     default:
         snprintf(line_out, line_max, "measurement.status=invalid\r\n");

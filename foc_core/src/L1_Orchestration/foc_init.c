@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "L2_Core/foc_motor_aggregate.h"
 #include "L1_Orchestration/foc_init.h"
 
@@ -168,9 +170,47 @@ void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
     }
     else
     {
+        static const struct
+        {
+            uint16_t bit;
+            const char *name;
+        } k_check_names[] =
+        {
+            { RUNTIME_INIT_CHECK_SENSOR,   "SENSOR"   },
+            { RUNTIME_INIT_CHECK_MOTOR,    "MOTOR"    },
+            { RUNTIME_INIT_CHECK_VBUS,     "VBUS"     },
+            { RUNTIME_INIT_CHECK_PWM,      "PWM"      },
+            { RUNTIME_INIT_CHECK_DEBUG,    "DEBUG"    },
+            { RUNTIME_INIT_CHECK_COMMAND,  "COMMAND"  },
+            { RUNTIME_INIT_CHECK_PROTOCOL, "PROTOCOL" },
+            { RUNTIME_INIT_CHECK_COMM,     "COMM"     }
+        };
+        uint16_t bad;
+        uint16_t i;
+        int n;
+
         motor->state.system_running = 0U;
         motor->state.system_fault = 1U;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_INIT_FAILED;
-        FOC_Platform_WriteDebugText("init: checks failed or missing\r\n");
+
+        bad = (uint16_t)(motor->state.init_fail_mask | missing);
+
+        {
+            char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+            uint8_t first = 1U;
+
+            n = snprintf(out, sizeof(out), "init: checks failed [");
+            for (i = 0U; i < (uint16_t)(sizeof(k_check_names) / sizeof(k_check_names[0])); i++)
+            {
+                if ((bad & k_check_names[i].bit) == 0U) continue;
+
+                n += snprintf(out + n, (size_t)sizeof(out) - (size_t)n, "%s%s",
+                              (first != 0U) ? "" : ",",
+                              k_check_names[i].name);
+                first = 0U;
+            }
+            snprintf(out + n, (size_t)sizeof(out) - (size_t)n, "]\r\n");
+            FOC_Platform_WriteDebugText(out);
+        }
     }
 }

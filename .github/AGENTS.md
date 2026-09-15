@@ -69,11 +69,11 @@
 
 ## 5. 构建相关
 
-构建命令（在实例工作区 `examples/GD32F303_FOCExplore/software` 内执行，或使用 VS Code 任务）：
+构建命令（在实例工作区 `examples/HYWFOC_Explorer/software` 内执行，或使用 VS Code 任务）：
 
 ```powershell
 set DOTNET_ROLL_FORWARD=Major
-unify_builder.exe --rebuild -p "examples\GD32F303_FOCExplore\software\build\GD32F30X_CL\builder.params"
+unify_builder.exe --rebuild -p "examples\HYWFOC_Explorer\software\build\GD32F30X_CL\builder.params"
 ```
 
 - `--rebuild`：强制全量重建；`-p`：指定 `builder.params` 路径。

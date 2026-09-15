@@ -473,20 +473,20 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         {
             char info[120];
-            int32_t ip_mech;
-            int32_t fp_mech;
-            int32_t ip_vbus;
-            int32_t fp_vbus;
+            char num_mech[24];
+            char num_vbus[24];
 
-            Math_FloatToFixed(motor->params.mech_angle_at_elec_zero_rad, 4, &ip_mech, &fp_mech);
-            Math_FloatToFixed(motor->params.vbus_voltage, 2, &ip_vbus, &fp_vbus);
+            (void)Math_FormatFixed(num_mech, sizeof(num_mech),
+                                   motor->params.mech_angle_at_elec_zero_rad, 4U);
+            (void)Math_FormatFixed(num_vbus, sizeof(num_vbus),
+                                   motor->params.vbus_voltage, 2U);
 
             snprintf(info, sizeof(info),
-                     "reinit done: mech_zero=%d.%04d rad, dir=%d, poles=%d, vbus=%d.%02dV\r\n",
-                     (int)ip_mech, (int)fp_mech,
+                     "reinit: done, mech zero %s rad, direction %d, poles %d, vbus %s V\r\n",
+                     num_mech,
                      (int)motor->params.direction,
                      (int)motor->params.pole_pairs,
-                     (int)ip_vbus, (int)fp_vbus);
+                     num_vbus);
             FOC_Platform_WriteDebugText(info);
         }
 

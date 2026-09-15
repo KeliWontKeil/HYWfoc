@@ -39,24 +39,11 @@ const char *FOC_Protocol_GetFaultName(uint8_t fault_code)
     }
 }
 
-/* 输出诊断信息（level/module/detail格式） */
-void FOC_Protocol_OutputDiag(const char *level, const char *module, const char *detail)
+/* 输出一条可读日志行（走主循环慢路径） */
+void FOC_Protocol_WriteLog(const char *text)
 {
-#if (FOC_FEATURE_DIAG_OUTPUT == FOC_CFG_ENABLE)
-    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-
-    snprintf(out,
-             sizeof(out),
-             "diag.level=%s module=%s detail=%s\r\n",
-             (level != 0) ? level : "INFO",
-             (module != 0) ? module : "general",
-             (detail != 0) ? detail : "none");
-    FOC_Platform_WriteDebugText(out);
-#else
-    (void)level;
-    (void)module;
-    (void)detail;
-#endif
+    if (text == 0) return;
+    FOC_Platform_WriteDebugText(text);
 }
 
 /* 格式化并输出参数（subcommand+value） */
@@ -103,11 +90,12 @@ void FOC_Protocol_FormatSummaryLine(const foc_motor_t *motor,
     if ((motor == 0) || (line_out == 0) || (line_max == 0U)) return;
 
     snprintf(line_out, line_max,
-             "STATE RUN=%u FLT=%u INIT=0x%04X/0x%04X "
+             "STATE RUN=%u FLT=%u CODE=%s INIT=0x%04X/0x%04X "
              "SENS_INV=%u PROTO_ERR=%lu PARAM_ERR=%lu "
              "CTRL_SKIP=%lu\r\n",
              (unsigned int)motor->state.system_running,
              (unsigned int)motor->state.system_fault,
+             FOC_Protocol_GetFaultName(motor->state.last_fault_code),
              (unsigned int)motor->state.init_check_mask,
              (unsigned int)motor->state.init_fail_mask,
              (unsigned int)motor->state.sensor_invalid_consecutive,

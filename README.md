@@ -7,10 +7,10 @@
 - English Name：HYW FOC（想不到怎么翻译好，先这样用首字母吧）
 
 - 当前项目状态：单电机 FOC 驱动库（有感+无感）
-- 当前稳定基线：v2.3.0
-- 下一活跃目标版本：v2.3.x
+- 当前稳定基线：v2.4.0
+- 下一活跃目标版本：v2.4.x
 
-- 注意：新硬件暂时出了点意外，目前沿用老硬件，新硬件可能还要1-2周左右
+- 新硬件（HYWFOC_Explorer）已完成适配！
 
 ## 何意味？（这个项目是什么）
 
@@ -129,9 +129,9 @@ FOC_VSCODE/
 4. 阅读 [docs/protocol-parameters.md](docs/protocol-parameters.md) 了解协议与参数语义。
 5. 阅读完文档后，你就可以开始阅读代码了，然后慢慢的一步一步尝试把这玩意整到你自己的板子上面去......~~什么年代了还在搞传统开发~~
 
-#### 路径 B：从 GD32F303_FOCExplore 开始上手
+#### 路径 B：从 HYWFOC_Explorer 开始上手
 1. 准备硬件。我在hardware文件夹里直接放了整个嘉立创EDA专业版的工程，买元件，嫖板子，然后把它装起来！当然你要觉得我画的板子不咋地~~确实不咋地~~，可以参考原理图自己从头设计。
-2. 打开 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace) 或 [examples/GD32F303_FOCExplore/software/Project.uvprojx](examples/GD32F303_FOCExplore/software/Project.uvprojx)。你可以选择你喜欢和熟悉的IDE。
+2. 打开 [examples/HYWFOC_Explorer/software/Project.code-workspace](examples/HYWFOC_Explorer/software/Project.code-workspace) 或 [examples/HYWFOC_Explorer/software/Project.uvprojx](examples/HYWFOC_Explorer/software/Project.uvprojx)。你可以选择你喜欢和熟悉的IDE。
 3. 调整相关宏定义设置相关参数和算法裁剪，编译并烧录。
 4. 按 [docs/protocol-parameters.md](docs/protocol-parameters.md) 与实例 README 指导，发送命令并进行验证/观察现象
 5. 如果一切正常的话，去做你想做的吧，摸索代码/二次开发/优化算法都行。
@@ -160,7 +160,7 @@ FOC_VSCODE/
 建议研究一下这几个文件：
 - [foc_core/src/foc_platform_api_empty.c](foc_core/src/foc_platform_api_empty.c)：一个完全空白的API实现
 - [foc_core/include/L3_Hal/foc_platform_api.h](foc_core/include/L3_Hal/foc_platform_api.h)：所有需要实现的相关API
-- [examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c](examples/GD32F303_FOCExplore/software/Application/Source/foc_platform_api.c)：具体API实现的一个工程实例
+- [examples/HYWFOC_Explorer/software/Application/Source/foc_platform_api.c](examples/HYWFOC_Explorer/software/Application/Source/foc_platform_api.c)：具体API实现的一个工程实例
 
 #### 还是太麻烦了怎么办？
 全~都~交给AI吧!从外设初始化到 API 实现，只需验证硬件行为即可!（而且效果应该还不错，我自己写GD32标准库的初始化就是AI干的，但是一定要让他做好计划并审查，不然干出来是一坨）
@@ -194,10 +194,10 @@ https://github.com/KeliWontKeil/PortOSC
 ## 其他开发相关
 ### 开发计划
 优先开发计划，完成前无必要不动核心库：
-- 新硬件开发
+- 新硬件功能验证（适配已完成）
 - 上位机开发
 
-核心库下版本目标：v2.3.0（控制效果与算法持续优化）：
+核心库下版本目标（控制效果与算法持续优化，里程碑见 NEXT_MISSION.md）：
 - 控制效果优化、PID 参数按速度/负载自适应
 - 高频注入
 - 有感/无感控制进一步打磨
@@ -218,16 +218,16 @@ https://github.com/KeliWontKeil/PortOSC
 - [docs/protocol-parameters.md](docs/protocol-parameters.md)：协议与参数定义
 
 #### 实例级文档（以具体项目为准的具体工程实例文档）
-- [examples/GD32F303_FOCExplore/README.md](examples/GD32F303_FOCExplore/README.md)：实例入口文档
-- [examples/GD32F303_FOCExplore/hardware/README.md](examples/GD32F303_FOCExplore/hardware/README.md)：硬件目录说明
-- [examples/GD32F303_FOCExplore/hardware/hardware.md](examples/GD32F303_FOCExplore/hardware/hardware.md)：硬件管脚速查
+- [examples/HYWFOC_Explorer/README.md](examples/HYWFOC_Explorer/README.md)：实例入口文档
+- [examples/HYWFOC_Explorer/hardware/README.md](examples/HYWFOC_Explorer/hardware/README.md)：硬件目录说明
+- [examples/HYWFOC_Explorer/hardware/hardware.md](examples/HYWFOC_Explorer/hardware/hardware.md)：硬件管脚速查
 
 
 ### 工作区使用说明
 
 - 该项目可直接在VSCODE完整打开
 - 根工作区 [Project.code-workspace](Project.code-workspace)：用于仓库管理、文档治理、跨目录检视。
-- 实例工作区 [examples/GD32F303_FOCExplore/software/Project.code-workspace](examples/GD32F303_FOCExplore/software/Project.code-workspace)：用于该实例构建/烧录/调试。
+- 实例工作区 [examples/HYWFOC_Explorer/software/Project.code-workspace](examples/HYWFOC_Explorer/software/Project.code-workspace)：用于该实例构建/烧录/调试。
 
 ### 开源协作说明
 

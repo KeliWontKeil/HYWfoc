@@ -44,6 +44,11 @@ void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor);
 /** @brief Stop motor output (open-loop zero). */
 void FOC_ControlExecutor_Stop(foc_motor_t *motor);
 
+/** @brief 处理一个控制周期结果（L1 采样/阈值判定产出码后转调）：
+ *         OK→维持运行；FAULT_*→锁存故障 + 全停 + 突发短码。
+ *         运行状态迁移与安全动作统一收口于 L2。 */
+void FOC_ControlExecutor_OnCycleResult(foc_motor_t *motor, uint8_t cycle_result);
+
 /** @brief Outer-loop unified entry (speed or speed-angle). */
 void FOC_ControlExecutor_RunOuterLoop(foc_motor_t *motor, float dt_sec);
 

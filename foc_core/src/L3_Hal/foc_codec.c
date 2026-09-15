@@ -228,8 +228,6 @@ uint16_t Codec_OscEncodeFrame(const uint8_t *bit_index, const float *value,
     uint16_t off = 0U;
     uint16_t i;
     int written;
-    int32_t ip;
-    int32_t fp;
 
     (void)bit_index;
 
@@ -242,9 +240,11 @@ uint16_t Codec_OscEncodeFrame(const uint8_t *bit_index, const float *value,
 
     for (i = 0U; i < count; i++)
     {
+        char num[24];
+
         if ((off + 12U) >= max_len) break;
-        Math_FloatToFixed(value[i], 3, &ip, &fp);
-        written = snprintf(out + off, max_len - off, " %d.%03d", (int)ip, (int)fp);
+        if (Math_FormatFixed(num, sizeof(num), value[i], 3U) == 0U) break;
+        written = snprintf(out + off, max_len - off, " %s", num);
         if ((written < 0) || ((uint16_t)written >= (max_len - off))) break;
         off += (uint16_t)written;
     }
@@ -262,20 +262,18 @@ uint8_t Codec_FormatValueLine(char *out, uint16_t max,
                               const char *prefix, const char *name,
                               float value, uint8_t is_int)
 {
-    int32_t ip;
-    int32_t fp;
-
     if ((out == 0) || (max == 0U)) return 0U;
 
     if (is_int != 0U)
     {
-        snprintf(out, max, "%s.%s=%u\r\n", prefix, name,
-                 (unsigned int)((value < 0.0f) ? 0U : (uint16_t)value));
+        snprintf(out, max, "%s.%s=%d\r\n", prefix, name, (int)value);
     }
     else
     {
-        Math_FloatToFixed(value, 3, &ip, &fp);
-        snprintf(out, max, "%s.%s=%d.%03d\r\n", prefix, name, (int)ip, (int)fp);
+        char num[24];
+
+        if (Math_FormatFixed(num, sizeof(num), value, 3U) == 0U) return 0U;
+        snprintf(out, max, "%s.%s=%s\r\n", prefix, name, num);
     }
     return 1U;
 }

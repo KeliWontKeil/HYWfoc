@@ -1,0 +1,42 @@
+## Hardware Pin Map (quick reference)
+
+- **Clocks**:8MHz HXTAL
+
+### ADC
+- PA2: ADC0/1/2_IN0(ADC_A)
+- PA1: ADC0/1/2_IN1(ADC_B)
+- PA0: ADC0/1/2_IN2(ADC_C)(不使用)
+- PA3: ADC0/1/2_IN3(ADC_POW)
+
+### USART
+- PB10: USART2_TX
+- PB11: USART2_RX
+- PB6: USART0_TX
+- PB7: USART0_RX
+
+### I2C(磁编码器)
+- PB8: I2C0_SCL
+- PB9: I2C0_SDA
+
+### PWM (TIMER0 complementary)
+- PA8: TIMER0_CH2(PWMA)
+- PA9: TIMER0_CH1(PWMB)
+- PA10: TIMER0_CH0(PWMC)
+- PB13: TIMER0_CH2_N(PWMAN)
+- PB14: TIMER0_CH1_N(PWMBN)
+- PB15: TIMER0_CH0_N(PWMCN)
+
+### LEDs (GPIO out)
+- PC13: LEDB
+- PC14: LEDG
+- PC15: LEDR
+
+## 其他预留外设，暂不实现
+### CAN0
+- PA12 CAN0_TX
+- PA11 CAN0_RX
+
+### 霍尔传感器接口
+- PB4:HALL_U(TIMER2_CH0)
+- PB5:HALL_V(TIMER2_CH1)
+- PB0:HALL_W(TIMER2_CH2)

@@ -26,29 +26,8 @@
 static foc_system_t g_sys;
 static foc_motor_t motor;
 
-static void FOC_App_HandleResult(uint8_t cycle_result)
-{
-    switch (cycle_result)
-    {
-    case FOC_CYCLE_OK:
-        motor.state.system_running = 1U;
-        break;
-    case FOC_CYCLE_FAULT_SENSOR:
-        motor.state.system_fault = 1U;
-        motor.state.system_running = 0U;
-        FOC_OutputMgr_WriteDirect("sensor invalid threshold reached\r\n");
-        FOC_ControlExecutor_SafeOutput(&motor);
-        break;
-    case FOC_CYCLE_FAULT_UVLO:
-        motor.state.system_fault = 1U;
-        motor.state.system_running = 0U;
-        FOC_OutputMgr_WriteDirect("under voltage threshold reached\r\n");
-        FOC_ControlExecutor_SafeOutput(&motor);
-        break;
-    default:
-        break;
-    }
-}
+/* 主循环 fault 补发用本地缓存（不进 motor 状态） */
+static uint8_t s_prev_system_fault = 0U;
 
 static void FOC_App_SchedTickBridge(void)
 {
@@ -111,8 +90,39 @@ void FOC_App_Start(void)
     FOC_Platform_SetControlInterruptsEnabled(1U);
 }
 
+/* 故障码 → 可读自然描述（主循环补发日志用） */
+static const char *FOC_App_FaultDescription(uint8_t code)
+{
+    switch (code)
+    {
+    case FOC_FAULT_SENSOR_ADC_INVALID:     return "adc current sampling invalid";
+    case FOC_FAULT_SENSOR_ENCODER_INVALID: return "encoder feedback invalid";
+    case FOC_FAULT_UNDERVOLTAGE:           return "bus undervoltage";
+    case FOC_FAULT_PROTOCOL_FRAME:         return "protocol frame error";
+    case FOC_FAULT_PARAM_INVALID:          return "invalid parameter";
+    case FOC_FAULT_INIT_FAILED:            return "initialization failed";
+    case FOC_FAULT_ESTIMATOR_INVALID:      return "estimator invalid";
+    default:                               return "unknown fault";
+    }
+}
+
+/* fault 0→1 跃迁当轮，主循环补发完整详情（慢路径可靠输出） */
+static void FOC_App_ReportFaultTransition(void)
+{
+    if ((motor.state.system_fault != 0U) && (s_prev_system_fault == 0U))
+    {
+        char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+        snprintf(line, sizeof(line), "fault: %s\r\n",
+                 FOC_App_FaultDescription(motor.state.last_fault_code));
+        FOC_Platform_WriteDebugText(line);
+    }
+    s_prev_system_fault = motor.state.system_fault;
+}
+
 void FOC_App_Loop(void)
 {
+    FOC_App_ReportFaultTransition();
+
     if (g_sys.runtime.tasks.monitor_pending != 0U)
     {
         g_sys.runtime.tasks.monitor_pending = 0U;
@@ -241,7 +251,12 @@ void FOC_App_AbortSpecialPhase(void)
         break;
     }
 
-    FOC_Protocol_OutputDiag("INFO", "abort", aborted_phase);
+    /* 突发通告（fast）：本函数可由 ISR(自动退出)或主循环(Y:A)调用，慢路径文本禁用于 ISR */
+    {
+        char msg[40];
+        snprintf(msg, sizeof(msg), "abort:%s\r\n", aborted_phase);
+        FOC_OutputMgr_WriteFastEvent(msg);
+    }
     motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
     motor.mode_transition.prev_control_mode_check = motor.state.control_mode;
     FOC_ControlExecutor_FullStop(&motor);
@@ -290,7 +305,7 @@ void FOC_App_ControlTrigger(void)
             (uint8_t)FOC_FAULT_SENSOR_ADC_INVALID : (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID;
 
         if (motor.state.sensor_invalid_consecutive >= FOC_DIAG_SENSOR_FAULT_THRESHOLD)
-            FOC_App_HandleResult((uint8_t)FOC_CYCLE_FAULT_SENSOR);
+            FOC_ControlExecutor_OnCycleResult(&motor, (uint8_t)FOC_CYCLE_FAULT_SENSOR);
         return;
     }
     motor.state.sensor_invalid_consecutive = 0U;
@@ -301,7 +316,7 @@ void FOC_App_ControlTrigger(void)
       if (motor.sensor.vbus.filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
     {
         motor.state.last_fault_code = (uint8_t)FOC_FAULT_UNDERVOLTAGE;
-        FOC_App_HandleResult((uint8_t)FOC_CYCLE_FAULT_UVLO);
+        FOC_ControlExecutor_OnCycleResult(&motor, (uint8_t)FOC_CYCLE_FAULT_UVLO);
         return;
     }
 #endif
@@ -312,7 +327,7 @@ void FOC_App_ControlTrigger(void)
     case FOC_CONTROL_PHASE_NORMAL:
         if (motor.state.motor_enabled == 0U) return;
         cycle_result = FOC_ControlExecutor_RunCycle(&motor, FOC_CONTROL_DT_SEC);
-        FOC_App_HandleResult(cycle_result);
+        FOC_ControlExecutor_OnCycleResult(&motor, cycle_result);
         break;
 
     case FOC_CONTROL_PHASE_COGGING_CALIB:

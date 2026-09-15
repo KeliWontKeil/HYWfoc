@@ -54,8 +54,8 @@ void Function(void) {
 
 ## 可编辑范围
 - ✅ `foc_core/src`、`foc_core/include`
-- ✅ `examples/GD32F303_FOCExplore/software/Application/**`
-- ✅ `examples/GD32F303_FOCExplore/software/Utilities/**`
+- ✅ `examples/HYWFOC_Explorer/software/Application/**`
+- ✅ `examples/HYWFOC_Explorer/software/Utilities/**`
 - ✅ 文档：`docs/`, `NEXT_MISSION.md`, `CHANGELOG.md`
 - ❌ 推荐不修改：`Firmware/**`、`.eide/**`（仅在必要时，如修复构建/烧录问题）
 

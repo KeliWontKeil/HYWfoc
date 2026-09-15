@@ -74,6 +74,38 @@ void FOC_ControlExecutor_Stop(foc_motor_t *motor)
     FOC_ControlExecutor_FullStop(motor);
 }
 
+void FOC_ControlExecutor_OnCycleResult(foc_motor_t *motor, uint8_t cycle_result)
+{
+    if (motor == 0) return;
+
+    switch (cycle_result)
+    {
+    case FOC_CYCLE_OK:
+        motor->state.system_running = 1U;
+        break;
+
+    case FOC_CYCLE_FAULT_SENSOR:
+        motor->state.system_fault = 1U;
+        motor->state.system_running = 0U;
+        /* 突发短码：由 last_fault_code 单一派生，区分 ADC/编码器 */
+        FOC_Platform_WriteDebugFast(
+            (motor->state.last_fault_code == (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID) ?
+            "FAULT ENC\r\n" : "FAULT ADC\r\n");
+        FOC_ControlExecutor_SafeOutput(motor);
+        break;
+
+    case FOC_CYCLE_FAULT_UVLO:
+        motor->state.system_fault = 1U;
+        motor->state.system_running = 0U;
+        FOC_Platform_WriteDebugFast("FAULT UV\r\n");
+        FOC_ControlExecutor_SafeOutput(motor);
+        break;
+
+    default:
+        break;
+    }
+}
+
 void FOC_ControlExecutor_Init(foc_motor_t *motor)
 {
     motor->isr_timing.fast_current_div_counter = 0U;
