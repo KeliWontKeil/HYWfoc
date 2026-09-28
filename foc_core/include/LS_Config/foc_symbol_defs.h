@@ -63,6 +63,10 @@
 #define FOC_CONTROL_SRC_OPENLOOP    4U
 #define FOC_CONTROL_SRC_FLUX        5U
 
+/* 电流环电压基准来源：设定值 / 实测值 */
+#define FOC_VOLTAGE_BASE_SETPOINT   0U
+#define FOC_VOLTAGE_BASE_MEASURED   1U
+
 /* Current soft-switch mode options. */
 #define FOC_CURRENT_SOFT_SWITCH_MODE_OPEN 0U
 #define FOC_CURRENT_SOFT_SWITCH_MODE_CLOSED 1U

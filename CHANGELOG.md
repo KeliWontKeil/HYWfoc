@@ -5,6 +5,21 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] - 2026-09-28
+
+### Added
+- **电流环电压基准来源宏开关（设定值 / 实测母线电压）**：新增编译期宏 `FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE`（`FOC_VOLTAGE_BASE_SETPOINT` 默认 / `FOC_VOLTAGE_BASE_MEASURED`），统一决定电流环与输出级电压运算所依据的电压基准，用户可据此在"电源采样可用时用实测值提升精度"与"无电源采样/采样不准时沿用设定值"之间切换。
+  - **单点解析**：电流环/PWM ISR 入口（`foc_ctrl_executor` 的 `FOC_ControlExecutor_RunISR` / `RunISR_PwmOnly` / `RunISR_CurrentLoop`）按宏解析为控制总线字段 `ctrl.vbus_voltage_base`；实测档在 `sensor.vbus_valid == 0` 或 `sensor.vbus.filtered <= 0` 时回落设定值（有效性检查单一收口，无电源采样时行为与设定档一致）。
+  - **消费点收敛**（内部无宏分支）：执行输出电压限幅 / 占空比上限 / SVPWM 调制比（`foc_ctrl_actuation`），电流环开环电阻模型限幅与 `current_limit`（`foc_ctrl_current_loop`）。
+  - **无扰预置基准联动**：源切换时电流环 PID 预置电压来源随宏切换（`foc_ctrl_source_mgr`）——设定档用指令电压 `ctrl.uq`（原行为），实测档用实际施加电压 `applied_output.uq`（无效时回落指令电压）；`foc_source_mgr_ctx_t` 增加条件只读视图 `applied`，由 executor 构建上下文时注入。
+  - **编译期取值校验**新增于 `foc_compile_limits.h`；`foc_control_runtime_t` 仅尾部新增字段，既有字段顺序与内存布局不变。
+  - **零回归**：默认档（设定值）与原实现位级一致，ROM/RAM 无变化；实测档 ROM +72B（52.51KB → 52.58KB）。两档在 GD32F30X_CL / GD32F30X_HD 目标均 0 error / 0 warning 通过。
+  - 说明：`ctrl.max_phase_voltage` 为用户限幅配置（非测量量），不参与"设定/实测"切换；实测母线低于该配置时以实测值为限。
+
+### Documentation
+- `docs/architecture.md`：新增"电流环电压基准（设定值 / 实测母线电压）"小节（档位表、数据流落点、5 条约束）；控制运行链补充 ISR 入口电压基准解析步骤与阶段4/5 的基准取值说明；平台 API 契约中 `ReadVbusVoltage` 的【按需】条件补充实测档；宏裁剪口径新增该开关条目；`ctrl` 数据结构字段说明补充 `vbus_voltage_base`。
+- `docs/development.md`：构建目标约束标注 `GD32F30X_HD` 目标因 `builder.params.rootDir` 遗留旧例程路径而暂不可用（与 FOC 库代码无关）。
+
 ## [2.4.0] - 2026-09-15
 
 ### Changed

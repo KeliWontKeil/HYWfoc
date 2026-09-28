@@ -137,6 +137,8 @@ typedef struct {
     /* 电流采样 Clarke 单点化共享结果（executor 阶段1 计算，SMO/电流环复用） */
     float ialpha;
     float ibeta;
+    /* 本拍生效的电流环电压基准 [V]，来源由 FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE 决定 */
+    float vbus_voltage_base;
 } foc_control_runtime_t;
 
 /* ========== 控制参考（控制 ISR → 电流环 ISR 单点原子发布块） ========== */

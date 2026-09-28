@@ -96,6 +96,7 @@ set DOTNET_ROLL_FORWARD=Major
 - 0 error，不新增 warning
 - ROM ≤ 256KB，RAM ≤ 96KB（GD32F303CC 实例限制）
 - 跨平台移植预留：建议 ROM ≤ 64KB，RAM ≤ 16KB
+- 当前可用构建目标：`GD32F30X_CL`。`GD32F30X_HD` 目标的 `build/GD32F30X_HD/builder.params` 中 `rootDir` 仍指向已重命名的旧例程路径（`examples/GD32F303_FOCExplore/software`），构建时抛 `DirectoryNotFoundException`，**该目标暂不可用**（属实例构建配置遗留，与 FOC 库代码无关）。
 
 ### 常见错误与解决方案
 

@@ -62,6 +62,9 @@ typedef struct {
     const foc_control_cfg_t *cfg;
     uint8_t control_mode;
     const foc_control_ref_t *ref;
+#if (FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE == FOC_VOLTAGE_BASE_MEASURED)
+    const foc_applied_output_state_t *applied;
+#endif
     /* 输入/输出（SourceMgr 读取或重写） */
     foc_source_switch_state_t *switch_cfg;
 #if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)

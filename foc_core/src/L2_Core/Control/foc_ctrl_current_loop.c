@@ -81,7 +81,7 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_control_run
         return;
     }
 
-    voltage_limit = Math_ClampFloat(ctrl->max_phase_voltage, 0.0f, params->vbus_voltage);
+    voltage_limit = Math_ClampFloat(ctrl->max_phase_voltage, 0.0f, ctrl->vbus_voltage_base);
     phase_resistance = fabsf(params->phase_resistance);
 
     if (phase_resistance < 1e-6f)

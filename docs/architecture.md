@@ -75,7 +75,7 @@ FOC_VSCODE/
 - **接口面稳定**：平台 API 全部无条件声明，不随配置宏裁剪。宏组合只改变实现行为（退化 no-op / 返回 0），不改变接口面。
 - **契约三档**：
   - 【必须】所有平台必须实现（Runtime、Indicator、Comm、PWM、Write*、WaitMs、MemoryBarrier 等）。
-  - 【按需】依赖宏组合：`AuxTimer*`（三 ISR 模式必须，双 ISR 可 no-op）；电流采样相关 `SensorInputInit/ReadPhaseCurrent/SetSensorSampleOffsetPercent`（`FOC_CURRENT_SENSE_PHASES != NONE` 必须）；`ReadMechanicalAngleRad`（有角度反馈必须，否则恒返回 0）；`ReadVbusVoltage`（欠压保护启用时必须）。
+  - 【按需】依赖宏组合：`AuxTimer*`（三 ISR 模式必须，双 ISR 可 no-op）；电流采样相关 `SensorInputInit/ReadPhaseCurrent/SetSensorSampleOffsetPercent`（`FOC_CURRENT_SENSE_PHASES != NONE` 必须）；`ReadMechanicalAngleRad`（有角度反馈必须，否则恒返回 0）；`ReadVbusVoltage`（欠压保护启用、或电流环电压基准取实测档时必须）。
   - 【可选】可空实现：`CommSource` 源 2/3、`EnableCycleCounter/ReadCycleCounter`。
 - **参数约定**：编译期固定配置（`FOC_PWM_FREQ_KHZ`、`FOC_SENSOR_SAMPLE_FREQ_KHZ`、`FOC_SCHEDULER_TICK_HZ`、`FOC_SVPWM_DEADTIME_PERCENT_DEFAULT`）由平台实现内部读取，不进入接口签名；仅运行时参数（辅助定时器频率、采样偏移）显式传参。
 - **回调统一**：`FOC_Platform_IsrCallback_t` 为唯一无参中断回调类型（PWM ISR / 控制节拍 / 辅助定时器共用）。
@@ -86,7 +86,7 @@ FOC_VSCODE/
 
 系统以两个顶层结构体为数据中枢：
 
-- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`estim_smo_state`、`estim_hfi_state`、`estim_encoder_state`）、Source Manager 状态（`active_source_state`、`source_mgr_state`、`source_switch_state`）、各 source 私有状态（如 `openloop_state`）和控制运行时（`ctrl`: `iq_target`、`electrical_angle_rad`、`ud/uq`）、外环状态等。L1 实例化，L2 各块通过指针读/写。
+- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`estim_smo_state`、`estim_hfi_state`、`estim_encoder_state`）、Source Manager 状态（`active_source_state`、`source_mgr_state`、`source_switch_state`）、各 source 私有状态（如 `openloop_state`）和控制运行时（`ctrl`: `iq_target`、`electrical_angle_rad`、`ud/uq`、`vbus_voltage_base`）、外环状态等。L1 实例化，L2 各块通过指针读/写。
 - **`foc_system_t`**（定义于 `foc_system_types.h`）— 系统级数据结构，包含：
   - `cfg.report`：系统 report 配置，不随 reinit 重置
   - `runtime.scheduler`：系统任务调度器
@@ -282,7 +282,7 @@ Control ISR（低频控制线，严格不做 source 选择）：
     → system_fault 检查 → return
     → [特殊 phase 自动退出] motor_enabled==0 或 control_mode 变化 → AbortSpecialPhase
   阶段1：传感器读取
-    → [SLOW] Sensor_ReadEncoder、Sensor_ReadVBUS
+    → [SLOW] Sensor_ReadEncoder、Sensor_ReadVBUS（实测母线电压：欠压保护 + 电流环电压基准实测档来源）
     → 有效性检查（adc_valid + [encoder] encoder_valid）
     → 欠压保护检查（FOC_FEATURE_UNDERVOLTAGE_PROTECTION）
   阶段2：按 control_phase 运行状态机
@@ -299,6 +299,11 @@ Control ISR（低频控制线，严格不做 source 选择）：
       供电流环 ISR 过程开头原子获取（见"控制参考单点原子发布"小节）
 
 PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
+  [L2 入口电压基准解析]
+    → FOC_ControlExecutor_UpdateVoltageBase（RunISR / RunISR_PwmOnly / RunISR_CurrentLoop 三入口首步）
+      按 FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE 解析本拍 motor->ctrl.vbus_voltage_base
+      （设定值 / 实测 sensor.vbus.filtered，实测档无效时回落设定值；见"电流环电压基准"小节）
+
   [L2 公共前导]
     → SVPWM_InterpolationISR（插值启用时执行）
       （三 ISR + 插值：PWM ISR 入口原子取走电流环 ISR 的 pending 目标）
@@ -338,11 +343,13 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
       派生写 motor->ctrl.electrical_angle_rad
       更新 encoder_services
   阶段4：NORMAL 电流环
-    → FOC_CurrentControlStep（复用阶段1b 的 αβ 做 Park → PID → ud/uq）
+    → FOC_CurrentControlStep（复用阶段1b 的 αβ 做 Park → PID → ud/uq；
+      开环电阻模型限幅与 current_limit 取 ctrl.vbus_voltage_base）
   阶段5：SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime（逆 Park → αβ 直通 SVPWM，
       逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ；
-      不再经逆 Clarke 转三相——SVPWM 直接消费 αβ，消除冗余往返）
+      不再经逆 Clarke 转三相——SVPWM 直接消费 αβ，消除冗余往返；
+      电压限幅 / 占空比上限 / 调制比统一取 ctrl.vbus_voltage_base）
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -355,6 +362,33 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 - Source Manager 的 Select 和 Publish 是两步分离的：Select 只做决策不拷贝数据，Publish 只拷贝数据不做决策
 - 电流环在发布之后，消费已发布的 `motor->ctrl.electrical_angle_rad`
 - 电流分频：`FOC_CURRENT_LOOP_ISR_DIVIDER` 控制每 N 个 PWM 周期执行一次完整电流环，中间的 PWM 周期只做插值和 Estimator 迭代
+
+### 电流环电压基准（设定值 / 实测母线电压）
+
+电流环与输出级的电压运算（过调制限幅、占空比上限、SVPWM 调制比、开环电阻模型限幅）统一以**电压基准**为参考，来源由编译期宏 `FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE` 选择：
+
+| 档位 | 电压基准 | 无扰预置电压基准 |
+|------|----------|------------------|
+| `FOC_VOLTAGE_BASE_SETPOINT`（默认） | `params.vbus_voltage`（设定值） | `ctrl.uq`（指令电压） |
+| `FOC_VOLTAGE_BASE_MEASURED` | `sensor.vbus.filtered`（控制 ISR 采样 + LPF 的实测母线电压） | `applied_output.uq`（实际施加电压） |
+
+数据流与落点：
+
+```
+控制 ISR：Sensor_ReadVBUS → sensor.vbus.filtered / vbus_valid
+电流环/PWM ISR 入口：UpdateVoltageBase（宏分支 + 无效回落）→ ctrl.vbus_voltage_base
+   ├── 阶段4 电流环：开环电阻模型限幅与 current_limit
+   ├── 阶段5 SVPWM：电压限幅、占空比上限、调制比
+   └── 源切换：电流环 PID 无扰预置（SourceMgr_SyncCurrentLoopOnSwitch）
+```
+
+**约束**：
+
+1. **单点解析**：宏分支只存在于 ISR 入口（`foc_ctrl_executor` 的 `FOC_ControlExecutor_UpdateVoltageBase`），消费模块只读 `ctrl.vbus_voltage_base`，内部无宏分支。
+2. **无效回落（单一检查点）**：实测档下 `sensor.vbus_valid == 0` 或 `sensor.vbus.filtered <= 0` 时回落设定值——无电源采样或采样异常时行为退化为默认档。
+3. **限幅链**：电压上限 = `min(ctrl.max_phase_voltage, ctrl.vbus_voltage_base)`，再由占空比上限（由电压基准与最大占空比参数派生）二次收窄。`max_phase_voltage` 是用户限幅配置而非测量量，不参与设定/实测切换。
+4. **无扰预置联动**：实测档下源切换的 PID 预置电压取实际施加电压 `applied_output.uq`（无效时回落指令电压）；`foc_source_mgr_ctx_t` 以条件只读视图 `applied` 注入，由 executor 构建上下文时赋值。
+5. **取值校验**：`foc_compile_limits.h` 对档位宏做合法性 `#error` 阻断；本宏为编译期开关，不提供运行时切换通道。
 
 ### ISR 架构双模式（v2.0.5）
 
@@ -707,6 +741,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 5. 齿槽补偿特性（`FOC_COGGING_COMP_ENABLE` + `FOC_COGGING_CALIB_ENABLE`）
 6. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
 7. 特殊控制状态退出：`FOC_SPECIAL_PHASE_ABORT_ENABLE`（当 `COGGING_CALIB_ENABLE` 或 `REINIT_ENABLE` 启用时自动开启）
+8. 电流环电压基准来源：`FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE`（设定值 / 实测母线电压，见"电流环电压基准"小节）
 
 ### 常见功能宏组合
 

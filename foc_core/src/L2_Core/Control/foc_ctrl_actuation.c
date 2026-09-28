@@ -24,13 +24,16 @@ static void FOC_ControlApplyElectricalAngleCore(foc_control_runtime_t *ctrl,
     float sin_theta;
     float cos_theta;
 
+    /* 电压基准统一取控制总线（来源由 FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE 决定） */
+    (void)params;
+
     electrical_angle = Math_WrapRad(electrical_angle);
 
-    voltage_limit = Math_ClampFloat(ctrl->max_phase_voltage, 0.0f, params->vbus_voltage);
+    voltage_limit = Math_ClampFloat(ctrl->max_phase_voltage, 0.0f, ctrl->vbus_voltage_base);
 
     /* SVPWM 最大占空比限制，保护低侧电流采样 */
     {
-        float duty_limit_v = params->vbus_voltage * (2.0f * FOC_SVPWM_MAX_DUTY_CYCLE - 1.0f);
+        float duty_limit_v = ctrl->vbus_voltage_base * (2.0f * FOC_SVPWM_MAX_DUTY_CYCLE - 1.0f);
         if (duty_limit_v < 0.0f) duty_limit_v = 0.0f;
         if (voltage_limit > duty_limit_v) voltage_limit = duty_limit_v;
     }
@@ -110,7 +113,7 @@ static void FOC_ControlApplyElectricalAngleCore(foc_control_runtime_t *ctrl,
                  alpha_beta->alpha,
                  alpha_beta->beta,
                  voltage_command,
-                 params->vbus_voltage,
+                 ctrl->vbus_voltage_base,
                  direct_output);
 }
 

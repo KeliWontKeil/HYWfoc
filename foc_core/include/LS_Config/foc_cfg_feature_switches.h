@@ -37,6 +37,8 @@
 
 /* 欠压保护 */
 #define FOC_FEATURE_UNDERVOLTAGE_PROTECTION FOC_CFG_ENABLE
+/* 电流环电压基准来源：SETPOINT=设定值(params->vbus_voltage) / MEASURED=实测母线电压(sensor.vbus.filtered) */
+#define FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE FOC_VOLTAGE_BASE_SETPOINT
 
 /* 控制行为裁剪 */
 #define FOC_CURRENT_LOOP_PID_ENABLE FOC_CFG_ENABLE

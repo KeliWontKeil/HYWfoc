@@ -111,6 +111,20 @@ void FOC_ControlExecutor_Init(foc_motor_t *motor)
     motor->isr_timing.fast_current_div_counter = 0U;
 }
 
+/* 本拍电压基准单点解析：实测档下采样无效时回落设定值 */
+static void FOC_ControlExecutor_UpdateVoltageBase(foc_motor_t *motor)
+{
+#if (FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE == FOC_VOLTAGE_BASE_MEASURED)
+    if ((motor->sensor.vbus_valid != 0U) &&
+        (motor->sensor.vbus.filtered > FOC_MATH_EPSILON))
+    {
+        motor->ctrl.vbus_voltage_base = motor->sensor.vbus.filtered;
+        return;
+    }
+#endif
+    motor->ctrl.vbus_voltage_base = motor->params.vbus_voltage;
+}
+
 /* ================================================================
  * 电流环核心阶段：采样 → Estimator → Select → Publish → 电流环 → SVPWM。
  * 双 ISR 模式由 PWM ISR 调用；三 ISR 模式由独立电流环 ISR 调用。
@@ -142,6 +156,9 @@ void FOC_ControlExecutor_BuildSourceMgrCtx(foc_motor_t *motor,
     ctx->torque_current_pid = &motor->torque_current_pid;
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     ctx->soft_switch = &motor->current_soft_switch_status;
+#endif
+#if (FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE == FOC_VOLTAGE_BASE_MEASURED)
+    ctx->applied = &motor->applied_output;
 #endif
     ctx->encoder_services = &motor->encoder_services;
 }
@@ -245,6 +262,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 {
     uint8_t divider;
 
+    FOC_ControlExecutor_UpdateVoltageBase(motor);
+
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     SVPWM_InterpolationISR(&motor->svpwm);
 #endif
@@ -282,6 +301,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
  * ================================================================ */
 void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
 {
+    FOC_ControlExecutor_UpdateVoltageBase(motor);
+
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     SVPWM_InterpolationISR(&motor->svpwm);
 #endif
@@ -308,6 +329,7 @@ void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
  * ================================================================ */
 void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
 {
+    FOC_ControlExecutor_UpdateVoltageBase(motor);
 
     if (motor->state.motor_enabled == 0U)
     {
