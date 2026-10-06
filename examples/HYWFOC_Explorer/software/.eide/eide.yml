@@ -80,6 +80,7 @@ virtualFolder:
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_estim_hfi.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_executor.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_init.c
+        - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_injection.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_outer_loop.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_param_learn.c
         - path: ../../../foc_core/src/L2_Core/Control/foc_ctrl_sens_reinit.c

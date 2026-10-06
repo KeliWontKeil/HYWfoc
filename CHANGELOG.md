@@ -5,6 +5,35 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **高频/任意频率注入基础设施（阶段 1，`foc_ctrl_injection`）**：新增开关 `FOC_INJECTION_ENABLE`（默认启用，未激活时零副作用）、模式宏 `FOC_INJECTION_MODE`（`COHERENT_ONLY` / `ARBITRARY_ONLY` / `BOTH_AUTO` 三选一）与轴裁剪宏（`FOC_INJECTION_ENABLE_AXIS_D/Q`，位编码 + 编译期轴掩码 + 兜底轴）。
+  - **定位**：被动工具——只提供"生成指定频率/幅值/轴的注入分量并叠加到 dq 电压"的能力，不含策略、无协议入口；启停与配置由调用方模块（参数辨识流程、声学回报、未来 HFI）通过 API 驱动。
+  - **注入点**：电流环 PID 输出之后、逆 Park 之前（`ctrl.ud/uq += inj`）；注入激活时阶段 5 改调既有 `FOC_ControlApplyElectricalAngleDirect`（直写占空比、旁路 SVPWM 插值，避免插值把注入波形压缩衰减），**执行输出模块零改动、零签名变更**。
+  - **ISR 快线形态（配置期缓存派生量）**：`Injection_ApplyConfig` 在 `Init` / `Configure` 一次性完成轴掩码归一、幅值/频率限幅、模式判定，并缓存运行期不变派生量——每拍相位增量 `phase_inc_rad`（相干 = 2π/N；任意频率 = 2π·f·T_loop）、解调窗口长度与归一化系数、I/Q 低通与幅值平滑系数、激励→采样 1 拍延迟的补偿旋转量。ISR 每拍仅"推进相位 + 单次条件回卷 + 单位正弦生成 + 轴叠加 + 同拍解调累加"，**无浮点除法、无变长回卷循环、无合法性判定**（反汇编核实：`FOC_ControlInjectionStep` 47 条指令，内含 2 次调用——通用查表 `FOC_MathLut_SinCos` 与同拍解调累加 `Injection_DemodAccumulate` 64 条；含 `sqrtf` 的 `Injection_DemodSettle` 每窗口结算一次，不在每拍路径）。
+  - **注入速率锚定电流环率**：`FOC_ControlInjectionStep(inj, ctrl)` 不再接收 `dt`（唯一调用点本就恒定传 `FOC_CURRENT_LOOP_DT_SEC`，且相干频点 `f = 电流环率/N` 本以电流环率为基准）——消除 `Math_NormalizeDt` 调用与 dt 越界/不一致这一类失效面，并使"相位增量 ≤ π（`N_MIN ≥ 2` 编译期约束保证）⇒ 单次条件回卷成立"成为不变量。
+  - **非法输入在源头收敛，不做错误回报**：频率限幅到 `[电流环率/N_MAX, 电流环率/N_MIN]`（`freq_act` 为唯一回报口径）、幅值取幅并收敛到 `FOC_INJECTION_AMPLITUDE_LIMIT_V`、轴按编译期掩码收敛、NaN 与非正值一并归入下限；据此**删除 `status` 字段与 `STATUS_*` 枚举、`Configure` 返回值、`ACTIVE_NONE` 中间态及全部 `return 0` 失败分支**；新增编译期约束（轴掩码非零、`N_MIN ≥ 2`、`N_MAX ≥ N_MIN`）。
+  - **指针契约收窄（同步修订仓库规则）**：状态指针来源为 `motor` 内嵌地址，构造上非 NULL，故模块内不设空指针检查；`.clinerules` 指针校验规则改为"只在指针可能为 NULL 时检查"。
+  - **两种对等模式**：相干模式（`f = 电流环率 / N`，相位固定步进，零频谱泄漏、解调可分箱累加）与任意频率模式（相位累加器，频率连续）；`BOTH_AUTO` 下按"最近相干频点相对误差 ≤ `FOC_INJECTION_QUANT_ERROR_MAX`"自动选择（不再拒绝频点，越界请求在配置期收敛后由 `freq_act` 反映）。
+  - **观测**：示波器掩码位 bit9 由 `current_a_raw` 重定义为 `injection_wave`（重定义前该通道恒为 0），显示即将注入的电压分量。
+  - **复位**：注入状态纳入 `FOC_MotorInit` 初始化与 `FullStop` / `RebuildControlBasis` 复位。
+  - **验证（编译期）**：总开关两档均 0 error / 0 warning；两轴全关按预期触发编译期 `#error`；默认档 ROM 57.23 KB（58600 B）/ RAM 7.43 KB，`FOC_INJECTION_ENABLE = DISABLE` 档 ROM 52.58 KB（53844 B，= v2.4.1 基线 53768 B + 76 B 的电流环 `id_measured` 发布，注入自身零残留）。
+  - **实现细节**：注入模块**直接复用 L3 查表三角函数**（`L3_Hal/foc_math_lut.h` 的 `FOC_MathLut_SinCos` 联合查表，与全项目其他三角函数同源），不含模块内自带表或插值实现。
+- **高频注入解调器（阶段 2，`foc_injection_state_t.demod` 子状态，与注入同一模块、同一功能宏）**：与注入成对的被动工具——把注入响应（d/q 实测电流）与注入参考做正交相关，输出各轴 I/Q 与幅值，供阶段 3（R/L 辨识）与观测使用；不含位置语义、无协议入口。**注入与解调不可拆分**：由 `FOC_INJECTION_ENABLE` 单宏统一裁剪，解调在同一 `FOC_ControlInjectionStep`（阶段 4b）内同拍完成，不设独立解调宏与独立执行阶段。
+  - **参考相位同源**：解调参考取注入本拍 `FOC_MathLut_SinCos` 的同一次结果（与施加电压严格同相），**零新增三角函数表**。
+  - **输入单点化**：新增 `ctrl.id_measured`，由电流环 Park 单点发布，与 `iq_measured` 同源同拍、语义完全镜像（软切换 OPEN/CLOSED 混合路径与开环模型路径一并对齐）→ 解调不重复 Clarke/Park，且不改动电流环任何计算行为。
+  - **两种模式对等**：相干模式按**整周期**（N 拍）相关累加（零泄漏、无 LPF，每周期结算一次）；任意频率模式对 I/Q 做一阶低通（截止 = `f_inj / FOC_INJECTION_DEMOD_LPF_FC_DIV`）并按 `FOC_INJECTION_DEMOD_SETTLE_DIV` 抽拍结算。
+  - **结算不在 ISR 引入三角函数**：仅 `sqrtf`（硬浮点 VSQRT 通路）算幅值，相位交由消费方/上位机由 I/Q 计算；并对"激励→采样 1 拍延迟"做精确旋转补偿（Δ = 每拍相位增量，其 sin/cos 在配置期用同一通用 LUT 算好，结算时 4 乘 2 加完成）。
+  - **配置单点**：`FOC_Injection_Configure()` 一次同时建立注入与解调（派生量：窗口长度、归一化系数 2/N 或 2、I/Q LPF 系数、延迟旋转量、幅值平滑系数）；`Init` / `Reset` / `SetEnable` 同步清理解调累加器，避免跨启停拼接半窗。
+  - **观测**：示波器掩码位 bit10 由 `current_b_raw` 重定义为 `injection_demod`（取注入主轴，D 优先）；语义流在注入启用时帧长 10→13 行（`injection.demod_magnitude_a` / `demod_in_phase_a` / `demod_quadrature_a`，未激活时三行上报 0；注入特性被宏裁剪时整行跳过并回落 10 行，帧尾空白行随末行迁移）——这是示波器采样率不足时验证注入的唯一有效手段。
+  - **验证（编译期，与阶段 1 同档）**：默认档 ROM 57.23 KB（58600 B，含复用 L3 通用查表三角函数与解调）/ RAM 7.43 KB，`FOC_INJECTION_ENABLE = DISABLE` 档 ROM 52.58 KB（53844 B，相对 v2.4.1 基线 +76 B：电流环为解调额外发布 `id_measured`，不做"注入感知"条件编译以保持电流环不依赖注入特性），两档均 0 error / 0 warning。
+  - **边界（须作为阶段 3 前置认知）**：电流环闭环时 PID 会部分抵消注入（频率越低越明显），故解调结果是**闭环残差响应**——R/L 辨识需在环路带宽外选频或临时降低环路增益，该策略属辨识流程而非工具层。
+  - **控制面**：本轮不做（决策：高频注入当前是自驱动闭环行为、缺少可靠测试手段；阶段 4 声学回报完成后可外部显式驱动电机，更早获得可靠验证）。
+
+### Changed
+- **注入路线阶段顺序调整**：由"1 注入 → 2 解调 → 3 参数辨识 R/L → 4 声学回报"改为 **"1 注入 → 2 解调 → 4 声学回报 → 3 参数辨识 R/L"**——音频回报是更易实机验证的现象（示波器采样率不足以观测注入波形，R/L 与万用表/LCR 对照条件受限），故提前实施；注入为被动工具，波形验证由阶段 2 解调流程驱动，不引入临时代码。
+
 ## [2.4.1] - 2026-09-28
 
 ### Added

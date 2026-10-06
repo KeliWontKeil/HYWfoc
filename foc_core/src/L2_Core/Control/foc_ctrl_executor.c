@@ -9,6 +9,7 @@
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L2_Core/Control/foc_ctrl_injection.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
@@ -54,6 +55,9 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
         (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
     motor->current_soft_switch_status.blend_initialized = 0U;
     motor->current_soft_switch_status.prev_active_mode = 0xFFU;
+#endif
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Injection_Reset(&motor->injection_state);
 #endif
 
     /* 归零 PWM */
@@ -245,11 +249,28 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                            &motor->params,
                            current_loop_dt_sec);
 
-    /* 阶段5：SVPWM */
-    FOC_ControlApplyElectricalAngleRuntime(&motor->ctrl, &motor->svpwm,
-                                           &motor->applied_output, &motor->alpha_beta,
-                                           &motor->params,
-                                           motor->ctrl.electrical_angle_rad);
+    /* 阶段4b：注入叠加 + 解调（被动工具；未启用时无副作用） */
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    FOC_ControlInjectionStep(&motor->injection_state, &motor->ctrl);
+#endif
+
+    /* 阶段5：SVPWM（注入激活时旁路插值，直写占空比） */
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    if (motor->injection_state.enabled != 0U)
+    {
+        FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                              &motor->applied_output, &motor->alpha_beta,
+                                              &motor->params,
+                                              motor->ctrl.electrical_angle_rad);
+    }
+    else
+#endif
+    {
+        FOC_ControlApplyElectricalAngleRuntime(&motor->ctrl, &motor->svpwm,
+                                               &motor->applied_output, &motor->alpha_beta,
+                                               &motor->params,
+                                               motor->ctrl.electrical_angle_rad);
+    }
 
     motor->isr_timing.current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
     }

@@ -262,6 +262,7 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 | `foc_ctrl_compensation` | 齿槽补偿 |
 | `foc_ctrl_sens_cogging_calib` | 有感齿槽标定（非阻塞状态机，由 L1 通过 control_phase 路由调用） |
 | `foc_ctrl_sens_reinit` | 有感非阻塞重初始化（由 L1 通过 control_phase 路由调用） |
+| `foc_ctrl_injection` | 高频/任意频率注入工具（被动）：配置期收敛（轴 / 幅值 / 频率 / 模式判定）+ 每拍 dq 电压叠加 + 同拍正交解调；无协议入口、不含策略，由调用方模块 `Configure` / `SetEnable` 驱动 |
 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
 
 ### 控制运行链
@@ -345,11 +346,18 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   阶段4：NORMAL 电流环
     → FOC_CurrentControlStep（复用阶段1b 的 αβ 做 Park → PID → ud/uq；
       开环电阻模型限幅与 current_limit 取 ctrl.vbus_voltage_base）
+  阶段4b：注入叠加 + 同拍解调（可选，FOC_INJECTION_ENABLE；未启用时无副作用）
+    → FOC_ControlInjectionStep：相位推进 → 单位正弦（复用 L3 通用查表 FOC_MathLut_SinCos）
+      → ctrl.ud/uq 叠加 → 消费 ctrl.id_measured/iq_measured 做正交相关累加
+      （id_measured 与 iq_measured 同源同拍，由阶段4 的 Park 单点发布）
   阶段5：SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime（逆 Park → αβ 直通 SVPWM，
       逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ；
       不再经逆 Clarke 转三相——SVPWM 直接消费 αβ，消除冗余往返；
       电压限幅 / 占空比上限 / 调制比统一取 ctrl.vbus_voltage_base）
+    → 注入启用（injection_state.enabled != 0）时改调 FOC_ControlApplyElectricalAngleDirect
+      （direct_output = 1，SVPWM_ApplyDirectDuty 直写占空比），旁路 SVPWM 插值，
+      避免插值把注入波形压缩衰减
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -775,7 +783,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 
 ## 数学变换与 SVPWM（ISR 快线热点优化约束）
 
-- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。
+- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。注入与解调的单位正弦同源复用该 LUT（`foc_ctrl_injection` 直接调用 `FOC_MathLut_SinCos`，不持有模块内自带表），因此解调参考与施加电压严格同相。
 - **SVPWM 输入为 αβ 静止坐标系**：`SVPWM_Update` 直接消费逆 Park 的 αβ 结果，不再经逆 Clarke 转三相（v2.2.5 起，消除往返冗余）；SVPWM 内部按 αβ 判扇区（符号）与查角度（比值），不依赖矢量幅值归一化，近零矢量判零直接以幅值平方阈值输出中点。
 - **运行期不变常量缓存**：SMO 等模块将 `Rs`/`inv_L`/LPF alpha 等派生量在 Init 时缓存，避免每周期重算除法；依赖 REINIT 可变字段（如 `pole_pairs`）的派生量不缓存。
 

@@ -134,6 +134,8 @@ typedef struct {
     float max_phase_voltage;
     float iq_target;
     float iq_measured;
+    /* 实测 d 轴电流 [A]（与 iq_measured 同源同拍，由电流环 Park 单点发布；注入解调消费） */
+    float id_measured;
     /* 电流采样 Clarke 单点化共享结果（executor 阶段1 计算，SMO/电流环复用） */
     float ialpha;
     float ibeta;

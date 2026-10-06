@@ -68,6 +68,7 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_control_run
                                                            float id_ref,
                                                            float *ud_out,
                                                            float *uq_out,
+                                                           float *id_estimated_out,
                                                            float *iq_estimated_out)
 {
     float voltage_limit;
@@ -76,7 +77,8 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_control_run
     float iq_estimated;
     float id_estimated;
 
-    if ((ctrl == 0) || (params == 0) || (ud_out == 0) || (uq_out == 0) || (iq_estimated_out == 0))
+    if ((ctrl == 0) || (params == 0) || (ud_out == 0) || (uq_out == 0) ||
+        (id_estimated_out == 0) || (iq_estimated_out == 0))
     {
         return;
     }
@@ -95,6 +97,7 @@ static void FOC_CurrentLoopEstimateOpenLoopResistanceModel(const foc_control_run
 
     *uq_out = iq_estimated * phase_resistance;
     *ud_out = id_estimated * phase_resistance;
+    *id_estimated_out = id_estimated;
     *iq_estimated_out = iq_estimated;
 }
 
@@ -105,6 +108,7 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_control_runtime_t *c
 {
     float ud = 0.0f;
     float uq = 0.0f;
+    float id_estimated = 0.0f;
     float iq_estimated = 0.0f;
 
     FOC_CurrentLoopEstimateOpenLoopResistanceModel(ctrl,
@@ -113,38 +117,39 @@ static void FOC_CurrentLoopApplyOpenLoopResistanceModel(foc_control_runtime_t *c
                                                    id_ref,
                                                    &ud,
                                                    &uq,
+                                                   &id_estimated,
                                                    &iq_estimated);
 
     ctrl->uq = uq;
     ctrl->ud = ud;
+    ctrl->id_measured = id_estimated;
     ctrl->iq_measured = iq_estimated;
 }
 
 #if (FOC_CURRENT_LOOP_PID_ENABLE == FOC_CFG_ENABLE)
 
-static void FOC_CurrentLoopComputeIqMeasured(const foc_control_runtime_t *ctrl,
-                                             float electrical_angle,
-                                             float *iq_out)
+/* dq 实测电流单点计算：Park 复用 executor 阶段1b 单点化的 αβ 结果（消除重复 Clarke）；
+ * sin/cos 联合查表一次取得（消除重复三角函数查表）。结果由调用方原样发布到 ctrl。 */
+static void FOC_CurrentLoopComputeIdqMeasured(const foc_control_runtime_t *ctrl,
+                                              float electrical_angle,
+                                              float *id_out,
+                                              float *iq_out)
 {
-    float id_measured;
     float sin_theta;
     float cos_theta;
 
-    if ((ctrl == 0) || (iq_out == 0))
+    if ((ctrl == 0) || (id_out == 0) || (iq_out == 0))
     {
         return;
     }
 
-    /* Park 变换复用 executor 阶段1b 单点化的 αβ 结果（消除重复 Clarke）；
-     * sin/cos 联合查表一次取得（消除重复三角函数查表）。 */
     FOC_MathLut_SinCos(electrical_angle, &sin_theta, &cos_theta);
     Math_ParkTransformSC(ctrl->ialpha,
                          ctrl->ibeta,
                          sin_theta,
                          cos_theta,
-                         &id_measured,
+                         id_out,
                          iq_out);
-    (void)id_measured;
 }
 
 static void FOC_CurrentControlClosedLoopStep(foc_control_runtime_t *ctrl,
@@ -153,17 +158,20 @@ static void FOC_CurrentControlClosedLoopStep(foc_control_runtime_t *ctrl,
                                               float electrical_angle,
                                               float dt_sec)
 {
+    float id_measured;
     float iq_measured;
     float uq_cmd;
 
     (void)sensor;
 
-    FOC_CurrentLoopComputeIqMeasured(ctrl,
-                                     electrical_angle,
-                                     &iq_measured);
+    FOC_CurrentLoopComputeIdqMeasured(ctrl,
+                                      electrical_angle,
+                                      &id_measured,
+                                      &iq_measured);
 
     uq_cmd = FOC_CurrentLoopPIDRun(torque_pid, ctrl->iq_target, iq_measured, dt_sec);
 
+    ctrl->id_measured = id_measured;
     ctrl->iq_measured = iq_measured;
 
     ctrl->ud = 0.0f;
@@ -225,9 +233,11 @@ static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
     uint8_t *blend_initialized;
     float open_ud = 0.0f;
     float open_uq = 0.0f;
+    float open_id = 0.0f;
     float open_iq = 0.0f;
     float closed_ud;
     float closed_uq;
+    float closed_id;
     float closed_iq;
     float blend_factor;
     float target_blend;
@@ -249,6 +259,7 @@ static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
                                          dt_sec);
         closed_ud = ctrl->ud;
         closed_uq = ctrl->uq;
+        closed_id = ctrl->id_measured;
         closed_iq = ctrl->iq_measured;
     }
     else
@@ -256,16 +267,16 @@ static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
         /* OPEN: skip PID, only sample ADC for iq_measured reporting. */
         closed_ud = 0.0f;
         closed_uq = 0.0f;
+        closed_id = 0.0f;
         closed_iq = 0.0f;
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
         if (sensor->adc_valid != 0U)
         {
-            FOC_CurrentLoopComputeIqMeasured(ctrl,
-                                             electrical_angle,
-                                             &closed_iq);
+            FOC_CurrentLoopComputeIdqMeasured(ctrl,
+                                              electrical_angle,
+                                              &closed_id,
+                                              &closed_iq);
         }
-#else
-        (void)sensor;
 #endif
     }
 
@@ -286,6 +297,7 @@ static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
                                                    0.0f,
                                                    &open_ud,
                                                    &open_uq,
+                                                   &open_id,
                                                    &open_iq);
 
     /* Update blender state. */
@@ -300,8 +312,10 @@ static void FOC_CurrentControlSoftSwitchStep(foc_control_runtime_t *ctrl,
     ctrl->ud = open_ud + (closed_ud - open_ud) * blend_factor;
     ctrl->uq = open_uq + (closed_uq - open_uq) * blend_factor;
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
+    ctrl->id_measured = closed_id;
     ctrl->iq_measured = closed_iq;
 #else
+    ctrl->id_measured = open_id + (closed_id - open_id) * blend_factor;
     ctrl->iq_measured = open_iq + (closed_iq - open_iq) * blend_factor;
 #endif
 }
@@ -358,9 +372,10 @@ void FOC_CurrentControlStep(foc_control_runtime_t *ctrl,
             soft_switch->blend_factor = 0.0f;
             FOC_CurrentLoopApplyOpenLoopResistanceModel(ctrl, params, ctrl->iq_target, 0.0f);
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
-            FOC_CurrentLoopComputeIqMeasured(ctrl,
-                                             local_angle,
-                                             &ctrl->iq_measured);
+            FOC_CurrentLoopComputeIdqMeasured(ctrl,
+                                              local_angle,
+                                              &ctrl->id_measured,
+                                              &ctrl->iq_measured);
 #endif
         }
     }

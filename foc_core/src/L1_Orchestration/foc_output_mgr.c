@@ -154,7 +154,7 @@ void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
         if (!in_frame) continue;
 
         /* 语义行 */
-        if (elem.tag <= MONITOR_ELEM_SEMANTIC_9)
+        if (elem.tag <= MONITOR_ELEM_SEMANTIC_12)
         {
             char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
 

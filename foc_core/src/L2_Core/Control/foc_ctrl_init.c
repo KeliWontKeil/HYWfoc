@@ -17,6 +17,7 @@
 #include "LS_Config/foc_cogging_table.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_executor.h"
+#include "L2_Core/Control/foc_ctrl_injection.h"
 
 void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
 {
@@ -138,6 +139,9 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->ctrl.uq = 0.0f;
     motor->ctrl.max_phase_voltage = max_phase_voltage;
     motor->ctrl.vbus_voltage_base = vbus_voltage;
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Injection_Init(&motor->injection_state);
+#endif
     motor->ctrl_ref_ready = 0U;
     motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
     motor->active_source_state.state = FOC_SOURCE_STATE_INIT;
@@ -365,6 +369,9 @@ void FOC_Control_RebuildControlBasis(foc_motor_t *motor)
         (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
     motor->current_soft_switch_status.blend_initialized = 0U;
     motor->current_soft_switch_status.prev_active_mode = 0xFFU;
+#endif
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Injection_Reset(&motor->injection_state);
 #endif
 
     /* 外环：清零累积（加速度机制从 0 平滑重建） */
