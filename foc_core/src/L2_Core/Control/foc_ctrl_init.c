@@ -142,6 +142,9 @@ void FOC_MotorInit(foc_motor_t *motor,
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
     FOC_Injection_Init(&motor->injection_state);
 #endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    FOC_Acoustic_Init(&motor->acoustic_state);
+#endif
     motor->ctrl_ref_ready = 0U;
     motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
     motor->active_source_state.state = FOC_SOURCE_STATE_INIT;
@@ -372,6 +375,9 @@ void FOC_Control_RebuildControlBasis(foc_motor_t *motor)
 #endif
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
     FOC_Injection_Reset(&motor->injection_state);
+#endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    FOC_Acoustic_Reset(&motor->acoustic_state);
 #endif
 
     /* 外环：清零累积（加速度机制从 0 平滑重建） */

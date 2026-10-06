@@ -17,6 +17,8 @@
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
+#include "L2_Core/Control/foc_ctrl_acoustic.h"
+#include "LS_Config/foc_ringtone_table.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -106,7 +108,7 @@ static const char *FOC_App_FaultDescription(uint8_t code)
     }
 }
 
-/* fault 0→1 跃迁当轮，主循环补发完整详情（慢路径可靠输出） */
+/* fault 0→1 跃迁当轮，主循环补发完整详情（慢路径可靠输出）+ 声学报警音 */
 static void FOC_App_ReportFaultTransition(void)
 {
     if ((motor.state.system_fault != 0U) && (s_prev_system_fault == 0U))
@@ -115,13 +117,57 @@ static void FOC_App_ReportFaultTransition(void)
         snprintf(line, sizeof(line), "fault: %s\r\n",
                  FOC_App_FaultDescription(motor.state.last_fault_code));
         FOC_Platform_WriteDebugText(line);
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+        (void)FOC_App_PlayTune((uint8_t)FOC_RINGTONE_ID_FAULT);
+#endif
     }
     s_prev_system_fault = motor.state.system_fault;
 }
 
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* 上电提示音编排状态（L1 私有） */
+static uint8_t s_tune_boot_done = 0U;
+
+/* 声学回报触发收口：注入（标定工具）优先，激活期间不接受声学占用同一叠加点 */
+uint8_t FOC_App_PlayTune(uint8_t tune_id)
+{
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    if (motor.injection_state.enabled != 0U)
+    {
+        return 0U;
+    }
+#endif
+    return FOC_Acoustic_PlayTune(&motor.acoustic_state, tune_id);
+}
+
+void FOC_App_StopTune(void)
+{
+    FOC_Acoustic_Stop(&motor.acoustic_state);
+}
+
+/* 上电自检通过 → 提示音（一次）；初始化失败由 fault 报警音回报 */
+static void FOC_App_BootTune(void)
+{
+    if (s_tune_boot_done != 0U)
+    {
+        return;
+    }
+    if ((motor.state.system_running == 0U) || (motor.state.system_fault != 0U))
+    {
+        return;
+    }
+
+    s_tune_boot_done = 1U;
+    (void)FOC_App_PlayTune((uint8_t)FOC_RINGTONE_ID_BOOT);
+}
+#endif /* FOC_ACOUSTIC_ENABLE */
+
 void FOC_App_Loop(void)
 {
     FOC_App_ReportFaultTransition();
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    FOC_App_BootTune();
+#endif
 
     if (g_sys.runtime.tasks.monitor_pending != 0U)
     {

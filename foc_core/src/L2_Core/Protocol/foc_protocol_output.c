@@ -6,6 +6,7 @@
 #include "L2_Core/Runtime/foc_runtime_types.h"
 #include "L2_Core/foc_ctrl_types.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
+#include "L3_Hal/foc_codec.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
@@ -83,6 +84,42 @@ void FOC_Protocol_OutputState(char subcommand, uint8_t value)
                                  value);
     FOC_Platform_WriteDebugText(out);
 }
+
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* 声学回报触发回显（A 组） */
+void FOC_Protocol_OutputAcousticTune(uint8_t tune_id)
+{
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    if (Codec_FormatValueLine(out, (uint16_t)sizeof(out),
+                              "acoustic", "tune", (float)tune_id, 1U) != 0U)
+    {
+        FOC_Platform_WriteDebugText(out);
+    }
+}
+
+void FOC_Protocol_OutputAcousticPlaying(uint8_t playing)
+{
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    if (Codec_FormatValueLine(out, (uint16_t)sizeof(out),
+                              "acoustic", "playing", (float)playing, 1U) != 0U)
+    {
+        FOC_Platform_WriteDebugText(out);
+    }
+}
+
+void FOC_Protocol_OutputAcousticTuneCount(uint16_t count)
+{
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    if (Codec_FormatValueLine(out, (uint16_t)sizeof(out),
+                              "acoustic", "tune_count", (float)count, 1U) != 0U)
+    {
+        FOC_Platform_WriteDebugText(out);
+    }
+}
+#endif
 
 void FOC_Protocol_FormatSummaryLine(const foc_motor_t *motor,
                                      char *line_out, uint16_t line_max)

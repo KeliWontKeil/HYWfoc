@@ -53,6 +53,12 @@
 #define FOC_INJECTION_AXIS_FALLBACK \
     ((FOC_INJECTION_ENABLE_AXIS_D == FOC_CFG_ENABLE) ? FOC_INJECTION_AXIS_D : FOC_INJECTION_AXIS_Q)
 
+/* 声学回报（蜂鸣器级）：RTTTL 铃声表 → dq 电压叠加。单一功能宏，无运行时禁能
+ * （是否发声由触发决定，裁剪即整体移除）；AXIS 决定叠加到 d 轴（默认，几乎不产生
+ * 转矩脉动）或 q 轴。音频波形与电流环同拍生成，无独立音频定时器/缓冲。 */
+#define FOC_ACOUSTIC_ENABLE FOC_CFG_ENABLE
+#define FOC_ACOUSTIC_AXIS FOC_ACOUSTIC_AXIS_D
+
 /* 控制行为裁剪 */
 #define FOC_CURRENT_LOOP_PID_ENABLE FOC_CFG_ENABLE
 #define FOC_CURRENT_SOFT_SWITCH_ENABLE FOC_CFG_ENABLE

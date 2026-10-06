@@ -52,7 +52,7 @@ FOC_VSCODE/
 | `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source 与 low-speed policy、估计器体系（编码器/SMO/HFI/FLUX）、外环、电流环、参数学习、补偿、有感齿槽标定、有感重初始化、执行输出、**FullStop 安全归零** | 不持实例，操作传入的 `foc_motor_t` 指针 |
 | `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **命令语义执行**：L3 codec（`foc_codec.h`）产出命令 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（系统 report 配置） |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（提供 PollNextValue + 格式化接口，由 L1 双上下文调用） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
-| `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、滤波器数学、**协议编解码（codec，`foc_codec.h/.c`）** | 无实例（纯函数或操作 motor 中的字段） |
+| `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、滤波器数学、**协议编解码（codec，`foc_codec.h/.c`）**、**铃声编解码（RTTTL，`foc_ringtone.h/.c`）** | 无实例（纯函数或操作 motor 中的字段） |
 | `L4` 板级驱动层 | `examples/.../software/Utilities/`、`Firmware/` | 外设驱动与芯片库实现 | 芯片固有实例 |
 
 ### 分层约束
@@ -263,6 +263,7 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 | `foc_ctrl_sens_cogging_calib` | 有感齿槽标定（非阻塞状态机，由 L1 通过 control_phase 路由调用） |
 | `foc_ctrl_sens_reinit` | 有感非阻塞重初始化（由 L1 通过 control_phase 路由调用） |
 | `foc_ctrl_injection` | 高频/任意频率注入工具（被动）：配置期收敛（轴 / 幅值 / 频率 / 模式判定）+ 每拍 dq 电压叠加 + 同拍正交解调；无协议入口、不含策略，由调用方模块 `Configure` / `SetEnable` 驱动 |
+| `foc_ctrl_acoustic` | 声学回报序列引擎（被动）：按铃声 ID 解码为事件步 + 每拍 dq 电压叠加（包络 / 相位推进）；无协议入口、不含策略，由 L1 `FOC_App_PlayTune` 驱动 |
 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
 
 ### 控制运行链
@@ -350,14 +351,19 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
     → FOC_ControlInjectionStep：相位推进 → 单位正弦（复用 L3 通用查表 FOC_MathLut_SinCos）
       → ctrl.ud/uq 叠加 → 消费 ctrl.id_measured/iq_measured 做正交相关累加
       （id_measured 与 iq_measured 同源同拍，由阶段4 的 Park 单点发布）
+  阶段4c：声学回报叠加（可选，FOC_ACOUSTIC_ENABLE；未启用时无副作用）
+    → FOC_ControlAcousticStep：按当前步频率推进相位（复用 L3 通用查表 FOC_MathLut_Sin）
+      → 包络线性推进 → 按曲目轴（默认 d）叠加到 ctrl.ud/uq → 步计时递减与切步
+      （与阶段4b 共用同一叠加点：两者都是"dq 电压叠加的被动工具"，同时激活由 L1 拒绝）
   阶段5：SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime（逆 Park → αβ 直通 SVPWM，
       逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ；
       不再经逆 Clarke 转三相——SVPWM 直接消费 αβ，消除冗余往返；
       电压限幅 / 占空比上限 / 调制比统一取 ctrl.vbus_voltage_base）
-    → 注入启用（injection_state.enabled != 0）时改调 FOC_ControlApplyElectricalAngleDirect
-      （direct_output = 1，SVPWM_ApplyDirectDuty 直写占空比），旁路 SVPWM 插值，
-      避免插值把注入波形压缩衰减
+    → 叠加工具激活（`injection_state.enabled != 0` 或 `acoustic_state.active != 0`）时改调
+      FOC_ControlApplyElectricalAngleDirect（direct_output = 1，SVPWM_ApplyDirectDuty 直写占空比），
+      旁路 SVPWM 插值，避免插值把叠加波形压缩衰减；判定收口于单一
+      FOC_ControlExecutor_NeedsDirectOutput()，注入/声学/两者/都关四种宏组合共用同一调用点
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -750,6 +756,8 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 6. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
 7. 特殊控制状态退出：`FOC_SPECIAL_PHASE_ABORT_ENABLE`（当 `COGGING_CALIB_ENABLE` 或 `REINIT_ENABLE` 启用时自动开启）
 8. 电流环电压基准来源：`FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE`（设定值 / 实测母线电压，见"电流环电压基准"小节）
+9. 高频注入发生器：`FOC_INJECTION_ENABLE`（+ `FOC_INJECTION_MODE` 选择轴/模式）
+10. 声学回报序列引擎：`FOC_ACOUSTIC_ENABLE`（+ `FOC_ACOUSTIC_AXIS` 选择输出轴）
 
 ### 常见功能宏组合
 
@@ -765,7 +773,8 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 2. 固定最小集（不可裁剪）：`P:A/R/S/D`、`S:M`、`Y:R/C/A`
 3. 可选组：`FOC_PROTOCOL_ENABLE_*`
 4. `Y:A`（Abort）受 `FOC_SPECIAL_PHASE_ABORT_ENABLE` 裁剪
-5. **协议裁剪宏仅控制协议命令可见性与参数读写通道，不得用于保护控制算法的逻辑分支**
+5. `A` 组（声学回报）受特性宏 `FOC_ACOUSTIC_ENABLE` 裁剪——与 `Y:A` 同类，由能力开关决定而非协议裁剪宏
+6. **协议裁剪宏仅控制协议命令可见性与参数读写通道，不得用于保护控制算法的逻辑分支**
 
 ### 编译期约束
 
@@ -783,7 +792,7 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 
 ## 数学变换与 SVPWM（ISR 快线热点优化约束）
 
-- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。注入与解调的单位正弦同源复用该 LUT（`foc_ctrl_injection` 直接调用 `FOC_MathLut_SinCos`，不持有模块内自带表），因此解调参考与施加电压严格同相。
+- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。注入与解调的单位正弦同源复用该 LUT（`foc_ctrl_injection` 直接调用 `FOC_MathLut_SinCos`，不持有模块内自带表），因此解调参考与施加电压严格同相。声学回报的音频波形同样直接调用 `FOC_MathLut_Sin`（不持有模块内自带表），与注入共用同一三角函数源。
 - **SVPWM 输入为 αβ 静止坐标系**：`SVPWM_Update` 直接消费逆 Park 的 αβ 结果，不再经逆 Clarke 转三相（v2.2.5 起，消除往返冗余）；SVPWM 内部按 αβ 判扇区（符号）与查角度（比值），不依赖矢量幅值归一化，近零矢量判零直接以幅值平方阈值输出中点。
 - **运行期不变常量缓存**：SMO 等模块将 `Rs`/`inv_L`/LPF alpha 等派生量在 Init 时缓存，避免每周期重算除法；依赖 REINIT 可变字段（如 `pole_pairs`）的派生量不缓存。
 

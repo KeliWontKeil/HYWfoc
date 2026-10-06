@@ -14,6 +14,7 @@
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
 #include "L2_Core/Control/foc_ctrl_injection.h"
+#include "L2_Core/Control/foc_ctrl_acoustic.h"
 #include "L3_Hal/foc_sensor.h"
 #include "L3_Hal/foc_svpwm.h"
 
@@ -98,6 +99,9 @@ typedef struct foc_motor_t {
 #endif
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
     foc_injection_state_t injection_state;
+#endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    foc_acoustic_state_t acoustic_state;
 #endif
 
     /* ─── 控制参考（控制 ISR 单点发布，电流环 ISR 原子获取） ─── */

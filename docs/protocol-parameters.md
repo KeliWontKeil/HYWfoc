@@ -81,12 +81,14 @@ aaPA3.14b
 | `C` | 调优/配置参数通道（读写） | `a<id>C<subcmd>[value]b` |
 | `S` | 状态通道（开关量，读写） | `a<id>S<subcmd>[0/1]b` |
 | `Y` | 系统语义通道（只读/执行） | `a<id>Y<subcmd>b` |
+| `A` | 声学回报通道（触发/查询：参数 = 铃声 ID） | `a<id>AP<id>b` |
 
 执行语义：
 
 - `P/C`：带值=写参数；不带值=读参数
 - `S`：带值=写状态；不带值=读状态
 - `Y`：不允许带值
+- `A`：`P` 带值=播放指定铃声；`S` 不带值=停止播放；`L` 不带值=读取铃声条目数
 
 ### 3.1 全子命令索引
 
@@ -94,6 +96,9 @@ aaPA3.14b
 
 | 子命令 | 命令组 | 简要描述 |
 |--------|--------|---------|
+| `A:L` | 声学回报 | 读取铃声条目数 |
+| `A:P` | 声学回报 | 播放铃声（参数 = 铃声 ID） |
+| `A:S` | 声学回报 | 停止播放 |
 | `P:A` | 运行参数 | target_angle_rad |
 | `P:D` | 运行参数 | control_mode |
 | `P:H` | 运行参数 | oscilloscope_report_frequency_hz |
@@ -339,6 +344,7 @@ STATE RUN=1 FLT=0 CODE=NONE INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=
 - `P` 组参数输出：`parameter.<name>=<value>`
 - `C` 组配置参数输出：`config.<name>=<value>`
 - `S` 组状态输出：`state.<name>=ENABLE/DISABLE`
+- `A` 组声学回报输出：`acoustic.<name>=<value>`（`tune` / `playing` / `tune_count`）
 - `Y:X` 系统信息输出：`system.<name>=<value>`
 
 `Y:X` 额外暴露当前 Source/Control 架构状态，均为只读：
@@ -416,6 +422,10 @@ aaYRb       # 读取运行时状态摘要（Y:R）
 aaYCb       # 清除故障计数器 + 软诊断重初始化（Y:C）
 aaYIb       # 运行时电机参数重初始化（Y:I）
 aaYXb       # 读取系统参数信息（Y:X）
+aaAP0b      # 播放铃声 0（A:P，上电提示音）
+aaAP2b      # 播放铃声 2（A:P，音阶测试）
+aaASb       # 停止播放（A:S）
+aaALb       # 读取铃声条目数（A:L）
 ```
 
 ### A.2 常用参数写入

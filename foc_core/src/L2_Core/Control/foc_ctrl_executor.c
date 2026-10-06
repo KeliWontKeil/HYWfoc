@@ -10,6 +10,7 @@
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_injection.h"
+#include "L2_Core/Control/foc_ctrl_acoustic.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
@@ -58,6 +59,9 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 #endif
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
     FOC_Injection_Reset(&motor->injection_state);
+#endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    FOC_Acoustic_Reset(&motor->acoustic_state);
 #endif
 
     /* 归零 PWM */
@@ -167,6 +171,26 @@ void FOC_ControlExecutor_BuildSourceMgrCtx(foc_motor_t *motor,
     ctx->encoder_services = &motor->encoder_services;
 }
 
+/* 直写占空比判定（单一收口）：注入 / 声学任一激活时旁路 SVPWM 插值，
+ * 避免插值把叠加波形压缩衰减。 */
+static uint8_t FOC_ControlExecutor_NeedsDirectOutput(const foc_motor_t *motor)
+{
+    (void)motor;
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    if (motor->injection_state.enabled != 0U)
+    {
+        return 1U;
+    }
+#endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    if (FOC_Acoustic_IsActive(&motor->acoustic_state) != 0U)
+    {
+        return 1U;
+    }
+#endif
+    return 0U;
+}
+
 static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float current_loop_dt_sec)
 {
     uint32_t isr_start;
@@ -249,14 +273,16 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                            &motor->params,
                            current_loop_dt_sec);
 
-    /* 阶段4b：注入叠加 + 解调（被动工具；未启用时无副作用） */
+    /* 阶段4b：注入叠加 + 解调 + 声学回报叠加（被动工具；未启用时无副作用） */
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
     FOC_ControlInjectionStep(&motor->injection_state, &motor->ctrl);
 #endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    FOC_ControlAcousticStep(&motor->acoustic_state, &motor->ctrl);
+#endif
 
-    /* 阶段5：SVPWM（注入激活时旁路插值，直写占空比） */
-#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
-    if (motor->injection_state.enabled != 0U)
+    /* 阶段5：SVPWM（叠加工具激活时旁路插值，直写占空比） */
+    if (FOC_ControlExecutor_NeedsDirectOutput(motor) != 0U)
     {
         FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
                                               &motor->applied_output, &motor->alpha_beta,
@@ -264,7 +290,6 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                                               motor->ctrl.electrical_angle_rad);
     }
     else
-#endif
     {
         FOC_ControlApplyElectricalAngleRuntime(&motor->ctrl, &motor->svpwm,
                                                &motor->applied_output, &motor->alpha_beta,

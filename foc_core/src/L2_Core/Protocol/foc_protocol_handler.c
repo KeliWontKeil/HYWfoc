@@ -10,6 +10,7 @@
 #include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/Control/foc_ctrl_acoustic.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_codec.h"
@@ -677,6 +678,93 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
     return res;
 }
 
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* ========== A 命令执行（声学回报触发） ========== */
+
+/* 曲目 ID 收敛：整数值且落在铃声表条目范围内 */
+static uint8_t ParseAcousticTuneId(float value, uint8_t *id_out)
+{
+    uint8_t id;
+
+    if ((value < 0.0f) || (value >= (float)FOC_Acoustic_GetTuneCount()))
+    {
+        return 0U;
+    }
+
+    id = (uint8_t)value;
+    if ((((float)id - value) > 0.001f) || ((value - (float)id) > 0.001f))
+    {
+        return 0U;
+    }
+
+    *id_out = id;
+    return 1U;
+}
+
+static foc_protocol_frame_result_t ExecuteACommand(foc_motor_t *motor, const protocol_command_t *cmd)
+{
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+
+    if (cmd->subcommand == COMMAND_MANAGER_ACOUSTIC_SUBCMD_PLAY)
+    {
+        uint8_t tune_id = 0U;
+
+        if ((cmd->has_param == 0U) || (ParseAcousticTuneId(cmd->param_value, &tune_id) == 0U))
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        if (FOC_App_PlayTune(tune_id) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_Protocol_OutputAcousticTune(tune_id);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_ACOUSTIC_SUBCMD_STOP)
+    {
+        if (cmd->has_param != 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_App_StopTune();
+        FOC_Protocol_OutputAcousticPlaying(0U);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_ACOUSTIC_SUBCMD_TUNE_COUNT)
+    {
+        if (cmd->has_param != 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_Protocol_OutputAcousticTuneCount(FOC_Acoustic_GetTuneCount());
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+    res.needs_status = 1U;
+    return res;
+}
+#endif /* FOC_ACOUSTIC_ENABLE */
+
 /* ========== Y 命令执行 ========== */
 
 static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const protocol_command_t *cmd)
@@ -819,6 +907,9 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
     if (command.command == COMMAND_MANAGER_CMD_PARAM)  return ExecutePCommand(motor, &command);
     if (command.command == COMMAND_MANAGER_CMD_CONFIG) return ExecuteCCommand(motor, &command);
     if (command.command == COMMAND_MANAGER_CMD_STATE)   return ExecuteSCommand(motor, &command);
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    if (command.command == COMMAND_MANAGER_CMD_ACOUSTIC) return ExecuteACommand(motor, &command);
+#endif
 
     FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
     res.needs_status = 1U;

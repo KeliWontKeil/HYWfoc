@@ -71,6 +71,8 @@ L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功
 - `foc_ctrl_compensation` — 齿槽补偿
 - `foc_ctrl_sens_cogging_calib` — 有感齿槽标定（非阻塞状态机）
 - `foc_ctrl_sens_reinit` — 有感非阻塞重初始化
+- `foc_ctrl_injection` — 高频注入发生器（dq 电压叠加）
+- `foc_ctrl_acoustic` — 声学回报序列引擎（铃声播放 + 包络）
 - `foc_ctrl_actuation` — 执行输出（SVPWM 驱动）
 
 ## Configuration macro & type management
@@ -93,6 +95,7 @@ LS_Config 文件分为三大类：
 
 **C. 数据表文件**
 - `foc_cogging_table.h` — 静态齿槽补偿默认表
+- `foc_ringtone_table.h` — 静态铃声表（RTTTL 文本，索引即铃声 ID）
 
 **约束**：
 - 宏头文件之间不交叉依赖（不互相 `#include`）
