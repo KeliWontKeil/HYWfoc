@@ -57,7 +57,7 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功能分组列出：
 
 - `foc_ctrl_executor` — 算法入口（外环/内环/开环/补偿入口）
-- `foc_ctrl_init` — 初始化与标定
+- `foc_ctrl_init` — 数据结构初始化、平台硬件初始化收口、控制基准重建、电机参数就绪判据
 - `foc_ctrl_cfg` — 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter）
 - `foc_ctrl_source_mgr` — Source Manager：在 PWM ISR 中运行/读取 source、选择 active source
 - `foc_ctrl_openloop` — OpenLoop angle source 实现 + OpenLoop low-speed policy
@@ -67,10 +67,9 @@ L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功
 - `foc_ctrl_estim_hfi` — HFI source 实现
 - `foc_ctrl_outer_loop` — 速度/位置外环
 - `foc_ctrl_current_loop` — 电流内环
-- `foc_ctrl_param_learn` — 电机参数学习
 - `foc_ctrl_compensation` — 齿槽补偿
 - `foc_ctrl_sens_cogging_calib` — 有感齿槽标定（非阻塞状态机）
-- `foc_ctrl_sens_reinit` — 有感非阻塞重初始化
+- `foc_ctrl_align` — 有感对齐/标定状态机（上电 STARTUP 与命令 aaYI 共用同一实现）
 - `foc_ctrl_injection` — 高频注入发生器（dq 电压叠加）
 - `foc_ctrl_acoustic` — 声学回报序列引擎（铃声播放 + 包络）
 - `foc_ctrl_actuation` — 执行输出（SVPWM 驱动）

@@ -1,4 +1,4 @@
-﻿#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 
 #include <stdio.h>
@@ -9,7 +9,7 @@
 #include "L2_Core/Protocol/foc_protocol_parser.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
-#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/Control/foc_ctrl_align.h"
 #include "L2_Core/Control/foc_ctrl_acoustic.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L3_Hal/foc_math_transforms.h"
@@ -812,7 +812,19 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
         motor->state.system_running = 1U;
         motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
         motor->state.current_loop_ready = 0U;
-        motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+
+        /* 上电自检尚未完成（如欠压）导致电机参数未标定：恢复后回到启动对齐阶段重新标定，
+         * 而非直接进入 NORMAL（否则电角度基准缺失无法换向）。参数已标定则沿用原恢复路径。 */
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+        if (FOC_Control_IsMotorParamCalibrated(&motor->params) == 0U)
+        {
+            FOC_Align_RequestStartup(motor);
+        }
+        else
+#endif
+        {
+            motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+        }
 
         FOC_Protocol_WriteLog("recovery: system fault cleared, control basis rebuilt\r\n");
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
@@ -823,8 +835,8 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT)
     {
-#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
-        FOC_ReInit_Request(motor);
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        FOC_Align_Request(motor);
 #endif
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;

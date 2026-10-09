@@ -102,6 +102,12 @@
 #define FOC_CALIB_FINE_STEP_SETTLE_MS 6U
 #define FOC_CALIB_FINE_STEP_SAMPLE_COUNT 4U
 
+/* 上电静态校验的母线电压门：多次采样确认，避免单点抖动误判。 */
+#define FOC_VBUS_GATE_SAMPLE_COUNT 8U
+#define FOC_VBUS_GATE_SAMPLE_INTERVAL_MS 2U
+/* 对齐状态机采样节拍（控制拍数/样本）：等效原阻塞实现的 FOC_CALIB_SETTLE_MS。 */
+#define FOC_CALIB_SAMPLE_CYCLES 4U
+
 /* Cogging compensation defaults (optional feature). */
 #define FOC_COGGING_LUT_POINT_COUNT 512U
 #define FOC_COGGING_CALIB_GAIN_K      0.06f
@@ -159,7 +165,7 @@
 
 /* Safety threshold defaults. */
 #define FOC_DIAG_SENSOR_FAULT_THRESHOLD 1U
-#define FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT 8.0f
+#define FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT 10.0f
 
 /* Control loop defaults and limits. */
 #define FOC_DEFAULT_MIN_MECH_ANGLE_ACCUM_DELTA_RAD 0.001f

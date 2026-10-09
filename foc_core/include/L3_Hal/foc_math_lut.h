@@ -16,7 +16,12 @@
 #define FOC_MATH_LUT_ATAN_RATIO_MAX_INDEX 1000U
 #define FOC_MATH_LUT_ATAN_SCALE_MRAD 0.001f
 
-static const uint16_t g_foc_math_lut_sin_quarter[FOC_MATH_LUT_SIN_Q_SIZE] = {
+/* LUT 表单点定义：只有定义 FOC_MATH_LUT_IMPL 的翻译单元（foc_math_transforms.c）
+ * 实例化表，其余翻译单元走下方 extern 声明。static const 表随头文件在每个 TU
+ * 各存一份会造成大量 ROM 重复（历史实测 sin 表 ×7、atan 表 ×3）。 */
+#if defined(FOC_MATH_LUT_IMPL)
+
+const uint16_t g_foc_math_lut_sin_quarter[FOC_MATH_LUT_SIN_Q_SIZE] = {
     0, 33, 66, 98, 131, 164, 197, 229, 262, 295, 328, 360, 
     393, 426, 459, 491, 524, 557, 590, 623, 655, 688, 721, 754, 
     786, 819, 852, 885, 917, 950, 983, 1016, 1048, 1081, 1114, 1147, 
@@ -151,7 +156,7 @@ static const uint16_t g_foc_math_lut_sin_quarter[FOC_MATH_LUT_SIN_Q_SIZE] = {
 };
 
 /* atan(r) for r in [0, 1], value stored in milli-radian. */
-static const uint16_t g_foc_math_lut_atan_ratio[FOC_MATH_LUT_ATAN_RATIO_MAX_INDEX + 1U] = {
+const uint16_t g_foc_math_lut_atan_ratio[FOC_MATH_LUT_ATAN_RATIO_MAX_INDEX + 1U] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 
     32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 
@@ -216,6 +221,13 @@ static const uint16_t g_foc_math_lut_atan_ratio[FOC_MATH_LUT_ATAN_RATIO_MAX_INDE
     773, 774, 774, 775, 775, 776, 776, 777, 777, 778, 778, 779, 779, 780, 780, 781, 
     781, 782, 782, 783, 783, 784, 784, 785, 785
 };
+
+#else /* !FOC_MATH_LUT_IMPL */
+
+extern const uint16_t g_foc_math_lut_sin_quarter[FOC_MATH_LUT_SIN_Q_SIZE];
+extern const uint16_t g_foc_math_lut_atan_ratio[FOC_MATH_LUT_ATAN_RATIO_MAX_INDEX + 1U];
+
+#endif /* FOC_MATH_LUT_IMPL */
 
 static inline uint16_t FOC_MathLut_ClampIndex(int32_t idx, uint16_t max_idx)
 {

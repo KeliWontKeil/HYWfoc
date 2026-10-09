@@ -191,6 +191,19 @@ static uint8_t FOC_ControlExecutor_NeedsDirectOutput(const foc_motor_t *motor)
     return 0U;
 }
 
+/* 需要由 phase_output_state 驱动的特殊控制阶段（齿槽标定 / 重新对齐 / 上电对齐） */
+static uint8_t FOC_ControlExecutor_IsPhaseOutputDriven(const foc_motor_t *motor)
+{
+    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
+        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT) ||
+        (motor->state.control_phase == FOC_CONTROL_PHASE_STARTUP))
+    {
+        return 1U;
+    }
+
+    return 0U;
+}
+
 static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float current_loop_dt_sec)
 {
     uint32_t isr_start;
@@ -320,8 +333,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
         return;
     }
 
-    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
-        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
+    if (FOC_ControlExecutor_IsPhaseOutputDriven(motor) != 0U)
     {
         if (motor->phase_output_state.valid == 0U) return;
         FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
@@ -359,8 +371,7 @@ void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
         return;
     }
 
-    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
-        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
+    if (FOC_ControlExecutor_IsPhaseOutputDriven(motor) != 0U)
     {
         if (motor->phase_output_state.valid == 0U) return;
         FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,

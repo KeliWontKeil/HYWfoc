@@ -14,7 +14,7 @@
 #include "L2_Core/Control/foc_ctrl_executor.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
-#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/Control/foc_ctrl_align.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Control/foc_ctrl_acoustic.h"
@@ -31,6 +31,30 @@ static foc_motor_t motor;
 /* 主循环 fault 补发用本地缓存（不进 motor 状态） */
 static uint8_t s_prev_system_fault = 0U;
 
+/* STARTUP 对齐完成 → 主循环补发启动信息（ISR 内不做长文本） */
+static uint8_t s_startup_done_pending = 0U;
+
+/* 启动阶段选择：自检通过且电机参数待标定（有编码器且允许对齐）时进入 STARTUP 阶段 */
+static uint8_t FOC_App_ShouldStartupAlign(const foc_motor_t *motor)
+{
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    if ((motor->state.system_running == 0U) || (motor->state.system_fault != 0U))
+    {
+        return 0U;
+    }
+
+    if (FOC_Control_IsMotorParamCalibrated(&motor->params) == 0U)
+    {
+        return 1U;
+    }
+
+    return 0U;
+#else
+    (void)motor;
+    return 0U;
+#endif
+}
+
 static void FOC_App_SchedTickBridge(void)
 {
     ControlScheduler_RunTick(&g_sys.runtime.scheduler);
@@ -43,6 +67,8 @@ static void FOC_App_SchedTickBridge(void)
 
 void FOC_App_Init(void)
 {
+    uint8_t vbus_ok;
+
     FOC_Platform_RuntimeInit();
 
     FOC_Platform_IndicatorInit();
@@ -62,9 +88,10 @@ void FOC_App_Init(void)
                      0
 #endif
                      );
-    FOC_Init_MotorAndCalib(&motor);
 
-    motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+    /* 就绪前：只写配置初值，不做任何功率动作（PWM 占空比恒 0） */
+    FOC_Init_Motor(&motor);
+
 #if (FOC_CONTROL_LOW_SOURCE == FOC_CONTROL_SRC_OPENLOOP)
     FOC_OpenLoop_Init(&motor.openloop_state, &motor.params, &motor.cfg);
 #endif
@@ -78,8 +105,21 @@ void FOC_App_Init(void)
                            (uint8_t)FOC_CONTROL_HIGH_SOURCE);
     }
 
-    FOC_Init_Verify(&motor, &motor.sensor);
-    FOC_OutputMgr_WriteStartupInfo(&motor);
+    /* 就绪前静态校验：母线电压门 + 通信/协议/命令/调试/PWM/传感器 */
+    vbus_ok = FOC_Init_VbusGate(&motor.sensor);
+    FOC_Init_Verify_Static(&motor, vbus_ok);
+
+    /* 启动阶段选择：参数待标定 → 就绪后由 STARTUP 阶段完成对齐（含电压监护与中止能力） */
+    if (FOC_App_ShouldStartupAlign(&motor) != 0U)
+    {
+        FOC_Align_RequestStartup(&motor);
+    }
+    else
+    {
+        motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+        FOC_OutputMgr_WriteStartupInfo(&motor);
+    }
+
     FOC_Indicator_Update(&motor, &g_sys.runtime);
 }
 
@@ -152,7 +192,8 @@ static void FOC_App_BootTune(void)
     {
         return;
     }
-    if ((motor.state.system_running == 0U) || (motor.state.system_fault != 0U))
+    if ((motor.state.system_running == 0U) || (motor.state.system_fault != 0U) ||
+        (motor.state.control_phase != FOC_CONTROL_PHASE_NORMAL))
     {
         return;
     }
@@ -165,6 +206,23 @@ static void FOC_App_BootTune(void)
 void FOC_App_Loop(void)
 {
     FOC_App_ReportFaultTransition();
+
+    /* 对齐/重新对齐完成后补发启动信息（ISR 内不做长文本） */
+    {
+        uint8_t report_ready = FOC_Align_TakeReport(&motor);
+
+        if (s_startup_done_pending != 0U)
+        {
+            s_startup_done_pending = 0U;
+            report_ready = 1U;
+        }
+
+        if (report_ready != 0U)
+        {
+            FOC_OutputMgr_WriteStartupInfo(&motor);
+        }
+    }
+
 #if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
     FOC_App_BootTune();
 #endif
@@ -287,10 +345,18 @@ void FOC_App_AbortSpecialPhase(void)
         FOC_CoggingCalib_Abort(&motor);
 #endif
         break;
+    case FOC_CONTROL_PHASE_STARTUP:
+        aborted_phase = "STARTUP";
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        FOC_Align_Abort(&motor);
+        /* 对齐被中止：参数可能仍未定义 → 立即判定（未定义则置初始化失败并停机） */
+        (void)FOC_Init_Verify_Motor(&motor);
+#endif
+        break;
     case FOC_CONTROL_PHASE_REINIT:
         aborted_phase = "REINIT";
-#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
-        FOC_ReInit_Abort(&motor);
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        FOC_Align_Abort(&motor);
 #endif
         break;
     default:
@@ -315,6 +381,14 @@ void FOC_App_ControlTrigger(void)
     uint8_t phase;
     uint8_t cycle_result = FOC_CYCLE_OK;
     FOC_Indicator_Update(&motor, &g_sys.runtime);
+
+    /* 阶段1：传感器读取。fault 期间也持续采样，使母线电压/有效性基准不冻结——
+     * 否则 fault 时采样暂停，filtered 停在欠压旧值，恢复电压后 Y:C 恢复仍被判欠压（死锁）。 */
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
+    Sensor_ReadEncoder(&motor.sensor, FOC_CONTROL_DT_SEC);
+#endif
+    Sensor_ReadVBUS(&motor.sensor);
+
     phase = motor.state.control_phase;
     if (motor.state.system_fault != 0U) return;
 
@@ -329,11 +403,6 @@ void FOC_App_ControlTrigger(void)
         }
     }
 #endif
-
-#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_DISABLE)
-    Sensor_ReadEncoder(&motor.sensor, FOC_CONTROL_DT_SEC);
-#endif
-    Sensor_ReadVBUS(&motor.sensor);
 
 
 #if (FOC_ESTIMATOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
@@ -358,14 +427,13 @@ void FOC_App_ControlTrigger(void)
     motor.state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
 
 
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
-      if (motor.sensor.vbus.filtered < FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
+    /* 母线电压安全判定（与上电门共用单一判定入口；保护关闭时恒为安全） */
+    if (FOC_Init_IsVbusSafe(&motor.sensor) == 0U)
     {
         motor.state.last_fault_code = (uint8_t)FOC_FAULT_UNDERVOLTAGE;
         FOC_ControlExecutor_OnCycleResult(&motor, (uint8_t)FOC_CYCLE_FAULT_UVLO);
         return;
     }
-#endif
 
 
     switch (phase)
@@ -382,9 +450,23 @@ void FOC_App_ControlTrigger(void)
 #endif
         break;
 
+    case FOC_CONTROL_PHASE_STARTUP:
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        /* 上电对齐：状态机驱动，全程受本函数阶段1的电压/有效性检查监护 */
+        if (FOC_Align_RunStep(&motor, FOC_CONTROL_DT_SEC) == 0U)
+        {
+            /* 对齐结束 → 电机参数就绪判定（就绪后判定组） */
+            if (FOC_Init_Verify_Motor(&motor) != 0U)
+            {
+                s_startup_done_pending = 1U;
+            }
+        }
+#endif
+        break;
+
     case FOC_CONTROL_PHASE_REINIT:
-#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
-        (void)FOC_ReInit_RunStep(&motor, FOC_CONTROL_DT_SEC);
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        (void)FOC_Align_RunStep(&motor, FOC_CONTROL_DT_SEC);
 #endif
         break;
 

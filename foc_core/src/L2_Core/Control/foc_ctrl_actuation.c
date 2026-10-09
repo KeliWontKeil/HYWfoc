@@ -217,54 +217,6 @@ float FOC_ControlMechanicalToElectricalAngle(const foc_motor_params_t *params,
     return Math_WrapRad((float)params->direction * mech_delta * (float)params->pole_pairs);
 }
 
-/* C31：采样锁定的机械角度（用于电机零点标定） */
-uint8_t FOC_SampleLockedMechanicalAngle(foc_control_runtime_t *ctrl,
-                                        svpwm_interp_state_t *svpwm,
-                                        foc_applied_output_state_t *applied,
-                                        foc_alpha_beta_phase_t *alpha_beta,
-                                        const foc_motor_params_t *params,
-                                        float electrical_angle,
-                                        uint16_t settle_ms,
-                                        uint16_t sample_count,
-                                        float *mech_angle_rad)
-{
-    float sin_sum = 0.0f;
-    float cos_sum = 0.0f;
-    uint16_t i;
-
-    if ((mech_angle_rad == 0) || (sample_count == 0U))
-    {
-        return 0U;
-    }
-
-    FOC_ControlApplyElectricalAngleDirect(ctrl, svpwm, applied, alpha_beta, params,
-                                          electrical_angle);
-    FOC_Platform_WaitMs(settle_ms);
-
-    /* 在锁定状态下多次采样，通过sin/cos矢量平均抑制噪声 */
-    for (i = 0U; i < sample_count; i++)
-    {
-        float sample_rad;
-
-        if (FOC_Platform_ReadMechanicalAngleRad(&sample_rad) == 0U)
-        {
-            continue;
-        }
-
-        sin_sum += FOC_MathLut_Sin(sample_rad);
-        cos_sum += FOC_MathLut_Sin(sample_rad + FOC_MATH_PI * 0.5f);
-        FOC_Platform_WaitMs(FOC_CALIB_SETTLE_MS);
-    }
-
-    if ((fabsf(sin_sum) < 1e-6f) && (fabsf(cos_sum) < 1e-6f))
-    {
-        return 0U;
-    }
-
-    *mech_angle_rad = Math_WrapRad(FOC_MathLut_Atan2(sin_sum, cos_sum));
-    return 1U;
-}
-
 /* C31：运行时应用电角度（插值启用走插值路径，裁剪后直接写占空比）*/
 void FOC_ControlApplyElectricalAngleRuntime(foc_control_runtime_t *ctrl,
                                             svpwm_interp_state_t *svpwm,

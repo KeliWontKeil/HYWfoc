@@ -5,10 +5,8 @@
 #include <math.h>
 
 #include "L2_Core/Control/foc_ctrl_actuation.h"
-#include "L2_Core/Control/foc_ctrl_param_learn.h"
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
-#include "L3_Hal/foc_math_lut.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "L3_Hal/foc_sensor.h"
@@ -19,104 +17,19 @@
 #include "L2_Core/Control/foc_ctrl_executor.h"
 #include "L2_Core/Control/foc_ctrl_injection.h"
 
-void FOC_CalibrateElectricalAngleAndDirection(foc_motor_t *motor)
+/* 电机参数是否已标定（方向/零点/极对数均非未定义） */
+uint8_t FOC_Control_IsMotorParamCalibrated(const foc_motor_params_t *params)
 {
-    float calib_uq;
-    float backup_ud;
-    float backup_uq;
-    int8_t direction_est;
-    uint8_t pole_pairs_est;
-    float mech_zero_rad_est;
-    uint8_t need_zero;
-    uint8_t need_direction;
-    uint8_t need_pole_pairs;
+    if (params == 0) return 0U;
 
-    need_zero = (motor->params.mech_angle_at_elec_zero_rad == FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) ? 1U : 0U;
-    need_direction = (motor->params.direction == FOC_DIR_UNDEFINED) ? 1U : 0U;
-    need_pole_pairs = (motor->params.pole_pairs == FOC_POLE_PAIRS_UNDEFINED) ? 1U : 0U;
-
-    if ((need_zero == 0U) && (need_direction == 0U) && (need_pole_pairs == 0U))
+    if ((params->direction != FOC_DIR_UNDEFINED) &&
+        (params->mech_angle_at_elec_zero_rad != FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED) &&
+        (params->pole_pairs != FOC_POLE_PAIRS_UNDEFINED))
     {
-        return;
+        return 1U;
     }
 
-    backup_ud = motor->ctrl.ud;
-    backup_uq = motor->ctrl.uq;
-
-    calib_uq = motor->ctrl.max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
-    calib_uq = Math_ClampFloat(calib_uq, 0.0f, motor->ctrl.max_phase_voltage);
-
-    motor->ctrl.uq = 0.0f;
-    motor->ctrl.ud = calib_uq;
-
-    if (need_zero != 0U)
-    {
-        if (FOC_SampleLockedMechanicalAngle(&motor->ctrl, &motor->svpwm,
-                                            &motor->applied_output, &motor->alpha_beta,
-                                            &motor->params,
-                                            0.0f,
-                                            FOC_CALIB_ZERO_LOCK_SETTLE_MS,
-                                            FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT,
-                                            &mech_zero_rad_est) != 0U)
-        {
-            motor->params.mech_angle_at_elec_zero_rad = mech_zero_rad_est;
-            motor->outer_loop.accum_rad = mech_zero_rad_est;
-            motor->outer_loop.prev_rad = mech_zero_rad_est;
-            motor->outer_loop.prev_valid = 1U;
-        }
-        else
-        {
-            motor->params.mech_angle_at_elec_zero_rad = FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED;
-            motor->outer_loop.accum_rad = 0.0f;
-            motor->outer_loop.prev_rad = 0.0f;
-            motor->outer_loop.prev_valid = 0U;
-            FOC_Platform_WriteDebugText("init: zero-lock sampling failed, mech zero left undefined\r\n");
-        }
-    }
-    else
-    {
-        FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
-                                              &motor->applied_output, &motor->alpha_beta,
-                                              &motor->params,
-                                              0.0f);
-        FOC_Platform_WaitMs(FOC_CALIB_ZERO_LOCK_SETTLE_MS);
-    }
-
-    if ((need_direction != 0U) || (need_pole_pairs != 0U))
-    {
-        if (FOC_EstimateDirectionAndPolePairs(&motor->ctrl, &motor->params, &motor->svpwm,
-                                              &motor->applied_output, &motor->alpha_beta,
-                                              &direction_est, &pole_pairs_est) != 0U)
-        {
-            if (need_direction != 0U)
-            {
-                motor->params.direction = direction_est;
-            }
-            if (need_pole_pairs != 0U)
-            {
-                motor->params.pole_pairs = pole_pairs_est;
-            }
-        }
-        else
-        {
-            if (need_direction != 0U)
-            {
-                motor->params.direction = FOC_DIR_UNDEFINED;
-            }
-            if (need_pole_pairs != 0U)
-            {
-                motor->params.pole_pairs = FOC_POLE_PAIRS_UNDEFINED;
-            }
-            FOC_Platform_WriteDebugText("init: direction/pole-pairs estimation failed, values left undefined\r\n");
-        }
-    }
-
-    motor->ctrl.ud = backup_ud;
-    motor->ctrl.uq = backup_uq;
-    FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
-                                          &motor->applied_output, &motor->alpha_beta,
-                                          &motor->params,
-                                          0.0f);
+    return 0U;
 }
 
 void FOC_MotorInit(foc_motor_t *motor,
@@ -282,12 +195,15 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->mode_transition.prev_control_mode = 0U;
     motor->mode_transition.prev_control_mode_valid = 0U;
     motor->mode_transition.prev_control_mode_check = 0xFFU;
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+    /* 对齐/标定状态机初值（触发源默认命令触发，报告标志清零） */
+    motor->align_state.phase = FOC_ALIGN_PHASE_IDLE;
+    motor->align_state.trigger_source = FOC_ALIGN_TRIGGER_COMMAND;
+    motor->align_state.report_pending = 0U;
+#endif
 
     FOC_ControlExecutor_Init(motor);
 
-#if (FOC_INIT_CALIBRATION_ENABLE == FOC_CFG_ENABLE)
-    FOC_CalibrateElectricalAngleAndDirection(motor);
-#endif
 #if (FOC_COGGING_COMP_ENABLE == FOC_CFG_ENABLE)
     {
         uint8_t table_defined = FOC_CFG_DISABLE;
@@ -325,7 +241,7 @@ void FOC_MotorInit(foc_motor_t *motor,
 
 }
 
-/* 重建"运行期控制基准"：从停止态恢复（使能/错误复位/abort/重初始化）时统一调用。
+/* 重建"运行期控制基准"：从停止态恢复（使能/错误复位/abort/重新对齐）时统一调用。
  * 只重建运行期状态，不触碰用户配置（cfg、soft_switch enabled/configured_mode、源配置）。
  * 调用时机须在电机停止态（motor_enabled==0 / system_fault!=0 / phase!=NORMAL），
  * 此时控制/电流环 ISR 均不消费本函数写入的控制基准，无数据竞争。
@@ -397,7 +313,7 @@ void FOC_Control_RebuildControlBasis(foc_motor_t *motor)
     FOC_EstimSMO_Init(&motor->estim_smo_state, &motor->params);
 #endif
 
-    /* 外环重初始化标记 + 门控：重建完成前阻塞电流环 ISR，由首个 RunCycle 恢复 */
+    /* 外环重建标记 + 门控：重建完成前阻塞电流环 ISR，由首个 RunCycle 恢复 */
     motor->mode_transition.prev_control_mode_valid = 0U;
     motor->state.current_loop_ready = 0U;
     motor->ctrl_ref_ready = 0U;
@@ -408,12 +324,13 @@ void FOC_ControlPlatform_InitHardware(foc_motor_t *motor)
 {
     Sensor_InitSnapshot(&motor->sensor);
     Sensor_Init();
-    Sensor_SetZeroOffset(&motor->sensor);
     /* 初始采样：编码器 + VBUS（电流在 PWM ISR 中由 Sensor_ReadCurrent 接管） */
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     Sensor_ReadEncoder(&motor->sensor, FOC_CONTROL_DT_SEC);
 #endif
     Sensor_ReadVBUS(&motor->sensor);
+    /* 电流采样有效性是运行态（由 PWM ISR 的 Sensor_ReadCurrent 每拍更新）；
+     * 此处预置为有效，仅使就绪前静态校验的 SENSOR 位得以判定（电流采样通道已在 Sensor_Init 就绪）。 */
     motor->sensor.adc_valid = 1U;
 
     SVPWM_Init(&motor->svpwm);

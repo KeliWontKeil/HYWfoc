@@ -40,7 +40,6 @@ void Sensor_InitSnapshot(sensor_data_t *out);
 void Sensor_ReadCurrent(sensor_data_t *out);
 void Sensor_ReadEncoder(sensor_data_t *out, float dt_sec);
 void Sensor_ReadVBUS(sensor_data_t *out);
-void Sensor_SetZeroOffset(sensor_data_t *out);
 void Sensor_ADCSampleTimeOffset(float percent);
 
 #endif /* FOC_SENSOR_H */

@@ -42,6 +42,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **注入路线阶段顺序调整**：由"1 注入 → 2 解调 → 3 参数辨识 R/L → 4 声学回报"改为 **"1 注入 → 2 解调 → 4 声学回报 → 3 参数辨识 R/L"**——音频回报是更易实机验证的现象（示波器采样率不足以观测注入波形，R/L 与万用表/LCR 对照条件受限），故提前实施；注入为被动工具，波形验证由阶段 2 解调流程驱动，不引入临时代码。
 
+### 上电初始化与控制链结构对齐（加电压动作纳入控制阶段）
+
+**问题**：上电阶段唯一的功率动作（有感对齐/标定）由 `FOC_MotorInit` 在"控制中断关闭、主循环未启动、协议未轮询"的就绪前窗口内阻塞执行（`FOC_CalibrateElectricalAngleAndDirection`，约 0.95 s 连续加电压）；而欠压/传感器检查（就绪前的 `FOC_Init_Verify`、就绪后的 Control ISR 阶段1）**都排在该动作之后**，且该动作自身不看母线电压、不可中止、不可观测。后果：在错误电源环境（如 5 V 小功率电源）下，非隔离驱动会在无任何监护的条件下持续执行功率操作，异常时最坏响应时间 = 整个阻塞窗口（最长 ≈1.15 s，且无看门狗兜底）。
+
+**结构性根因**：早期初始化方案（阻塞 + 中断关闭 + 直调 L2 算法）与控制链方案（phase 状态机 + ISR 路由 + 每拍安全检查 + abort + 观测）是两套并行机制，二者都能"施加电压并推进时序"，但只有后一套拥有安全与观测基础设施。
+
+**本次重构（自上而下）**：
+
+- **原则**：就绪前（`FOC_App_Init`）只做"一次性、无反馈、确定性"的初始化，**不做任何功率动作**；一切写入 PWM 占空比 / `ud`/`uq` 的动作只在就绪后的 `control_phase` 内发生。
+- **新增启动控制阶段**：`foc_control_phase_t` 增加 `FOC_CONTROL_PHASE_STARTUP`（枚举尾部追加，既有值不变）。自检通过且电机参数待标定时，由 L1 请求进入 STARTUP；对齐状态机在 Control ISR 中推进（与 `COGGING_CALIB`/`REINIT` 同一范式），PWM ISR 通过 `phase_output_state` 输出。
+- **就绪判据分层**：`FOC_Init_Verify` 拆为 `FOC_Init_Verify_Static`（就绪前：COMM/PROTOCOL/COMMAND/DEBUG/PWM/SENSOR/VBUS）与 `FOC_Init_Verify_Motor`（就绪后：方向/零点/极对数，含既有缺口 `pole_pairs` 的补判定）；失败时 VBUS 单独归因 `FOC_FAULT_UNDERVOLTAGE`（其余为 `INIT_FAILED`）。
+- **电压判定单点收敛**：新增 `FOC_Init_IsVbusSafe`（唯一判定：`vbus_valid && filtered >= 阈值`）供上电门 `FOC_Init_VbusGate`（多次采样 + 间隔）与运行期 trip 共用；保护宏关闭时恒返回安全，行为与旧实现一致。
+- **就绪前不再采集电流零偏**：`Sensor_SetZeroOffset`（200 次 ×1 ms 阻塞）从 `FOC_ControlPlatform_InitHardware` 移除，改由对齐状态机的 `ZERO_SAMPLE` 阶段在运行期完成。
+- **统一对齐/标定状态机**：原 `foc_ctrl_sens_reinit` 提升为通用能力，**更名 `foc_ctrl_align.c/.h`**（宏 `FOC_ALIGN_*`、类型 `foc_align_state_t`、字段 `motor.align_state`、API `FOC_Align_Request/RequestStartup/RunStep/Abort/TakeReport`），上电 STARTUP 与协议 `aaYI` 共用同一实现；新增触发源（`FOC_ALIGN_TRIGGER_STARTUP`/`_COMMAND`）区分收尾判定（STARTUP 由 L1 做电机参数就绪判定，COMMAND 由状态机自行收尾）。
+- **删除阻塞实现**：`FOC_CalibrateElectricalAngleAndDirection`、`foc_ctrl_param_learn.c/.h`（整文件）、`FOC_SampleLockedMechanicalAngle` 全部删除；4 个构建入口（两个实例 × CL/HD 的 `builder.params`）与两份 `.eide/eide.yml` 同步。
+- **宏收敛**：`FOC_INIT_CALIBRATION_ENABLE` 与 `FOC_REINIT_ENABLE` 合并为单一能力宏 `FOC_ALIGN_ENABLE`（消除同一能力的双实现/双开关）；`FOC_SPECIAL_PHASE_ABORT_ENABLE` 联动集合更新为 {ALIGN, COGGING_CALIB}；`foc_compile_limits.h` 约束判据同步（关闭对齐时必须提供默认方向/零点/极对数）。
+- **ISR 内长文本收口**：对齐状态机不再在中断上下文调用 `FOC_Platform_WriteDebugText`/`snprintf`（原实现含 5 处进度日志与 1 处结果详情）；改为完成报告标志 `report_pending` + L1 主循环 `FOC_Align_TakeReport` 取走后输出完整启动信息；失败时只发 fast 短码（`FAULT PARAM`），详情由既有 fault 跃迁补发机制输出。
+- **LUT 表单点定义（ROM 回收）**：`foc_math_lut.h` 的 `static const` 表改为"单点定义（`FOC_MATH_LUT_IMPL`，定义在 `foc_math_transforms.c`）+ 其余翻译单元 `extern` 声明"。改动前实测副本：sin 表 3144 B × 6 份、atan 表 2002 B × 2 份，合计 22.9 KB（约占 ROM 36%）；单点化后各 1 份，回收 17,722 B。
+
+### Fixed（同上）
+
+- **进入特殊控制阶段第一拍被自动退出误中止**：`FOC_MotorInit` 将 `mode_transition.prev_control_mode_check` 置 `0xFF`，而 `FOC_App_ControlTrigger` 的"控制模式变化自动退出"判定为 `control_mode != prev_control_mode_check` → 请求进入 `STARTUP`/`REINIT`/`COGGING_CALIB` 的**第一拍即被误中止**（该缺陷随 `FOC_REINIT_ENABLE` 默认关闭而未暴露）。修复：三个请求入口（`FOC_Align_Request` / `FOC_Align_RequestStartup` / `FOC_CoggingCalib_RequestStart`）在切换 `control_phase` 前同步该检查基准。
+- **PWM/电流环 ISR 的 phase 输出路由**：新增单一判定 `FOC_ControlExecutor_IsPhaseOutputDriven`（齿槽标定 / 重初始化 / 上电对齐），消除多处并列 `||` 条件的遗漏面。
+- **`FOC_App_BootTune` 提前播报**：上电提示音增加 `control_phase == NORMAL` 条件，避免对齐尚未完成即播报就绪。
+- **错误恢复（`Y:C`）无法恢复"上电自检未完成"状态**：上电欠压 → 静态校验失败置 `system_fault` 时，电机参数（方向/零点/极对数）尚未标定；原 `Y:C` 恢复路径无条件 `control_phase = NORMAL`，导致电角度基准缺失、无法换向（运行期欠压因参数已标定而可恢复，两者行为不一致）。修复：`Y:C` 恢复时用统一判据 `FOC_Control_IsMotorParamCalibrated` 判定参数是否已标定——未标定则回到 `STARTUP` 启动对齐阶段重新标定（无需复位 MCU），已标定沿用原恢复路径。该判据同时收敛 L1 `FOC_Init_Verify_Motor`、`FOC_App_ShouldStartupAlign` 与 L2 协议层三处重复判断为单一检查点。
+- **fault 期间母线采样冻结导致恢复死锁**：`FOC_App_ControlTrigger` 的 `system_fault` 守卫位于 `Sensor_ReadVBUS` 之前，fault 期间采样暂停，`vbus.filtered`（LPF α=0.1）冻结在欠压旧值；恢复电压后 `Y:C` 清 fault 的下一拍，filtered 只被抬升一点仍低于阈值，再次触发 `FAULT UV` 并重新冻结——形成"采样→误判欠压→fault→采样冻结"的死锁（上电欠压比运行态掉电更易触发：后者 filtered 冻结在阈值附近，恢复一拍即过）。修复：把传感器采样（编码器 + VBUS）移到 `system_fault` 守卫之前，fault 期间也持续采样，使 filtered 能跟随恢复后的电压（恢复电压后约 12 ms 升过阈值，之后 `Y:C` 即成功；若在 12 ms 内极早发出仍可能报一次 `FAULT UV`，重发即可，不再死锁）。
+- **注释口径统一**：初始化与重新对齐已合并为同一对齐/标定状态机，故清理模块注释中的"重初始化"措辞（改为"对齐/重新对齐"），并修正 `foc_ctrl_align.h` 中残留的"上电初始化保持阻塞"过时描述。
+
+### 验证（编译期）
+
+- 默认档与 `FOC_ALIGN_ENABLE = DISABLE` 档均 **0 error / 0 warning**；关闭对齐且未提供默认方向/零点 → 编译期 `#error`（`foc_compile_limits.h`）按预期触发。
+- ROM：**63,960 B → 47,460 B（-16,500 B）**，其中 LUT 单点化回收 17,722 B、其余结构变化净增约 1.2 KB（新增对齐状态机 2,376 B + L1 校验函数，扣除删除的阻塞标定 1,096 B 与 ISR 长文本格式化）；`FOC_ALIGN_ENABLE = DISABLE` 档 44,728 B。
+- RAM：7.97 KB → 8.02 KB（`foc_align_state_t` 增加 `trigger_source`/`report_pending` 两字节，其余为对齐状态机既有结构）。
+
+### 待实机验证
+
+- 欠压上电（如 5 V 母线）：应报静态校验失败 `[VBUS]`，**全程无任何功率动作**（这是本次重构的核心验收项）。
+- 正常母线上电：STARTUP 自动完成对齐 → 输出对齐后的启动信息 → 进入 NORMAL，运动行为与改动前一致。
+- **对齐过程中人为拉低母线**：应在 ≤1 个控制拍内 trip（`FAULT UV`）并归零输出（替代原"持续到标定结束"）。
+- `Y:A` 中止 / `S:M=0` 禁能中止 / `P:D` 模式切换中止 / `Y:C` 恢复 / `aaYI` 命令重初始化 / `Y:G` 齿槽标定（若启用）回归。
+- 三 ISR 与双 ISR 两模式、`FOC_CURRENT_SENSE_PHASES = NONE` 档编译与运行。
+
 ## [2.4.1] - 2026-09-28
 
 ### Added

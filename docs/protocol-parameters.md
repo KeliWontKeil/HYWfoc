@@ -135,10 +135,10 @@ aaPA3.14b
 | `S:O` | 状态 | oscilloscope_report_enabled |
 | `S:S` | 状态 | semantic_report_enabled |
 | `S:X` | 状态 | 读取全部（批读哨兵） |
-| `Y:C` | 系统 | 故障清除 + 软诊断重初始化 |
+| `Y:C` | 系统 | 故障清除 + 控制基准重建（电机参数未标定时回到对齐流程） |
 | `Y:D` | 系统 | 导出齿槽表 |
 | `Y:G` | 系统 | 启动齿槽标定 |
-| `Y:I` | 系统 | 运行时电机参数重初始化 |
+| `Y:I` | 系统 | 重新对齐/标定（复用上电对齐状态机） |
 | `Y:R` | 系统 | 运行时摘要 |
 | `Y:T` | 系统 | 以 C 代码形式导出齿槽表 |
 | `Y:X` | 系统 | 系统信息（只读） |
@@ -419,8 +419,8 @@ aaSM1b      # motor_enable = ENABLE（S:M）
 aaSMb       # 读取 motor_enable（S:M）
 aaSXb       # 读取所有状态（S:X）
 aaYRb       # 读取运行时状态摘要（Y:R）
-aaYCb       # 清除故障计数器 + 软诊断重初始化（Y:C）
-aaYIb       # 运行时电机参数重初始化（Y:I）
+aaYCb       # 清除故障计数器 + 控制基准重建（Y:C）
+aaYIb       # 重新对齐/标定（Y:I）
 aaYXb       # 读取系统参数信息（Y:X）
 aaAP0b      # 播放铃声 0（A:P，上电提示音）
 aaAP2b      # 播放铃声 2（A:P，音阶测试）
