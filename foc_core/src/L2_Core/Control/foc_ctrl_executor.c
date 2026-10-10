@@ -171,24 +171,16 @@ void FOC_ControlExecutor_BuildSourceMgrCtx(foc_motor_t *motor,
     ctx->encoder_services = &motor->encoder_services;
 }
 
-/* 直写占空比判定（单一收口）：注入 / 声学任一激活时旁路 SVPWM 插值，
+/* 直写占空比判定（单一收口）：HFI 注入激活时旁路 SVPWM 插值，
  * 避免插值把叠加波形压缩衰减。 */
 static uint8_t FOC_ControlExecutor_NeedsDirectOutput(const foc_motor_t *motor)
 {
-    (void)motor;
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
-    if (motor->injection_state.enabled != 0U)
-    {
-        return 1U;
-    }
-#endif
-#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
-    if (FOC_Acoustic_IsActive(&motor->acoustic_state) != 0U)
-    {
-        return 1U;
-    }
-#endif
+    return FOC_Injection_IsActive(&motor->injection_state);
+#else
+    (void)motor;
     return 0U;
+#endif
 }
 
 /* 需要由 phase_output_state 驱动的特殊控制阶段（齿槽标定 / 重新对齐 / 上电对齐） */
@@ -203,6 +195,32 @@ static uint8_t FOC_ControlExecutor_IsPhaseOutputDriven(const foc_motor_t *motor)
 
     return 0U;
 }
+
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* ACOUSTIC 相位的输出例程（电流环率）：与 NORMAL 同级互斥——控制环不输出，
+ * 由声学序列经注入基础设施产生开环 dq 电压，直接逆 Park 写占空比。 */
+static void FOC_ControlExecutor_RunAcousticOutput(foc_motor_t *motor)
+{
+    float phase_inc_rad;
+    float amplitude_v;
+    uint8_t axis;
+
+    /* 控制环不输出：清空基准，注入样本即最终 dq 电压 */
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = 0.0f;
+
+    if (FOC_Acoustic_ModeStep(&motor->acoustic_state, &phase_inc_rad, &amplitude_v, &axis) != 0U)
+    {
+        FOC_Injection_InjectSample(&motor->injection_state, &motor->ctrl,
+                                   phase_inc_rad, amplitude_v, axis);
+    }
+
+    FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                          &motor->applied_output, &motor->alpha_beta,
+                                          &motor->params,
+                                          motor->ctrl.electrical_angle_rad);
+}
+#endif /* FOC_ACOUSTIC_ENABLE */
 
 static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float current_loop_dt_sec)
 {
@@ -286,12 +304,9 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                            &motor->params,
                            current_loop_dt_sec);
 
-    /* 阶段4b：注入叠加 + 解调 + 声学回报叠加（被动工具；未启用时无副作用） */
+    /* 阶段4b：HFI 注入基础设施（NORMAL 相位：控制环输出上叠加 + 同拍解调） */
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
-    FOC_ControlInjectionStep(&motor->injection_state, &motor->ctrl);
-#endif
-#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
-    FOC_ControlAcousticStep(&motor->acoustic_state, &motor->ctrl);
+    FOC_Injection_HfiStep(&motor->injection_state, &motor->ctrl);
 #endif
 
     /* 阶段5：SVPWM（叠加工具激活时旁路插值，直写占空比） */
@@ -342,13 +357,32 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
         return;
     }
 
-    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
-    if (motor->state.current_loop_ready == 0U) return;
+    if ((motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL)
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+        && (motor->state.control_phase != FOC_CONTROL_PHASE_ACOUSTIC)
+#endif
+       )
+    {
+        return;
+    }
+    if ((motor->state.control_phase == FOC_CONTROL_PHASE_NORMAL) &&
+        (motor->state.current_loop_ready == 0U))
+    {
+        return;
+    }
 
     divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
     motor->isr_timing.fast_current_div_counter++;
     if (motor->isr_timing.fast_current_div_counter < divider) return;
     motor->isr_timing.fast_current_div_counter = 0U;
+
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    if (motor->state.control_phase == FOC_CONTROL_PHASE_ACOUSTIC)
+    {
+        FOC_ControlExecutor_RunAcousticOutput(motor);
+        return;
+    }
+#endif
 
     FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_DT_SEC);
 }
@@ -394,7 +428,17 @@ void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
         return;
     }
 
-    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
+    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL)
+    {
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+        if (motor->state.control_phase == FOC_CONTROL_PHASE_ACOUSTIC)
+        {
+            FOC_ControlExecutor_RunAcousticOutput(motor);
+            return;
+        }
+#endif
+        return;
+    }
     if (motor->state.current_loop_ready == 0U) return;
 
     FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_DT_SEC);

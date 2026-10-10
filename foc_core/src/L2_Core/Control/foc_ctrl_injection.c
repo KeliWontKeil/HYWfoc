@@ -75,12 +75,13 @@ static void Injection_DemodSettle(foc_injection_state_t *inj)
 static void Injection_DemodAccumulate(foc_injection_state_t *inj,
                                       const foc_control_runtime_t *ctrl,
                                       float ref_sin,
-                                      float ref_cos)
+                                      float ref_cos,
+                                      uint8_t axis)
 {
     foc_injection_demod_state_t *dm = &inj->demod;
     float alpha = dm->iq_lpf_alpha;
 
-    if ((inj->axis & FOC_INJECTION_AXIS_D) != 0U)
+    if ((axis & FOC_INJECTION_AXIS_D) != 0U)
     {
         if (alpha > 0.0f)
         {
@@ -94,7 +95,7 @@ static void Injection_DemodAccumulate(foc_injection_state_t *inj,
         }
     }
 
-    if ((inj->axis & FOC_INJECTION_AXIS_Q) != 0U)
+    if ((axis & FOC_INJECTION_AXIS_Q) != 0U)
     {
         if (alpha > 0.0f)
         {
@@ -116,17 +117,18 @@ static void Injection_DemodAccumulate(foc_injection_state_t *inj,
     }
 }
 
-/* 配置期一次性收敛：轴掩码归一、幅值归一、频率限幅、模式判定、派生量缓存。
+/* HFI 配置建立：轴运行时收敛、幅值/频率限幅、模式判定、派生量缓存。
  * 完成后状态必然合法（轴非零、模式必为相干或任意频率、频率在可表达区间内）。 */
-static void Injection_ApplyConfig(foc_injection_state_t *inj, float freq_hz, float amplitude_v)
+void FOC_Injection_Configure(foc_injection_state_t *inj, float freq_hz, float amplitude_v, uint8_t axis)
 {
-    inj->axis &= FOC_INJECTION_AXIS_MASK;
+    inj->axis = axis & FOC_INJECTION_AXIS_DQ;
     if (inj->axis == 0U)
     {
-        inj->axis = FOC_INJECTION_AXIS_FALLBACK;
+        inj->axis = FOC_INJECTION_AXIS_D;
     }
 
-    inj->amplitude_v = Math_ClampFloat(fabsf(amplitude_v), 0.0f, FOC_INJECTION_AMPLITUDE_LIMIT_V);
+    /* 幅值仅取幅；上限由输出级统一钳位（不在此重复设限） */
+    inj->amplitude_v = fabsf(amplitude_v);
     freq_hz = Math_ClampFloat(freq_hz, FOC_INJECTION_FREQ_MIN_HZ, FOC_INJECTION_FREQ_MAX_HZ);
 
 #if (FOC_INJECTION_MODE == FOC_INJECTION_MODE_ARBITRARY_ONLY)
@@ -195,25 +197,59 @@ static void Injection_ApplyConfig(foc_injection_state_t *inj, float freq_hz, flo
     Injection_DemodClear(&inj->demod);
 }
 
-/* 相位推进（增量有界，单次条件回卷即成立）+ 通用 LUT 查表 → 单位 sin/cos → 注入电压 [V] */
-static float Injection_NextWave(foc_injection_state_t *inj, float *sin_out, float *cos_out)
+/* 基础设施（唯一叠加点）：相位推进 → 单位正弦（复用 L3 通用查表）→ 按轴叠加 ctrl.ud/uq → 按需解调 */
+static void Injection_ApplyWave(foc_injection_state_t *inj,
+                                foc_control_runtime_t *ctrl,
+                                float phase_inc_rad,
+                                float amplitude_v,
+                                uint8_t axis,
+                                uint8_t demod)
 {
-    inj->phase_rad += inj->phase_inc_rad;
+    float ref_sin;
+    float ref_cos;
+    float wave;
+
+    inj->phase_rad += phase_inc_rad;
     if (inj->phase_rad >= FOC_MATH_TWO_PI)
     {
         inj->phase_rad -= FOC_MATH_TWO_PI;
     }
 
-    FOC_MathLut_SinCos(inj->phase_rad, sin_out, cos_out);
+    FOC_MathLut_SinCos(inj->phase_rad, &ref_sin, &ref_cos);
+    wave = ref_sin * amplitude_v;
+    inj->inj_wave = wave;
 
-    return (*sin_out) * inj->amplitude_v;
+    if ((axis & FOC_INJECTION_AXIS_D) != 0U)
+    {
+        inj->inj_d = wave;
+        ctrl->ud += wave;
+    }
+    else
+    {
+        inj->inj_d = 0.0f;
+    }
+
+    if ((axis & FOC_INJECTION_AXIS_Q) != 0U)
+    {
+        inj->inj_q = wave;
+        ctrl->uq += wave;
+    }
+    else
+    {
+        inj->inj_q = 0.0f;
+    }
+
+    if (demod != 0U)
+    {
+        Injection_DemodAccumulate(inj, ctrl, ref_sin, ref_cos, axis);
+    }
 }
 
 void FOC_Injection_Init(foc_injection_state_t *inj)
 {
     inj->enabled = 0U;
-    inj->axis = FOC_INJECTION_AXIS_FALLBACK;
-    Injection_ApplyConfig(inj, FOC_INJECTION_DEFAULT_FREQ_HZ, FOC_INJECTION_DEFAULT_AMPLITUDE_V);
+    FOC_Injection_Configure(inj, FOC_INJECTION_DEFAULT_FREQ_HZ,
+                            FOC_INJECTION_DEFAULT_AMPLITUDE_V, FOC_INJECTION_AXIS_D);
 }
 
 /* 复位瞬态（停止/恢复路径）；保留频率/幅值与派生量配置 */
@@ -225,16 +261,6 @@ void FOC_Injection_Reset(foc_injection_state_t *inj)
     Injection_DemodClear(&inj->demod);
 }
 
-/* 配置（越界输入在配置期收敛，无失败路径） */
-void FOC_Injection_Configure(foc_injection_state_t *inj,
-                             float freq_hz,
-                             float amplitude_v,
-                             uint8_t axis)
-{
-    inj->axis = axis;
-    Injection_ApplyConfig(inj, freq_hz, amplitude_v);
-}
-
 void FOC_Injection_SetEnable(foc_injection_state_t *inj, uint8_t enable)
 {
     inj->enabled = (enable != 0U) ? 1U : 0U;
@@ -243,44 +269,27 @@ void FOC_Injection_SetEnable(foc_injection_state_t *inj, uint8_t enable)
     Injection_DemodClear(&inj->demod);
 }
 
-/* 阶段 4b：推进相位、叠加 dq 电压（电流环 PID 输出之后、逆 Park 之前），随后同拍解调累加。
- * 未启用时直接返回：输出已由 SetEnable 清零。 */
-void FOC_ControlInjectionStep(foc_injection_state_t *inj,
-                              foc_control_runtime_t *ctrl)
+/* NORMAL 相位：HFI 载波叠加 + 同拍解调（未使能时无副作用） */
+void FOC_Injection_HfiStep(foc_injection_state_t *inj, foc_control_runtime_t *ctrl)
 {
-    float ref_sin;
-    float ref_cos;
-    float wave;
-
     if (inj->enabled == 0U)
     {
         return;
     }
 
-    wave = Injection_NextWave(inj, &ref_sin, &ref_cos);
-    inj->inj_wave = wave;
+    Injection_ApplyWave(inj, ctrl, inj->phase_inc_rad, inj->amplitude_v, inj->axis, 1U);
+}
 
-    if ((inj->axis & FOC_INJECTION_AXIS_D) != 0U)
-    {
-        inj->inj_d = wave;
-        ctrl->ud += wave;
-    }
-    else
-    {
-        inj->inj_d = 0.0f;
-    }
+/* 共享 sink：ACOUSTIC 相位驱动（控制环不输出，本函数产生的样本即最终 dq 电压；不解调） */
+void FOC_Injection_InjectSample(foc_injection_state_t *inj, foc_control_runtime_t *ctrl,
+                                float phase_inc_rad, float amplitude_v, uint8_t axis)
+{
+    Injection_ApplyWave(inj, ctrl, phase_inc_rad, amplitude_v, axis, 0U);
+}
 
-    if ((inj->axis & FOC_INJECTION_AXIS_Q) != 0U)
-    {
-        inj->inj_q = wave;
-        ctrl->uq += wave;
-    }
-    else
-    {
-        inj->inj_q = 0.0f;
-    }
-
-    Injection_DemodAccumulate(inj, ctrl, ref_sin, ref_cos);
+uint8_t FOC_Injection_IsActive(const foc_injection_state_t *inj)
+{
+    return (inj->enabled != 0U) ? 1U : 0U;
 }
 
 #endif /* FOC_INJECTION_ENABLE */

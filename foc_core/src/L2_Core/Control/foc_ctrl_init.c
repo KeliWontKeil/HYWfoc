@@ -58,6 +58,7 @@ void FOC_MotorInit(foc_motor_t *motor,
 #if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
     FOC_Acoustic_Init(&motor->acoustic_state);
 #endif
+
     motor->ctrl_ref_ready = 0U;
     motor->active_source_state.source = FOC_SOURCE_TYPE_NONE;
     motor->active_source_state.state = FOC_SOURCE_STATE_INIT;

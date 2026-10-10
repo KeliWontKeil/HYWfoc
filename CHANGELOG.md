@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-10
+
+### Changed
+- **注入/声学架构收敛：由"叠加工具"改为「ACOUSTIC 同级相位 + 共享注入基础设施」**（取代本版本开发过程中先行的"阶段 4b/4c 双叠加 + 源侧自叠加"中间形态；下方 `Added` 中的"阶段"条目为过程记录，**最终形态以本节为准**）：
+  - **声学 = 同级 `control_phase`**：新增 `FOC_CONTROL_PHASE_ACOUSTIC`，与 `NORMAL`/`STARTUP`/`REINIT`/`COGGING_CALIB` **互斥**——声学期间**控制环不输出**，由声学序列在电流环率经注入基础设施产生开环 dq 电压并直写占空比（executor `RunAcousticOutput`）；消除控制环反向压制声学。曲终（含包络释放）回 NORMAL 并 `FullStop` + `RebuildControlBasis` 防恢复突跳。
+  - **注入模块收窄为"共享 sink"**：删除模式路由与需求握手（`FOC_Injection_Request/Cancel`、注入模式枚举、声学内嵌状态）；对外为 `Init/Reset` + `Configure/SetEnable/HfiStep`（HFI 载波，控制态驱动）+ `InjectSample`（声学样本，ACOUSTIC 相位驱动）+ `IsActive`。**唯一叠加点**仍在基础设施内（`Injection_ApplyWave`）。
+  - **声学状态回顶层**：`motor.acoustic_state`（与 `align_state`/`cogging_calib_state` 同级）；`foc_ctrl_acoustic` 只做序列引擎（`FOC_Acoustic_ModeStep` 出参产规格），不再自叠加。
+  - **直写判定收窄**：`NeedsDirectOutput` 由"逐源 `#if` 列举"改为 `FOC_Injection_IsActive`（HFI）单一查询；ACOUSTIC 相位走专用例程（本身直写）。
+  - **禁能 / fault 不允许声学**（声学即功率输出）：纳入既有特殊相位自动退出（`AbortSpecialPhase`）⇒ 打断并停机。
+- **注入轴去编译期裁剪**：删除 `FOC_INJECTION_ENABLE_AXIS_D/Q`、`FOC_INJECTION_AXIS_MASK/FALLBACK`、`FOC_ACOUSTIC_AXIS` 及对应编译期 `#error`；轴成为**运行时参数**（HFI 默认 D、声学默认 `FOC_ACOUSTIC_DEFAULT_AXIS`）。
+- **配置约束清理（只保留用户可调项）**：删除 `FOC_ACOUSTIC_AMPLITUDE_LIMIT_V` / `FOC_INJECTION_AMPLITUDE_LIMIT_V`（输出级为唯一电压钳位，属重复约束）与 `FOC_ACOUSTIC_TONE_MIN/MAX_HZ`（物理不变量）；音域上限（= 电流环率/4，保证单次相位回卷）与解码容量 `FOC_ACOUSTIC_SEQ_CAPACITY` 收敛（容量作为配置项）。
+- **`foc_app.c` 职责收敛**：fault 码→文本下沉输出层（新增 `FOC_OutputMgr_WriteFaultReport`）；`AbortSpecialPhase` 去掉 ISR 路径 `snprintf`（改用消息字面量直传 fast 事件）；移除 `<stdio.h>` 依赖。
+
+### Added（2.5.0 收敛后）
+- **声响编排（铃声按"声音"命名，场景由 L1 决定）**：铃声表重命名为 `FOC_RINGTONE_ID_LONG_BEEP`(0) / `FOC_RINGTONE_ID_TWO_SHORT_BEEPS`(1) / `FOC_RINGTONE_ID_SCALE`(2)；就绪播报 `FOC_App_AnnounceReadySound`（取代 `FOC_App_BootTune`）：**上电（首次就绪）= 长鸣**、**进入正常态（fault 恢复 / 对齐完成）= 两短鸣**；**不做故障音**（fault 保护功率输出）。
+- **自定义铃声播放**：在 LS 铃声表表尾追加 `foc_ringtone_entry_t` 即可以 `A:P<id>` 播放（id ≥ 3；0..2 保留给内部事件）；协议接受任意「整数且 < 条目总数」的 ID（多位数可解析）。
+
+### 验证（2.5.0，编译期）
+- 宏组合：默认档 / `FOC_ACOUSTIC_ENABLE=DISABLE` / `FOC_INJECTION_ENABLE=DISABLE`，均 **0 error / 0 warning**；负向：声学开 + 注入关触发预期 `#error`。
+- ROM（当前实例配置）：默认 46012 B / 声学关 43952 B / 注入关 42264 B。
+- 实机：`A:P0/1/2` = 长鸣 / 两短鸣 / 音阶；上电首次 = 长鸣；`Y:C` 恢复 = 两短鸣；fault 期间无声；控制零回归（已确认）。
+
 ### Added
 - **高频/任意频率注入基础设施（阶段 1，`foc_ctrl_injection`）**：新增开关 `FOC_INJECTION_ENABLE`（默认启用，未激活时零副作用）、模式宏 `FOC_INJECTION_MODE`（`COHERENT_ONLY` / `ARBITRARY_ONLY` / `BOTH_AUTO` 三选一）与轴裁剪宏（`FOC_INJECTION_ENABLE_AXIS_D/Q`，位编码 + 编译期轴掩码 + 兜底轴）。
   - **定位**：被动工具——只提供"生成指定频率/幅值/轴的注入分量并叠加到 dq 电压"的能力，不含策略、无协议入口；启停与配置由调用方模块（参数辨识流程、声学回报、未来 HFI）通过 API 驱动。

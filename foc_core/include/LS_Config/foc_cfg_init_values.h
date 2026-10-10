@@ -24,7 +24,7 @@
 #define FOC_SCHEDULER_HEARTBEAT_HZ 1U
 
 /* 双 ISR 模式：电流环为PWMISR分频，分频仅作为降低计算负担，仍需保证执行时间小于 PWMISR 周期 */
-#define FOC_CURRENT_LOOP_ISR_DIVIDER   3U
+#define FOC_CURRENT_LOOP_ISR_DIVIDER   2U
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
 
 /* 三 ISR 模式：电流环独立 ISR 频率（Hz），与 PWM 频率解耦 */
@@ -67,8 +67,8 @@
 #define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED
 
 /* Motor initialization parameters. */
-#define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
-#define FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT 12.0f
+#define FOC_MOTOR_INIT_VBUS_DEFAULT 6.0f
+#define FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT 6.0f
 /* max_phase_voltage 限制相电压幅值(≤ VBUS)，用于 PID 饱和、过调制限制、电流计算。 */
 #define FOC_SVPWM_MAX_DUTY_CYCLE 0.92f
 /* max_duty_cycle 限制 SVPWM 占空比对称上限(如 0.85 → duty∈[0.15,0.85])，
@@ -76,7 +76,7 @@
 
  /* Control mode default selection and initialization. */
 #if (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_FULL)
-#define COMMAND_MANAGER_DEFAULT_CONTROL_MODE COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY
+#define COMMAND_MANAGER_DEFAULT_CONTROL_MODE COMMAND_MANAGER_CONTROL_MODE_SPEED_ANGLE
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ONLY)
 #define COMMAND_MANAGER_DEFAULT_CONTROL_MODE COMMAND_MANAGER_CONTROL_MODE_SPEED_ONLY
 #elif (FOC_BUILD_CONTROL_ALGO_SET == FOC_CTRL_ALGO_BUILD_SPEED_ANGLE_ONLY)
@@ -184,8 +184,6 @@
 #define FOC_INJECTION_COHERENT_N_MIN 4U
 #define FOC_INJECTION_COHERENT_N_MAX 64U
 #define FOC_INJECTION_QUANT_ERROR_MAX 0.02f
-/* 幅值健全上限（编译期界，非运行期电压预算）：越界请求在配置期收敛，不进 ISR */
-#define FOC_INJECTION_AMPLITUDE_LIMIT_V 5.0f
 /* 可表达频率区间：由电流环率与相干分频上下限直接导出（配置期据此限幅，
  * 故分频比必然落在 [N_MIN, N_MAX]，除零/越界不可能出现） */
 #define FOC_INJECTION_FREQ_MIN_HZ ((float)FOC_CURRENT_LOOP_FREQ_HZ / (float)FOC_INJECTION_COHERENT_N_MAX)
@@ -198,15 +196,14 @@
 #define FOC_INJECTION_DEMOD_SETTLE_DIV 16U
 #define FOC_INJECTION_DEMOD_MAG_LPF_ALPHA 0.25f
 
-/* 声学回报默认值：音频波形与电流环同拍生成（更新率 = 电流环率），音域上限取环率/4
- * （每周期 ≥4 拍）；AMPLITUDE 为峰值电压，AMPLITUDE_LIMIT 为编译期界；
- * SEQ_MAX_STEPS 为铃声音符解析容量（超出即拒绝播放，不做半曲播放） */
-#define FOC_ACOUSTIC_AMPLITUDE_V 0.6f
-#define FOC_ACOUSTIC_AMPLITUDE_LIMIT_V 2.0f
-#define FOC_ACOUSTIC_ENVELOPE_MS 3U
-#define FOC_ACOUSTIC_TONE_MIN_HZ 200U
-#define FOC_ACOUSTIC_TONE_MAX_HZ ((float)FOC_CURRENT_LOOP_FREQ_HZ / 4.0f)
-#define FOC_ACOUSTIC_SEQ_MAX_STEPS 128U
+/* 声学回报默认值：音频波形与电流环同拍生成（更新率 = 电流环率）。
+ * AMPLITUDE 为峰值电压（真正的电压钳位在输出级，不在此重复设限）；ENVELOPE_MS 为起停包络；
+ * DEFAULT_AXIS 为输出轴默认值。音域上限与音符容量属物理/实现事实，由声学模块内部收敛，不作配置项。 */
+#define FOC_ACOUSTIC_AMPLITUDE_V 6.0f
+#define FOC_ACOUSTIC_ENVELOPE_MS 10U
+#define FOC_ACOUSTIC_DEFAULT_AXIS FOC_ACOUSTIC_AXIS_Q
+/* 铃声音符解析容量（模块内部常量，非用户配置）：需容纳铃声表内最长曲目*/
+#define FOC_ACOUSTIC_SEQ_CAPACITY 512U
 
 /* PID default gains. */
 #define COMMAND_MANAGER_DEFAULT_PID_ANGLE_KP 1.7f

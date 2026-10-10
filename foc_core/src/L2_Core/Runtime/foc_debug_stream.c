@@ -288,7 +288,7 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
         case 12U:
             /* 注入解调结果（主轴 = 掩码中 D 优先的轴）；未激活时上报 0 */
             elem_out->value = 0.0f;
-            if ((motor != 0) && (motor->injection_state.enabled != 0U))
+            if ((motor != 0) && (FOC_Injection_IsActive(&motor->injection_state) != 0U))
             {
                 uint8_t is_q = ((motor->injection_state.axis & FOC_INJECTION_AXIS_D) == 0U) ? 1U : 0U;
 

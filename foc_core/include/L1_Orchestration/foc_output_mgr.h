@@ -30,6 +30,9 @@ void FOC_OutputMgr_PollSources(foc_system_t *sys);
 /* 输出启动信息 */
 void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor);
 
+/* 输出 fault 完整详情（主循环 fault 0→1 跃迁补发；慢路径可靠文本） */
+void FOC_OutputMgr_WriteFaultReport(const foc_motor_t *motor);
+
 /* 处理 Monitor 元素队列（元素出队→格式化→入 TX 队列） */
 void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys);
 

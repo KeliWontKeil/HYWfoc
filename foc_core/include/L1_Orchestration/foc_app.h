@@ -26,7 +26,7 @@ void FOC_App_OnCurrentLoopISR(void);
 void FOC_App_AbortSpecialPhase(void);
 
 #if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
-/* 声学回报触发（协议 A 组与 L1 内部事件共用的单一收口；含注入互斥与音域/幅值收敛） */
+/* 声学回报触发（协议 A 组与 L1 内部事件共用的单一收口；进入 ACOUSTIC 相位，控制环停止输出） */
 uint8_t FOC_App_PlayTune(uint8_t tune_id);
 void    FOC_App_StopTune(void);
 #endif

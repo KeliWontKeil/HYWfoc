@@ -127,6 +127,33 @@ void FOC_OutputMgr_WriteStartupInfo(foc_motor_t *motor)
     FOC_Platform_WriteDebugText(buf);
 }
 
+/* fault 码 → 可读自然描述（报告职责，本层私有） */
+static const char *FOC_OutputMgr_FaultDescription(uint8_t code)
+{
+    switch (code)
+    {
+    case FOC_FAULT_SENSOR_ADC_INVALID:     return "adc current sampling invalid";
+    case FOC_FAULT_SENSOR_ENCODER_INVALID: return "encoder feedback invalid";
+    case FOC_FAULT_UNDERVOLTAGE:           return "bus undervoltage";
+    case FOC_FAULT_PROTOCOL_FRAME:         return "protocol frame error";
+    case FOC_FAULT_PARAM_INVALID:          return "invalid parameter";
+    case FOC_FAULT_INIT_FAILED:            return "initialization failed";
+    case FOC_FAULT_ESTIMATOR_INVALID:      return "estimator invalid";
+    default:                               return "unknown fault";
+    }
+}
+
+void FOC_OutputMgr_WriteFaultReport(const foc_motor_t *motor)
+{
+    char buf[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+
+    if (motor == 0) return;
+
+    snprintf(buf, sizeof(buf), "fault: %s\r\n",
+             FOC_OutputMgr_FaultDescription(motor->state.last_fault_code));
+    FOC_Platform_WriteDebugText(buf);
+}
+
 void FOC_OutputMgr_ProcessMonitorElements(foc_system_t *sys)
 {
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \

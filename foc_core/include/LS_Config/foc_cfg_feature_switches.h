@@ -13,10 +13,10 @@
 
 /* ── 控制策略：低速/高速算法对 ── */
 #define FOC_CONTROL_LOW_SOURCE   FOC_CONTROL_SRC_ENCODER
-#define FOC_CONTROL_HIGH_SOURCE  FOC_CONTROL_SRC_SMO
+#define FOC_CONTROL_HIGH_SOURCE  FOC_CONTROL_SRC_ENCODER
 
 /* 控制模式选择 */
-#define FOC_BUILD_CONTROL_ALGO_SET FOC_CTRL_ALGO_BUILD_SPEED_ONLY
+#define FOC_BUILD_CONTROL_ALGO_SET FOC_CTRL_ALGO_BUILD_SPEED_ANGLE
 
 /* ── 传感器硬件控制 ── */
 #define FOC_SENSOR_ENCODER_ENABLE FOC_CFG_ENABLE
@@ -40,24 +40,15 @@
 /* 电流环电压基准来源：SETPOINT=设定值(params->vbus_voltage) / MEASURED=实测母线电压(sensor.vbus.filtered) */
 #define FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE FOC_VOLTAGE_BASE_SETPOINT
 
-/* 高频/任意频率注入（被动工具：由调用方模块 Configure 后 SetEnable 生效，自身不含策略） */
+/* 高频/任意频率注入基础设施（共享 sink：单一叠加点；HFI 由控制态驱动）。
+ * 注入轴为运行时参数，无编译期裁剪。 */
 #define FOC_INJECTION_ENABLE FOC_CFG_ENABLE
 #define FOC_INJECTION_MODE FOC_INJECTION_MODE_BOTH_AUTO
-#define FOC_INJECTION_ENABLE_AXIS_D FOC_CFG_ENABLE
-#define FOC_INJECTION_ENABLE_AXIS_Q FOC_CFG_ENABLE
-/* 轴裁剪掩码（编译期可用轴集合）与兜底轴：请求轴与掩码相与为 0 时收敛到兜底轴，
- * 保证配置完成后轴掩码非零，ISR 侧无需再做合法性判定 */
-#define FOC_INJECTION_AXIS_MASK \
-    (((FOC_INJECTION_ENABLE_AXIS_D == FOC_CFG_ENABLE) ? FOC_INJECTION_AXIS_D : 0U) | \
-     ((FOC_INJECTION_ENABLE_AXIS_Q == FOC_CFG_ENABLE) ? FOC_INJECTION_AXIS_Q : 0U))
-#define FOC_INJECTION_AXIS_FALLBACK \
-    ((FOC_INJECTION_ENABLE_AXIS_D == FOC_CFG_ENABLE) ? FOC_INJECTION_AXIS_D : FOC_INJECTION_AXIS_Q)
 
-/* 声学回报（蜂鸣器级）：RTTTL 铃声表 → dq 电压叠加。单一功能宏，无运行时禁能
- * （是否发声由触发决定，裁剪即整体移除）；AXIS 决定叠加到 d 轴（默认，几乎不产生
- * 转矩脉动）或 q 轴。音频波形与电流环同拍生成，无独立音频定时器/缓冲。 */
+/* 声学回报（蜂鸣器级）：RTTTL 铃声表 → dq 电压，作为与对齐/标定同级的 ACOUSTIC 相位。
+ * 单一功能宏，无运行时禁能（是否发声由触发决定，裁剪即整体移除）。
+ * 输出轴/幅值/包络为运行时参数（默认值见 foc_cfg_init_values.h）。 */
 #define FOC_ACOUSTIC_ENABLE FOC_CFG_ENABLE
-#define FOC_ACOUSTIC_AXIS FOC_ACOUSTIC_AXIS_D
 
 /* 控制行为裁剪 */
 #define FOC_CURRENT_LOOP_PID_ENABLE FOC_CFG_ENABLE

@@ -108,7 +108,9 @@ typedef enum {
     FOC_CONTROL_PHASE_COGGING_CALIB = 1U,
     FOC_CONTROL_PHASE_REINIT        = 2U,
     /* 上电启动阶段：自检通过后进入，由有感对齐/标定状态机驱动，完成并判定电机参数就绪后回 NORMAL */
-    FOC_CONTROL_PHASE_STARTUP       = 3U
+    FOC_CONTROL_PHASE_STARTUP       = 3U,
+    /* 声学回报阶段：与 NORMAL/标定/对齐同级；控制环不输出，由声学序列经注入基础设施产生开环 dq 电压 */
+    FOC_CONTROL_PHASE_ACOUSTIC      = 4U
 } foc_control_phase_t;
 
 /* ========== 运行时状态（per-motor） ========== */

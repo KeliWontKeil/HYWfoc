@@ -70,8 +70,8 @@ L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功
 - `foc_ctrl_compensation` — 齿槽补偿
 - `foc_ctrl_sens_cogging_calib` — 有感齿槽标定（非阻塞状态机）
 - `foc_ctrl_align` — 有感对齐/标定状态机（上电 STARTUP 与命令 aaYI 共用同一实现）
-- `foc_ctrl_injection` — 高频注入发生器（dq 电压叠加）
-- `foc_ctrl_acoustic` — 声学回报序列引擎（铃声播放 + 包络）
+- `foc_ctrl_injection` — 注入基础设施（共享 sink：单一叠加点 + 相位/正弦 + 同拍解调；HFI 由控制态驱动、声学由 ACOUSTIC 相位驱动）
+- `foc_ctrl_acoustic` — 声学序列引擎（ACOUSTIC 相位的序列 + 包络，产出波形规格；不自叠加）
 - `foc_ctrl_actuation` — 执行输出（SVPWM 驱动）
 
 ## Configuration macro & type management

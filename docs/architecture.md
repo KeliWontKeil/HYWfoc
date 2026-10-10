@@ -261,8 +261,8 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 | `foc_ctrl_compensation` | 齿槽补偿 |
 | `foc_ctrl_sens_cogging_calib` | 有感齿槽标定（非阻塞状态机，由 L1 通过 control_phase 路由调用） |
 | `foc_ctrl_align` | 有感对齐/标定状态机（零点/方向/极对数辨识；上电 `STARTUP` 与命令 `aaYI` 共用，非阻塞，由 L1 通过 control_phase 路由调用） |
-| `foc_ctrl_injection` | 高频/任意频率注入工具（被动）：配置期收敛（轴 / 幅值 / 频率 / 模式判定）+ 每拍 dq 电压叠加 + 同拍正交解调；无协议入口、不含策略，由调用方模块 `Configure` / `SetEnable` 驱动 |
-| `foc_ctrl_acoustic` | 声学回报序列引擎（被动）：按铃声 ID 解码为事件步 + 每拍 dq 电压叠加（包络 / 相位推进）；无协议入口、不含策略，由 L1 `FOC_App_PlayTune` 驱动 |
+| `foc_ctrl_injection` | 注入基础设施（**共享 sink**）：配置期收敛 + 每拍波形生成（正弦）+ **单一叠加点** + 同拍正交解调；两个驱动者——HFI 载波（控制态：`Configure`/`SetEnable`/`HfiStep`）与声学样本（ACOUSTIC 相位：`InjectSample`）。无协议入口、不含策略 |
+| `foc_ctrl_acoustic` | 声学序列引擎（被动）：`ACOUSTIC` 相位的序列状态机（按铃声 ID 解码为事件步 + 包络，产出波形规格 `FOC_Acoustic_ModeStep`，**不自叠加**）；由 L1 `FOC_App_PlayTune` 触发相位后经注入基础设施输出 |
 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
 
 ### 控制运行链
@@ -360,23 +360,27 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
   阶段4：NORMAL 电流环
     → FOC_CurrentControlStep（复用阶段1b 的 αβ 做 Park → PID → ud/uq；
       开环电阻模型限幅与 current_limit 取 ctrl.vbus_voltage_base）
-  阶段4b：注入叠加 + 同拍解调（可选，FOC_INJECTION_ENABLE；未启用时无副作用）
-    → FOC_ControlInjectionStep：相位推进 → 单位正弦（复用 L3 通用查表 FOC_MathLut_SinCos）
-      → ctrl.ud/uq 叠加 → 消费 ctrl.id_measured/iq_measured 做正交相关累加
+  阶段4b：HFI 注入叠加 + 同拍解调（可选，FOC_INJECTION_ENABLE；未启用时无副作用）
+    → FOC_Injection_HfiStep：相位推进 → 波形生成（复用 L3 通用查表 FOC_MathLut_SinCos）
+      → ctrl.ud/uq **单点叠加**（Injection_ApplyWave）→ 消费 ctrl.id_measured/iq_measured 做正交相关累加
       （id_measured 与 iq_measured 同源同拍，由阶段4 的 Park 单点发布）
-  阶段4c：声学回报叠加（可选，FOC_ACOUSTIC_ENABLE；未启用时无副作用）
-    → FOC_ControlAcousticStep：按当前步频率推进相位（复用 L3 通用查表 FOC_MathLut_Sin）
-      → 包络线性推进 → 按曲目轴（默认 d）叠加到 ctrl.ud/uq → 步计时递减与切步
-      （与阶段4b 共用同一叠加点：两者都是"dq 电压叠加的被动工具"，同时激活由 L1 拒绝）
   阶段5：SVPWM 输出
     → FOC_ControlApplyElectricalAngleRuntime（逆 Park → αβ 直通 SVPWM，
       逆 Park 结果写 motor->alpha_beta，供下周期 SMO 复用为电压 αβ；
       不再经逆 Clarke 转三相——SVPWM 直接消费 αβ，消除冗余往返；
       电压限幅 / 占空比上限 / 调制比统一取 ctrl.vbus_voltage_base）
-    → 叠加工具激活（`injection_state.enabled != 0` 或 `acoustic_state.active != 0`）时改调
-      FOC_ControlApplyElectricalAngleDirect（direct_output = 1，SVPWM_ApplyDirectDuty 直写占空比），
-      旁路 SVPWM 插值，避免插值把叠加波形压缩衰减；判定收口于单一
-      FOC_ControlExecutor_NeedsDirectOutput()，注入/声学/两者/都关四种宏组合共用同一调用点
+    → HFI 注入激活（FOC_Injection_IsActive）时改调 FOC_ControlApplyElectricalAngleDirect
+      （direct_output = 1，SVPWM_ApplyDirectDuty 直写占空比），旁路 SVPWM 插值，
+      避免插值把注入波形压缩衰减；判定收口于单一 FOC_ControlExecutor_NeedsDirectOutput()
+
+ACOUSTIC 相位输出（与 NORMAL/STARTUP/REINIT/COGGING_CALIB 同级互斥；不走 phase_output）：
+  → 电流环核由 control_phase 分流到 FOC_ControlExecutor_RunAcousticOutput：
+     清零 ud/uq（**控制环不输出**，跳过估计器/源/电流环）
+     → FOC_Acoustic_ModeStep（序列 + 包络 → 出参波形规格）
+     → FOC_Injection_InjectSample（相位推进 + 波形生成 + **同一叠加点**）
+     → FOC_ControlApplyElectricalAngleDirect（直写占空比，与 NORMAL 同机制）
+  → 声学期间控制环功率输出为 0，从根本上避免控制环反向压制声学；
+    曲终（含包络释放）由 L1 ControlTrigger 回 NORMAL + FullStop + RebuildControlBasis（防恢复突跳）
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -525,16 +529,19 @@ typedef enum {
     FOC_CONTROL_PHASE_NORMAL        = 0U,  // 正常控制
     FOC_CONTROL_PHASE_COGGING_CALIB = 1U,  // 有感齿槽标定
     FOC_CONTROL_PHASE_REINIT        = 2U,  // 有感重新对齐（命令 aaYI 触发）
-    FOC_CONTROL_PHASE_STARTUP       = 3U   // 上电启动对齐（自检通过但电机参数未标定时进入）
+    FOC_CONTROL_PHASE_STARTUP       = 3U,  // 上电启动对齐（自检通过但电机参数未标定时进入）
+    FOC_CONTROL_PHASE_ACOUSTIC      = 4U   // 声学回报（与标定/对齐同级；控制环不输出，经注入基础设施开环输出）
 } foc_control_phase_t;
 ```
 
-`control_phase` 表示当前顶层控制模式，决定 Control ISR 的状态机入口和 PWM ISR 的输出流程路由。
+`control_phase` 表示当前顶层控制模式（**输出归属的互斥仲裁**），决定 Control ISR 的状态机入口和 PWM ISR / 电流环核的输出流程路由。
 低速/高速、OpenLoop/SMO/Encoder/HFI 切换不通过 `control_phase` 表示，只属于 NORMAL 标准流程内部的 source/control 状态。
+
+> 输出应用机制分两类：`NORMAL` 与 `ACOUSTIC` 在**电流环核**内直接算/直接写占空比（走 `FOC_ControlApplyElectricalAngleDirect`）；`COGGING_CALIB` / `REINIT` / `STARTUP` 由控制率状态机写 `phase_output_state`、PWM ISR 经 `FOC_ControlApplyPhaseOutputRuntime` 施加。`FOC_ControlExecutor_IsPhaseOutputDriven` 只覆盖后者（不含 `ACOUSTIC`）。
 
 ### 特殊控制状态退出机制（Abort）
 
-当 `control_phase != NORMAL` 时，系统支持三种退出路径，由 `FOC_SPECIAL_PHASE_ABORT_ENABLE` 宏总控（当 `FOC_COGGING_CALIB_ENABLE` 或 `FOC_ALIGN_ENABLE` 任一启用时自动开启）：
+当 `control_phase != NORMAL` 时，系统支持三种退出路径，由 `FOC_SPECIAL_PHASE_ABORT_ENABLE` 宏总控（当 `FOC_COGGING_CALIB_ENABLE`、`FOC_ALIGN_ENABLE` 或 `FOC_ACOUSTIC_ENABLE` 任一启用时自动开启）：
 
 | 退出路径 | 触发方式 | 行为 |
 |---------|---------|------|
@@ -783,10 +790,10 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 4. Source 切换：`FOC_SOURCE_SWITCH_ENABLE`
 5. 齿槽补偿特性（`FOC_COGGING_COMP_ENABLE` + `FOC_COGGING_CALIB_ENABLE`）
 6. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
-7. 特殊控制状态退出：`FOC_SPECIAL_PHASE_ABORT_ENABLE`（当 `COGGING_CALIB_ENABLE` 或 `ALIGN_ENABLE` 启用时自动开启）
+7. 特殊控制状态退出：`FOC_SPECIAL_PHASE_ABORT_ENABLE`（当 `COGGING_CALIB_ENABLE`、`ALIGN_ENABLE` 或 `ACOUSTIC_ENABLE` 启用时自动开启）
 8. 电流环电压基准来源：`FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE`（设定值 / 实测母线电压，见"电流环电压基准"小节）
-9. 高频注入发生器：`FOC_INJECTION_ENABLE`（+ `FOC_INJECTION_MODE` 选择轴/模式）
-10. 声学回报序列引擎：`FOC_ACOUSTIC_ENABLE`（+ `FOC_ACOUSTIC_AXIS` 选择输出轴）
+9. 注入基础设施：`FOC_INJECTION_ENABLE`（+ `FOC_INJECTION_MODE` 选择相干/任意频率；注入轴为**运行时参数**）
+10. 声学回报：`FOC_ACOUSTIC_ENABLE`（声学为与对齐/标定同级的 `ACOUSTIC` 相位；输出轴 / 幅值 / 包络 / 解码容量见 `foc_cfg_init_values.h`）
 11. 有感对齐/标定：`FOC_ALIGN_ENABLE`（上电 `STARTUP` 自动执行 + 命令 `aaYI` 复用同一实现；关闭时须由 LS 默认值提供方向/零点/极对数，见编译期约束）
 
 ### 常见功能宏组合
