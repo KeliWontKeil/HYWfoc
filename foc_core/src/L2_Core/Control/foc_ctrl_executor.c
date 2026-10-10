@@ -9,6 +9,8 @@
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
 #include "L2_Core/Control/foc_ctrl_actuation.h"
+#include "L2_Core/Control/foc_ctrl_injection.h"
+#include "L2_Core/Control/foc_ctrl_acoustic.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
@@ -54,6 +56,12 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
         (motor->current_soft_switch_status.configured_mode == FOC_CURRENT_SOFT_SWITCH_MODE_OPEN) ? 0.0f : 1.0f;
     motor->current_soft_switch_status.blend_initialized = 0U;
     motor->current_soft_switch_status.prev_active_mode = 0xFFU;
+#endif
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Injection_Reset(&motor->injection_state);
+#endif
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    FOC_Acoustic_Reset(&motor->acoustic_state);
 #endif
 
     /* 归零 PWM */
@@ -111,6 +119,20 @@ void FOC_ControlExecutor_Init(foc_motor_t *motor)
     motor->isr_timing.fast_current_div_counter = 0U;
 }
 
+/* 本拍电压基准单点解析：实测档下采样无效时回落设定值 */
+static void FOC_ControlExecutor_UpdateVoltageBase(foc_motor_t *motor)
+{
+#if (FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE == FOC_VOLTAGE_BASE_MEASURED)
+    if ((motor->sensor.vbus_valid != 0U) &&
+        (motor->sensor.vbus.filtered > FOC_MATH_EPSILON))
+    {
+        motor->ctrl.vbus_voltage_base = motor->sensor.vbus.filtered;
+        return;
+    }
+#endif
+    motor->ctrl.vbus_voltage_base = motor->params.vbus_voltage;
+}
+
 /* ================================================================
  * 电流环核心阶段：采样 → Estimator → Select → Publish → 电流环 → SVPWM。
  * 双 ISR 模式由 PWM ISR 调用；三 ISR 模式由独立电流环 ISR 调用。
@@ -143,8 +165,62 @@ void FOC_ControlExecutor_BuildSourceMgrCtx(foc_motor_t *motor,
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     ctx->soft_switch = &motor->current_soft_switch_status;
 #endif
+#if (FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE == FOC_VOLTAGE_BASE_MEASURED)
+    ctx->applied = &motor->applied_output;
+#endif
     ctx->encoder_services = &motor->encoder_services;
 }
+
+/* 直写占空比判定（单一收口）：HFI 注入激活时旁路 SVPWM 插值，
+ * 避免插值把叠加波形压缩衰减。 */
+static uint8_t FOC_ControlExecutor_NeedsDirectOutput(const foc_motor_t *motor)
+{
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    return FOC_Injection_IsActive(&motor->injection_state);
+#else
+    (void)motor;
+    return 0U;
+#endif
+}
+
+/* 需要由 phase_output_state 驱动的特殊控制阶段（齿槽标定 / 重新对齐 / 上电对齐） */
+static uint8_t FOC_ControlExecutor_IsPhaseOutputDriven(const foc_motor_t *motor)
+{
+    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
+        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT) ||
+        (motor->state.control_phase == FOC_CONTROL_PHASE_STARTUP))
+    {
+        return 1U;
+    }
+
+    return 0U;
+}
+
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* ACOUSTIC 相位的输出例程（电流环率）：与 NORMAL 同级互斥——控制环不输出，
+ * 由声学序列经注入基础设施产生开环 dq 电压，直接逆 Park 写占空比。 */
+static void FOC_ControlExecutor_RunAcousticOutput(foc_motor_t *motor)
+{
+    float phase_inc_rad;
+    float amplitude_v;
+    uint8_t axis;
+
+    /* 控制环不输出：清空基准，注入样本即最终 dq 电压 */
+    motor->ctrl.ud = 0.0f;
+    motor->ctrl.uq = 0.0f;
+
+    if (FOC_Acoustic_ModeStep(&motor->acoustic_state, &phase_inc_rad, &amplitude_v, &axis) != 0U)
+    {
+        FOC_Injection_InjectSample(&motor->injection_state, &motor->ctrl,
+                                   phase_inc_rad, amplitude_v, axis);
+    }
+
+    FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                          &motor->applied_output, &motor->alpha_beta,
+                                          &motor->params,
+                                          motor->ctrl.electrical_angle_rad);
+}
+#endif /* FOC_ACOUSTIC_ENABLE */
 
 static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float current_loop_dt_sec)
 {
@@ -228,11 +304,26 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
                            &motor->params,
                            current_loop_dt_sec);
 
-    /* 阶段5：SVPWM */
-    FOC_ControlApplyElectricalAngleRuntime(&motor->ctrl, &motor->svpwm,
-                                           &motor->applied_output, &motor->alpha_beta,
-                                           &motor->params,
-                                           motor->ctrl.electrical_angle_rad);
+    /* 阶段4b：HFI 注入基础设施（NORMAL 相位：控制环输出上叠加 + 同拍解调） */
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    FOC_Injection_HfiStep(&motor->injection_state, &motor->ctrl);
+#endif
+
+    /* 阶段5：SVPWM（叠加工具激活时旁路插值，直写占空比） */
+    if (FOC_ControlExecutor_NeedsDirectOutput(motor) != 0U)
+    {
+        FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
+                                              &motor->applied_output, &motor->alpha_beta,
+                                              &motor->params,
+                                              motor->ctrl.electrical_angle_rad);
+    }
+    else
+    {
+        FOC_ControlApplyElectricalAngleRuntime(&motor->ctrl, &motor->svpwm,
+                                               &motor->applied_output, &motor->alpha_beta,
+                                               &motor->params,
+                                               motor->ctrl.electrical_angle_rad);
+    }
 
     motor->isr_timing.current_loop_cycles = FOC_Platform_ReadCycleCounter() - isr_start;
     }
@@ -245,6 +336,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
 {
     uint8_t divider;
 
+    FOC_ControlExecutor_UpdateVoltageBase(motor);
+
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     SVPWM_InterpolationISR(&motor->svpwm);
 #endif
@@ -255,8 +348,7 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
         return;
     }
 
-    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
-        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
+    if (FOC_ControlExecutor_IsPhaseOutputDriven(motor) != 0U)
     {
         if (motor->phase_output_state.valid == 0U) return;
         FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
@@ -265,13 +357,32 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
         return;
     }
 
-    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
-    if (motor->state.current_loop_ready == 0U) return;
+    if ((motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL)
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+        && (motor->state.control_phase != FOC_CONTROL_PHASE_ACOUSTIC)
+#endif
+       )
+    {
+        return;
+    }
+    if ((motor->state.control_phase == FOC_CONTROL_PHASE_NORMAL) &&
+        (motor->state.current_loop_ready == 0U))
+    {
+        return;
+    }
 
     divider = (FOC_CURRENT_LOOP_ISR_DIVIDER == 0U) ? 1U : (uint8_t)FOC_CURRENT_LOOP_ISR_DIVIDER;
     motor->isr_timing.fast_current_div_counter++;
     if (motor->isr_timing.fast_current_div_counter < divider) return;
     motor->isr_timing.fast_current_div_counter = 0U;
+
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    if (motor->state.control_phase == FOC_CONTROL_PHASE_ACOUSTIC)
+    {
+        FOC_ControlExecutor_RunAcousticOutput(motor);
+        return;
+    }
+#endif
 
     FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_DT_SEC);
 }
@@ -282,6 +393,8 @@ void FOC_ControlExecutor_RunISR(foc_motor_t *motor)
  * ================================================================ */
 void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
 {
+    FOC_ControlExecutor_UpdateVoltageBase(motor);
+
 #if (FOC_SVPWM_INTERP_ENABLE == FOC_CFG_ENABLE)
     SVPWM_InterpolationISR(&motor->svpwm);
 #endif
@@ -292,8 +405,7 @@ void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
         return;
     }
 
-    if ((motor->state.control_phase == FOC_CONTROL_PHASE_COGGING_CALIB) ||
-        (motor->state.control_phase == FOC_CONTROL_PHASE_REINIT))
+    if (FOC_ControlExecutor_IsPhaseOutputDriven(motor) != 0U)
     {
         if (motor->phase_output_state.valid == 0U) return;
         FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
@@ -308,6 +420,7 @@ void FOC_ControlExecutor_RunISR_PwmOnly(foc_motor_t *motor)
  * ================================================================ */
 void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
 {
+    FOC_ControlExecutor_UpdateVoltageBase(motor);
 
     if (motor->state.motor_enabled == 0U)
     {
@@ -315,7 +428,17 @@ void FOC_ControlExecutor_RunISR_CurrentLoop(foc_motor_t *motor)
         return;
     }
 
-    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) return;
+    if (motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL)
+    {
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+        if (motor->state.control_phase == FOC_CONTROL_PHASE_ACOUSTIC)
+        {
+            FOC_ControlExecutor_RunAcousticOutput(motor);
+            return;
+        }
+#endif
+        return;
+    }
     if (motor->state.current_loop_ready == 0U) return;
 
     FOC_ControlExecutor_RunISR_CurrentLoopCore(motor, FOC_CURRENT_LOOP_DT_SEC);

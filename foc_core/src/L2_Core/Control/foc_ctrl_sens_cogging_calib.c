@@ -50,6 +50,8 @@ void FOC_CoggingCalib_RequestStart(foc_motor_t *motor)
 {
     if (motor == 0) return;
     motor->cogging_calib_state.request_start = 1U;
+    /* 进入特殊阶段前同步模式检查基准，避免 Control ISR 的"模式变化自动退出"误触发 */
+    motor->mode_transition.prev_control_mode_check = motor->state.control_mode;
     motor->state.control_phase = FOC_CONTROL_PHASE_COGGING_CALIB;
 }
 

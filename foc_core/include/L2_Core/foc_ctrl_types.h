@@ -106,7 +106,11 @@ typedef enum {
 typedef enum {
     FOC_CONTROL_PHASE_NORMAL        = 0U,
     FOC_CONTROL_PHASE_COGGING_CALIB = 1U,
-    FOC_CONTROL_PHASE_REINIT        = 2U
+    FOC_CONTROL_PHASE_REINIT        = 2U,
+    /* 上电启动阶段：自检通过后进入，由有感对齐/标定状态机驱动，完成并判定电机参数就绪后回 NORMAL */
+    FOC_CONTROL_PHASE_STARTUP       = 3U,
+    /* 声学回报阶段：与 NORMAL/标定/对齐同级；控制环不输出，由声学序列经注入基础设施产生开环 dq 电压 */
+    FOC_CONTROL_PHASE_ACOUSTIC      = 4U
 } foc_control_phase_t;
 
 /* ========== 运行时状态（per-motor） ========== */
@@ -134,9 +138,13 @@ typedef struct {
     float max_phase_voltage;
     float iq_target;
     float iq_measured;
+    /* 实测 d 轴电流 [A]（与 iq_measured 同源同拍，由电流环 Park 单点发布；注入解调消费） */
+    float id_measured;
     /* 电流采样 Clarke 单点化共享结果（executor 阶段1 计算，SMO/电流环复用） */
     float ialpha;
     float ibeta;
+    /* 本拍生效的电流环电压基准 [V]，来源由 FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE 决定 */
+    float vbus_voltage_base;
 } foc_control_runtime_t;
 
 /* ========== 控制参考（控制 ISR → 电流环 ISR 单点原子发布块） ========== */

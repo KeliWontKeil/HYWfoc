@@ -694,11 +694,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_outer_loop.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_param_learn.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
@@ -749,11 +744,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_sens_reinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
@@ -762,6 +752,26 @@
               <FileName>foc_codec.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_codec.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_align.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_align.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ringtone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_ringtone.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_acoustic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_acoustic.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_injection.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_injection.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1457,11 +1467,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_outer_loop.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_param_learn.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
@@ -1512,11 +1517,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_sens_reinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
@@ -1525,6 +1525,26 @@
               <FileName>foc_codec.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_codec.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_align.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_align.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ringtone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_ringtone.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_acoustic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_acoustic.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_injection.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_injection.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -2221,11 +2241,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_outer_loop.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_param_learn.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_param_learn.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_math_transforms.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_math_transforms.c</FilePath>
@@ -2276,11 +2291,6 @@
               <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_cogging_calib.c</FilePath>
             </File>
             <File>
-              <FileName>foc_ctrl_sens_reinit.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_sens_reinit.c</FilePath>
-            </File>
-            <File>
               <FileName>foc_filter_math.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_filter_math.c</FilePath>
@@ -2289,6 +2299,26 @@
               <FileName>foc_codec.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L3_Hal\foc_codec.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_align.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_align.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ringtone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L3_Hal\foc_ringtone.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_acoustic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_acoustic.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc_ctrl_injection.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L2_Core\Control\foc_ctrl_injection.c</FilePath>
             </File>
           </Files>
         </Group>

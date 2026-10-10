@@ -40,14 +40,5 @@ void FOC_ControlApplyElectricalAngleDirect(foc_control_runtime_t *ctrl,
                                            foc_alpha_beta_phase_t *alpha_beta,
                                            const foc_motor_params_t *params,
                                            float electrical_angle);
-uint8_t FOC_SampleLockedMechanicalAngle(foc_control_runtime_t *ctrl,
-                                        svpwm_interp_state_t *svpwm,
-                                        foc_applied_output_state_t *applied,
-                                        foc_alpha_beta_phase_t *alpha_beta,
-                                        const foc_motor_params_t *params,
-                                        float electrical_angle,
-                                        uint16_t settle_ms,
-                                        uint16_t sample_count,
-                                        float *mech_angle_rad);
 
 #endif /* FOC_CONTROL_C31_ACTUATION_H */

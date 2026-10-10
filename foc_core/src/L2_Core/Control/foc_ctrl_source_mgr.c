@@ -422,6 +422,18 @@ static void SourceMgr_PrimePidOutput(foc_pid_t *pid, float target_output, float 
     }
 }
 
+/* 电流环无扰预置电压来源：实测档用实际施加电压，无效时回落指令电压 */
+static float SourceMgr_CurrentLoopPrimeVoltage(const foc_source_mgr_ctx_t *ctx)
+{
+#if (FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE == FOC_VOLTAGE_BASE_MEASURED)
+    if ((ctx->applied != 0) && (ctx->applied->valid != 0U))
+    {
+        return ctx->applied->uq;
+    }
+#endif
+    return ctx->ctrl->uq;
+}
+
 static void SourceMgr_SyncOuterLoopOnSwitch(foc_source_mgr_ctx_t *ctx, uint8_t new_source,
                                             uint8_t old_source)
 {
@@ -459,7 +471,8 @@ static void SourceMgr_SyncCurrentLoopOnSwitch(foc_source_mgr_ctx_t *ctx)
     float iq_error;
 
     iq_error = ctx->ctrl->iq_target - ctx->ctrl->iq_measured;
-    SourceMgr_PrimePidOutput(ctx->torque_current_pid, ctx->ctrl->uq, iq_error);
+    SourceMgr_PrimePidOutput(ctx->torque_current_pid,
+                             SourceMgr_CurrentLoopPrimeVoltage(ctx), iq_error);
 
 #if (FOC_CURRENT_SOFT_SWITCH_ENABLE == FOC_CFG_ENABLE)
     if (ctx->soft_switch->blend_factor > 0.5f)

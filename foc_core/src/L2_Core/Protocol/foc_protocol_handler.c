@@ -1,4 +1,4 @@
-﻿#include "L2_Core/foc_motor_aggregate.h"
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 
 #include <stdio.h>
@@ -9,7 +9,8 @@
 #include "L2_Core/Protocol/foc_protocol_parser.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
-#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/Control/foc_ctrl_align.h"
+#include "L2_Core/Control/foc_ctrl_acoustic.h"
 #include "L2_Core/Runtime/foc_queue.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_codec.h"
@@ -677,6 +678,93 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
     return res;
 }
 
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* ========== A 命令执行（声学回报触发） ========== */
+
+/* 曲目 ID 收敛：整数值且落在铃声表条目范围内 */
+static uint8_t ParseAcousticTuneId(float value, uint8_t *id_out)
+{
+    uint8_t id;
+
+    if ((value < 0.0f) || (value >= (float)FOC_Acoustic_GetTuneCount()))
+    {
+        return 0U;
+    }
+
+    id = (uint8_t)value;
+    if ((((float)id - value) > 0.001f) || ((value - (float)id) > 0.001f))
+    {
+        return 0U;
+    }
+
+    *id_out = id;
+    return 1U;
+}
+
+static foc_protocol_frame_result_t ExecuteACommand(foc_motor_t *motor, const protocol_command_t *cmd)
+{
+    foc_protocol_frame_result_t res = {0, 0, 0, 0};
+
+    if (cmd->subcommand == COMMAND_MANAGER_ACOUSTIC_SUBCMD_PLAY)
+    {
+        uint8_t tune_id = 0U;
+
+        if ((cmd->has_param == 0U) || (ParseAcousticTuneId(cmd->param_value, &tune_id) == 0U))
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        if (FOC_App_PlayTune(tune_id) == 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_Protocol_OutputAcousticTune(tune_id);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_ACOUSTIC_SUBCMD_STOP)
+    {
+        if (cmd->has_param != 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_App_StopTune();
+        FOC_Protocol_OutputAcousticPlaying(0U);
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    if (cmd->subcommand == COMMAND_MANAGER_ACOUSTIC_SUBCMD_TUNE_COUNT)
+    {
+        if (cmd->has_param != 0U)
+        {
+            FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+            res.needs_status = 1U;
+            return res;
+        }
+        FOC_Protocol_OutputAcousticTuneCount(FOC_Acoustic_GetTuneCount());
+        FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
+        res.comm_active  = 1U;
+        res.needs_status = 1U;
+        return res;
+    }
+
+    FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
+    res.needs_status = 1U;
+    return res;
+}
+#endif /* FOC_ACOUSTIC_ENABLE */
+
 /* ========== Y 命令执行 ========== */
 
 static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const protocol_command_t *cmd)
@@ -724,7 +812,19 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
         motor->state.system_running = 1U;
         motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
         motor->state.current_loop_ready = 0U;
-        motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+
+        /* 上电自检尚未完成（如欠压）导致电机参数未标定：恢复后回到启动对齐阶段重新标定，
+         * 而非直接进入 NORMAL（否则电角度基准缺失无法换向）。参数已标定则沿用原恢复路径。 */
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+        if (FOC_Control_IsMotorParamCalibrated(&motor->params) == 0U)
+        {
+            FOC_Align_RequestStartup(motor);
+        }
+        else
+#endif
+        {
+            motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+        }
 
         FOC_Protocol_WriteLog("recovery: system fault cleared, control basis rebuilt\r\n");
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
@@ -735,8 +835,8 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_REINIT)
     {
-#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
-        FOC_ReInit_Request(motor);
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        FOC_Align_Request(motor);
 #endif
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
@@ -819,6 +919,9 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
     if (command.command == COMMAND_MANAGER_CMD_PARAM)  return ExecutePCommand(motor, &command);
     if (command.command == COMMAND_MANAGER_CMD_CONFIG) return ExecuteCCommand(motor, &command);
     if (command.command == COMMAND_MANAGER_CMD_STATE)   return ExecuteSCommand(motor, &command);
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    if (command.command == COMMAND_MANAGER_CMD_ACOUSTIC) return ExecuteACommand(motor, &command);
+#endif
 
     FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_CMD_INVALID_CHAR);
     res.needs_status = 1U;

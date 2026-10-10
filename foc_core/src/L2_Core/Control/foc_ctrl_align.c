@@ -1,10 +1,9 @@
 #include "L2_Core/foc_motor_aggregate.h"
-#include "L2_Core/Control/foc_ctrl_sens_reinit.h"
+#include "L2_Core/Control/foc_ctrl_align.h"
 
-#if (FOC_REINIT_ENABLE == FOC_CFG_ENABLE)
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
 
 #include <math.h>
-#include <stdio.h>
 
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L3_Hal/foc_svpwm.h"
@@ -18,9 +17,30 @@
 
 /* ========== 公共 API ========== */
 
-void FOC_ReInit_Request(foc_motor_t *motor)
+void FOC_Align_Request(foc_motor_t *motor)
 {
+    motor->align_state.trigger_source = FOC_ALIGN_TRIGGER_COMMAND;
+    /* 进入特殊阶段前同步模式检查基准，避免 Control ISR 的"模式变化自动退出"误触发 */
+    motor->mode_transition.prev_control_mode_check = motor->state.control_mode;
     motor->state.control_phase = FOC_CONTROL_PHASE_REINIT;
+}
+
+void FOC_Align_RequestStartup(foc_motor_t *motor)
+{
+    motor->align_state.trigger_source = FOC_ALIGN_TRIGGER_STARTUP;
+    motor->mode_transition.prev_control_mode_check = motor->state.control_mode;
+    motor->state.control_phase = FOC_CONTROL_PHASE_STARTUP;
+}
+
+uint8_t FOC_Align_TakeReport(foc_motor_t *motor)
+{
+    if (motor->align_state.report_pending == 0U)
+    {
+        return 0U;
+    }
+
+    motor->align_state.report_pending = 0U;
+    return 1U;
 }
 
 /* ========== 内部工具 ========== */
@@ -38,12 +58,6 @@ static uint16_t ReInit_MsToCycles(float dt_sec, uint16_t ms)
     return (uint16_t)(cycles_f + 0.5f);
 }
 
-/* 写日志 */
-static void ReInit_WriteLog(const char *msg)
-{
-    FOC_Platform_WriteDebugText(msg);
-}
-
 /* D 轴对齐电压：与阻塞标定 FOC_CalibrateElectricalAngleAndDirection 一致 */
 static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 {
@@ -51,7 +65,7 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
     motor->ctrl.ud = calib_uq;
     FOC_ControlRecordPhaseOutputDqAngle(&motor->phase_output_state, &motor->ctrl,
                                         FOC_CONTROL_PHASE_REINIT,
-                                        motor->reinit_state.phase,
+                                        motor->align_state.phase,
                                         0.0f,
                                         motor->ctrl.ud,
                                         motor->ctrl.uq);
@@ -64,11 +78,11 @@ static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
     FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
                                      &motor->outer_loop,
                                      FOC_CONTROL_PHASE_REINIT,
-                                     motor->reinit_state.phase);
+                                     motor->align_state.phase);
 }
 
 /* sin/cos 矢量平均采样机械角度 */
-static float ReInit_SampleMechanicalAngle(foc_reinit_state_t *rs)
+static float ReInit_SampleMechanicalAngle(foc_align_state_t *rs)
 {
     float sample_rad;
     if (FOC_Platform_ReadMechanicalAngleRad(&sample_rad) == 0U)
@@ -82,7 +96,7 @@ static float ReInit_SampleMechanicalAngle(foc_reinit_state_t *rs)
 }
 
 /* 从 sin_sum/cos_sum 计算机械角度 */
-static float ReInit_AngleFromSum(const foc_reinit_state_t *rs)
+static float ReInit_AngleFromSum(const foc_align_state_t *rs)
 {
     if ((fabsf(rs->sin_sum) < 1e-6f) && (fabsf(rs->cos_sum) < 1e-6f))
     {
@@ -91,26 +105,26 @@ static float ReInit_AngleFromSum(const foc_reinit_state_t *rs)
     return Math_WrapRad(FOC_MathLut_Atan2(rs->sin_sum, rs->cos_sum));
 }
 
-/* ========== 重初始化内部状态机步进 ========== */
+/* ========== 对齐状态机内部步进 ========== */
 
-uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
+uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
 {
-    foc_reinit_state_t *rs;
+    foc_align_state_t *rs;
 
-    rs = &motor->reinit_state;
+    rs = &motor->align_state;
     if (dt_sec <= 0.0f)
     {
         dt_sec = FOC_CONTROL_DT_SEC;
     }
 
     /* IDLE -> 直接进入 STOP */
-    if (rs->phase == FOC_REINIT_PHASE_IDLE)
+    if (rs->phase == FOC_ALIGN_PHASE_IDLE)
     {
         /* 停止电机 */
         ReInit_ZeroOutput(motor, dt_sec);
         motor->state.current_loop_ready = 0U;
 
-        rs->phase = FOC_REINIT_PHASE_STOP;
+        rs->phase = FOC_ALIGN_PHASE_STOP;
         rs->settle_cycles = 0U;
         rs->sample_count = 0U;
         rs->sample_target = 0U;
@@ -127,16 +141,15 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         rs->sum_d_mech = 0.0f;
         rs->sum_d_elec = 0.0f;
 
-        ReInit_WriteLog("\r\n=== Non-blocking ReInit started ===\r\n");
         return 1U;
     }
 
     switch (rs->phase)
     {
     /* ========== STOP: 已完成停止，进入零漂采样 ========== */
-    case FOC_REINIT_PHASE_STOP:
+    case FOC_ALIGN_PHASE_STOP:
     {
-        rs->phase = FOC_REINIT_PHASE_ZERO_SAMPLE;
+        rs->phase = FOC_ALIGN_PHASE_ZERO_SAMPLE;
         rs->sample_count = 0U;
         rs->sample_target = SENSOR_ZERO_CALIB_SAMPLES;
           motor->sensor.current_a_zero_offset = 0.0f;
@@ -144,12 +157,11 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 #if (FOC_CURRENT_SENSE_PHASES == 3U)
         motor->sensor.current_c_zero_offset = 0.0f;
 #endif
-        ReInit_WriteLog("ReInit: zero offset sampling\r\n");
         return 1U;
     }
 
     /* ========== ZERO_SAMPLE: 非阻塞零漂采样 ========== */
-    case FOC_REINIT_PHASE_ZERO_SAMPLE:
+    case FOC_ALIGN_PHASE_ZERO_SAMPLE:
     {
 #if (FOC_CURRENT_SENSE_PHASES != FOC_CURRENT_SENSE_NONE)
         float cur_a = 0.0f;
@@ -193,14 +205,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 #endif
             }
 #endif
-            ReInit_WriteLog("ReInit: zero offset done\r\n");
-
             /* 计算对齐电压，与标定一致：ud = calib_uq, uq = 0 */
             rs->calib_uq = motor->ctrl.max_phase_voltage * FOC_CALIB_ALIGN_VOLTAGE_RATIO;
             rs->calib_uq = Math_ClampFloat(rs->calib_uq, 0.0f, motor->ctrl.max_phase_voltage);
 
             /* 进入对齐 */
-            rs->phase = FOC_REINIT_PHASE_ALIGN_SETTLE;
+            rs->phase = FOC_ALIGN_PHASE_ALIGN_SETTLE;
             rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_ZERO_LOCK_SETTLE_MS);
             rs->sin_sum = 0.0f;
             rs->cos_sum = 0.0f;
@@ -213,7 +223,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     }
 
     /* ========== ALIGN_SETTLE: D 轴对齐等待 ========== */
-    case FOC_REINIT_PHASE_ALIGN_SETTLE:
+    case FOC_ALIGN_PHASE_ALIGN_SETTLE:
     {
         ReInit_ApplyDAlign(motor, rs->calib_uq);
 
@@ -223,7 +233,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         }
         if (rs->settle_cycles == 0U)
         {
-            rs->phase = FOC_REINIT_PHASE_ALIGN_SAMPLE;
+            rs->phase = FOC_ALIGN_PHASE_ALIGN_SAMPLE;
             rs->sin_sum = 0.0f;
             rs->cos_sum = 0.0f;
             rs->sample_count = 0U;
@@ -232,7 +242,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     }
 
     /* ========== ALIGN_SAMPLE: D 轴对齐采样 ========== */
-    case FOC_REINIT_PHASE_ALIGN_SAMPLE:
+    case FOC_ALIGN_PHASE_ALIGN_SAMPLE:
     {
         ReInit_ApplyDAlign(motor, rs->calib_uq);
         (void)ReInit_SampleMechanicalAngle(rs);
@@ -254,8 +264,6 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
                   motor->outer_loop.prev_rad = 0.0f;
                   motor->outer_loop.prev_valid = 0U;
             }
-            ReInit_WriteLog("ReInit: zero align done\r\n");
-
             /* 退磁 */
             motor->ctrl.uq = 0.0f;
             motor->ctrl.ud = 0.0f;
@@ -265,7 +273,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
                                              rs->phase);
 
             /* 进入方向/极对数粗步进 */
-            rs->phase = FOC_REINIT_PHASE_DIR_STEP;
+            rs->phase = FOC_ALIGN_PHASE_DIR_STEP;
             rs->step_index = 0U;
             rs->step_count = (uint8_t)FOC_CALIB_COARSE_STEP_COUNT;
             rs->has_prev = 0U;
@@ -279,7 +287,7 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
     }
 
     /* ========== DIR_STEP: 步进到下一个电角度位置（开环步进） ========== */
-    case FOC_REINIT_PHASE_DIR_STEP:
+    case FOC_ALIGN_PHASE_DIR_STEP:
     {
         float step_elec = FOC_CALIB_COARSE_STEP_ELEC_RAD;
         rs->elec_angle_rad = step_elec * (float)rs->step_index;
@@ -300,12 +308,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         rs->sample_count = 0U;
         rs->sample_target = FOC_CALIB_COARSE_STEP_SAMPLE_COUNT;
 
-        rs->phase = FOC_REINIT_PHASE_DIR_SAMPLE;
+        rs->phase = FOC_ALIGN_PHASE_DIR_SAMPLE;
         return 1U;
     }
 
     /* ========== DIR_SAMPLE: 在当前电角度位置采样机械角度 ========== */
-    case FOC_REINIT_PHASE_DIR_SAMPLE:
+    case FOC_ALIGN_PHASE_DIR_SAMPLE:
     {
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
@@ -348,18 +356,18 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             rs->step_index++;
             if (rs->step_index > rs->step_count)
             {
-                rs->phase = FOC_REINIT_PHASE_DIR_CALC;
+                rs->phase = FOC_ALIGN_PHASE_DIR_CALC;
             }
             else
             {
-                rs->phase = FOC_REINIT_PHASE_DIR_STEP;
+                rs->phase = FOC_ALIGN_PHASE_DIR_STEP;
             }
         }
         return 1U;
     }
 
     /* ========== DIR_CALC: 计算方向 + 极对数 ========== */
-    case FOC_REINIT_PHASE_DIR_CALC:
+    case FOC_ALIGN_PHASE_DIR_CALC:
     {
         if ((fabsf(rs->sum_d_mech) >= FOC_CALIB_MIN_MECH_STEP_RAD) &&
             (fabsf(rs->sum_d_elec) >= 1e-6f))
@@ -373,22 +381,20 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
             motor->params.pole_pairs = poles;
         }
 
-        ReInit_WriteLog("ReInit: dir/pole estimated\r\n");
-
         /* 反向扫描确认（与阻塞标定一致） */
         rs->step_index = rs->step_count;
         rs->reverse_pass = 0U;
-        rs->phase = FOC_REINIT_PHASE_DIR_REV_STEP;
+        rs->phase = FOC_ALIGN_PHASE_DIR_REV_STEP;
         return 1U;
     }
 
     /* ========== DIR_REV_STEP: 反向扫描步进 ========== */
-    case FOC_REINIT_PHASE_DIR_REV_STEP:
+    case FOC_ALIGN_PHASE_DIR_REV_STEP:
     {
         if ((rs->step_index == 0U) && (rs->reverse_pass != 0U))
         {
             /* 反向扫描完成 */
-            rs->phase = FOC_REINIT_PHASE_FINALIZE;
+            rs->phase = FOC_ALIGN_PHASE_FINALIZE;
             return 1U;
         }
 
@@ -415,12 +421,12 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
         rs->sample_count = 0U;
         rs->sample_target = FOC_CALIB_COARSE_STEP_SAMPLE_COUNT;
 
-        rs->phase = FOC_REINIT_PHASE_DIR_REV_SAMPLE;
+        rs->phase = FOC_ALIGN_PHASE_DIR_REV_SAMPLE;
         return 1U;
     }
 
     /* ========== DIR_REV_SAMPLE: 反向扫描采样 ========== */
-    case FOC_REINIT_PHASE_DIR_REV_SAMPLE:
+    case FOC_ALIGN_PHASE_DIR_REV_SAMPLE:
     {
         motor->ctrl.uq = 0.0f;
         motor->ctrl.ud = rs->calib_uq;
@@ -442,13 +448,13 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
 
         if (rs->sample_count >= rs->sample_target)
         {
-            rs->phase = FOC_REINIT_PHASE_DIR_REV_STEP;
+            rs->phase = FOC_ALIGN_PHASE_DIR_REV_STEP;
         }
         return 1U;
     }
 
     /* ========== FINALIZE: 完成 ========== */
-    case FOC_REINIT_PHASE_FINALIZE:
+    case FOC_ALIGN_PHASE_FINALIZE:
     {
         /* 归零输出 */
         ReInit_ZeroOutput(motor, dt_sec);
@@ -464,54 +470,42 @@ uint8_t FOC_ReInit_RunStep(foc_motor_t *motor, float dt_sec)
                                 &motor->cfg,
                                 &motor->params);
 
-        /* 重建运行期控制基准（源获取/电角度/反馈链/外环/滤波），使重初始化后从干净基准运行 */
+        /* 重建运行期控制基准（源获取/电角度/反馈链/外环/滤波），使对齐完成后从干净基准运行 */
         FOC_Control_RebuildControlBasis(motor);
 
-        motor->state.system_running = 1U;
-        motor->state.system_fault = 0U;
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-
+        /* 命令触发：状态机自行收尾置就绪；上电触发（STARTUP）就绪判定交由 L1 */
+        if (rs->trigger_source == FOC_ALIGN_TRIGGER_COMMAND)
         {
-            char info[120];
-            char num_mech[24];
-            char num_vbus[24];
-
-            (void)Math_FormatFixed(num_mech, sizeof(num_mech),
-                                   motor->params.mech_angle_at_elec_zero_rad, 4U);
-            (void)Math_FormatFixed(num_vbus, sizeof(num_vbus),
-                                   motor->params.vbus_voltage, 2U);
-
-            snprintf(info, sizeof(info),
-                     "reinit: done, mech zero %s rad, direction %d, poles %d, vbus %s V\r\n",
-                     num_mech,
-                     (int)motor->params.direction,
-                     (int)motor->params.pole_pairs,
-                     num_vbus);
-            FOC_Platform_WriteDebugText(info);
+            motor->state.system_running = 1U;
+            motor->state.system_fault = 0U;
+            motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
         }
 
-        rs->phase = FOC_REINIT_PHASE_DONE;
+        /* 完成报告只置位：ISR 内不做长文本，由主循环取走输出 */
+        rs->report_pending = 1U;
+
+        rs->phase = FOC_ALIGN_PHASE_DONE;
         return 1U;
     }
 
     /* ========== DONE: 切回 NORMAL ========== */
-    case FOC_REINIT_PHASE_DONE:
+    case FOC_ALIGN_PHASE_DONE:
     {
-        rs->phase = FOC_REINIT_PHASE_IDLE;
+        rs->phase = FOC_ALIGN_PHASE_IDLE;
         motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
         return 0U;
     }
 
     default:
-        rs->phase = FOC_REINIT_PHASE_IDLE;
+        rs->phase = FOC_ALIGN_PHASE_IDLE;
         motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
         return 0U;
     }
 }
 
-void FOC_ReInit_Abort(foc_motor_t *motor)
+void FOC_Align_Abort(foc_motor_t *motor)
 {
-    motor->reinit_state.phase = FOC_REINIT_PHASE_IDLE;
+    motor->align_state.phase = FOC_ALIGN_PHASE_IDLE;
 }
 
-#endif /* FOC_REINIT_ENABLE */
+#endif /* FOC_ALIGN_ENABLE */

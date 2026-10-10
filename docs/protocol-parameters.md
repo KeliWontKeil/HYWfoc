@@ -81,12 +81,17 @@ aaPA3.14b
 | `C` | 调优/配置参数通道（读写） | `a<id>C<subcmd>[value]b` |
 | `S` | 状态通道（开关量，读写） | `a<id>S<subcmd>[0/1]b` |
 | `Y` | 系统语义通道（只读/执行） | `a<id>Y<subcmd>b` |
+| `A` | 声学回报通道（触发/查询：参数 = 铃声 ID） | `a<id>AP<id>b` |
 
 执行语义：
 
 - `P/C`：带值=写参数；不带值=读参数
 - `S`：带值=写状态；不带值=读状态
 - `Y`：不允许带值
+- `A`：`P` 带值=播放指定铃声；`S` 不带值=停止播放；`L` 不带值=读取铃声条目数
+
+> **铃声 ID 约定**：索引即 ID，取值「整数且 < 条目总数」（`A:L` 可读总数，多位数可解析）。
+> `0..2` 为内部事件固定 ID（长鸣 / 两短鸣 / 音阶）；`>= 3` 为用户在铃声表表尾追加的自定义铃声。
 
 ### 3.1 全子命令索引
 
@@ -94,6 +99,9 @@ aaPA3.14b
 
 | 子命令 | 命令组 | 简要描述 |
 |--------|--------|---------|
+| `A:L` | 声学回报 | 读取铃声条目数 |
+| `A:P` | 声学回报 | 播放铃声（参数 = 铃声 ID） |
+| `A:S` | 声学回报 | 停止播放 |
 | `P:A` | 运行参数 | target_angle_rad |
 | `P:D` | 运行参数 | control_mode |
 | `P:H` | 运行参数 | oscilloscope_report_frequency_hz |
@@ -130,10 +138,10 @@ aaPA3.14b
 | `S:O` | 状态 | oscilloscope_report_enabled |
 | `S:S` | 状态 | semantic_report_enabled |
 | `S:X` | 状态 | 读取全部（批读哨兵） |
-| `Y:C` | 系统 | 故障清除 + 软诊断重初始化 |
+| `Y:C` | 系统 | 故障清除 + 控制基准重建（电机参数未标定时回到对齐流程） |
 | `Y:D` | 系统 | 导出齿槽表 |
 | `Y:G` | 系统 | 启动齿槽标定 |
-| `Y:I` | 系统 | 运行时电机参数重初始化 |
+| `Y:I` | 系统 | 重新对齐/标定（复用上电对齐状态机） |
 | `Y:R` | 系统 | 运行时摘要 |
 | `Y:T` | 系统 | 以 C 代码形式导出齿槽表 |
 | `Y:X` | 系统 | 系统信息（只读） |
@@ -251,8 +259,8 @@ aaPA3.14b
 | 6 | 0x0040 | vbus_voltage | 否 |
 | 7 | 0x0080 | iq_target | 是 |
 | 8 | 0x0100 | iq_measured | 否 |
-| 9 | 0x0200 | current_a_raw | 否 |
-| 10 | 0x0400 | current_b_raw | 否 |
+| 9 | 0x0200 | injection_wave | 否 |
+| 10 | 0x0400 | injection_demod | 否 |
 | 11 | 0x0800 | speed_active_mech | 是 |
 | 12 | 0x1000 | speed_standby_mech | 是 |
 | 13 | 0x2000 | angle_active_elec | 是 |
@@ -266,11 +274,13 @@ aaPA3.14b
 - `angle_*_mech`：活跃/备用源的机械角度（rad）
 - `angle_*_elec`：活跃/备用源的电角度（rad）
 - `phase_lag_elec`：主副源电角度相位差 = `angle_standby_elec − angle_active_elec`（环绕归一化到 `[−π, π]`，电弧度）。正值=副源超前，负值=副源滞后；常数值对应恒定相位偏移，随转速增大则对应 LPF/时间常数滞后（`Δt = Δθ / ωe`）。仅当两源均有效时输出有效值，否则输出 0。坐标系语义跟随各源 `ReadSourceAngle` 输出终点（当前 SMO 为物理系直通、ENCODER/OPENLOOP 为控制系；direction=+1 下可比，direction=-1 待正式化统一坐标系后校准）。
+- `injection_wave`：**即将注入**的 dq 电压分量（V，电流环 PID 输出之后、逆 Park 之前叠加），供观测注入频率/幅值/相位。该位原语义（`current_a_raw`）从未实现、恒为 0，故直接重定义；信号与注入模块同源同拍（`foc_ctrl_injection`）。
+- `injection_demod`：**注入解调响应幅值**（A，注入主轴：D 优先，仅 Q 轴启用时为 Q 轴）。来自与注入成对的解调器（正交相关：相干模式整周期累加、任意频率模式 I/Q 低通），未激活或该特性被宏裁剪时输出 0。该位原语义（`current_b_raw`）从未实现、恒为 0，故直接重定义。
 - 不同源的原生角度类型由 Source Manager 统一封装（Encoder 原生机械角度、SMO/OpenLoop 原生电角度），示波器输出始终同时提供机械与电角度两种视图。
 
 ### 4.7 语义调试行说明
 
-启用语义报告（`S:S=1`）后，调试流按周期输出以下行（行 0~9 共 10 行）：
+启用语义报告（`S:S=1`）后，调试流按周期输出以下行（基础 10 行 = 行 0~9；注入启用时追加行 10~12，共 13 行）：
 
 | 行 | 标签 | 输出格式示例 | 说明 |
 |----|------|-------------|------|
@@ -284,8 +294,13 @@ aaPA3.14b
 | 7 | exec_time | `control.execution_time_us=15.200` | 调度器 tick 执行时间 |
 | 8 | current_loop_time | `control.current_loop_execution_time_us=8.500` | 电流环 ISR 执行时间 |
 | 9 | pwm_isr_time | `control.pwm_isr_execution_time_us=2.300` | PWM ISR（三 ISR 插值）执行时间 |
+| 10 | demod_magnitude | `injection.demod_magnitude_a=0.042` | 注入解调响应幅值（主轴，A）※ |
+| 11 | demod_in_phase | `injection.demod_in_phase_a=0.040` | 响应同相分量 I（主轴，A）※ |
+| 12 | demod_quadrature | `injection.demod_quadrature_a=0.012` | 响应正交分量 Q（主轴，A）※ |
 
-传感器无效时跳过对应行，末尾以一个空行结束帧。
+※ 行 10~12 仅当注入特性启用（`FOC_INJECTION_ENABLE`；注入与解调同宏、不可拆分）时存在；注入未激活时三行输出 0。相位由上位机按 `φ = atan2(Q, I)` 计算（参考量为注入电压，1 拍激励延迟已由固件补偿）。主轴 = 注入轴掩码中 D 优先的轴（仅 Q 轴启用时为 Q 轴）。
+
+传感器无效时跳过对应行，末尾以一个空行结束帧（该空行随末行迁移：基础配置在行 9 之后，注入启用时在行 12 之后）。
 
 ## 5. 状态子命令
 
@@ -332,6 +347,7 @@ STATE RUN=1 FLT=0 CODE=NONE INIT=0xFFFF/0x0000 SENS_INV=0 PROTO_ERR=0 PARAM_ERR=
 - `P` 组参数输出：`parameter.<name>=<value>`
 - `C` 组配置参数输出：`config.<name>=<value>`
 - `S` 组状态输出：`state.<name>=ENABLE/DISABLE`
+- `A` 组声学回报输出：`acoustic.<name>=<value>`（`tune` / `playing` / `tune_count`）
 - `Y:X` 系统信息输出：`system.<name>=<value>`
 
 `Y:X` 额外暴露当前 Source/Control 架构状态，均为只读：
@@ -406,9 +422,14 @@ aaSM1b      # motor_enable = ENABLE（S:M）
 aaSMb       # 读取 motor_enable（S:M）
 aaSXb       # 读取所有状态（S:X）
 aaYRb       # 读取运行时状态摘要（Y:R）
-aaYCb       # 清除故障计数器 + 软诊断重初始化（Y:C）
-aaYIb       # 运行时电机参数重初始化（Y:I）
+aaYCb       # 清除故障计数器 + 控制基准重建（Y:C）
+aaYIb       # 重新对齐/标定（Y:I）
 aaYXb       # 读取系统参数信息（Y:X）
+aaAP0b      # 播放铃声 0（A:P，一声长鸣：上电就绪）
+aaAP2b      # 播放铃声 2（A:P，音阶测试）
+aaAP3b      # 播放铃声 3（A:P，用户自定义；id>=3 为表尾追加的自定义铃声）
+aaASb       # 停止播放（A:S）
+aaALb       # 读取铃声条目数（A:L）
 ```
 
 ### A.2 常用参数写入

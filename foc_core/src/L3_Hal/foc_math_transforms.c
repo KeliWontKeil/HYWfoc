@@ -1,3 +1,6 @@
+/* LUT 表单点定义点：本项目所有翻译单元共用本单元的 LUT 表实例 */
+#define FOC_MATH_LUT_IMPL
+
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_math_lut.h"
 

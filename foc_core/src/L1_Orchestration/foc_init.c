@@ -74,7 +74,7 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
 #endif
 }
 
-void FOC_Init_MotorAndCalib(foc_motor_t *motor)
+void FOC_Init_Motor(foc_motor_t *motor)
 {
     if (motor == 0) return;
 
@@ -102,12 +102,84 @@ void FOC_Init_MotorAndCalib(foc_motor_t *motor)
 #endif
 }
 
-void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
+/* 单一母线电压安全判定（上电门与运行期 trip 共用） */
+uint8_t FOC_Init_IsVbusSafe(const sensor_data_t *sensor)
+{
+#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
+    if ((sensor->vbus_valid != 0U) &&
+        (sensor->vbus.filtered >= FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT))
+    {
+        return 1U;
+    }
+    return 0U;
+#else
+    (void)sensor;
+    return 1U;
+#endif
+}
+
+/* 就绪前母线电压门：多次采样 + 阈值判定（唯一电压安全判定入口） */
+uint8_t FOC_Init_VbusGate(sensor_data_t *sensor)
+{
+    uint8_t i;
+
+    if (sensor == 0) return 0U;
+
+    for (i = 0U; i < FOC_VBUS_GATE_SAMPLE_COUNT; i++)
+    {
+        Sensor_ReadVBUS(sensor);
+        FOC_Platform_WaitMs(FOC_VBUS_GATE_SAMPLE_INTERVAL_MS);
+    }
+
+    return FOC_Init_IsVbusSafe(sensor);
+}
+
+/* 校验位可读名（失败报告用） */
+static const struct
+{
+    uint16_t bit;
+    const char *name;
+} k_init_check_names[] =
+{
+    { RUNTIME_INIT_CHECK_SENSOR,   "SENSOR"   },
+    { RUNTIME_INIT_CHECK_MOTOR,    "MOTOR"    },
+    { RUNTIME_INIT_CHECK_VBUS,     "VBUS"     },
+    { RUNTIME_INIT_CHECK_PWM,      "PWM"      },
+    { RUNTIME_INIT_CHECK_DEBUG,    "DEBUG"    },
+    { RUNTIME_INIT_CHECK_COMMAND,  "COMMAND"  },
+    { RUNTIME_INIT_CHECK_PROTOCOL, "PROTOCOL" },
+    { RUNTIME_INIT_CHECK_COMM,     "COMM"     }
+};
+
+static void FOC_Init_ReportChecksFailed(uint16_t bad)
+{
+    char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
+    uint8_t first = 1U;
+    uint16_t i;
+    int n;
+
+    n = snprintf(out, sizeof(out), "init: checks failed [");
+    for (i = 0U; i < (uint16_t)(sizeof(k_init_check_names) / sizeof(k_init_check_names[0])); i++)
+    {
+        if ((bad & k_init_check_names[i].bit) == 0U) continue;
+
+        n += snprintf(out + n, (size_t)sizeof(out) - (size_t)n, "%s%s",
+                      (first != 0U) ? "" : ",",
+                      k_init_check_names[i].name);
+        first = 0U;
+    }
+    snprintf(out + n, (size_t)sizeof(out) - (size_t)n, "]\r\n");
+    FOC_Platform_WriteDebugText(out);
+}
+
+void FOC_Init_Verify_Static(foc_motor_t *motor, uint8_t vbus_ok)
 {
     uint16_t missing;
+    uint16_t bad;
 
-    if ((motor == 0) || (sensor == 0)) return;
+    if (motor == 0) return;
 
+    /* 静态可判定项：不含电机参数位（由 FOC_Init_Verify_Motor 在对齐完成后判定） */
     motor->state.init_check_mask = RUNTIME_INIT_CHECK_COMMAND |
                                     RUNTIME_INIT_CHECK_COMM |
                                     RUNTIME_INIT_CHECK_PROTOCOL |
@@ -115,9 +187,9 @@ void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
                                     RUNTIME_INIT_CHECK_PWM;
 
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    if ((sensor->adc_valid != 0U) && (sensor->encoder_valid != 0U))
+    if ((motor->sensor.adc_valid != 0U) && (motor->sensor.encoder_valid != 0U))
 #else
-    if (sensor->adc_valid != 0U)
+    if (motor->sensor.adc_valid != 0U)
 #endif
     {
         motor->state.init_check_mask |= RUNTIME_INIT_CHECK_SENSOR;
@@ -127,18 +199,7 @@ void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
         motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_SENSOR;
     }
 
-    if ((motor->params.direction != FOC_DIR_UNDEFINED) &&
-        (motor->params.mech_angle_at_elec_zero_rad != FOC_MECH_ANGLE_AT_ELEC_ZERO_UNDEFINED))
-    {
-        motor->state.init_check_mask |= RUNTIME_INIT_CHECK_MOTOR;
-    }
-    else
-    {
-        motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_MOTOR;
-    }
-
-#if (FOC_FEATURE_UNDERVOLTAGE_PROTECTION == FOC_CFG_ENABLE)
-      if (sensor->vbus.filtered > FOC_UNDERVOLTAGE_TRIP_VBUS_DEFAULT)
+    if (vbus_ok != 0U)
     {
         motor->state.init_check_mask |= RUNTIME_INIT_CHECK_VBUS;
     }
@@ -146,12 +207,8 @@ void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
     {
         motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_VBUS;
     }
-#else
-    motor->state.init_check_mask |= RUNTIME_INIT_CHECK_VBUS;
-#endif
 
     missing = (uint16_t)(RUNTIME_INIT_CHECK_VBUS |
-               RUNTIME_INIT_CHECK_MOTOR |
                RUNTIME_INIT_CHECK_PWM |
                RUNTIME_INIT_CHECK_SENSOR |
                RUNTIME_INIT_CHECK_DEBUG |
@@ -159,58 +216,43 @@ void FOC_Init_Verify(foc_motor_t *motor, const sensor_data_t *sensor)
                RUNTIME_INIT_CHECK_PROTOCOL |
                RUNTIME_INIT_CHECK_COMM) & (~motor->state.init_check_mask);
 
-    if ((motor->state.init_check_mask != 0U) &&
-        (motor->state.init_fail_mask == 0U) &&
-        (missing == 0U))
+    if ((motor->state.init_fail_mask == 0U) && (missing == 0U))
     {
         motor->state.system_running = 1U;
         motor->state.system_fault = 0U;
         motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-        FOC_Platform_WriteDebugText("init: all checks passed\r\n");
+        FOC_Platform_WriteDebugText("init: static checks passed\r\n");
+        return;
     }
-    else
+
+    bad = (uint16_t)(motor->state.init_fail_mask | missing);
+    motor->state.system_running = 0U;
+    motor->state.system_fault = 1U;
+    motor->state.last_fault_code = ((bad & (uint16_t)(~RUNTIME_INIT_CHECK_VBUS)) == 0U) ?
+        (uint8_t)FOC_FAULT_UNDERVOLTAGE : (uint8_t)FOC_FAULT_INIT_FAILED;
+    FOC_Init_ReportChecksFailed(bad);
+}
+
+/* 就绪后：电机参数就绪判定（STARTUP 对齐完成时调用；ISR 安全，仅状态字段 + fast 短码） */
+uint8_t FOC_Init_Verify_Motor(foc_motor_t *motor)
+{
+    if (motor == 0) return 0U;
+
+    if (FOC_Control_IsMotorParamCalibrated(&motor->params) != 0U)
     {
-        static const struct
-        {
-            uint16_t bit;
-            const char *name;
-        } k_check_names[] =
-        {
-            { RUNTIME_INIT_CHECK_SENSOR,   "SENSOR"   },
-            { RUNTIME_INIT_CHECK_MOTOR,    "MOTOR"    },
-            { RUNTIME_INIT_CHECK_VBUS,     "VBUS"     },
-            { RUNTIME_INIT_CHECK_PWM,      "PWM"      },
-            { RUNTIME_INIT_CHECK_DEBUG,    "DEBUG"    },
-            { RUNTIME_INIT_CHECK_COMMAND,  "COMMAND"  },
-            { RUNTIME_INIT_CHECK_PROTOCOL, "PROTOCOL" },
-            { RUNTIME_INIT_CHECK_COMM,     "COMM"     }
-        };
-        uint16_t bad;
-        uint16_t i;
-        int n;
-
-        motor->state.system_running = 0U;
-        motor->state.system_fault = 1U;
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_INIT_FAILED;
-
-        bad = (uint16_t)(motor->state.init_fail_mask | missing);
-
-        {
-            char out[COMMAND_MANAGER_REPLY_BUFFER_LEN];
-            uint8_t first = 1U;
-
-            n = snprintf(out, sizeof(out), "init: checks failed [");
-            for (i = 0U; i < (uint16_t)(sizeof(k_check_names) / sizeof(k_check_names[0])); i++)
-            {
-                if ((bad & k_check_names[i].bit) == 0U) continue;
-
-                n += snprintf(out + n, (size_t)sizeof(out) - (size_t)n, "%s%s",
-                              (first != 0U) ? "" : ",",
-                              k_check_names[i].name);
-                first = 0U;
-            }
-            snprintf(out + n, (size_t)sizeof(out) - (size_t)n, "]\r\n");
-            FOC_Platform_WriteDebugText(out);
-        }
+        motor->state.init_check_mask |= RUNTIME_INIT_CHECK_MOTOR;
+        motor->state.init_fail_mask &= (uint16_t)(~RUNTIME_INIT_CHECK_MOTOR);
+        motor->state.system_running = 1U;
+        motor->state.system_fault = 0U;
+        motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
+        FOC_Platform_WriteDebugFast("init: OK\r\n");
+        return 1U;
     }
+
+    motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_MOTOR;
+    motor->state.system_running = 0U;
+    motor->state.system_fault = 1U;
+    motor->state.last_fault_code = (uint8_t)FOC_FAULT_INIT_FAILED;
+    FOC_Platform_WriteDebugFast("FAULT PARAM\r\n");
+    return 0U;
 }

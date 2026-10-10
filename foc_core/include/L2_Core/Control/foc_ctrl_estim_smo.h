@@ -38,8 +38,8 @@ typedef struct {
     uint8_t  converged;
     uint16_t lost_count;
 
-    /* 运行期不变派生量缓存（FOC_EstimSMO_Init 计算；R/L 等参数运行期仅初始化/重初始化更新，
-     * REINIT 流程不修改 R/L，故无需随 REINIT 刷新；依赖 pole_pairs 的 pll_speed_limit 不缓存） */
+    /* 运行期不变派生量缓存（FOC_EstimSMO_Init 计算；R/L 等参数运行期仅初始化/恢复更新，
+     * 重新对齐流程不修改 R/L，故无需随重新对齐刷新；依赖 pole_pairs 的 pll_speed_limit 不缓存） */
     float    rs_ohms;
     float    inv_l_1h;
     float    sat_current_a;

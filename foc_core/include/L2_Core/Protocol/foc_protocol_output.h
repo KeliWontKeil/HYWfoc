@@ -23,6 +23,13 @@ void FOC_Protocol_OutputConfigParam(char subcommand, float value);
 /* 格式化并输出状态（subcommand+value） */
 void FOC_Protocol_OutputState(char subcommand, uint8_t value);
 
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* 声学回报触发回显（A 组）：acoustic.tune / acoustic.playing / acoustic.tune_count */
+void FOC_Protocol_OutputAcousticTune(uint8_t tune_id);
+void FOC_Protocol_OutputAcousticPlaying(uint8_t playing);
+void FOC_Protocol_OutputAcousticTuneCount(uint16_t count);
+#endif
+
 /* 格式化协议摘要行（纯字符串转换，不入队列不写硬件） */
 void FOC_Protocol_FormatSummaryLine(const foc_motor_t *motor,
                                      char *line_out, uint16_t line_max);

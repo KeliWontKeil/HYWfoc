@@ -9,10 +9,16 @@
 #include "L3_Hal/foc_platform_api.h"
 
 /*
- * 语义遥测最多生成 10 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered +
- * 各 invalid 行 + exec_time + current_loop_exec_time + pwm_isr_exec_time）
+ * 语义遥测行数（按裁剪宏变化）：
+ * 基础 10 行（current_a/b/c + angle_raw/filtered + vbus_raw/filtered + 各 invalid 行 +
+ * exec_time + current_loop_exec_time + pwm_isr_exec_time）；
+ * 注入解调启用时追加 3 行（injection.demod_magnitude_a / _in_phase_a / _quadrature_a）。
  */
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+#define SEMANTIC_LINE_COUNT 13U
+#else
 #define SEMANTIC_LINE_COUNT 10U
+#endif
 
 /* 状态标记：已经过语义行数检查 */
 #define SEMANTIC_PHASE_COUNTER_CHECK 0xFFU
@@ -98,9 +104,20 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     ds->snapshot.channel[7] = motor->ctrl.iq_target;
     ds->snapshot.channel[8] = motor->ctrl.iq_measured;
 
-    /* bit 9, 10 unused */
+    /* bit 9: 注入波形（即将注入的电压分量）；bit 10: 注入解调响应幅值 */
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    ds->snapshot.channel[9] = motor->injection_state.inj_wave;
+#else
     ds->snapshot.channel[9] = 0.0f;
+#endif
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    /* 主轴 = 注入轴掩码中 D 优先的轴 */
+    ds->snapshot.channel[10] = ((motor->injection_state.axis & FOC_INJECTION_AXIS_D) != 0U)
+                               ? motor->injection_state.demod.mag_d
+                               : motor->injection_state.demod.mag_q;
+#else
     ds->snapshot.channel[10] = 0.0f;
+#endif
 
     /* bit 11: active speed */
     {
@@ -265,6 +282,34 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
                 elem_out->value = 0.0f;
             elem_out->aux = 2U;
             break;
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+        case 10U:
+        case 11U:
+        case 12U:
+            /* 注入解调结果（主轴 = 掩码中 D 优先的轴）；未激活时上报 0 */
+            elem_out->value = 0.0f;
+            if ((motor != 0) && (FOC_Injection_IsActive(&motor->injection_state) != 0U))
+            {
+                uint8_t is_q = ((motor->injection_state.axis & FOC_INJECTION_AXIS_D) == 0U) ? 1U : 0U;
+
+                if (idx == 10U)
+                {
+                    elem_out->value = (is_q != 0U) ? motor->injection_state.demod.mag_q
+                                                   : motor->injection_state.demod.mag_d;
+                }
+                else if (idx == 11U)
+                {
+                    elem_out->value = (is_q != 0U) ? motor->injection_state.demod.i_q
+                                                   : motor->injection_state.demod.i_d;
+                }
+                else
+                {
+                    elem_out->value = (is_q != 0U) ? motor->injection_state.demod.q_q
+                                                   : motor->injection_state.demod.q_d;
+                }
+            }
+            break;
+#endif
         default:
             break;
         }
@@ -420,9 +465,28 @@ void DebugStream_FormatSemanticLine(uint8_t tag, float value,
             "control.current_loop_execution_time_us=%s\r\n", num);
         break;
     case 9U:
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+        snprintf(line_out, line_max,
+            "control.pwm_isr_execution_time_us=%s\r\n", num);
+#else
         snprintf(line_out, line_max,
             "control.pwm_isr_execution_time_us=%s\r\n\r\n", num);
+#endif
         break;
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    case 10U:
+        snprintf(line_out, line_max,
+            "injection.demod_magnitude_a=%s\r\n", num);
+        break;
+    case 11U:
+        snprintf(line_out, line_max,
+            "injection.demod_in_phase_a=%s\r\n", num);
+        break;
+    case 12U:
+        snprintf(line_out, line_max,
+            "injection.demod_quadrature_a=%s\r\n\r\n", num);
+        break;
+#endif
     default:
         snprintf(line_out, line_max, "measurement.status=invalid\r\n");
         break;

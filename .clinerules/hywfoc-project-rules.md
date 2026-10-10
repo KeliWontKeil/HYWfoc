@@ -57,7 +57,7 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功能分组列出：
 
 - `foc_ctrl_executor` — 算法入口（外环/内环/开环/补偿入口）
-- `foc_ctrl_init` — 初始化与标定
+- `foc_ctrl_init` — 数据结构初始化、平台硬件初始化收口、控制基准重建、电机参数就绪判据
 - `foc_ctrl_cfg` — 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter）
 - `foc_ctrl_source_mgr` — Source Manager：在 PWM ISR 中运行/读取 source、选择 active source
 - `foc_ctrl_openloop` — OpenLoop angle source 实现 + OpenLoop low-speed policy
@@ -67,10 +67,11 @@ L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功
 - `foc_ctrl_estim_hfi` — HFI source 实现
 - `foc_ctrl_outer_loop` — 速度/位置外环
 - `foc_ctrl_current_loop` — 电流内环
-- `foc_ctrl_param_learn` — 电机参数学习
 - `foc_ctrl_compensation` — 齿槽补偿
 - `foc_ctrl_sens_cogging_calib` — 有感齿槽标定（非阻塞状态机）
-- `foc_ctrl_sens_reinit` — 有感非阻塞重初始化
+- `foc_ctrl_align` — 有感对齐/标定状态机（上电 STARTUP 与命令 aaYI 共用同一实现）
+- `foc_ctrl_injection` — 注入基础设施（共享 sink：单一叠加点 + 相位/正弦 + 同拍解调；HFI 由控制态驱动、声学由 ACOUSTIC 相位驱动）
+- `foc_ctrl_acoustic` — 声学序列引擎（ACOUSTIC 相位的序列 + 包络，产出波形规格；不自叠加）
 - `foc_ctrl_actuation` — 执行输出（SVPWM 驱动）
 
 ## Configuration macro & type management
@@ -93,6 +94,7 @@ LS_Config 文件分为三大类：
 
 **C. 数据表文件**
 - `foc_cogging_table.h` — 静态齿槽补偿默认表
+- `foc_ringtone_table.h` — 静态铃声表（RTTTL 文本，索引即铃声 ID）
 
 **约束**：
 - 宏头文件之间不交叉依赖（不互相 `#include`）
@@ -109,7 +111,7 @@ LS_Config 文件分为三大类：
 - **宏命名**：`UPPERCASE_WITH_UNDERSCORES`
 - **类型命名**：`xxx_t` 后缀
 - **条件编译**：宏裁剪链路必须声明/定义/调用三者一致，关闭宏后必须同步收口所有引用点
-- **指针校验**：函数入口检查指针是否为 NULL，返回 0 或直接 return
+- **指针校验**：只在指针**可能为 NULL** 时检查（跨层传入、可选参数、由调用方动态取得的实例），非法时返回 0 或直接 return；指针来源为构造上必然有效的地址（如 L1 传入的 `motor` 内嵌状态）时不检查——那是死代码，ISR 热路径尤其不写可证明无效的分支
 - **传参排序（耦合域规范）**：函数参数按 `[本域私有状态] → [跨域可写总线] → [跨域只读输入(const)] → [显式 out] → [标量(dt 最后)]` 分组排序；`const` 指针=只读输入，非 `const`=可写/状态。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛，其余域函数不引入 ctx 聚合
 - **ISR 路径**：禁止阻塞操作，避免浮点运算；优先转发到模块处理函数
 - **keil兼容**：所有文件最后一行要空一行，避免警告

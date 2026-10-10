@@ -5,6 +5,122 @@ All notable changes to the HYWfoc (何易位FOC) project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [2.5.0] - 2026-10-10
+
+### Changed
+- **注入/声学架构收敛：由"叠加工具"改为「ACOUSTIC 同级相位 + 共享注入基础设施」**（取代本版本开发过程中先行的"阶段 4b/4c 双叠加 + 源侧自叠加"中间形态；下方 `Added` 中的"阶段"条目为过程记录，**最终形态以本节为准**）：
+  - **声学 = 同级 `control_phase`**：新增 `FOC_CONTROL_PHASE_ACOUSTIC`，与 `NORMAL`/`STARTUP`/`REINIT`/`COGGING_CALIB` **互斥**——声学期间**控制环不输出**，由声学序列在电流环率经注入基础设施产生开环 dq 电压并直写占空比（executor `RunAcousticOutput`）；消除控制环反向压制声学。曲终（含包络释放）回 NORMAL 并 `FullStop` + `RebuildControlBasis` 防恢复突跳。
+  - **注入模块收窄为"共享 sink"**：删除模式路由与需求握手（`FOC_Injection_Request/Cancel`、注入模式枚举、声学内嵌状态）；对外为 `Init/Reset` + `Configure/SetEnable/HfiStep`（HFI 载波，控制态驱动）+ `InjectSample`（声学样本，ACOUSTIC 相位驱动）+ `IsActive`。**唯一叠加点**仍在基础设施内（`Injection_ApplyWave`）。
+  - **声学状态回顶层**：`motor.acoustic_state`（与 `align_state`/`cogging_calib_state` 同级）；`foc_ctrl_acoustic` 只做序列引擎（`FOC_Acoustic_ModeStep` 出参产规格），不再自叠加。
+  - **直写判定收窄**：`NeedsDirectOutput` 由"逐源 `#if` 列举"改为 `FOC_Injection_IsActive`（HFI）单一查询；ACOUSTIC 相位走专用例程（本身直写）。
+  - **禁能 / fault 不允许声学**（声学即功率输出）：纳入既有特殊相位自动退出（`AbortSpecialPhase`）⇒ 打断并停机。
+- **注入轴去编译期裁剪**：删除 `FOC_INJECTION_ENABLE_AXIS_D/Q`、`FOC_INJECTION_AXIS_MASK/FALLBACK`、`FOC_ACOUSTIC_AXIS` 及对应编译期 `#error`；轴成为**运行时参数**（HFI 默认 D、声学默认 `FOC_ACOUSTIC_DEFAULT_AXIS`）。
+- **配置约束清理（只保留用户可调项）**：删除 `FOC_ACOUSTIC_AMPLITUDE_LIMIT_V` / `FOC_INJECTION_AMPLITUDE_LIMIT_V`（输出级为唯一电压钳位，属重复约束）与 `FOC_ACOUSTIC_TONE_MIN/MAX_HZ`（物理不变量）；音域上限（= 电流环率/4，保证单次相位回卷）与解码容量 `FOC_ACOUSTIC_SEQ_CAPACITY` 收敛（容量作为配置项）。
+- **`foc_app.c` 职责收敛**：fault 码→文本下沉输出层（新增 `FOC_OutputMgr_WriteFaultReport`）；`AbortSpecialPhase` 去掉 ISR 路径 `snprintf`（改用消息字面量直传 fast 事件）；移除 `<stdio.h>` 依赖。
+
+### Added（2.5.0 收敛后）
+- **声响编排（铃声按"声音"命名，场景由 L1 决定）**：铃声表重命名为 `FOC_RINGTONE_ID_LONG_BEEP`(0) / `FOC_RINGTONE_ID_TWO_SHORT_BEEPS`(1) / `FOC_RINGTONE_ID_SCALE`(2)；就绪播报 `FOC_App_AnnounceReadySound`（取代 `FOC_App_BootTune`）：**上电（首次就绪）= 长鸣**、**进入正常态（fault 恢复 / 对齐完成）= 两短鸣**；**不做故障音**（fault 保护功率输出）。
+- **自定义铃声播放**：在 LS 铃声表表尾追加 `foc_ringtone_entry_t` 即可以 `A:P<id>` 播放（id ≥ 3；0..2 保留给内部事件）；协议接受任意「整数且 < 条目总数」的 ID（多位数可解析）。
+
+### 验证（2.5.0，编译期）
+- 宏组合：默认档 / `FOC_ACOUSTIC_ENABLE=DISABLE` / `FOC_INJECTION_ENABLE=DISABLE`，均 **0 error / 0 warning**；负向：声学开 + 注入关触发预期 `#error`。
+- ROM（当前实例配置）：默认 46012 B / 声学关 43952 B / 注入关 42264 B。
+- 实机：`A:P0/1/2` = 长鸣 / 两短鸣 / 音阶；上电首次 = 长鸣；`Y:C` 恢复 = 两短鸣；fault 期间无声；控制零回归（已确认）。
+
+### Added
+- **高频/任意频率注入基础设施（阶段 1，`foc_ctrl_injection`）**：新增开关 `FOC_INJECTION_ENABLE`（默认启用，未激活时零副作用）、模式宏 `FOC_INJECTION_MODE`（`COHERENT_ONLY` / `ARBITRARY_ONLY` / `BOTH_AUTO` 三选一）与轴裁剪宏（`FOC_INJECTION_ENABLE_AXIS_D/Q`，位编码 + 编译期轴掩码 + 兜底轴）。
+  - **定位**：被动工具——只提供"生成指定频率/幅值/轴的注入分量并叠加到 dq 电压"的能力，不含策略、无协议入口；启停与配置由调用方模块（参数辨识流程、声学回报、未来 HFI）通过 API 驱动。
+  - **注入点**：电流环 PID 输出之后、逆 Park 之前（`ctrl.ud/uq += inj`）；注入激活时阶段 5 改调既有 `FOC_ControlApplyElectricalAngleDirect`（直写占空比、旁路 SVPWM 插值，避免插值把注入波形压缩衰减），**执行输出模块零改动、零签名变更**。
+  - **ISR 快线形态（配置期缓存派生量）**：`Injection_ApplyConfig` 在 `Init` / `Configure` 一次性完成轴掩码归一、幅值/频率限幅、模式判定，并缓存运行期不变派生量——每拍相位增量 `phase_inc_rad`（相干 = 2π/N；任意频率 = 2π·f·T_loop）、解调窗口长度与归一化系数、I/Q 低通与幅值平滑系数、激励→采样 1 拍延迟的补偿旋转量。ISR 每拍仅"推进相位 + 单次条件回卷 + 单位正弦生成 + 轴叠加 + 同拍解调累加"，**无浮点除法、无变长回卷循环、无合法性判定**（反汇编核实：`FOC_ControlInjectionStep` 47 条指令，内含 2 次调用——通用查表 `FOC_MathLut_SinCos` 与同拍解调累加 `Injection_DemodAccumulate` 64 条；含 `sqrtf` 的 `Injection_DemodSettle` 每窗口结算一次，不在每拍路径）。
+  - **注入速率锚定电流环率**：`FOC_ControlInjectionStep(inj, ctrl)` 不再接收 `dt`（唯一调用点本就恒定传 `FOC_CURRENT_LOOP_DT_SEC`，且相干频点 `f = 电流环率/N` 本以电流环率为基准）——消除 `Math_NormalizeDt` 调用与 dt 越界/不一致这一类失效面，并使"相位增量 ≤ π（`N_MIN ≥ 2` 编译期约束保证）⇒ 单次条件回卷成立"成为不变量。
+  - **非法输入在源头收敛，不做错误回报**：频率限幅到 `[电流环率/N_MAX, 电流环率/N_MIN]`（`freq_act` 为唯一回报口径）、幅值取幅并收敛到 `FOC_INJECTION_AMPLITUDE_LIMIT_V`、轴按编译期掩码收敛、NaN 与非正值一并归入下限；据此**删除 `status` 字段与 `STATUS_*` 枚举、`Configure` 返回值、`ACTIVE_NONE` 中间态及全部 `return 0` 失败分支**；新增编译期约束（轴掩码非零、`N_MIN ≥ 2`、`N_MAX ≥ N_MIN`）。
+  - **指针契约收窄（同步修订仓库规则）**：状态指针来源为 `motor` 内嵌地址，构造上非 NULL，故模块内不设空指针检查；`.clinerules` 指针校验规则改为"只在指针可能为 NULL 时检查"。
+  - **两种对等模式**：相干模式（`f = 电流环率 / N`，相位固定步进，零频谱泄漏、解调可分箱累加）与任意频率模式（相位累加器，频率连续）；`BOTH_AUTO` 下按"最近相干频点相对误差 ≤ `FOC_INJECTION_QUANT_ERROR_MAX`"自动选择（不再拒绝频点，越界请求在配置期收敛后由 `freq_act` 反映）。
+  - **观测**：示波器掩码位 bit9 由 `current_a_raw` 重定义为 `injection_wave`（重定义前该通道恒为 0），显示即将注入的电压分量。
+  - **复位**：注入状态纳入 `FOC_MotorInit` 初始化与 `FullStop` / `RebuildControlBasis` 复位。
+  - **验证（编译期）**：总开关两档均 0 error / 0 warning；两轴全关按预期触发编译期 `#error`；默认档 ROM 57.23 KB（58600 B）/ RAM 7.43 KB，`FOC_INJECTION_ENABLE = DISABLE` 档 ROM 52.58 KB（53844 B，= v2.4.1 基线 53768 B + 76 B 的电流环 `id_measured` 发布，注入自身零残留）。
+  - **实现细节**：注入模块**直接复用 L3 查表三角函数**（`L3_Hal/foc_math_lut.h` 的 `FOC_MathLut_SinCos` 联合查表，与全项目其他三角函数同源），不含模块内自带表或插值实现。
+- **高频注入解调器（阶段 2，`foc_injection_state_t.demod` 子状态，与注入同一模块、同一功能宏）**：与注入成对的被动工具——把注入响应（d/q 实测电流）与注入参考做正交相关，输出各轴 I/Q 与幅值，供阶段 3（R/L 辨识）与观测使用；不含位置语义、无协议入口。**注入与解调不可拆分**：由 `FOC_INJECTION_ENABLE` 单宏统一裁剪，解调在同一 `FOC_ControlInjectionStep`（阶段 4b）内同拍完成，不设独立解调宏与独立执行阶段。
+  - **参考相位同源**：解调参考取注入本拍 `FOC_MathLut_SinCos` 的同一次结果（与施加电压严格同相），**零新增三角函数表**。
+  - **输入单点化**：新增 `ctrl.id_measured`，由电流环 Park 单点发布，与 `iq_measured` 同源同拍、语义完全镜像（软切换 OPEN/CLOSED 混合路径与开环模型路径一并对齐）→ 解调不重复 Clarke/Park，且不改动电流环任何计算行为。
+  - **两种模式对等**：相干模式按**整周期**（N 拍）相关累加（零泄漏、无 LPF，每周期结算一次）；任意频率模式对 I/Q 做一阶低通（截止 = `f_inj / FOC_INJECTION_DEMOD_LPF_FC_DIV`）并按 `FOC_INJECTION_DEMOD_SETTLE_DIV` 抽拍结算。
+  - **结算不在 ISR 引入三角函数**：仅 `sqrtf`（硬浮点 VSQRT 通路）算幅值，相位交由消费方/上位机由 I/Q 计算；并对"激励→采样 1 拍延迟"做精确旋转补偿（Δ = 每拍相位增量，其 sin/cos 在配置期用同一通用 LUT 算好，结算时 4 乘 2 加完成）。
+  - **配置单点**：`FOC_Injection_Configure()` 一次同时建立注入与解调（派生量：窗口长度、归一化系数 2/N 或 2、I/Q LPF 系数、延迟旋转量、幅值平滑系数）；`Init` / `Reset` / `SetEnable` 同步清理解调累加器，避免跨启停拼接半窗。
+  - **观测**：示波器掩码位 bit10 由 `current_b_raw` 重定义为 `injection_demod`（取注入主轴，D 优先）；语义流在注入启用时帧长 10→13 行（`injection.demod_magnitude_a` / `demod_in_phase_a` / `demod_quadrature_a`，未激活时三行上报 0；注入特性被宏裁剪时整行跳过并回落 10 行，帧尾空白行随末行迁移）——这是示波器采样率不足时验证注入的唯一有效手段。
+  - **验证（编译期，与阶段 1 同档）**：默认档 ROM 57.23 KB（58600 B，含复用 L3 通用查表三角函数与解调）/ RAM 7.43 KB，`FOC_INJECTION_ENABLE = DISABLE` 档 ROM 52.58 KB（53844 B，相对 v2.4.1 基线 +76 B：电流环为解调额外发布 `id_measured`，不做"注入感知"条件编译以保持电流环不依赖注入特性），两档均 0 error / 0 warning。
+  - **边界（须作为阶段 3 前置认知）**：电流环闭环时 PID 会部分抵消注入（频率越低越明显），故解调结果是**闭环残差响应**——R/L 辨识需在环路带宽外选频或临时降低环路增益，该策略属辨识流程而非工具层。
+  - **控制面**：本轮不做（决策：高频注入当前是自驱动闭环行为、缺少可靠测试手段；阶段 4 声学回报完成后可外部显式驱动电机，更早获得可靠验证）。
+- **声学回报（阶段 4，`foc_ctrl_acoustic` + L3 RTTTL 解码 + LS 铃声表）**：把"蜂鸣器式"回报统一为**铃声资源 + ID 触发**——提示音/报警音/音乐共用同一序列引擎与同一 dq 电压叠加点；旋律以 RTTTL 文本存于 LS 铃声表（随固件版本管理），协议只携带铃声 ID。
+  - **触发面**：新增协议命令组 `A`（`A:P<id>` 播放、`A:S` 停止、`A:L` 读条目数；回显 `acoustic.*` 文本行）；**不设运行时禁能开关**（能力裁剪由 `FOC_ACOUSTIC_ENABLE` 单宏决定，是否发声由触发决定）。协议层零 codec 改动（命令组分发在 handler，codec 仅校验 `A-Z` 字符）。
+  - **输出面**：音频波形与电流环同拍生成（更新率 = 电流环率，音域上限取环率/4），叠加在阶段 4b 的 dq 电压上、默认 d 轴（几乎不产生转矩脉动）；叠加工具激活时阶段 5 改走直写占空比（旁路 SVPWM 插值）——该判定收口为单一 `NeedsDirectOutput()`，注入/声学/两者/都关四种宏组合共用同一调用点。
+  - **时序与包络**：起停线性包络（`FOC_ACOUSTIC_ENVELOPE_MS`，防爆音与直流尾）、音符切换保持相位连续；文本解码与派生量计算全部在调用方上下文（协议/主循环）完成，ISR 只做"推进 + 单次回卷 + 查表 + 包络 + 叠加 + 计数"，无除法、无合法性判定。
+  - **事件触发**：上电自检通过 → 提示音（ID 0，一次）；fault 0→1 跃迁 → 报警音（ID 1，复用既有跃迁检测点）。触发收口于 L1 `FOC_App_PlayTune()`：注入（标定工具）激活时拒绝，避免两个工具同时占用同一叠加点。
+  - **与注入序列的分层**：两者共用底层注入工具（叠加点 / L3 通用查表三角函数 / 直写占空比），但各自保留原生数据表达——声学用 RTTTL（音高 + 节奏），注入用精确频率/幅值/轴事件（相干整周期与解调对齐）；统一在"**序列数据模型 + ID 触发**"层，避免把注入频率量化到十二平均律而破坏解调前提。
+  - **验证（编译期）**：默认档 0 error / 0 warning，ROM 62.45 KB（63952 B，相对 v2.4.1 基线 +5.35 KB）、RAM 8.0 KB；`FOC_ACOUSTIC_ENABLE = DISABLE` 0 error / 0 warning、ROM 逐字节回到 58600 B（零残留）；"声学开 + 注入关"组合 0 error / 0 warning、ROM 57.79 KB；"两者都关"0 error / 0 warning、ROM 53844 B（52.58 KB）——四种宏组合均无交叉依赖。
+  - **待实机验证**：上电/报警/测试音听感与音量、绕组温升、使能零速下对 `iq_measured`/速度的扰动、`A` 组命令回显。
+
+### Changed
+- **注入路线阶段顺序调整**：由"1 注入 → 2 解调 → 3 参数辨识 R/L → 4 声学回报"改为 **"1 注入 → 2 解调 → 4 声学回报 → 3 参数辨识 R/L"**——音频回报是更易实机验证的现象（示波器采样率不足以观测注入波形，R/L 与万用表/LCR 对照条件受限），故提前实施；注入为被动工具，波形验证由阶段 2 解调流程驱动，不引入临时代码。
+
+### 上电初始化与控制链结构对齐（加电压动作纳入控制阶段）
+
+**问题**：上电阶段唯一的功率动作（有感对齐/标定）由 `FOC_MotorInit` 在"控制中断关闭、主循环未启动、协议未轮询"的就绪前窗口内阻塞执行（`FOC_CalibrateElectricalAngleAndDirection`，约 0.95 s 连续加电压）；而欠压/传感器检查（就绪前的 `FOC_Init_Verify`、就绪后的 Control ISR 阶段1）**都排在该动作之后**，且该动作自身不看母线电压、不可中止、不可观测。后果：在错误电源环境（如 5 V 小功率电源）下，非隔离驱动会在无任何监护的条件下持续执行功率操作，异常时最坏响应时间 = 整个阻塞窗口（最长 ≈1.15 s，且无看门狗兜底）。
+
+**结构性根因**：早期初始化方案（阻塞 + 中断关闭 + 直调 L2 算法）与控制链方案（phase 状态机 + ISR 路由 + 每拍安全检查 + abort + 观测）是两套并行机制，二者都能"施加电压并推进时序"，但只有后一套拥有安全与观测基础设施。
+
+**本次重构（自上而下）**：
+
+- **原则**：就绪前（`FOC_App_Init`）只做"一次性、无反馈、确定性"的初始化，**不做任何功率动作**；一切写入 PWM 占空比 / `ud`/`uq` 的动作只在就绪后的 `control_phase` 内发生。
+- **新增启动控制阶段**：`foc_control_phase_t` 增加 `FOC_CONTROL_PHASE_STARTUP`（枚举尾部追加，既有值不变）。自检通过且电机参数待标定时，由 L1 请求进入 STARTUP；对齐状态机在 Control ISR 中推进（与 `COGGING_CALIB`/`REINIT` 同一范式），PWM ISR 通过 `phase_output_state` 输出。
+- **就绪判据分层**：`FOC_Init_Verify` 拆为 `FOC_Init_Verify_Static`（就绪前：COMM/PROTOCOL/COMMAND/DEBUG/PWM/SENSOR/VBUS）与 `FOC_Init_Verify_Motor`（就绪后：方向/零点/极对数，含既有缺口 `pole_pairs` 的补判定）；失败时 VBUS 单独归因 `FOC_FAULT_UNDERVOLTAGE`（其余为 `INIT_FAILED`）。
+- **电压判定单点收敛**：新增 `FOC_Init_IsVbusSafe`（唯一判定：`vbus_valid && filtered >= 阈值`）供上电门 `FOC_Init_VbusGate`（多次采样 + 间隔）与运行期 trip 共用；保护宏关闭时恒返回安全，行为与旧实现一致。
+- **就绪前不再采集电流零偏**：`Sensor_SetZeroOffset`（200 次 ×1 ms 阻塞）从 `FOC_ControlPlatform_InitHardware` 移除，改由对齐状态机的 `ZERO_SAMPLE` 阶段在运行期完成。
+- **统一对齐/标定状态机**：原 `foc_ctrl_sens_reinit` 提升为通用能力，**更名 `foc_ctrl_align.c/.h`**（宏 `FOC_ALIGN_*`、类型 `foc_align_state_t`、字段 `motor.align_state`、API `FOC_Align_Request/RequestStartup/RunStep/Abort/TakeReport`），上电 STARTUP 与协议 `aaYI` 共用同一实现；新增触发源（`FOC_ALIGN_TRIGGER_STARTUP`/`_COMMAND`）区分收尾判定（STARTUP 由 L1 做电机参数就绪判定，COMMAND 由状态机自行收尾）。
+- **删除阻塞实现**：`FOC_CalibrateElectricalAngleAndDirection`、`foc_ctrl_param_learn.c/.h`（整文件）、`FOC_SampleLockedMechanicalAngle` 全部删除；4 个构建入口（两个实例 × CL/HD 的 `builder.params`）与两份 `.eide/eide.yml` 同步。
+- **宏收敛**：`FOC_INIT_CALIBRATION_ENABLE` 与 `FOC_REINIT_ENABLE` 合并为单一能力宏 `FOC_ALIGN_ENABLE`（消除同一能力的双实现/双开关）；`FOC_SPECIAL_PHASE_ABORT_ENABLE` 联动集合更新为 {ALIGN, COGGING_CALIB}；`foc_compile_limits.h` 约束判据同步（关闭对齐时必须提供默认方向/零点/极对数）。
+- **ISR 内长文本收口**：对齐状态机不再在中断上下文调用 `FOC_Platform_WriteDebugText`/`snprintf`（原实现含 5 处进度日志与 1 处结果详情）；改为完成报告标志 `report_pending` + L1 主循环 `FOC_Align_TakeReport` 取走后输出完整启动信息；失败时只发 fast 短码（`FAULT PARAM`），详情由既有 fault 跃迁补发机制输出。
+- **LUT 表单点定义（ROM 回收）**：`foc_math_lut.h` 的 `static const` 表改为"单点定义（`FOC_MATH_LUT_IMPL`，定义在 `foc_math_transforms.c`）+ 其余翻译单元 `extern` 声明"。改动前实测副本：sin 表 3144 B × 6 份、atan 表 2002 B × 2 份，合计 22.9 KB（约占 ROM 36%）；单点化后各 1 份，回收 17,722 B。
+
+### Fixed（同上）
+
+- **进入特殊控制阶段第一拍被自动退出误中止**：`FOC_MotorInit` 将 `mode_transition.prev_control_mode_check` 置 `0xFF`，而 `FOC_App_ControlTrigger` 的"控制模式变化自动退出"判定为 `control_mode != prev_control_mode_check` → 请求进入 `STARTUP`/`REINIT`/`COGGING_CALIB` 的**第一拍即被误中止**（该缺陷随 `FOC_REINIT_ENABLE` 默认关闭而未暴露）。修复：三个请求入口（`FOC_Align_Request` / `FOC_Align_RequestStartup` / `FOC_CoggingCalib_RequestStart`）在切换 `control_phase` 前同步该检查基准。
+- **PWM/电流环 ISR 的 phase 输出路由**：新增单一判定 `FOC_ControlExecutor_IsPhaseOutputDriven`（齿槽标定 / 重初始化 / 上电对齐），消除多处并列 `||` 条件的遗漏面。
+- **`FOC_App_BootTune` 提前播报**：上电提示音增加 `control_phase == NORMAL` 条件，避免对齐尚未完成即播报就绪。
+- **错误恢复（`Y:C`）无法恢复"上电自检未完成"状态**：上电欠压 → 静态校验失败置 `system_fault` 时，电机参数（方向/零点/极对数）尚未标定；原 `Y:C` 恢复路径无条件 `control_phase = NORMAL`，导致电角度基准缺失、无法换向（运行期欠压因参数已标定而可恢复，两者行为不一致）。修复：`Y:C` 恢复时用统一判据 `FOC_Control_IsMotorParamCalibrated` 判定参数是否已标定——未标定则回到 `STARTUP` 启动对齐阶段重新标定（无需复位 MCU），已标定沿用原恢复路径。该判据同时收敛 L1 `FOC_Init_Verify_Motor`、`FOC_App_ShouldStartupAlign` 与 L2 协议层三处重复判断为单一检查点。
+- **fault 期间母线采样冻结导致恢复死锁**：`FOC_App_ControlTrigger` 的 `system_fault` 守卫位于 `Sensor_ReadVBUS` 之前，fault 期间采样暂停，`vbus.filtered`（LPF α=0.1）冻结在欠压旧值；恢复电压后 `Y:C` 清 fault 的下一拍，filtered 只被抬升一点仍低于阈值，再次触发 `FAULT UV` 并重新冻结——形成"采样→误判欠压→fault→采样冻结"的死锁（上电欠压比运行态掉电更易触发：后者 filtered 冻结在阈值附近，恢复一拍即过）。修复：把传感器采样（编码器 + VBUS）移到 `system_fault` 守卫之前，fault 期间也持续采样，使 filtered 能跟随恢复后的电压（恢复电压后约 12 ms 升过阈值，之后 `Y:C` 即成功；若在 12 ms 内极早发出仍可能报一次 `FAULT UV`，重发即可，不再死锁）。
+- **注释口径统一**：初始化与重新对齐已合并为同一对齐/标定状态机，故清理模块注释中的"重初始化"措辞（改为"对齐/重新对齐"），并修正 `foc_ctrl_align.h` 中残留的"上电初始化保持阻塞"过时描述。
+
+### 验证（编译期）
+
+- 默认档与 `FOC_ALIGN_ENABLE = DISABLE` 档均 **0 error / 0 warning**；关闭对齐且未提供默认方向/零点 → 编译期 `#error`（`foc_compile_limits.h`）按预期触发。
+- ROM：**63,960 B → 47,460 B（-16,500 B）**，其中 LUT 单点化回收 17,722 B、其余结构变化净增约 1.2 KB（新增对齐状态机 2,376 B + L1 校验函数，扣除删除的阻塞标定 1,096 B 与 ISR 长文本格式化）；`FOC_ALIGN_ENABLE = DISABLE` 档 44,728 B。
+- RAM：7.97 KB → 8.02 KB（`foc_align_state_t` 增加 `trigger_source`/`report_pending` 两字节，其余为对齐状态机既有结构）。
+
+### 待实机验证
+
+- 欠压上电（如 5 V 母线）：应报静态校验失败 `[VBUS]`，**全程无任何功率动作**（这是本次重构的核心验收项）。
+- 正常母线上电：STARTUP 自动完成对齐 → 输出对齐后的启动信息 → 进入 NORMAL，运动行为与改动前一致。
+- **对齐过程中人为拉低母线**：应在 ≤1 个控制拍内 trip（`FAULT UV`）并归零输出（替代原"持续到标定结束"）。
+- `Y:A` 中止 / `S:M=0` 禁能中止 / `P:D` 模式切换中止 / `Y:C` 恢复 / `aaYI` 命令重初始化 / `Y:G` 齿槽标定（若启用）回归。
+- 三 ISR 与双 ISR 两模式、`FOC_CURRENT_SENSE_PHASES = NONE` 档编译与运行。
+
+## [2.4.1] - 2026-09-28
+
+### Added
+- **电流环电压基准来源宏开关（设定值 / 实测母线电压）**：新增编译期宏 `FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE`（`FOC_VOLTAGE_BASE_SETPOINT` 默认 / `FOC_VOLTAGE_BASE_MEASURED`），统一决定电流环与输出级电压运算所依据的电压基准，用户可据此在"电源采样可用时用实测值提升精度"与"无电源采样/采样不准时沿用设定值"之间切换。
+  - **单点解析**：电流环/PWM ISR 入口（`foc_ctrl_executor` 的 `FOC_ControlExecutor_RunISR` / `RunISR_PwmOnly` / `RunISR_CurrentLoop`）按宏解析为控制总线字段 `ctrl.vbus_voltage_base`；实测档在 `sensor.vbus_valid == 0` 或 `sensor.vbus.filtered <= 0` 时回落设定值（有效性检查单一收口，无电源采样时行为与设定档一致）。
+  - **消费点收敛**（内部无宏分支）：执行输出电压限幅 / 占空比上限 / SVPWM 调制比（`foc_ctrl_actuation`），电流环开环电阻模型限幅与 `current_limit`（`foc_ctrl_current_loop`）。
+  - **无扰预置基准联动**：源切换时电流环 PID 预置电压来源随宏切换（`foc_ctrl_source_mgr`）——设定档用指令电压 `ctrl.uq`（原行为），实测档用实际施加电压 `applied_output.uq`（无效时回落指令电压）；`foc_source_mgr_ctx_t` 增加条件只读视图 `applied`，由 executor 构建上下文时注入。
+  - **编译期取值校验**新增于 `foc_compile_limits.h`；`foc_control_runtime_t` 仅尾部新增字段，既有字段顺序与内存布局不变。
+  - **零回归**：默认档（设定值）与原实现位级一致，ROM/RAM 无变化；实测档 ROM +72B（52.51KB → 52.58KB）。两档在 GD32F30X_CL / GD32F30X_HD 目标均 0 error / 0 warning 通过。
+  - 说明：`ctrl.max_phase_voltage` 为用户限幅配置（非测量量），不参与"设定/实测"切换；实测母线低于该配置时以实测值为限。
+
+### Documentation
+- `docs/architecture.md`：新增"电流环电压基准（设定值 / 实测母线电压）"小节（档位表、数据流落点、5 条约束）；控制运行链补充 ISR 入口电压基准解析步骤与阶段4/5 的基准取值说明；平台 API 契约中 `ReadVbusVoltage` 的【按需】条件补充实测档；宏裁剪口径新增该开关条目；`ctrl` 数据结构字段说明补充 `vbus_voltage_base`。
+- `docs/development.md`：构建目标约束标注 `GD32F30X_HD` 目标因 `builder.params.rootDir` 遗留旧例程路径而暂不可用（与 FOC 库代码无关）。
+
 ## [2.4.0] - 2026-09-15
 
 ### Changed
