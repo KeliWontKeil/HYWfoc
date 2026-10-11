@@ -11,6 +11,9 @@
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_injection.h"
 #include "L2_Core/Control/foc_ctrl_acoustic.h"
+#include "L2_Core/Control/foc_ctrl_align.h"
+#include "L2_Core/Control/foc_ctrl_init.h"
+#include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_openloop.h"
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Control/foc_ctrl_estim.h"
@@ -20,10 +23,6 @@
 #include "L3_Hal/foc_math_types.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "LS_Config/foc_config.h"
-
-/* 电流环 ISR 的控制参考快照：控制 ISR 单点发布 ctrl_ref 后，此处原子取走；
- * 提交标志未置位（控制仍在写块/未发布）时复用上次快照，保证本 ISR 读到一致参考。 */
-static foc_control_ref_t s_ctrl_ref_snap;
 
 void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 {
@@ -59,6 +58,7 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
 #endif
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
     FOC_Injection_Reset(&motor->injection_state);
+    motor->ctrl.inject_axis = 0U;
 #endif
 #if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
     FOC_Acoustic_Reset(&motor->acoustic_state);
@@ -70,16 +70,6 @@ void FOC_ControlExecutor_FullStop(foc_motor_t *motor)
     FOC_ControlApplyPhaseOutputRuntime(&motor->ctrl, &motor->svpwm,
                                        &motor->applied_output, &motor->alpha_beta,
                                        &motor->phase_output_state, &motor->params);
-}
-
-void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor)
-{
-    FOC_ControlExecutor_FullStop(motor);
-}
-
-void FOC_ControlExecutor_Stop(foc_motor_t *motor)
-{
-    FOC_ControlExecutor_FullStop(motor);
 }
 
 void FOC_ControlExecutor_OnCycleResult(foc_motor_t *motor, uint8_t cycle_result)
@@ -99,18 +89,96 @@ void FOC_ControlExecutor_OnCycleResult(foc_motor_t *motor, uint8_t cycle_result)
         FOC_Platform_WriteDebugFast(
             (motor->state.last_fault_code == (uint8_t)FOC_FAULT_SENSOR_ENCODER_INVALID) ?
             "FAULT ENC\r\n" : "FAULT ADC\r\n");
-        FOC_ControlExecutor_SafeOutput(motor);
+        FOC_ControlExecutor_FullStop(motor);
         break;
 
     case FOC_CYCLE_FAULT_UVLO:
         motor->state.system_fault = 1U;
         motor->state.system_running = 0U;
         FOC_Platform_WriteDebugFast("FAULT UV\r\n");
-        FOC_ControlExecutor_SafeOutput(motor);
+        FOC_ControlExecutor_FullStop(motor);
         break;
 
     default:
         break;
+    }
+}
+
+#if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
+/* 特殊控制相位中止（协议 Y:A 与 L1 自动退出守卫共用的单一收口）：
+ * 各相位回滚安全态 → fast 通告 → 归 NORMAL → 全停 → 重建控制基准。
+ * 本函数可由 ISR(自动退出)或主循环(Y:A)调用，故只用 fast 通道与字面量文本（不做格式化）。 */
+void FOC_ControlExecutor_AbortSpecialPhase(foc_motor_t *motor)
+{
+    const char *aborted_msg = "abort:UNKNOWN\r\n";
+
+    switch (motor->state.control_phase)
+    {
+    case FOC_CONTROL_PHASE_COGGING_CALIB:
+        aborted_msg = "abort:COGGING_CALIB\r\n";
+#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
+        FOC_CoggingCalib_Abort(motor);
+#endif
+        break;
+
+    case FOC_CONTROL_PHASE_STARTUP:
+        aborted_msg = "abort:STARTUP\r\n";
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        FOC_Align_Abort(motor);
+        /* 对齐被中止：参数可能仍未定义 → 立即判定（未定义则置初始化失败并停机） */
+        (void)FOC_Control_VerifyMotor(motor);
+#endif
+        break;
+
+    case FOC_CONTROL_PHASE_REINIT:
+        aborted_msg = "abort:REINIT\r\n";
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
+        FOC_Align_Abort(motor);
+#endif
+        break;
+
+    case FOC_CONTROL_PHASE_ACOUSTIC:
+        aborted_msg = "abort:ACOUSTIC\r\n";
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+        FOC_Acoustic_Reset(&motor->acoustic_state);
+#endif
+        break;
+
+    default:
+        break;
+    }
+
+    FOC_Platform_WriteDebugFast(aborted_msg);
+    motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
+    motor->mode_transition.prev_control_mode_check = motor->state.control_mode;
+    FOC_ControlExecutor_FullStop(motor);
+    FOC_Control_RebuildControlBasis(motor);
+}
+#endif /* FOC_SPECIAL_PHASE_ABORT_ENABLE */
+
+/* 错误复位（协议 Y:C）：清错误计数 + 重建控制基准；参数未标定则回 STARTUP 重新对齐，
+ * 否则回 NORMAL（否则电角度基准缺失无法换向）。 */
+void FOC_ControlExecutor_RecoverFault(foc_motor_t *motor)
+{
+    /* 错误复位前重建控制基准（此时 system_fault 仍为 1，ISR 走 FullStop，无竞态） */
+    FOC_Control_RebuildControlBasis(motor);
+    motor->state.sensor_invalid_consecutive = 0U;
+    motor->state.protocol_error_count = 0U;
+    motor->state.param_error_count = 0U;
+    motor->state.control_skip_count = 0U;
+    motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
+    motor->state.system_fault = 0U;
+    motor->state.system_running = 1U;
+    motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
+    motor->state.current_loop_ready = 0U;
+
+    if (FOC_Control_ShouldStartupAlign(motor) != 0U)
+    {
+        FOC_Align_RequestStartup(motor);
+    }
+    else
+    {
+        motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
     }
 }
 
@@ -197,17 +265,57 @@ static uint8_t FOC_ControlExecutor_IsPhaseOutputDriven(const foc_motor_t *motor)
 }
 
 #if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+/* 声学注入参考角（由驱动本注入的声学域决定；sink 不感知角度——角度在执行输出 API 显式传入）：
+ *   可信角度源（编码器有效 / 估计器已收敛 / 开环有效）→ 跟随源电角度，使注入方向相对转子一致；
+ *   否则保持现值（纯无感未收敛、HFI·FLUX 源、编码器无效、参数未标定）——退化为"冻结角"行为，
+ *   避免把可疑估计角送进功率级。
+ * 注：FAST 档编码器由电流环 ISR 自持，而声学相位跳过电流环核，故该档需先补一次采样。 */
+static float FOC_ControlExecutor_AcousticRefAngle(foc_motor_t *motor)
+{
+    foc_source_read_ctx_t rctx;
+    float mech = 0.0f;
+    float elec = 0.0f;
+
+#if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ANGLE_FAST_ENABLE == FOC_CFG_ENABLE)
+    Sensor_ReadEncoder(&motor->sensor, FOC_CURRENT_LOOP_DT_SEC);
+#endif
+
+    rctx.sensor = &motor->sensor;
+    rctx.params = &motor->params;
+    rctx.ctrl = &motor->ctrl;
+    rctx.ref = &motor->ctrl_ref;
+#if (FOC_ESTIMATOR_SMO_ENABLE == FOC_CFG_ENABLE)
+    rctx.smo_state = &motor->estim_smo_state;
+#endif
+#if (FOC_OPENLOOP_SOURCE_ENABLE == FOC_CFG_ENABLE)
+    rctx.openloop_state = &motor->openloop_state;
+#endif
+
+    if (FOC_SourceMgr_ReadSourceAngle(&rctx, motor->source_mgr_state.active_source,
+                                      &mech, &elec) != 0U)
+    {
+        return elec;
+    }
+
+    return motor->ctrl.electrical_angle_rad;
+}
+
 /* ACOUSTIC 相位的输出例程（电流环率）：与 NORMAL 同级互斥——控制环不输出，
  * 由声学序列经注入基础设施产生开环 dq 电压，直接逆 Park 写占空比。 */
 static void FOC_ControlExecutor_RunAcousticOutput(foc_motor_t *motor)
 {
     float phase_inc_rad;
     float amplitude_v;
+    float acoustic_angle;
     uint8_t axis;
 
     /* 控制环不输出：清空基准，注入样本即最终 dq 电压 */
     motor->ctrl.ud = 0.0f;
     motor->ctrl.uq = 0.0f;
+    motor->ctrl.inject_axis = 0U;
+
+    /* 注入参考角：声学域决定（可信则跟随转子，否则保持现值）；Direct 输出会同步写回 ctrl 电角度 */
+    acoustic_angle = FOC_ControlExecutor_AcousticRefAngle(motor);
 
     if (FOC_Acoustic_ModeStep(&motor->acoustic_state, &phase_inc_rad, &amplitude_v, &axis) != 0U)
     {
@@ -218,7 +326,7 @@ static void FOC_ControlExecutor_RunAcousticOutput(foc_motor_t *motor)
     FOC_ControlApplyElectricalAngleDirect(&motor->ctrl, &motor->svpwm,
                                           &motor->applied_output, &motor->alpha_beta,
                                           &motor->params,
-                                          motor->ctrl.electrical_angle_rad);
+                                          acoustic_angle);
 }
 #endif /* FOC_ACOUSTIC_ENABLE */
 
@@ -229,10 +337,10 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
     /* 获取控制参考：控制 ISR 单点发布，此处原子取走；未提交时复用上次快照 */
     if (motor->ctrl_ref_ready != 0U)
     {
-        s_ctrl_ref_snap = motor->ctrl_ref;
+        motor->ctrl_ref_snap = motor->ctrl_ref;
         motor->ctrl_ref_ready = 0U;
     }
-    motor->ctrl.iq_target = s_ctrl_ref_snap.iq_target;
+    motor->ctrl.iq_target = motor->ctrl_ref_snap.iq_target;
 
     isr_start = FOC_Platform_ReadCycleCounter();
 
@@ -287,7 +395,7 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
     {
         foc_source_mgr_ctx_t sm_ctx;
 
-        FOC_ControlExecutor_BuildSourceMgrCtx(motor, &s_ctrl_ref_snap, &sm_ctx);
+        FOC_ControlExecutor_BuildSourceMgrCtx(motor, &motor->ctrl_ref_snap, &sm_ctx);
         FOC_SourceMgr_Select(&sm_ctx);
         FOC_SourceMgr_Publish(&sm_ctx);
     }
@@ -306,6 +414,8 @@ static void FOC_ControlExecutor_RunISR_CurrentLoopCore(foc_motor_t *motor, float
 
     /* 阶段4b：HFI 注入基础设施（NORMAL 相位：控制环输出上叠加 + 同拍解调） */
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    /* 本拍注入轴清零（未注入 = 0）；由 sink 在真正叠加时置位 */
+    motor->ctrl.inject_axis = 0U;
     FOC_Injection_HfiStep(&motor->injection_state, &motor->ctrl);
 #endif
 

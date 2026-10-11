@@ -107,6 +107,8 @@ typedef struct foc_motor_t {
     /* ─── 控制参考（控制 ISR 单点发布，电流环 ISR 原子获取） ─── */
     foc_control_ref_t ctrl_ref;
     volatile uint8_t ctrl_ref_ready;
+    /* 电流环 ISR 的控制参考本地快照：提交标志未置位时复用上次快照，保证本 ISR 读到一致参考 */
+    foc_control_ref_t ctrl_ref_snap;
 } foc_motor_t;
 
 #endif /* FOC_MOTOR_AGGREGATE_H */

@@ -7,15 +7,15 @@
 #include "L2_Core/Control/foc_ctrl_actuation.h"
 #include "L2_Core/Control/foc_ctrl_compensation.h"
 #include "L2_Core/Control/foc_ctrl_cfg.h"
+#include "L2_Core/Control/foc_ctrl_executor.h"
+#include "L2_Core/Control/foc_ctrl_injection.h"
+#include "L2_Core/Runtime/foc_runtime_types.h"
 #include "L3_Hal/foc_math_transforms.h"
 #include "L3_Hal/foc_platform_api.h"
 #include "L3_Hal/foc_sensor.h"
 #include "L3_Hal/foc_svpwm.h"
 #include "LS_Config/foc_config.h"
 #include "LS_Config/foc_cogging_table.h"
-#include "L2_Core/Control/foc_ctrl_cfg.h"
-#include "L2_Core/Control/foc_ctrl_executor.h"
-#include "L2_Core/Control/foc_ctrl_injection.h"
 
 /* 电机参数是否已标定（方向/零点/极对数均非未定义） */
 uint8_t FOC_Control_IsMotorParamCalibrated(const foc_motor_params_t *params)
@@ -30,6 +30,49 @@ uint8_t FOC_Control_IsMotorParamCalibrated(const foc_motor_params_t *params)
     }
 
     return 0U;
+}
+
+/* 电机参数就绪判定（唯一入口：STARTUP 对齐完成、或对齐被中止时共用） */
+uint8_t FOC_Control_VerifyMotor(foc_motor_t *motor)
+{
+    if (FOC_Control_IsMotorParamCalibrated(&motor->params) != 0U)
+    {
+        motor->state.init_check_mask |= RUNTIME_INIT_CHECK_MOTOR;
+        motor->state.init_fail_mask &= (uint16_t)(~RUNTIME_INIT_CHECK_MOTOR);
+        motor->state.system_running = 1U;
+        motor->state.system_fault = 0U;
+        motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
+        FOC_Platform_WriteDebugFast("init: OK\r\n");
+        return 1U;
+    }
+
+    motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_MOTOR;
+    motor->state.system_running = 0U;
+    motor->state.system_fault = 1U;
+    motor->state.last_fault_code = (uint8_t)FOC_FAULT_INIT_FAILED;
+    FOC_Platform_WriteDebugFast("FAULT PARAM\r\n");
+    return 0U;
+}
+
+/* 启动阶段选择策略（唯一入口，上电与 Y:C 恢复共用） */
+uint8_t FOC_Control_ShouldStartupAlign(const foc_motor_t *motor)
+{
+#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
+    if ((motor->state.system_running == 0U) || (motor->state.system_fault != 0U))
+    {
+        return 0U;
+    }
+
+    if (FOC_Control_IsMotorParamCalibrated(&motor->params) == 0U)
+    {
+        return 1U;
+    }
+
+    return 0U;
+#else
+    (void)motor;
+    return 0U;
+#endif
 }
 
 void FOC_MotorInit(foc_motor_t *motor,
@@ -78,7 +121,6 @@ void FOC_MotorInit(foc_motor_t *motor,
     motor->encoder_services.comp_active = 0U;
     motor->encoder_services.calib_available = 0U;
     motor->encoder_services.reinit_available = 0U;
-    motor->applied_output.valid = 0U;
     motor->applied_output.valid = 0U;
     motor->applied_output.ud = 0.0f;
     motor->applied_output.uq = 0.0f;

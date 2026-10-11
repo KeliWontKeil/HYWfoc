@@ -31,7 +31,7 @@
    - Monitor 段：调试流生成器逐行输出 → 入 TX 队列
    - Service 段：RX 出队 → 协议单帧处理 → 编排结果（状态码直写、摘要入 TX 队列）；参数写入即生效（直写 motor 字段，无运行时派生重算）
    - TX 消费段：TX 队列出队 → 平台发送
-5. L2/Control 模块命名按职责分组：`foc_ctrl_executor`（算法入口、外环调度、控制模式切换）、`foc_ctrl_init`（初始化与标定）、`foc_ctrl_cfg`（配置状态管理）、`foc_ctrl_source_mgr`（Source Manager）、`foc_ctrl_openloop`（OpenLoop 角度源/低速策略）、`foc_ctrl_estim`（估计器注册中心）、`foc_ctrl_estim_encoder`（编码器估计器）、`foc_ctrl_estim_smo`（SMO 估计器）、`foc_ctrl_estim_hfi`（HFI 估计器）、`foc_ctrl_outer_loop`（速度/位置外环）、`foc_ctrl_current_loop`（电流内环）、`foc_ctrl_compensation`（齿槽补偿）、`foc_ctrl_sens_cogging_calib`（有感齿槽标定）、`foc_ctrl_align`（有感对齐/标定状态机，上电 STARTUP 与命令 aaYI 共用）、`foc_ctrl_actuation`（执行输出）。
+5. L2/Control 模块命名按职责分组：`foc_ctrl_executor`（算法入口、外环调度、控制模式切换、特殊相位中止分派、ACOUSTIC 输出例程与声学注入参考角、错误复位收口）、`foc_ctrl_init`（初始化与标定、启动阶段选择判据、电机参数就绪判定）、`foc_ctrl_cfg`（配置状态管理）、`foc_ctrl_source_mgr`（Source Manager）、`foc_ctrl_openloop`（OpenLoop 角度源/低速策略）、`foc_ctrl_estim`（估计器注册中心）、`foc_ctrl_estim_encoder`（编码器估计器）、`foc_ctrl_estim_smo`（SMO 估计器）、`foc_ctrl_estim_hfi`（HFI 估计器）、`foc_ctrl_outer_loop`（速度/位置外环）、`foc_ctrl_current_loop`（电流内环）、`foc_ctrl_compensation`（齿槽补偿）、`foc_ctrl_sens_cogging_calib`（有感齿槽标定）、`foc_ctrl_align`（有感对齐/标定状态机，上电 STARTUP 与命令 aaYI 共用）、`foc_ctrl_injection`（注入基础设施共享 sink，不持策略/不感知参考角）、`foc_ctrl_acoustic`（声学序列引擎 + `FOC_Acoustic_RequestTune/RequestStop` 触发收口）、`foc_ctrl_actuation`（执行输出）。
    Source Manager 只在 PWM ISR 的 NORMAL 标准流程中发布 active source；Control Policy / 外环在 Control ISR 中生成 `iq_target`。齿槽标定与对齐/标定以特殊 `control_phase` 状态机推进（STARTUP/COGGING_CALIB/REINIT），由 PWM ISR 特殊输出流程应用输出。
    就绪前（`FOC_App_Init`）只做一次性、无反馈、无功率动作的初始化（配置初值/静态校验/启动阶段选择）；一切写入占空比或 `ud`/`uq` 的动作只在就绪后的 `control_phase` 内发生（就绪 = `FOC_App_Start` 完成）。
 6. L2/Runtime 新增工具模块（如队列）需同步更新 `builder.params`。
@@ -61,6 +61,7 @@
 3. 宏裁剪链路一致：声明、定义、调用在同一条件编译语义下。
 4. 关键约束可映射到可执行检查动作（检索/构建/日志）。
 5. L2 层不持有队列实例，不包含 L1 头文件。
+6. 无模块级 `static` 可变状态（状态进 `foc_system_t`/`foc_motor_t` 或 L1 实例；协议层不缓存 L1 配置指针）。
 
 ### 拒收条件
 
@@ -68,6 +69,7 @@
 2. 为兼容旧结构新增跳转壳文档。
 3. 关键路径出现无收益的重复限幅/归一化或绕路中转。
 4. 引入降低可读性的冗余中间抽象。
+5. 新增模块级 `static` 可变状态（应进系统/电机结构体或 L1 实例）。
 
 ## 提交治理
 

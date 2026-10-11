@@ -54,6 +54,8 @@
 2. 公共头文件不暴露 `gd32f30x_*` 设备头。
 3. 配置参数只能从 `foc_config.h` + `foc_cfg_*.h` 获取，禁止散落 `.c`。
 4. 结构事实源以 `docs/architecture.md` 为唯一主文档。
+5. 禁止模块级 `static` 可变状态：状态收敛进 `foc_system_t` / `foc_motor_t` 或 L1 持有的实例（仅 `static const` 数据表与 `static` 函数允许）。
+6. 控制类命令的收口在 L2：协议层不得反向包含 `L1_Orchestration/` 头，也不得在协议层内联重写控制状态机。
 
 ## 配置收敛规则
 

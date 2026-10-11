@@ -32,11 +32,13 @@ typedef struct {
  *      max_steps  steps_out 容量（步数）
  * out: steps_out   事件步序列（仅在返回 1 时有效）
  *      count_out   实际步数
+ *      bpm_out     解析后的节拍（b=，已收敛到 [25, 900]；文本缺省时取 RTTTL 默认值）
  * 返回：1 = 成功，0 = 失败（非法文本 / 超容量 / 空序列）。 */
 uint8_t FOC_Ringtone_Parse(const char *text,
                            foc_ringtone_step_t *steps_out,
                            uint16_t max_steps,
-                           uint16_t *count_out);
+                           uint16_t *count_out,
+                           uint16_t *bpm_out);
 
 #endif /* FOC_ACOUSTIC_ENABLE */
 

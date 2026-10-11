@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "L1_Orchestration/foc_system_types.h"
+#include "L1_Orchestration/foc_app_event.h"
 #include "L1_Orchestration/foc_output_mgr.h"
 #include "L1_Orchestration/foc_indicator.h"
 #include "L1_Orchestration/foc_init.h"
@@ -18,7 +19,6 @@
 #include "L2_Core/Control/foc_ctrl_source_mgr.h"
 #include "L2_Core/Control/foc_ctrl_injection.h"
 #include "L2_Core/Control/foc_ctrl_acoustic.h"
-#include "LS_Config/foc_ringtone_table.h"
 #include "L2_Core/Protocol/foc_protocol_handler.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L3_Hal/foc_platform_api.h"
@@ -27,33 +27,6 @@
 
 static foc_system_t g_sys;
 static foc_motor_t motor;
-
-/* 主循环 fault 补发用本地缓存（不进 motor 状态） */
-static uint8_t s_prev_system_fault = 0U;
-
-/* STARTUP 对齐完成 → 主循环补发启动信息（ISR 内不做长文本） */
-static uint8_t s_startup_done_pending = 0U;
-
-/* 启动阶段选择：自检通过且电机参数待标定（有编码器且允许对齐）时进入 STARTUP 阶段 */
-static uint8_t FOC_App_ShouldStartupAlign(const foc_motor_t *motor)
-{
-#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-    if ((motor->state.system_running == 0U) || (motor->state.system_fault != 0U))
-    {
-        return 0U;
-    }
-
-    if (FOC_Control_IsMotorParamCalibrated(&motor->params) == 0U)
-    {
-        return 1U;
-    }
-
-    return 0U;
-#else
-    (void)motor;
-    return 0U;
-#endif
-}
 
 static void FOC_App_SchedTickBridge(void)
 {
@@ -110,7 +83,7 @@ void FOC_App_Init(void)
     FOC_Init_Verify_Static(&motor, vbus_ok);
 
     /* 启动阶段选择：参数待标定 → 就绪后由 STARTUP 阶段完成对齐（含电压监护与中止能力） */
-    if (FOC_App_ShouldStartupAlign(&motor) != 0U)
+    if (FOC_Control_ShouldStartupAlign(&motor) != 0U)
     {
         FOC_Align_RequestStartup(&motor);
     }
@@ -132,101 +105,10 @@ void FOC_App_Start(void)
     FOC_Platform_SetControlInterruptsEnabled(1U);
 }
 
-/* fault 0→1 跃迁当轮，主循环补发完整详情（慢路径可靠输出；无故障音——
- * fault 保护功率输出，声学需 NORMAL/ACOUSTIC 相位） */
-static void FOC_App_ReportFaultTransition(void)
-{
-    if ((motor.state.system_fault != 0U) && (s_prev_system_fault == 0U))
-    {
-        FOC_OutputMgr_WriteFaultReport(&motor);
-    }
-    s_prev_system_fault = motor.state.system_fault;
-}
-
-#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
-/* 就绪播报状态（L1 私有）：就绪沿触发；首次就绪 = 长鸣，其后进入正常态 = 两短鸣 */
-static uint8_t s_ready_prev = 0U;
-static uint8_t s_ready_announced = 0U;
-
-/* 声学回报触发收口：进入 ACOUSTIC 相位（与对齐/标定同级——控制环停止输出）。
- * 仅 NORMAL/ACOUSTIC 且无 fault、已使能时接受；播放中再次调用 = 同相覆盖（重入）。 */
-uint8_t FOC_App_PlayTune(uint8_t tune_id)
-{
-    if ((motor.state.system_fault != 0U) || (motor.state.motor_enabled == 0U))
-    {
-        return 0U;
-    }
-    if ((motor.state.control_phase != FOC_CONTROL_PHASE_NORMAL) &&
-        (motor.state.control_phase != FOC_CONTROL_PHASE_ACOUSTIC))
-    {
-        return 0U;
-    }
-
-    if (FOC_Acoustic_PlayTune(&motor.acoustic_state, tune_id) == 0U)
-    {
-        return 0U;
-    }
-
-    /* 切换 control_phase 前同步自动退出检查基准，避免第一拍被误判模式变化而中止 */
-    motor.mode_transition.prev_control_mode_check = motor.state.control_mode;
-    motor.state.control_phase = FOC_CONTROL_PHASE_ACOUSTIC;
-    return 1U;
-}
-
-void FOC_App_StopTune(void)
-{
-    /* 只发起停止（进入包络释放段）；相位由序列结束后在 ControlTrigger 自动回 NORMAL */
-    FOC_Acoustic_Stop(&motor.acoustic_state);
-}
-
-/* 就绪播报：上电（从无到有）= 长鸣；其他状态 → 正常态（恢复 / 正常推进）= 两短鸣。
- * ACOUSTIC 视为"仍就绪"（它是通知，不改变控制态），避免曲终回转被误判为进入正常态。 */
-static void FOC_App_AnnounceReadySound(void)
-{
-    uint8_t ready;
-
-    ready = ((motor.state.system_running != 0U) &&
-             (motor.state.system_fault == 0U) &&
-             (motor.state.motor_enabled != 0U) &&
-             ((motor.state.control_phase == FOC_CONTROL_PHASE_NORMAL) ||
-              (motor.state.control_phase == FOC_CONTROL_PHASE_ACOUSTIC))) ? 1U : 0U;
-
-    if ((ready != 0U) && (s_ready_prev == 0U))
-    {
-        uint8_t tune_id = (s_ready_announced == 0U) ? (uint8_t)FOC_RINGTONE_ID_LONG_BEEP
-                                                    : (uint8_t)FOC_RINGTONE_ID_TWO_SHORT_BEEPS;
-
-        s_ready_announced = 1U;
-        (void)FOC_App_PlayTune(tune_id);
-    }
-
-    s_ready_prev = ready;
-}
-#endif /* FOC_ACOUSTIC_ENABLE */
-
 void FOC_App_Loop(void)
 {
-    FOC_App_ReportFaultTransition();
-
-    /* 对齐/重新对齐完成后补发启动信息（ISR 内不做长文本） */
-    {
-        uint8_t report_ready = FOC_Align_TakeReport(&motor);
-
-        if (s_startup_done_pending != 0U)
-        {
-            s_startup_done_pending = 0U;
-            report_ready = 1U;
-        }
-
-        if (report_ready != 0U)
-        {
-            FOC_OutputMgr_WriteStartupInfo(&motor);
-        }
-    }
-
-#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
-    FOC_App_AnnounceReadySound();
-#endif
+    /* 事件段：状态跃迁触发的对外通告（fault 补发 / 对齐报告 / 就绪播报） */
+    FOC_AppEvent_Run(&g_sys, &motor);
 
     if (g_sys.runtime.tasks.monitor_pending != 0U)
     {
@@ -256,7 +138,7 @@ void FOC_App_Loop(void)
             foc_protocol_frame_result_t result;
 
             (void)FIFO_Dequeue(&g_sys.runtime.comm.rx_fifo, frame);
-            result = FOC_Protocol_ProcessSingle(&motor, frame, PROTOCOL_PARSER_RX_MAX_LEN);
+            result = FOC_Protocol_ProcessSingle(&motor, &g_sys.cfg.report, frame, PROTOCOL_PARSER_RX_MAX_LEN);
 
             if (result.comm_active != 0U)
                 g_sys.runtime.indicator.comm_pulse_counter = FOC_LED_COMM_PULSE_TICKS;
@@ -274,9 +156,9 @@ void FOC_App_Loop(void)
             needs_system_info  |= result.needs_system_info;
         }
 
-        if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.runtime.output.tx_fifo);
+        if (needs_param_dump   != 0U) FOC_Protocol_QueueParams(&motor, &g_sys.cfg.report, &g_sys.runtime.output.tx_fifo);
         if (needs_config_dump  != 0U) FOC_Protocol_QueueConfigs(&motor, &g_sys.runtime.output.tx_fifo);
-        if (needs_state_dump   != 0U) FOC_Protocol_QueueStates(&motor, &g_sys.runtime.output.tx_fifo);
+        if (needs_state_dump   != 0U) FOC_Protocol_QueueStates(&motor, &g_sys.cfg.report, &g_sys.runtime.output.tx_fifo);
         if (needs_system_info  != 0U) FOC_Protocol_QueueSystemInfo(&motor, &g_sys.runtime.output.tx_fifo);
 
 #if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
@@ -321,7 +203,7 @@ void FOC_App_MonitorTrigger(void)
         monitor_element_t elem;
         while (DebugStream_PollNextValue(&g_sys.runtime.monitor.stream,
                                           &motor,
-                                          FOC_Protocol_GetReportConfig(),
+                                          &g_sys.cfg.report,
                                           &elem) != 0U)
         {
             (void)FIFO_Enqueue(&g_sys.runtime.monitor.elem_fifo, (uint8_t *)&elem);
@@ -332,53 +214,6 @@ void FOC_App_MonitorTrigger(void)
     g_sys.runtime.tasks.monitor_pending = 1U;
 #endif
 }
-
-#if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
-void FOC_App_AbortSpecialPhase(void)
-{
-    const char *aborted_msg = "abort:UNKNOWN\r\n";
-
-    switch (motor.state.control_phase)
-    {
-    case FOC_CONTROL_PHASE_COGGING_CALIB:
-        aborted_msg = "abort:COGGING_CALIB\r\n";
-#if (FOC_COGGING_CALIB_ENABLE == FOC_CFG_ENABLE)
-        FOC_CoggingCalib_Abort(&motor);
-#endif
-        break;
-    case FOC_CONTROL_PHASE_STARTUP:
-        aborted_msg = "abort:STARTUP\r\n";
-#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
-        FOC_Align_Abort(&motor);
-        /* 对齐被中止：参数可能仍未定义 → 立即判定（未定义则置初始化失败并停机） */
-        (void)FOC_Init_Verify_Motor(&motor);
-#endif
-        break;
-    case FOC_CONTROL_PHASE_REINIT:
-        aborted_msg = "abort:REINIT\r\n";
-#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE)
-        FOC_Align_Abort(&motor);
-#endif
-        break;
-    case FOC_CONTROL_PHASE_ACOUSTIC:
-        aborted_msg = "abort:ACOUSTIC\r\n";
-#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
-        FOC_Acoustic_Reset(&motor.acoustic_state);
-#endif
-        break;
-    default:
-        break;
-    }
-
-    /* 突发通告（fast）：本函数可由 ISR(自动退出)或主循环(Y:A)调用，慢路径文本禁用于 ISR；
-     * 消息为字面量，避免在 ISR 路径做 snprintf 格式化 */
-    FOC_OutputMgr_WriteFastEvent(aborted_msg);
-    motor.state.control_phase = FOC_CONTROL_PHASE_NORMAL;
-    motor.mode_transition.prev_control_mode_check = motor.state.control_mode;
-    FOC_ControlExecutor_FullStop(&motor);
-    FOC_Control_RebuildControlBasis(&motor);
-}
-#endif
 
 void FOC_App_ControlTrigger(void)
 {
@@ -402,7 +237,7 @@ void FOC_App_ControlTrigger(void)
         if ((motor.state.motor_enabled == 0U) ||
             (motor.state.control_mode != motor.mode_transition.prev_control_mode_check))
         {
-            FOC_App_AbortSpecialPhase();
+            FOC_ControlExecutor_AbortSpecialPhase(&motor);
             phase = FOC_CONTROL_PHASE_NORMAL;
         }
     }
@@ -459,11 +294,8 @@ void FOC_App_ControlTrigger(void)
         /* 上电对齐：状态机驱动，全程受本函数阶段1的电压/有效性检查监护 */
         if (FOC_Align_RunStep(&motor, FOC_CONTROL_DT_SEC) == 0U)
         {
-            /* 对齐结束 → 电机参数就绪判定（就绪后判定组） */
-            if (FOC_Init_Verify_Motor(&motor) != 0U)
-            {
-                s_startup_done_pending = 1U;
-            }
+            /* 对齐结束 → 电机参数就绪判定（就绪后判定组）；完成报告由主循环事件段补发 */
+            (void)FOC_Control_VerifyMotor(&motor);
         }
 #endif
         break;

@@ -25,22 +25,18 @@
  */
 foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
     foc_motor_t *motor,
+    foc_report_config_t *report,
     const uint8_t *frame,
     uint16_t len);
 
-/* 初始化协议内部状态
- * report — 报告配置指针（L1 提供的不随 reinit 重置的配置空间）
- * 协议内部保存此指针用于访问报告策略等系统配置。
- */
-void FOC_Protocol_Init(foc_report_config_t *report);
-
-/* 获取报告配置（供 L1/debug 流使用） */
-const foc_report_config_t *FOC_Protocol_GetReportConfig(void);
+/* 写入报告配置默认值（L1 初始化时调用）。
+ * 协议层不持有 report 指针（无模块级静态状态），运行期由调用方逐次显式传入。 */
+void FOC_Protocol_InitReport(foc_report_config_t *report);
 
 /* 批量输出（入 TX FIFO，供 X 指令使用） */
-void FOC_Protocol_QueueParams(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
+void FOC_Protocol_QueueParams(const foc_motor_t *motor, const foc_report_config_t *report, fifo_queue_t *tx_fifo);
 void FOC_Protocol_QueueConfigs(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
-void FOC_Protocol_QueueStates(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
+void FOC_Protocol_QueueStates(const foc_motor_t *motor, const foc_report_config_t *report, fifo_queue_t *tx_fifo);
 void FOC_Protocol_QueueSystemInfo(const foc_motor_t *motor, fifo_queue_t *tx_fifo);
 
 #endif /* FOC_PROTOCOL_HANDLER_H */

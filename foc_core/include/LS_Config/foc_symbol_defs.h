@@ -77,14 +77,13 @@
 #define FOC_INJECTION_MODE_ARBITRARY_ONLY 1U
 #define FOC_INJECTION_MODE_BOTH_AUTO 2U
 
-/* 注入轴（位编码：D=bit0、Q=bit1、DQ=双轴；编译期可用轴掩码见 foc_cfg_feature_switches.h） */
+/* 注入管线入参编码（位掩码：D=bit0、Q=bit1、DQ=双轴）。
+ * 这是共享 sink 的**接口编码，不含策略**——"某功能注入哪些轴"由该功能自己的配置决定：
+ *   声学回报 = FOC_ACOUSTIC_OUTPUT_AXIS（用户可调，见 foc_cfg_init_values.h）
+ *   HFI / 参数辨识 = 算法域默认值（由凸极/饱和等数学性质决定，非用户可调项） */
 #define FOC_INJECTION_AXIS_D 0x01U
 #define FOC_INJECTION_AXIS_Q 0x02U
 #define FOC_INJECTION_AXIS_DQ (FOC_INJECTION_AXIS_D | FOC_INJECTION_AXIS_Q)
-
-/* 声学回报输出轴（dq 电压叠加轴，单轴选择，编译期由 FOC_ACOUSTIC_AXIS 收敛） */
-#define FOC_ACOUSTIC_AXIS_D 0x01U
-#define FOC_ACOUSTIC_AXIS_Q 0x02U
 
 /* 注入实际生效模式（配置完成后必为相干或任意频率，不存在"未判定"态） */
 #define FOC_INJECTION_ACTIVE_COHERENT 1U

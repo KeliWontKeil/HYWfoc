@@ -46,7 +46,7 @@ uint8_t FOC_Align_TakeReport(foc_motor_t *motor)
 /* ========== 内部工具 ========== */
 
 /* 根据 dt_sec 和毫秒数计算等待周期数 */
-static uint16_t ReInit_MsToCycles(float dt_sec, uint16_t ms)
+static uint16_t Align_MsToCycles(float dt_sec, uint16_t ms)
 {
     float cycles_f;
     if (dt_sec <= 0.0f)
@@ -59,7 +59,7 @@ static uint16_t ReInit_MsToCycles(float dt_sec, uint16_t ms)
 }
 
 /* D 轴对齐电压：与阻塞标定 FOC_CalibrateElectricalAngleAndDirection 一致 */
-static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
+static void Align_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 {
     motor->ctrl.uq = 0.0f;
     motor->ctrl.ud = calib_uq;
@@ -72,7 +72,7 @@ static void ReInit_ApplyDAlign(foc_motor_t *motor, float calib_uq)
 }
 
 /* 归零输出 */
-static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
+static void Align_ZeroOutput(foc_motor_t *motor, float dt_sec)
 {
     (void)dt_sec;
     FOC_ControlRecordPhaseOutputZero(&motor->phase_output_state, &motor->ctrl,
@@ -82,7 +82,7 @@ static void ReInit_ZeroOutput(foc_motor_t *motor, float dt_sec)
 }
 
 /* sin/cos 矢量平均采样机械角度 */
-static float ReInit_SampleMechanicalAngle(foc_align_state_t *rs)
+static float Align_SampleMechanicalAngle(foc_align_state_t *rs)
 {
     float sample_rad;
     if (FOC_Platform_ReadMechanicalAngleRad(&sample_rad) == 0U)
@@ -96,7 +96,7 @@ static float ReInit_SampleMechanicalAngle(foc_align_state_t *rs)
 }
 
 /* 从 sin_sum/cos_sum 计算机械角度 */
-static float ReInit_AngleFromSum(const foc_align_state_t *rs)
+static float Align_AngleFromSum(const foc_align_state_t *rs)
 {
     if ((fabsf(rs->sin_sum) < 1e-6f) && (fabsf(rs->cos_sum) < 1e-6f))
     {
@@ -121,7 +121,7 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
     if (rs->phase == FOC_ALIGN_PHASE_IDLE)
     {
         /* 停止电机 */
-        ReInit_ZeroOutput(motor, dt_sec);
+        Align_ZeroOutput(motor, dt_sec);
         motor->state.current_loop_ready = 0U;
 
         rs->phase = FOC_ALIGN_PHASE_STOP;
@@ -211,13 +211,13 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
 
             /* 进入对齐 */
             rs->phase = FOC_ALIGN_PHASE_ALIGN_SETTLE;
-            rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_ZERO_LOCK_SETTLE_MS);
+            rs->settle_cycles = Align_MsToCycles(dt_sec, FOC_CALIB_ZERO_LOCK_SETTLE_MS);
             rs->sin_sum = 0.0f;
             rs->cos_sum = 0.0f;
             rs->sample_count = 0U;
             rs->sample_target = FOC_CALIB_ZERO_LOCK_SAMPLE_COUNT;
 
-            ReInit_ApplyDAlign(motor, rs->calib_uq);
+            Align_ApplyDAlign(motor, rs->calib_uq);
         }
         return 1U;
     }
@@ -225,7 +225,7 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
     /* ========== ALIGN_SETTLE: D 轴对齐等待 ========== */
     case FOC_ALIGN_PHASE_ALIGN_SETTLE:
     {
-        ReInit_ApplyDAlign(motor, rs->calib_uq);
+        Align_ApplyDAlign(motor, rs->calib_uq);
 
         if (rs->settle_cycles > 0U)
         {
@@ -244,12 +244,12 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
     /* ========== ALIGN_SAMPLE: D 轴对齐采样 ========== */
     case FOC_ALIGN_PHASE_ALIGN_SAMPLE:
     {
-        ReInit_ApplyDAlign(motor, rs->calib_uq);
-        (void)ReInit_SampleMechanicalAngle(rs);
+        Align_ApplyDAlign(motor, rs->calib_uq);
+        (void)Align_SampleMechanicalAngle(rs);
 
         if (rs->sample_count >= rs->sample_target)
         {
-            float mech_zero = ReInit_AngleFromSum(rs);
+            float mech_zero = Align_AngleFromSum(rs);
             if (mech_zero >= -998.0f)
             {
                 motor->params.mech_angle_at_elec_zero_rad = mech_zero;
@@ -302,7 +302,7 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
                                             motor->ctrl.ud,
                                             motor->ctrl.uq);
 
-        rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
+        rs->settle_cycles = Align_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
         rs->sin_sum = 0.0f;
         rs->cos_sum = 0.0f;
         rs->sample_count = 0U;
@@ -330,12 +330,12 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
         }
         else
         {
-            (void)ReInit_SampleMechanicalAngle(rs);
+            (void)Align_SampleMechanicalAngle(rs);
         }
 
         if (rs->sample_count >= rs->sample_target)
         {
-            float mech_rad_est = ReInit_AngleFromSum(rs);
+            float mech_rad_est = Align_AngleFromSum(rs);
 
             if (rs->has_prev != 0U)
             {
@@ -415,7 +415,7 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
                                             motor->ctrl.ud,
                                             motor->ctrl.uq);
 
-        rs->settle_cycles = ReInit_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
+        rs->settle_cycles = Align_MsToCycles(dt_sec, FOC_CALIB_COARSE_STEP_SETTLE_MS);
         rs->sin_sum = 0.0f;
         rs->cos_sum = 0.0f;
         rs->sample_count = 0U;
@@ -443,7 +443,7 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
         }
         else
         {
-            (void)ReInit_SampleMechanicalAngle(rs);
+            (void)Align_SampleMechanicalAngle(rs);
         }
 
         if (rs->sample_count >= rs->sample_target)
@@ -457,7 +457,7 @@ uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec)
     case FOC_ALIGN_PHASE_FINALIZE:
     {
         /* 归零输出 */
-        ReInit_ZeroOutput(motor, dt_sec);
+        Align_ZeroOutput(motor, dt_sec);
 
         /* 强制 PWM 输出 50% 中点（零电压），绕过 ISR 延迟 */
         SVPWM_ApplyDirectDuty(&motor->svpwm, 0U, 0.5f, 0.5f, 0.5f);

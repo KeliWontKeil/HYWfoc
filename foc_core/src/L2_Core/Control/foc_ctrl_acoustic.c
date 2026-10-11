@@ -1,3 +1,4 @@
+#include "L2_Core/foc_motor_aggregate.h"
 #include "L2_Core/Control/foc_ctrl_acoustic.h"
 
 #include "LS_Config/foc_ringtone_table.h"
@@ -23,9 +24,14 @@ static void Acoustic_StartStep(foc_acoustic_state_t *ac)
 
 void FOC_Acoustic_Init(foc_acoustic_state_t *ac)
 {
-    ac->axis = FOC_ACOUSTIC_DEFAULT_AXIS;
+    ac->axis = FOC_ACOUSTIC_OUTPUT_AXIS;
     ac->amplitude_v = FOC_ACOUSTIC_AMPLITUDE_V;
-    ac->env_step = 1.0f;
+    /* 包络步进 = 1 / 包络时长拍数（时长为 0 的情形由编译期校验阻断） */
+    ac->env_step = 1.0f / ((float)FOC_ACOUSTIC_ENVELOPE_MS * 0.001f * (float)FOC_CURRENT_LOOP_FREQ_HZ);
+    if (ac->env_step > 1.0f)
+    {
+        ac->env_step = 1.0f;
+    }
 
     FOC_Acoustic_Reset(ac);
 }
@@ -38,6 +44,7 @@ void FOC_Acoustic_Reset(foc_acoustic_state_t *ac)
     ac->step_len = 0U;
     ac->step_idx = 0U;
     ac->step_ticks = 0U;
+    ac->bpm = 0U;
     ac->phase_inc_rad = 0.0f;
     ac->env = 0.0f;
 }
@@ -45,8 +52,8 @@ void FOC_Acoustic_Reset(foc_acoustic_state_t *ac)
 /* 播放铃声表条目（调用方上下文：查表 → 解码 → 音域收敛 → 启动） */
 uint8_t FOC_Acoustic_PlayTune(foc_acoustic_state_t *ac, uint8_t tune_id)
 {
-    const foc_ringtone_entry_t *entry;
     uint16_t count = 0U;
+    uint16_t bpm = 0U;
     uint16_t i;
 
     if ((uint32_t)tune_id >= (uint32_t)FOC_RINGTONE_COUNT)
@@ -54,9 +61,8 @@ uint8_t FOC_Acoustic_PlayTune(foc_acoustic_state_t *ac, uint8_t tune_id)
         return 0U;
     }
 
-    entry = &foc_ringtone_table[tune_id];
-    if (FOC_Ringtone_Parse(entry->rtttl, ac->steps,
-                           (uint16_t)FOC_ACOUSTIC_SEQ_CAPACITY, &count) == 0U)
+    if (FOC_Ringtone_Parse(foc_ringtone_table[tune_id], ac->steps,
+                           (uint16_t)FOC_ACOUSTIC_SEQ_CAPACITY, &count, &bpm) == 0U)
     {
         return 0U;
     }
@@ -70,15 +76,7 @@ uint8_t FOC_Acoustic_PlayTune(foc_acoustic_state_t *ac, uint8_t tune_id)
         }
     }
 
-    ac->axis = entry->axis;
-    ac->amplitude_v = entry->amplitude_v;
-    /* 包络步进 = 1 / 包络时长拍数（时长为 0 的情形由编译期校验阻断） */
-    ac->env_step = 1.0f / ((float)entry->envelope_ms * 0.001f * (float)FOC_CURRENT_LOOP_FREQ_HZ);
-    if (ac->env_step > 1.0f)
-    {
-        ac->env_step = 1.0f;
-    }
-
+    ac->bpm = bpm;
     ac->tune_id = tune_id;
     ac->step_len = count;
     ac->step_idx = 0U;
@@ -174,6 +172,36 @@ uint8_t FOC_Acoustic_ModeStep(foc_acoustic_state_t *ac,
     }
 
     return ac->active;
+}
+
+/* 触发收口：协议 A 组与 L1 内部事件共用（进入 ACOUSTIC 相位，控制环停止输出） */
+uint8_t FOC_Acoustic_RequestTune(foc_motor_t *motor, uint8_t tune_id)
+{
+    if ((motor->state.system_fault != 0U) || (motor->state.motor_enabled == 0U))
+    {
+        return 0U;
+    }
+    if ((motor->state.control_phase != FOC_CONTROL_PHASE_NORMAL) &&
+        (motor->state.control_phase != FOC_CONTROL_PHASE_ACOUSTIC))
+    {
+        return 0U;
+    }
+
+    if (FOC_Acoustic_PlayTune(&motor->acoustic_state, tune_id) == 0U)
+    {
+        return 0U;
+    }
+
+    /* 切换 control_phase 前同步自动退出检查基准，避免第一拍被误判模式变化而中止 */
+    motor->mode_transition.prev_control_mode_check = motor->state.control_mode;
+    motor->state.control_phase = FOC_CONTROL_PHASE_ACOUSTIC;
+    return 1U;
+}
+
+void FOC_Acoustic_RequestStop(foc_motor_t *motor)
+{
+    /* 走释放段而非硬切：避免爆音与直流尾；相位由曲终在 L1 控制触发收回 NORMAL */
+    FOC_Acoustic_Stop(&motor->acoustic_state);
 }
 
 #endif /* FOC_ACOUSTIC_ENABLE */

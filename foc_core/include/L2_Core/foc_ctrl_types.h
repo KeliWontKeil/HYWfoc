@@ -145,6 +145,11 @@ typedef struct {
     float ibeta;
     /* 本拍生效的电流环电压基准 [V]，来源由 FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE 决定 */
     float vbus_voltage_base;
+#if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
+    /* 本拍实际叠加的注入轴掩码（共享 sink 在唯一叠加点写入；0 = 本拍无注入）。
+     * 遥测按此解读解调支路，故对声学播放期同样正确（单一事实源）。 */
+    uint8_t inject_axis;
+#endif
 } foc_control_runtime_t;
 
 /* ========== 控制参考（控制 ISR → 电流环 ISR 单点原子发布块） ========== */

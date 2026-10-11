@@ -136,6 +136,10 @@
 #if (FOC_ACOUSTIC_ENVELOPE_MS < 1U)
 #error "FOC_ACOUSTIC_ENVELOPE_MS must be >= 1 (envelope prevents click and DC tail)"
 #endif
+/* HFI 估计器经注入基础设施产生载波并消费其解调结果，故依赖注入基础设施 */
+#if (FOC_ESTIMATOR_HFI_ENABLE == FOC_CFG_ENABLE) && (FOC_INJECTION_ENABLE != FOC_CFG_ENABLE)
+#error "FOC_ESTIMATOR_HFI_ENABLE requires FOC_INJECTION_ENABLE (HFI carrier is produced by the injection sink)"
+#endif
 #if ((FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_DISABLE) && (FOC_CURRENT_SOFT_SWITCH_ENABLE != FOC_CFG_ENABLE))
 #error "FOC_CURRENT_SOFT_SWITCH_ENABLE must be FOC_CFG_ENABLE or FOC_CFG_DISABLE"
 #endif
