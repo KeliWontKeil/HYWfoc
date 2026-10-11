@@ -111,8 +111,8 @@ void DebugStream_CaptureOscSnapshot(debug_stream_state_t *ds, const foc_motor_t 
     ds->snapshot.channel[9] = 0.0f;
 #endif
 #if (FOC_INJECTION_ENABLE == FOC_CFG_ENABLE)
-    /* 主轴 = 注入轴掩码中 D 优先的轴 */
-    ds->snapshot.channel[10] = ((motor->injection_state.axis & FOC_INJECTION_AXIS_D) != 0U)
+    /* 主轴 = 本拍实际注入轴掩码中 D 优先的轴 */
+    ds->snapshot.channel[10] = ((motor->ctrl.inject_axis & FOC_INJECTION_AXIS_D) != 0U)
                                ? motor->injection_state.demod.mag_d
                                : motor->injection_state.demod.mag_q;
 #else
@@ -290,7 +290,7 @@ static uint8_t DebugStream_PollSemantic(debug_stream_state_t *ds,
             elem_out->value = 0.0f;
             if ((motor != 0) && (FOC_Injection_IsActive(&motor->injection_state) != 0U))
             {
-                uint8_t is_q = ((motor->injection_state.axis & FOC_INJECTION_AXIS_D) == 0U) ? 1U : 0U;
+                uint8_t is_q = ((motor->ctrl.inject_axis & FOC_INJECTION_AXIS_D) == 0U) ? 1U : 0U;
 
                 if (idx == 10U)
                 {

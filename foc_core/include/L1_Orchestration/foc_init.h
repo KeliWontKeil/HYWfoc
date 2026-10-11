@@ -35,11 +35,8 @@ uint8_t FOC_Init_IsVbusSafe(const sensor_data_t *sensor);
 uint8_t FOC_Init_VbusGate(sensor_data_t *sensor);
 
 /* 就绪前静态校验：通信/协议/命令/调试/PWM/传感器/母线电压（不含电机参数就绪位），
- * 决定 system_running / system_fault。vbus_ok 来自 FOC_Init_VbusGate。 */
+ * 决定 system_running / system_fault。vbus_ok 来自 FOC_Init_VbusGate。
+ * 电机参数就绪位由 L2 `FOC_Control_VerifyMotor` 在对齐完成后判定。 */
 void FOC_Init_Verify_Static(foc_motor_t *motor, uint8_t vbus_ok);
-
-/* 就绪后电机参数就绪判定（STARTUP 对齐完成时调用，ISR 上下文安全：仅状态字段 + fast 短码）。
- * 返回 1=就绪并进入可运行状态，0=参数未定义（置初始化失败）。 */
-uint8_t FOC_Init_Verify_Motor(foc_motor_t *motor);
 
 #endif /* FOC_INIT_H */

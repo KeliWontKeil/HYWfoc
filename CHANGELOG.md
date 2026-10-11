@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-10-11
+
+### Changed
+- **L2→L1 反向依赖清零（协议层不再包含任何 `L1_Orchestration/` 头）**：
+  - 声学触发收口由 L1 `FOC_App_PlayTune/StopTune` 下移为 L2 `FOC_Acoustic_RequestTune/RequestStop`（`foc_ctrl_acoustic`），与既有 `aaYI`→`FOC_Align_Request`、`Y:G`→`FOC_CoggingCalib_RequestStart` 同一范式；协议 `A:P/A:S` 直调 L2。
+  - 特殊相位中止由 L1 `FOC_App_AbortSpecialPhase` 下移为 L2 `FOC_ControlExecutor_AbortSpecialPhase`（executor facade——L2 内跨块分发唯一收口）；fast 通告改直调 L3 平台 API；协议 `Y:A` 与 L1 自动退出守卫共用同一实现。
+- **初始化/恢复判定归位 L2（消除同一判据多处各写一份）**：原 `FOC_App_ShouldStartupAlign`（L1）与协议 `Y:C` 内联判据合并为 L2 `FOC_Control_ShouldStartupAlign`；`Y:C` 的 20 行状态复位收口为 `FOC_ControlExecutor_RecoverFault`；电机参数就绪判定 `FOC_Init_Verify_Motor` 下移为 L2 `FOC_Control_VerifyMotor`（STARTUP 完成与对齐被中止共用）。
+- **模块级 static 可变状态清零（新约束：模块内 static 一律收敛进系统/电机结构体）**：
+  - 新增 L1 `foc_app_event`(应用级事件通告) + `foc_system_t.events`（跨 reinit 保持，避免就绪提示音重复/故障跃迁漏报）；删除冗余双事实源 `s_startup_done_pending`（对齐完成报告单一由 `align_state.report_pending` 派生）。
+  - 电流环控制参考快照 `s_ctrl_ref_snap`（原 L2 静态实例）上收为 `foc_motor_t.ctrl_ref_snap`。
+  - 协议层 `g_report_config` 指针删除：`report` 改为逐次显式传参（`FOC_Protocol_ProcessSingle/QueueParams/QueueStates`）；`FOC_Protocol_Init`→`FOC_Protocol_InitReport`，`FOC_Protocol_GetReportConfig` 删除（L1 直接用 `&sys->cfg.report`）。
+- **`foc_app.c` 收敛为纯编排主干**：事件通告（fault 补发 / 就绪播报 / 对齐报告）迁至 `foc_app_event`；启动阶段选择、声学触发、相位中止分别归位 L2。
+- **宏裁剪链路一致**：`FOC_SPECIAL_PHASE_ABORT_ENABLE` 条件补入 `FOC_ACOUSTIC_ENABLE`（与 `architecture.md` 声明一致）；新增编译期约束「`FOC_ESTIMATOR_HFI_ENABLE` 需要 `FOC_INJECTION_ENABLE`」；`RUNTIME_INIT_CHECK_STATIC_ALL` 单点定义静态校验位。
+- **符号/接口统一**：删除与注入同值的重复轴符号 `FOC_ACOUSTIC_AXIS_D/Q`（声学轴改用 `FOC_INJECTION_AXIS_*`）；`foc_ctrl_align.h` disable 分支补齐 `FOC_Align_Abort` 桩。
+- **死代码清理**：`FOC_ControlExecutor_SafeOutput/Stop`（与 `FullStop` 等价别名）、`FOC_OutputMgr_GetOverflowCount`、`FOC_OutputMgr_WriteFastEvent`（中止归位 L2 后无调用者）、`runtime_step_signal_t`（旧 runtime 遗留）、`foc_init.c` 重复 `#include <stdio.h>`、`FOC_MotorInit` 重复赋值 `applied_output.valid`；`foc_debug_stream.h` 补 `foc_motor_t` 前向声明（头文件自包含，消除 include 顺序依赖）。
+- **预留基础设施标注（保留不删，供后续接入）**：HFI 载波/解调链路（`Configure/SetEnable/HfiStep` 当前无驱动者）、`estim_hfi_state`（约定解调结果唯一来源为注入模块 `demod`，不重复实现）、`inj_d/inj_q`、`acoustic_state.axis/amplitude_v/tune_id`（预留运行时/上报入口）均加注说明。
+
+### 验证（第一轮：结构整理）
+- `unify_builder --rebuild` 默认档 **0 error / 0 warning**。
+- ROM 47420 B（改动前 47460 B，−40 B）、RAM 9656 B（持平）—— 结构整理无空间回归。
+- 构建入口三处同步：`builder.params`、`.eide/eide.yml`、`Project.uvprojx`（3 个 target 各新增 `foc_app_event.c`）。
+
+### Changed（第二轮：轴语义分层 + 命名去歧义）
+- **对齐状态机内部命名去歧义**：`foc_ctrl_align.c` 内部 `ReInit_*` → `Align_*`（5 定义 + 13 调用）——原名前缀是 `foc_ctrl_sens_reinit.c` 改名遗留，且与 `FOC_ALIGN_PHASE_REINIT`（命令重新对齐相位）语义冲突。
+- **轴：编码归 sink 接口、选轴归功能域**（原实现由基础设施替功能选轴，语义颠倒）：
+  - `FOC_INJECTION_AXIS_*` 明确为**共享 sink 的入参编码（不含策略）**，注释列出各功能的选轴归属。
+  - `FOC_Injection_Init` 改为**零初值（未配置即无输出，fail-safe）**：基础设施不再替功能选轴/频率/幅值；`FOC_Injection_Configure` 成为功能启用前的唯一配置入口。
+  - 新增 **HFI 域**载波默认值 `FOC_HFI_INJECT_AXIS` / `FOC_HFI_DEFAULT_FREQ_HZ` / `FOC_HFI_DEFAULT_AMPLITUDE_V`（由凸极/解调前提的数学性质决定，**非用户可调项**；原 `FOC_INJECTION_DEFAULT_*` 迁入该域）。
+  - 声学域：`FOC_ACOUSTIC_DEFAULT_AXIS` → **`FOC_ACOUSTIC_OUTPUT_AXIS`**（"输出轴"，用户可调；注释写明 D/Q 的物理取舍），消除"声学轴＝注入轴取值"的跨域别名暗示。
+- **遥测注入轴单一事实源**：`foc_control_runtime_t` 新增 `inject_axis`（本拍**实际**叠加轴，由共享 sink 在唯一叠加点写入；executor 在 4b 入口与 ACOUSTIC 输出入口清零、`FullStop` 清零）；`foc_debug_stream` 改读该字段——声学播放期的遥测轴不再使用陈旧的 HFI 配置轴。
+
+### 验证（第二轮：轴语义分层）
+- 默认档 / `FOC_ACOUSTIC_ENABLE=DISABLE` / `FOC_INJECTION_ENABLE=DISABLE`（+声学关）三组均 **0 error / 0 warning**。
+- 默认档 ROM **47144 B（46.04 KB，较上一轮 47420 B −276 B；`Configure` 不再被 Init 调用而由链接器裁剪，预留 API 无调用者零成本）**、RAM 9656 B（持平）；`ACOUSTIC=DISABLE` 43696 B / 7584 B；`INJECTION=DISABLE` 42292 B / 7480 B。
+- 行为等价性：声学默认仍为 Q 轴、幅值/包络/频率不变；HFI 未接入（`enabled` 恒 0）→ 运行行为不变。
+
+### Fixed（第三轮：声学回报强度不一致）
+- **现象**：自动触发的声学回报（上电长鸣 / 其后两短鸣）与协议 `A:P` 触发的同一铃声**听感强度不一致**。
+- **定位（幅值链已逐项核对为恒等，非传参错误）**：`amplitude_v`(=6.0)、`env`(→1.0)、`axis`(=Q)、`vbus_voltage_base`(=12，SETPOINT 档)、限幅 `min(max_phase_voltage=12, 0.84·12=10.08)`、`voltage_command`（与角度无关）两条路径完全相同。
+  **真正差异是"注入参考角"**：`RunAcousticOutput` 用 `ctrl.electrical_angle_rad` 做逆 Park，而 ACOUSTIC 相位在 `RunISR_CurrentLoop` 中提前 return（不进入电流环核）⇒ `FOC_SourceMgr_Publish` 从不执行 ⇒ **角度被冻结**；两条入口冻结到不同的值：上电路径恰逢对齐 FINALIZE 刚 `RebuildControlBasis` 清零（≈0，且首个 NORMAL 拍尚未发布），协议路径为最后一次源发布的真实电角度。实测（手拨转子）亦证明该电机的听感对"注入相对转子的方向"敏感 ⇒ 两者听感不同。
+- **修复**：声学注入参考角改由**声学域显式决定**（新增 `FOC_ControlExecutor_AcousticRefAngle`，仅声学输出例程调用）：
+  - **可信角度源 → 跟随转子/估计器**（`FOC_SourceMgr_ReadSourceAngle(active_source)`：编码器有效 / 估计器已收敛 / 开环有效）；
+  - **无可靠源 → 保持现值**（纯无感未收敛、HFI·FLUX 源、编码器无效、参数未标定）——天然退化为原"冻结角"行为，不把可疑估计角送进功率级；
+  - 参考角作为**显式参数**传入 `FOC_ControlApplyElectricalAngleDirect`（Direct 路径本已写回 `ctrl.electrical_angle_rad`）⇒ 顺带修掉"遥测角度（实时）≠ 控制使用角度（冻结）"的不一致；
+  - FAST 档适配：该档编码器由电流环 ISR 自持而声学相位跳过电流环核，故在取角前补一次 `Sensor_ReadEncoder`。当前档（FAST=DISABLE）编码器由控制 ISR 每 1 kHz 采样并经 `ctrl_ref` 原子发布（ACOUSTIC 期间照常）⇒ **零新增读取、不改中断结构**。
+- **不涉及的路径**（避免顾此失彼）：`foc_injection` sink（不感知角度/不持策略）、`HfiStep`、`foc_ctrl_actuation`（API 本就参数化）、协议层均未改动。
+- **新增统一原则（写入注释）**：注入的 **轴 / 幅值 / 频率 / 参考角** 四项均属**驱动功能域**——声学（跟随或保持）、HFI（估计器自己的坐标帧，须与解调帧一致）、参数辨识（算法锁存/固定，测量期坐标系须稳定）；sink 只负责"在给定坐标系下叠加波形并解调"。
+
+### 验证（第三轮：声学强度修复，已实机确认）
+- 三组宏（默认 / `ACOUSTIC=DISABLE` / `INJECTION=DISABLE`+声学关）均 **0 error / 0 warning**；默认档 ROM 47200 B（+56 B）、RAM 9656 B（持平）。
+- 实机确认（用户）：`A:P0` 与上电长鸣听感一致；手拨转子到不同角度重复播放强度不再随位置大幅变化（"跟随转子"生效）。
+
+### 记录为独立问题（标定/硬件，不在本轮修复范围）
+- **对齐零点 vs 控制角度基准偏差**（低齿槽云台电机 + 轴摔弯 ⇒ 磁路不对称）：属标定精度问题，会同时影响换向质量与声学听感；后续可考虑零点标定的多位置一致性校验/合理性检查。
+- FAST 档 I2C 编码器读入 ISR 的耗时余量（既有优化议题）。
+
 ## [2.5.0] - 2026-10-10
 
 ### Changed

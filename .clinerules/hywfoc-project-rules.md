@@ -29,9 +29,9 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 | 层级 | 位置 | 职责 | 实例化职责 |
 |---|---|---|---|
 | `LS` | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
-| `L1` | `foc_core/src/L1_Orchestration/` | 启动流程、主循环编排、实例化核心数据结构 | **持有所有运行时实例**（foc_motor_t、foc_system_t、队列缓冲区） |
-| `L2/Control` | `foc_core/src/L2_Core/Control/foc_ctrl_*.c` | 控制算法（执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出） | 不持实例，操作传入的 `foc_motor_t` 指针 |
-| `L2/Protocol` | `foc_core/src/L2_Core/Protocol/foc_protocol_*.c` | **命令语义执行**：L3 codec 产出命令→修改 motor→返回结果。不读帧、不入队、不轮询 | 不持实例，指针由 L1 传入 |
+| `L1` | `foc_core/src/L1_Orchestration/` | 启动流程、主循环编排、**应用级事件通告（`foc_app_event`）**、实例化核心数据结构 | **持有所有运行时实例**（foc_motor_t、foc_system_t、队列缓冲区、事件状态） |
+| `L2/Control` | `foc_core/src/L2_Core/Control/foc_ctrl_*.c` | 控制算法（执行器/配置/初始化/外环/电流环/参数学习/补偿/执行输出/**相位中止分派/错误复位收口**/注入基础设施/声学序列） | 不持实例，操作传入的 `foc_motor_t` 指针 |
+| `L2/Protocol` | `foc_core/src/L2_Core/Protocol/foc_protocol_*.c` | **命令语义执行**：L3 codec 产出命令→修改 motor 或转调 L2/Control 请求收口→返回结果。不读帧、不入队、不轮询、不持配置指针 | 不持实例，指针由 L1 传入 |
 | `L2/Runtime` | `foc_core/src/L2_Core/Runtime/` | 调度器、环形队列（**纯方法模块**）、调试流生成器（逐行生成，不写队列） | 队列类型可实例化，但实例在 L1 分配 |
 | `L3` | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、协议编解码（codec） | 无实例（纯函数） |
 | `L4` | `examples/.../software/Utilities/` | 外设驱动与芯片库实现 | 芯片固有实例 |
@@ -43,6 +43,8 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 - 配置常量必须收敛在 `foc_cfg_*.h`，禁止在业务 `.c` 中散落默认值
 - **L2 任何模块不得反向包含 `L1_Orchestration/` 头文件**
 - **L2 任何模块不得持有实例**——所有实例在 L1 中分配，L2 通过指针参数操作
+- **禁止模块级 static 可变状态**：模块内 `static` 可变变量即隐藏状态，必须收敛进 `foc_system_t` / `foc_motor_t` 或由 L1 持有的实例；仅 `static const` 数据表与 `static` 函数允许。L1 文件级实例（`g_sys`、`motor`、事件状态）是唯一"实例持有"形态
+- **控制类命令的收口在 L2**：协议层不得反向包含 L1 头，也不得内联重写控制状态机（判据/顺序的唯一实现在 L2）；一律转调 L2/Control 的 Request/收口函数（`FOC_Align_Request*`、`FOC_CoggingCalib_Request*`、`FOC_Acoustic_Request*`、`FOC_ControlExecutor_AbortSpecialPhase` / `RecoverFault`）
 
 ## Platform API contract
 
@@ -56,8 +58,8 @@ HYWfoc（何易位FOC）是一个磁场定向控制（FOC）项目，采用"核�
 
 L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功能分组列出：
 
-- `foc_ctrl_executor` — 算法入口（外环/内环/开环/补偿入口）
-- `foc_ctrl_init` — 数据结构初始化、平台硬件初始化收口、控制基准重建、电机参数就绪判据
+- `foc_ctrl_executor` — 算法入口（外环/内环/开环/补偿入口；**特殊相位中止分派**、**ACOUSTIC 输出例程（含声学注入参考角决定）**、**错误复位收口**）
+- `foc_ctrl_init` — 数据结构初始化、平台硬件初始化收口、控制基准重建、电机参数就绪判据（`FOC_Control_VerifyMotor`）、启动阶段选择判据（`FOC_Control_ShouldStartupAlign`）
 - `foc_ctrl_cfg` — 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter）
 - `foc_ctrl_source_mgr` — Source Manager：在 PWM ISR 中运行/读取 source、选择 active source
 - `foc_ctrl_openloop` — OpenLoop angle source 实现 + OpenLoop low-speed policy
@@ -70,8 +72,8 @@ L2/Control 控制链模块统一按 `foc_ctrl_<name>.c/.h` 命名。以下按功
 - `foc_ctrl_compensation` — 齿槽补偿
 - `foc_ctrl_sens_cogging_calib` — 有感齿槽标定（非阻塞状态机）
 - `foc_ctrl_align` — 有感对齐/标定状态机（上电 STARTUP 与命令 aaYI 共用同一实现）
-- `foc_ctrl_injection` — 注入基础设施（共享 sink：单一叠加点 + 相位/正弦 + 同拍解调；HFI 由控制态驱动、声学由 ACOUSTIC 相位驱动）
-- `foc_ctrl_acoustic` — 声学序列引擎（ACOUSTIC 相位的序列 + 包络，产出波形规格；不自叠加）
+- `foc_ctrl_injection` — 注入基础设施（共享 sink：单一叠加点 + 相位/正弦 + 同拍解调；HFI 由控制态驱动、声学由 ACOUSTIC 相位驱动；**不持策略、不感知参考角**——轴/幅值/频率/参考角归驱动功能域）
+- `foc_ctrl_acoustic` — 声学序列引擎 + 触发收口（`FOC_Acoustic_RequestTune/RequestStop`，协议 A 组与 L1 就绪播报共用；ACOUSTIC 相位的序列 + 包络，产出波形规格；不自叠加）
 - `foc_ctrl_actuation` — 执行输出（SVPWM 驱动）
 
 ## Configuration macro & type management
@@ -84,13 +86,16 @@ LS_Config 文件分为三大类：
 - `foc_cfg_init_values.h` — 默认值
 - `foc_compile_limits.h` — 编译期约束检查（不单独 `#include`，由 `foc_config.h` 按序包含）
 
-**B. 类型定义文件（通过 `foc_shared_types.h` 聚合或直接引用）**
-- `foc_math_types.h` — kalman_filter_t, foc_pid_t
-- `foc_motor_types.h` — motor 聚合结构体
-- `foc_scheduler_types.h` — FOC_TaskRate_t 调度枚举
-- `foc_protocol_types.h` — protocol_command_t, 解析器枚举
-- `foc_runtime_types.h` — runtime_step_signal_t, init_check / fault 码
-- `foc_snapshot_types.h` — 快照/视图结构体
+**B. 类型定义文件（按层归属，直接引用）**
+- `L3_Hal/foc_math_types.h` — kalman_filter_t, foc_pid_t
+- `L3_Hal/foc_filter_types.h` — 滤波器状态类型
+- `L2_Core/foc_ctrl_types.h` — 控制总线/状态/阶段/配置/PID 限幅等共享类型
+- `L2_Core/foc_motor_aggregate.h` — `foc_motor_t` 聚合结构体（含各条件编译子状态）
+- `L2_Core/Runtime/foc_runtime_types.h` — 调度枚举、init_check / fault 码
+- `L2_Core/Runtime/foc_monitor_queue_types.h` — monitor 元素类型
+- `L2_Core/Protocol/foc_protocol_types.h` — protocol_command_t、解析器枚举、report 配置
+- `L1_Orchestration/foc_system_types.h` — `foc_system_t` 及其运行时/事件子结构
+- 各模块私有状态类型定义在其模块头（如 `foc_ctrl_align.h` 的 `foc_align_state_t`、`foc_ctrl_acoustic.h` 的 `foc_acoustic_state_t`）
 
 **C. 数据表文件**
 - `foc_cogging_table.h` — 静态齿槽补偿默认表
@@ -98,7 +103,7 @@ LS_Config 文件分为三大类：
 
 **约束**：
 - 宏头文件之间不交叉依赖（不互相 `#include`）
-- 统一入口：`foc_config.h`（业务代码只包含此文件） + `foc_shared_types.h`（类型聚合）
+- 统一入口：`foc_config.h`（配置宏唯一入口，业务代码只包含此文件）；类型按层各归其头文件，不存在集中聚合头
 - 已无 `cfg` 前缀的非设置项文件（`foc_symbol_defs.h` 已去 `cfg`）
 - 各 `.c` 文件中枚举/结构体定义已全部收敛至 LS 层对应类型文件
 - 所有可配置宏定义均需移至该层，作为可自定义的参数
@@ -111,6 +116,7 @@ LS_Config 文件分为三大类：
 - **宏命名**：`UPPERCASE_WITH_UNDERSCORES`
 - **类型命名**：`xxx_t` 后缀
 - **条件编译**：宏裁剪链路必须声明/定义/调用三者一致，关闭宏后必须同步收口所有引用点
+- **模块级 static**：禁止 `static` 可变状态（隐藏状态→进 `foc_system_t`/`foc_motor_t` 或 L1 实例）；仅 `static const` 数据表与 `static` 函数允许
 - **指针校验**：只在指针**可能为 NULL** 时检查（跨层传入、可选参数、由调用方动态取得的实例），非法时返回 0 或直接 return；指针来源为构造上必然有效的地址（如 L1 传入的 `motor` 内嵌状态）时不检查——那是死代码，ISR 热路径尤其不写可证明无效的分支
 - **传参排序（耦合域规范）**：函数参数按 `[本域私有状态] → [跨域可写总线] → [跨域只读输入(const)] → [显式 out] → [标量(dt 最后)]` 分组排序；`const` 指针=只读输入，非 `const`=可写/状态。复杂跨域模块（SourceMgr）用上下文视图（`foc_source_mgr_ctx_t` / `foc_source_read_ctx_t`）收敛，其余域函数不引入 ctx 聚合
 - **ISR 路径**：禁止阻塞操作，避免浮点运算；优先转发到模块处理函数
@@ -229,3 +235,17 @@ set DOTNET_ROLL_FORWARD=Major
 
 #### 调试数据源
 - 调试/遥测输出应反映控制算法实际看到的数据（如 `ctrl_input`），而非独立采集原始传感器数据
+
+#### 模块级 static 可变状态禁止
+- 模块内 `static` 可变变量 = 隐藏状态：必须收敛进 `foc_system_t` / `foc_motor_t`，或由 L1 持有的实例。
+- 仅 `static const` 数据表（铃声表、LUT 等）与 `static` 函数允许；实例归属只在 L1（`g_sys`、`motor`、事件状态）。
+- 跨 reinit 需保持的事件/瞬态状态放 `foc_system_t.events`（非"每次 reinit 重置"的 `runtime` 段）；随 reinit 重置的放 `foc_runtime_ctx_t`。
+- 协议层不得缓存 L1 配置指针（如 report 配置），改为逐次显式传参。
+
+#### 注入参数归驱动功能域（轴 / 幅值 / 频率 / 参考角）
+- `foc_ctrl_injection` 是共享 sink：只负责"在给定坐标系下叠加波形并解调"，**不持策略、不感知参考角**（参考角由执行输出 API 显式传入）。
+- 四项参数由驱动该注入的功能决定：
+  - **声学**：`FOC_ACOUSTIC_OUTPUT_AXIS` + 幅值；参考角由声学输出例程决定——**可信源**（编码器有效 / 估计器已收敛 / 开环有效）跟随转子，**否则保持现值**（纯无感未收敛等天然退化，不把可疑估计角送进功率级）。
+  - **HFI**：`FOC_HFI_INJECT_AXIS` / `FOC_HFI_DEFAULT_*`（预留，由凸极与解调前提的数学性质决定，非用户可调）；参考角由估计器给出，且必须与解调帧一致（相干解调前提）。
+  - **参数辨识**：由其算法锁存/固定参考角（测量期内坐标系必须稳定，不能随时间抖动）。
+- sink 侧无功能默认值：`FOC_Injection_Init` 为零初值（未配置即无输出，fail-safe）。

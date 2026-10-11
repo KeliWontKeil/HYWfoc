@@ -1,6 +1,6 @@
 #include "LED.h"
 
-/* 逻辑索引→颜色映射：1=蓝(COMM)、2=绿(RUN)、3=红(ERROR)。 */
+/* 逻辑索引→GPIO 通道映射（物理颜色随 LED 封装而定，按需手动调整）。 */
 static void LED_Apply(uint8_t led_index, FlagStatus level)
 {
     switch (led_index)

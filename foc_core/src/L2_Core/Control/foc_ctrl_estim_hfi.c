@@ -15,8 +15,10 @@ void FOC_EstimHFI_Step(foc_estim_hfi_state_t *state, float dt_sec)
     (void)dt_sec;
 
     /*
-     * TODO: 预收敛速度门限检查（参考 SMO 实现），在支持收敛状态机后引入。
-     *   FOC_HFI_ACCEL_PRECONV_SPEED_THRESHOLD_RAD_S
+     * 预留（HFI 状态机未接入）：实现时在此读取注入解调结果
+     * （motor 侧 foc_injection_state_t.demod）并做预收敛速度门限检查（参考 SMO 实现）。
+     * 载波参数取本域默认值（FOC_HFI_INJECT_AXIS / FOC_HFI_DEFAULT_*），
+     * 启用前调用 FOC_Injection_Configure 下发；门限值届时一并在 foc_cfg_init_values.h 补齐。
      */
 }
 

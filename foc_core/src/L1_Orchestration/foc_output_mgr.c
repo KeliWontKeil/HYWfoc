@@ -29,14 +29,6 @@ void FOC_OutputMgr_Init(foc_system_t *sys)
               FOC_RX_QUEUE_DEPTH);
 }
 
-void FOC_OutputMgr_WriteFastEvent(const char *text)
-{
-    /* 突发一次性事件通告：底层 fast 通道。调用方须保证文本简短、关键字段前置、
-     * 允许尾部截断；常规长文本禁用本通道（走主循环慢路径）。 */
-    if (text == 0) return;
-    FOC_Platform_WriteDebugFast(text);
-}
-
 void FOC_OutputMgr_FlushQueue(foc_system_t *sys)
 {
     uint8_t sent = 0U;
@@ -53,12 +45,6 @@ void FOC_OutputMgr_FlushQueue(foc_system_t *sys)
         FOC_Platform_WriteDebugText(buf);
         sent++;
     }
-}
-
-uint8_t FOC_OutputMgr_GetOverflowCount(const foc_system_t *sys)
-{
-    if (sys == 0) return 0U;
-    return sys->runtime.output.tx_fifo.overflow_count;
 }
 
 static void FOC_OutputMgr_PollOneSource(foc_system_t *sys, uint8_t source_idx)

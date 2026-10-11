@@ -28,7 +28,7 @@
 #define FOC_CURRENT_LOOP_ISR_FREQ      (FOC_PWM_FREQ_KHZ / FOC_CURRENT_LOOP_ISR_DIVIDER)
 
 /* 三 ISR 模式：电流环独立 ISR 频率（Hz），与 PWM 频率解耦 */
-#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   8000U
+#define FOC_CURRENT_LOOP_ISR_FREQ_HZ   12000U
 #define FOC_CONTROL_DT_SEC             (1.0f / (float)FOC_SCHEDULER_CONTROL_HZ)
 
 /* 电流环周期（秒）：按 FOC_CURRENT_LOOP_ISR_MODE 收敛的唯一真值，所有电流环 ISR 内模块统一使用
@@ -67,8 +67,8 @@
 #define FOC_MOTOR_INIT_DIRECTION_DEFAULT FOC_DIR_UNDEFINED
 
 /* Motor initialization parameters. */
-#define FOC_MOTOR_INIT_VBUS_DEFAULT 6.0f
-#define FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT 6.0f
+#define FOC_MOTOR_INIT_VBUS_DEFAULT 12.0f
+#define FOC_MOTOR_INIT_MAX_PHASE_VOLTAGE_DEFAULT 12.0f
 /* max_phase_voltage 限制相电压幅值(≤ VBUS)，用于 PID 饱和、过调制限制、电流计算。 */
 #define FOC_SVPWM_MAX_DUTY_CYCLE 0.92f
 /* max_duty_cycle 限制 SVPWM 占空比对称上限(如 0.85 → duty∈[0.15,0.85])，
@@ -176,11 +176,11 @@
 #define FOC_DEFAULT_SPEED_ANGLE_TRANSITION_END_RAD 0.6f
 #define FOC_ZERO_VECTOR_CLAMP_VOLTAGE_THRESHOLD_V 0.05f
 
-/* 高频/任意频率注入默认值（被动工具：Configure 后 SetEnable 生效）
+/* 高频/任意频率注入基础设施常量（被动工具：Configure 后 SetEnable 生效）。
+ * 注意：本组**不含功能默认值**——注入哪个轴、什么频率/幅值由驱动该注入的功能自己决定
+ * （声学：FOC_ACOUSTIC_OUTPUT_AXIS + 幅值；HFI/辨识：见下方 HFI 组）。
  * N_MIN：相干模式相位分箱下限（箱数不足则解调相位分辨率过差）
  * QUANT_ERROR_MAX：相干频点相对误差上限，超过则改走任意频率模式 */
-#define FOC_INJECTION_DEFAULT_FREQ_HZ 1000.0f
-#define FOC_INJECTION_DEFAULT_AMPLITUDE_V 0.5f
 #define FOC_INJECTION_COHERENT_N_MIN 4U
 #define FOC_INJECTION_COHERENT_N_MAX 64U
 #define FOC_INJECTION_QUANT_ERROR_MAX 0.02f
@@ -196,13 +196,18 @@
 #define FOC_INJECTION_DEMOD_SETTLE_DIV 16U
 #define FOC_INJECTION_DEMOD_MAG_LPF_ALPHA 0.25f
 
-/* 声学回报默认值：音频波形与电流环同拍生成（更新率 = 电流环率）。
- * AMPLITUDE 为峰值电压（真正的电压钳位在输出级，不在此重复设限）；ENVELOPE_MS 为起停包络；
- * DEFAULT_AXIS 为输出轴默认值。音域上限与音符容量属物理/实现事实，由声学模块内部收敛，不作配置项。 */
+/* HFI 估计器载波默认值（预留：HFI 状态机接入时以该组值调用 FOC_Injection_Configure）。
+ * 轴/频率由凸极与解调前提的数学性质决定，**不是用户可调项**（改为 Q 轴会破坏解调前提）。
+   实际是否使用该组值需实现时具体评估 */
+#define FOC_HFI_DEFAULT_FREQ_HZ 1000.0f
+#define FOC_HFI_DEFAULT_AMPLITUDE_V 0.5f
+#define FOC_HFI_INJECT_AXIS FOC_INJECTION_AXIS_D
+
+/* 声学回报默认值：AMPLITUDE 为峰值电压；ENVELOPE_MS 为起停包络；OUTPUT_AXIS 为声学输出轴*/
 #define FOC_ACOUSTIC_AMPLITUDE_V 6.0f
 #define FOC_ACOUSTIC_ENVELOPE_MS 10U
-#define FOC_ACOUSTIC_DEFAULT_AXIS FOC_ACOUSTIC_AXIS_Q
-/* 铃声音符解析容量（模块内部常量，非用户配置）：需容纳铃声表内最长曲目*/
+#define FOC_ACOUSTIC_OUTPUT_AXIS FOC_INJECTION_AXIS_Q
+/* 铃声音符解析容量：需容纳铃声表内最长曲目*/
 #define FOC_ACOUSTIC_SEQ_CAPACITY 512U
 
 /* PID default gains. */
@@ -245,11 +250,16 @@
  */
 #define FOC_COMM_MAX_FRAMES_PER_SERVICE  0U
 
-/*LED initialization defaults. */
+/* LED 指示器参数。
+ * 索引为板级物理通道号（索引→引脚映射随 LED 封装手动调整）；灯语义由 L1 foc_indicator.c 决定。*/
 #define FOC_LED_RUN_INDEX 1U
 #define FOC_LED_COMM_INDEX 2U
 #define FOC_LED_ERROR_INDEX 3U
+/* 运行态慢闪半周期（控制率拍） */
 #define FOC_LED_RUN_BLINK_HALF_PERIOD_TICKS 1000U
+/* 播放态按曲目节拍闪烁的半周期收敛区间（控制率拍）：半周期 = 30 · 控制率 / bpm */
+#define FOC_LED_PLAY_BLINK_MIN_HALF_TICKS 50U
+#define FOC_LED_PLAY_BLINK_MAX_HALF_TICKS 500U
 #define FOC_LED_COMM_PULSE_TICKS 10U
 
 /* ── SMO默认参数 ── */

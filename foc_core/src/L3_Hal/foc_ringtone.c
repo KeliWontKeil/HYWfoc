@@ -50,7 +50,8 @@ static uint16_t Ringtone_ReadUint(const char **pp)
 uint8_t FOC_Ringtone_Parse(const char *text,
                            foc_ringtone_step_t *steps_out,
                            uint16_t max_steps,
-                           uint16_t *count_out)
+                           uint16_t *count_out,
+                           uint16_t *bpm_out)
 {
     const char *p;
     uint16_t bpm = 63U;
@@ -58,7 +59,7 @@ uint8_t FOC_Ringtone_Parse(const char *text,
     uint8_t default_oct = 6U;
     uint16_t count = 0U;
 
-    if ((text == 0) || (steps_out == 0) || (count_out == 0) || (max_steps == 0U))
+    if ((text == 0) || (steps_out == 0) || (count_out == 0) || (bpm_out == 0) || (max_steps == 0U))
     {
         return 0U;
     }
@@ -241,6 +242,7 @@ uint8_t FOC_Ringtone_Parse(const char *text,
     }
 
     *count_out = count;
+    *bpm_out = bpm;
     return 1U;
 }
 

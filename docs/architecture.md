@@ -17,7 +17,7 @@ FOC_VSCODE/
 ├── foc_core/                         ← 平台无关可复用控制库
 │   ├── include/
 │   │   ├── LS_Config/           ← 符号定义、功能开关、默认值、编译期约束、类型定义、数据表
-│   │   ├── L1_Orchestration/    ← 应用编排（主循环、输出管理器、service handler、monitor queue types）
+│   │   ├── L1_Orchestration/    ← 应用编排（主循环、事件通告、初始化序列、输出管理器、指示器）
 │   │   ├── L2_Core/
 │   │   │   ├── Control/         ← 控制算法（Source Manager、Source、估计器、外环/电流环、特殊模式）
 │   │   │   ├── Protocol/        ← 协议帧解析、命令执行、输出适配
@@ -48,9 +48,9 @@ FOC_VSCODE/
 | 层级 | 主要位置 | 职责 | 实例化职责 |
 |---|---|---|---|
 | `LS` 配置层 | `foc_core/include/LS_Config/` | 符号定义、功能开关、默认值、编译期约束、类型定义、数据表 | 无实例（纯宏与类型） |
-| `L1` 编排层 | `foc_core/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、实例化和持有所有队列（comm RX FIFO、output TX FIFO、monitor element FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态） |
-| `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source 与 low-speed policy、估计器体系（编码器/SMO/HFI/FLUX）、外环、电流环、补偿、有感齿槽标定、**有感对齐/标定状态机（上电 STARTUP 与命令 aaYI 共用）**、执行输出、**FullStop 安全归零** | 不持实例，操作传入的 `foc_motor_t` 指针 |
-| `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **命令语义执行**：L3 codec（`foc_codec.h`）产出命令 → 修改 motor 字段 → 返回结果结构体。不读帧、不入队、不轮询 | 不持实例，工作所需指针由 L1 传入（系统 report 配置） |
+| `L1` 编排层 | `foc_core/src/L1_Orchestration/` | 启动流程、实例化核心数据结构（`foc_motor_t`、`foc_system_t`）、主循环编排、**应用级事件通告（`foc_app_event`：fault 补发 / 对齐报告 / 就绪播报）**、实例化和持有所有队列（comm RX FIFO、output TX FIFO、monitor element FIFO）、调度器/指示器管理 | **持有所有运行时实例**（系统结构体、队列缓冲区、调度器、调试流状态、事件状态） |
+| `L2/Control` | `foc_ctrl_*.c` | 控制算法：Source Manager、OpenLoop angle source 与 low-speed policy、估计器体系（编码器/SMO/HFI/FLUX）、外环、电流环、补偿、有感齿槽标定、**有感对齐/标定状态机（上电 STARTUP 与命令 aaYI 共用）**、**启动阶段选择判据 / 错误复位收口 / 电机参数就绪判定**、**特殊相位中止分派**、注入基础设施（sink）、声学序列引擎与触发收口、执行输出、**FullStop 安全归零** | 不持实例，操作传入的 `foc_motor_t` 指针 |
+| `L2/Protocol` | `foc_protocol_handler.c`、`foc_protocol_output.c`、`foc_protocol_parser.c` | **命令语义执行**：L3 codec（`foc_codec.h`）产出命令 → 修改 motor 字段 → 返回结果结构体；控制类命令一律调用 L2/Control 的请求收口（对齐 / 齿槽标定 / 声学 / 中止 / 恢复）。不读帧、不入队、不轮询、**不持有配置指针**（系统 report 由 L1 逐次显式传入） | 不持实例，工作所需指针由 L1 传入 |
 | `L2/Runtime` | `foc_task_scheduler.c`、`foc_queue.c`、`foc_debug_stream.c` | 调度器（任务速率管理）；环形队列（**纯方法模块**，不持实例，调用者传入队列指针）；调试流生成器（提供 PollNextValue + 格式化接口，由 L1 双上下文调用） | 队列类型可实例化，但实例在 L1 分配；调度器/调试流实例由 L1 持有 |
 | `L3` 基础服务层 | `foc_core/src/L3_Hal/` | 数学变换、LUT、平台抽象API、传感器采样、SVPWM、滤波器数学、**协议编解码（codec，`foc_codec.h/.c`）**、**铃声编解码（RTTTL，`foc_ringtone.h/.c`）** | 无实例（纯函数或操作 motor 中的字段） |
 | `L4` 板级驱动层 | `examples/.../software/Utilities/`、`Firmware/` | 外设驱动与芯片库实现 | 芯片固有实例 |
@@ -69,6 +69,8 @@ FOC_VSCODE/
 10. **传感器硬件存在性与算法使用分离**：`FOC_SENSOR_ENCODER_ENABLE` 控制编码器硬件层，`FOC_ESTIMATOR_ENCODER_ENABLE` 控制是否使用编码器作为反馈源。齿槽补偿/标定依赖 `FOC_SENSOR_ENCODER_ENABLE`。
 11. **有效性检查收口单一检查点**：传感器有效性检查仅在 L1 `FOC_App_ControlTrigger` 中执行，L2 `RunCycle` 不再重复检查。
 12. **L3 协议编解码（`foc_codec.h`）为可替换 seam**：只做 wire 语法 ↔ 裸数据的无业务语义转换，不 include 任何 L2/L1 业务类型；换接口/上位机只需改该模块，L2 语义层与 L1 编排零改动。
+13. **禁止模块级 static 可变状态**：模块内 `static` 可变变量即隐藏状态——状态一律收敛进系统/电机结构体（`foc_system_t` / `foc_motor_t`）或由 L1 持有的实例；仅 `static const` 数据表与 `static` 函数允许。L1 文件级实例（`g_sys`、`motor`、事件状态）是唯一的"实例持有"形态（L1 持有实例 ≠ 模块持有状态）。
+14. **控制类命令的 L2 调用收口**：协议层对控制行为的请求一律走 L2/Control 提供的 Request/收口函数（`FOC_Align_Request*`、`FOC_CoggingCalib_Request*`、`FOC_Acoustic_Request*`、`FOC_ControlExecutor_AbortSpecialPhase`/`RecoverFault`），不得反向包含 `L1_Orchestration/` 头，也不得在协议层内联重写控制状态机（判据/顺序的唯一实现点在 L2）。
 
 ### 平台 API 契约（foc_platform_api.h）
 
@@ -86,9 +88,10 @@ FOC_VSCODE/
 
 系统以两个顶层结构体为数据中枢：
 
-- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`estim_smo_state`、`estim_hfi_state`、`estim_encoder_state`）、Source Manager 状态（`active_source_state`、`source_mgr_state`、`source_switch_state`）、各 source 私有状态（如 `openloop_state`）和控制运行时（`ctrl`: `iq_target`、`electrical_angle_rad`、`ud/uq`、`vbus_voltage_base`）、外环状态等。L1 实例化，L2 各块通过指针读/写。
+- **`foc_motor_t`**（定义于 `foc_ctrl_types.h`，聚合定义于 `L2_Core/foc_motor_aggregate.h`）— 电机控制数据结构，包含控制参数、状态、PID、估计器状态（`estim_smo_state`、`estim_hfi_state`）、Source Manager 状态（`active_source_state`、`source_mgr_state`、`source_switch_state`）、各 source/功能私有状态（`openloop_state`、`align_state`、`cogging_calib_state`、`injection_state`、`acoustic_state`）、控制运行时（`ctrl`：`iq_target`、`electrical_angle_rad`、`ud/uq`、`vbus_voltage_base`、`inject_axis`）、控制参考（`ctrl_ref` + 电流环 ISR 本地快照 `ctrl_ref_snap`）、外环状态等。L1 实例化，L2 各块通过指针读/写。
 - **`foc_system_t`**（定义于 `foc_system_types.h`）— 系统级数据结构，包含：
   - `cfg.report`：系统 report 配置，不随 reinit 重置
+  - `events`：应用级事件状态（`foc_app_event_state_t`：故障跃迁缓存、就绪沿播报标志），**跨 reinit 保持**（否则会重复播报上电提示音、漏报故障跃迁）
   - `runtime.scheduler`：系统任务调度器
   - `runtime.tasks`：ISR → main loop 任务触发标志
   - `runtime.comm`：通信输入轮询状态与 RX FIFO
@@ -164,9 +167,10 @@ FIFO_Enqueue(runtime.comm.rx_fifo)   ← L2/Runtime 队列方法，操作 L1 的
 FIFO_Dequeue(runtime.comm.rx_fifo)   ← L2/Runtime 队列方法
   │
   ▼
-FOC_Protocol_ProcessSingle() ← L2/Protocol 命令语义执行
+FOC_Protocol_ProcessSingle(motor, report, frame, len) ← L2/Protocol 命令语义执行
+  │   （report = 系统报告配置，由 L1 逐次显式传入；协议层不持有该指针）
   │   L3 codec（Codec_ParseCommandFrame）拆信封 → 填 protocol_command_t
-  │   → 修改 motor 字段 → 返回结果结构体
+  │   → 修改 motor 字段（控制类命令转调 L2/Control 收口）→ 返回结果结构体
   │
   ├── [comm_active]  → 更新 LED 指示器
   ├── [needs_summary] → L1 生成摘要文本 →
@@ -191,7 +195,7 @@ FOC_Protocol_ProcessSingle() ← L2/Protocol 命令语义执行
 | 类别 | 说明 | 输出 |
 |------|------|------|
 | **L 日志/诊断** | 常规人读 | 主循环慢路径（`FOC_Protocol_WriteLog` / `WriteDebugText`） |
-| **突发一次性通告** | 重要事件保底直达，允许截断 | fast（`FOC_OutputMgr_WriteFastEvent` / `WriteDebugFast`） |
+| **突发一次性通告** | 重要事件保底直达，允许截断 | fast（`FOC_Platform_WriteDebugFast`，字面量文本） |
 | **D 数据导出** | cogging C 代码 / LUT dump | 主循环，保留精确结构化语法 |
 | **Q 协议查询数据** | 参数/配置/状态/摘要行 | 主循环文本行 |
 | **B 单字节回执** | 协议机器反馈 | `WriteStatusByte` |
@@ -247,8 +251,8 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 
 | 文件名 | 职责 |
 |------|------|
-| `foc_ctrl_executor` | 算法入口：PWM ISR 与 Control ISR 路由，外环调度、控制模式切换、**FullStop 安全归零** |
-| `foc_ctrl_init` | 数据结构初始化、平台硬件初始化收口、控制基准重建、电机参数就绪判据 |
+| `foc_ctrl_executor` | 算法入口：PWM ISR 与 Control ISR 路由，外环调度、控制模式切换、**FullStop 安全归零**、**特殊相位中止分派（AbortSpecialPhase）**、**ACOUSTIC 输出例程（含声学注入参考角决定）**、**错误复位收口（RecoverFault）** |
+| `foc_ctrl_init` | 数据结构初始化、平台硬件初始化收口、控制基准重建、电机参数就绪判据（`FOC_Control_VerifyMotor`）、**启动阶段选择判据（`FOC_Control_ShouldStartupAlign`）** |
 | `foc_ctrl_cfg` | 配置状态管理（软切换、齿槽补偿、PID 初始化、fine-tuning setter） |
 | `foc_ctrl_source_mgr` | Source Manager：Select（切换决策）+ Publish（发布 active source view） |
 | `foc_ctrl_openloop` | OpenLoop angle source 实现 + OpenLoop low-speed policy |
@@ -261,8 +265,8 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
 | `foc_ctrl_compensation` | 齿槽补偿 |
 | `foc_ctrl_sens_cogging_calib` | 有感齿槽标定（非阻塞状态机，由 L1 通过 control_phase 路由调用） |
 | `foc_ctrl_align` | 有感对齐/标定状态机（零点/方向/极对数辨识；上电 `STARTUP` 与命令 `aaYI` 共用，非阻塞，由 L1 通过 control_phase 路由调用） |
-| `foc_ctrl_injection` | 注入基础设施（**共享 sink**）：配置期收敛 + 每拍波形生成（正弦）+ **单一叠加点** + 同拍正交解调；两个驱动者——HFI 载波（控制态：`Configure`/`SetEnable`/`HfiStep`）与声学样本（ACOUSTIC 相位：`InjectSample`）。无协议入口、不含策略 |
-| `foc_ctrl_acoustic` | 声学序列引擎（被动）：`ACOUSTIC` 相位的序列状态机（按铃声 ID 解码为事件步 + 包络，产出波形规格 `FOC_Acoustic_ModeStep`，**不自叠加**）；由 L1 `FOC_App_PlayTune` 触发相位后经注入基础设施输出 |
+| `foc_ctrl_injection` | 注入基础设施（**共享 sink**）：每拍波形生成（正弦）+ **单一叠加点** + 同拍正交解调；两个驱动者——HFI 载波（控制态：`Configure`/`SetEnable`/`HfiStep`）与声学样本（ACOUSTIC 相位：`InjectSample`）。**无协议入口、不含策略、不感知参考角**：注入的**轴 / 幅值 / 频率 / 参考角**四项均归驱动该注入的功能域（HFI 载波参数为预留：`FOC_HFI_*`；参考角经执行输出 API 显式传入） |
+| `foc_ctrl_acoustic` | 声学序列引擎 + 触发收口：`ACOUSTIC` 相位的序列状态机（按铃声 ID 解码为事件步 + 包络，产出波形规格 `FOC_Acoustic_ModeStep`，**不自叠加**）；`FOC_Acoustic_RequestTune/RequestStop` 为**协议 `A:P/A:S` 与 L1 就绪播报共用的单一触发收口**（含相位切换与自动退出检查基准同步） |
 | `foc_ctrl_actuation` | 执行输出（SVPWM 驱动） |
 
 ### 控制运行链
@@ -278,15 +282,16 @@ L2/Control 按 `foc_ctrl_<name>.c/.h` 命名，模块划分：
   → FOC_Init_VbusGate（多次采样母线电压门）+ FOC_Init_Verify_Static（静态校验组：
       COMM/COMMAND/PROTOCOL/DEBUG/PWM/SENSOR/VBUS；不含依赖标定产物的 MOTOR 位）
   → 启动阶段选择：自检通过且电机参数未标定 → FOC_Align_RequestStartup（control_phase=STARTUP）
-                  否则 → NORMAL
+                  否则 → NORMAL        （判据收口：L2 `FOC_Control_ShouldStartupAlign`）
   → FOC_App_Start：启动控制节拍源 + 使能控制中断（此后进入就绪后控制链）
 
 就绪后控制链：
   对齐/标定：STARTUP/REINIT → FOC_Align_RunStep 每控制周期步进 → FINALIZE 归零输出 + 重建控制基准
-             → STARTUP 完成时 FOC_Init_Verify_Motor（就绪判定组：方向/零点/极对数）→ NORMAL
+             → STARTUP 完成时 FOC_Control_VerifyMotor（就绪判定组：方向/零点/极对数）→ NORMAL
   恢复链（从停止态）：禁能→使能 / 错误复位 Y:C / phase-abort / aaYI
        → FOC_Control_RebuildControlBasis（重建运行期控制基准）
-       → Y:C：若电机参数未标定（上电自检未完成，如欠压）→ 回到 STARTUP 重新对齐；否则回 NORMAL
+       → Y:C 由 L2 `FOC_ControlExecutor_RecoverFault` 收口（清错 + 重建基准 + 判据分流）：
+            若电机参数未标定（上电自检未完成，如欠压）→ 回到 STARTUP 重新对齐；否则回 NORMAL
        → RunCycle "源无效"分支 → 电流环 ISR 重新 Select/Publish
        （详见下方"恢复路径统一软初始化"小节）
 
@@ -296,7 +301,7 @@ Control ISR（低频控制线，严格不做 source 选择）：
     → [SLOW] Sensor_ReadEncoder、Sensor_ReadVBUS（实测母线电压：欠压保护 + 电流环电压基准实测档来源）
   阶段2：L1 系统守卫
     → system_fault 检查 → return
-    → [特殊 phase 自动退出] motor_enabled==0 或 control_mode 变化 → AbortSpecialPhase
+    → [特殊 phase 自动退出] motor_enabled==0 或 control_mode 变化 → FOC_ControlExecutor_AbortSpecialPhase
   阶段3：有效性检查 + 欠压保护
     → adc_valid + [encoder] encoder_valid
     → FOC_Init_IsVbusSafe（与就绪前电压门共用单一判定入口；FOC_FEATURE_UNDERVOLTAGE_PROTECTION）
@@ -376,11 +381,18 @@ PWM ISR（双 ISR 模式默认；三 ISR 模式拆分电流环）：
 ACOUSTIC 相位输出（与 NORMAL/STARTUP/REINIT/COGGING_CALIB 同级互斥；不走 phase_output）：
   → 电流环核由 control_phase 分流到 FOC_ControlExecutor_RunAcousticOutput：
      清零 ud/uq（**控制环不输出**，跳过估计器/源/电流环）
+     → FOC_ControlExecutor_AcousticRefAngle（**注入参考角由声学域决定**）：
+         可信角度源（编码器有效 / 估计器已收敛 / 开环有效）→ 跟随源电角度；
+         否则保持现值（纯无感未收敛、HFI·FLUX 源、编码器无效、参数未标定）——
+         退化为"冻结角"行为，不把可疑估计角送进功率级
      → FOC_Acoustic_ModeStep（序列 + 包络 → 出参波形规格）
      → FOC_Injection_InjectSample（相位推进 + 波形生成 + **同一叠加点**）
-     → FOC_ControlApplyElectricalAngleDirect（直写占空比，与 NORMAL 同机制）
+     → FOC_ControlApplyElectricalAngleDirect（直写占空比，与 NORMAL 同机制；参考角为入参）
   → 声学期间控制环功率输出为 0，从根本上避免控制环反向压制声学；
     曲终（含包络释放）由 L1 ControlTrigger 回 NORMAL + FullStop + RebuildControlBasis（防恢复突跳）
+  → 参考角取角不新增 ISR 读取：`ANGLE_FAST==DISABLE` 档编码器由控制 ISR 每拍采样并经
+    `ctrl_ref` 原子发布（ACOUSTIC 期间照常）；`ANGLE_FAST==ENABLE` 档才在取角前补一次
+    `Sensor_ReadEncoder`（编码器由电流环 ISR 自持，而声学相位跳过电流环核）
 
 配置应用（冷路径专用）：
   FOC_Control_ApplyConfig(ctrl, pids, cfg, params)
@@ -444,7 +456,7 @@ ACOUSTIC 相位输出（与 NORMAL/STARTUP/REINIT/COGGING_CALIB 同级互斥；�
 控制 ISR（外环/开环）与电流环 ISR 之间的跨 ISR 控制数据（`ctrl.iq_target`、`outer_loop.ramped_speed_rad_s`、编码器角度/速度/有效性、OpenLoop 虚拟状态）通过 `foc_control_ref_t ctrl_ref` + `volatile ctrl_ref_ready` 标志实现**单点原子发布**：
 
 - **发布（控制 ISR 过程末尾）**：`FOC_ControlExecutor_PublishControlRef` 一次性写入块 → `FOC_Platform_MemoryBarrier()` → `ctrl_ref_ready=1`。
-- **获取（电流环 ISR 过程开头）**：见 `ctrl_ref_ready` 才原子取走为本地快照（未提交时复用上次快照），并物化 `ctrl.iq_target`；SourceMgr 的编码器/开环/外环斜坡读取统一走该快照。
+- **获取（电流环 ISR 过程开头）**：见 `ctrl_ref_ready` 才原子取走为本地快照（未提交时复用上次快照），并物化 `ctrl.iq_target`；SourceMgr 的编码器/开环/外环斜坡读取统一走该快照。快照实例为 `foc_motor_t.ctrl_ref_snap`（**实例集中 L1；L2 不持静态快照**；ACOUSTIC 相位取参考角时直接读已发布的 `ctrl_ref`）。
 - **正确性前提**：写者（控制 ISR，低优先级）与读者（电流环 ISR，高优先级）方向与 SVPWM pending 一致——读者运行时写者不可能抢占，快照一致；写者不会在读者读取期间重写，故单缓冲 + 标志即足够，无需双缓冲。
 - **目的**：消除"控制 ISR 逐字段散写、电流环中途读到跨字段不一致中间态"的竞态（如新角度 + 旧 iq_target），使正确性不依赖中断优先级串行化，从而可将控制 ISR 置于低优先级恢复实时性。
 - 编码器字段仅在 `FOC_SENSOR_ANGLE_FAST_ENABLE == DISABLE`（控制 ISR 采样）时纳入；FAST 模式下编码器由电流环自持，读 `sensor`。
@@ -459,18 +471,19 @@ ACOUSTIC 相位输出（与 NORMAL/STARTUP/REINIT/COGGING_CALIB 同级互斥；�
 - 复位模式切换标记：`mode_transition.prev_control_mode_valid = 0`（使下次 RunCycle 重新初始化外环）
 - 阻断 ISR 控制链：`current_loop_ready = 0`
 - 复位软切换运行时瞬态、保留用户配置 `enabled`/`configured_mode`（条件编译）
+- 复位注入/声学瞬态：`FOC_Injection_Reset` + `ctrl.inject_axis = 0` + `FOC_Acoustic_Reset`（保留各自配置）
 - 归零 PWM：`RecordPhaseOutputZero` + `ApplyPhaseOutputRuntime` → `SVPWM_ApplyDirectDuty(0,0,0)`
 
-调用方：`L1 OnPwmUpdateISR`（system_fault 时）、`L2 RunISR`（motor_enabled==0 时）、`L1 AbortSpecialPhase`（退出特殊状态时）。`SafeOutput` 和 `Stop` 均委托至 `FullStop`。
+调用方：`L1 OnPwmUpdateISR`（system_fault 时）、`L2 RunISR/RunISR_CurrentLoop/RunISR_PwmOnly`（motor_enabled==0 时）、`FOC_ControlExecutor_AbortSpecialPhase`（退出特殊状态时）。
 
 ### 运行周期结果处理（fault 锁存/通告）— 结果处置收口 L2
 
 L1 负责传感器采样与阈值判定（架构约束 #11），产出 `FOC_CYCLE_*` 结果码后统一转调 `FOC_ControlExecutor_OnCycleResult(motor, code)`（L2 executor，替换原 L1 `FOC_App_HandleResult`）：
 
 - `OK` → 维持 `system_running = 1`；
-- `FAULT_SENSOR` / `FAULT_UVLO` → 锁存 `system_fault = 1`、`system_running = 0` + `SafeOutput` + 突发短码（由 `last_fault_code` 单一派生 `FAULT ENC/ADC/UV`，经平台 `WriteDebugFast`）。
+- `FAULT_SENSOR` / `FAULT_UVLO` → 锁存 `system_fault = 1`、`system_running = 0` + `FullStop` + 突发短码（由 `last_fault_code` 单一派生 `FAULT ENC/ADC/UV`，经平台 `WriteDebugFast`）。
 
-fault 完整可读详情由主循环 `FOC_App_ReportFaultTransition` 检测 `system_fault` 0→1 跃迁后经慢路径补发（如 `fault: encoder feedback invalid`）；ISR 内不做长文本。
+fault 完整可读详情由 L1 事件段（`FOC_AppEvent_Run`，含**跨 reinit 保持**的 `foc_system_t.events` 缓存）检测 `system_fault` 0→1 跃迁后经慢路径补发（如 `fault: encoder feedback invalid`）；ISR 内不做长文本。同一事件段还负责"对齐/重新对齐完成报告"与"就绪沿声学播报"。
 
 ### FOC_Control_RebuildControlBasis — 恢复路径统一软初始化
 
@@ -488,13 +501,14 @@ fault 完整可读详情由主循环 `FOC_App_ReportFaultTransition` 检测 `sys
 | 场景 | 触发点 |
 |---|---|
 | 禁能→使能（0→1） | `WriteState MOTOR_ENABLE` |
-| 错误复位 `Y:C` | `HandleSystemCommand FAULT_CLEAR_REINIT` |
-| phase-abort | `FOC_App_AbortSpecialPhase` |
+| 错误复位 `Y:C` | `FOC_ControlExecutor_RecoverFault`（协议层单次调用，内含重建 + 判据分流） |
+| phase-abort | `FOC_ControlExecutor_AbortSpecialPhase` |
 | 重新对齐 `aaYI` | `FOC_Align_RunStep` FINALIZE（复用） |
+| ACOUSTIC 曲终 | `FOC_App_ControlTrigger` 的 ACOUSTIC 分支（回 NORMAL） |
 
 - 不依赖 `FOC_ALIGN_ENABLE`（任何配置下均为正常控制状态）。
 - 只重建运行期基准，**不触碰**用户配置/电机参数/源配置。
-- **错误复位 `Y:C` 的参数未标定分支**：若电机参数（方向/零点/极对数）尚未标定（上电自检未完成，如欠压），`Y:C` 恢复后不直接回 NORMAL，而是 `FOC_Align_RequestStartup` 回到 `STARTUP` 重新对齐（无需复位 MCU）。判据 `FOC_Control_IsMotorParamCalibrated`（`foc_ctrl_init`）为单一检查点，L1 就绪判定与 L2 协议层共用。
+- **错误复位 `Y:C` 的参数未标定分支**：若电机参数（方向/零点/极对数）尚未标定（上电自检未完成，如欠压），`Y:C` 恢复后不直接回 NORMAL，而是 `FOC_Align_RequestStartup` 回到 `STARTUP` 重新对齐（无需复位 MCU）。判据 `FOC_Control_IsMotorParamCalibrated`（`foc_ctrl_init`）为单一检查点，L1 就绪判定、L2 恢复分流（`FOC_Control_ShouldStartupAlign`）与就绪判定（`FOC_Control_VerifyMotor`）共用。
 
 ### 采样路径规则
 
@@ -515,7 +529,7 @@ fault 完整可读详情由主循环 `FOC_App_ReportFaultTransition` 检测 `sys
 |---|---|---|
 | 数据 | 配置初值、PID 参数、滤波器零态 | 运行态：源发布、电角度、输出、控制参考快照、外环累积、状态机、闸门 |
 | 采样 | 一次编码器 + VBUS（供静态校验） | 每拍编码器/VBUS/电流采样；电流零偏（对齐 `ZERO_SAMPLE` 阶段） |
-| 判定 | `FOC_Init_Verify_Static`（静态组） | `FOC_Init_Verify_Motor`（就绪判定组）；每拍欠压 trip |
+| 判定 | `FOC_Init_Verify_Static`（静态组，L1） | `FOC_Control_VerifyMotor`（就绪判定组，L2）；每拍欠压 trip |
 | 功率动作 | **无**（PWM 占空比恒 0） | 对齐/标定（`STARTUP`）、齿槽标定、重新对齐、NORMAL 控制 |
 
 **原则**：任何写入 PWM 占空比 / `ud`/`uq` 的动作必须在就绪后的 `control_phase` 内；就绪前只写"配置类/静态事实/零态"，不写由反馈或时序派生的运行态。
@@ -545,13 +559,13 @@ typedef enum {
 
 | 退出路径 | 触发方式 | 行为 |
 |---------|---------|------|
-| **显式命令** | 协议 `Y:A`（`a61YAb`） | `FOC_App_AbortSpecialPhase` → 调用对应模块 `_Abort` + `control_phase=NORMAL` + `FullStop` + 状态码 `O` |
-| **禁能自动** | `S:M=0`（motor_enabled=0） | ControlTrigger 检测 → `AbortSpecialPhase` |
-| **模式切换自动** | `P:D=xxx`（control_mode 变化） | ControlTrigger 检测 → `AbortSpecialPhase` |
+| **显式命令** | 协议 `Y:A`（`a61YAb`） | `FOC_ControlExecutor_AbortSpecialPhase`（L2 executor，与 L1 自动退出守卫共用）→ 调用对应模块 `_Abort` + `control_phase=NORMAL` + `FullStop` + `RebuildControlBasis` + 状态码 `O` |
+| **禁能自动** | `S:M=0`（motor_enabled=0） | ControlTrigger 检测 → `FOC_ControlExecutor_AbortSpecialPhase` |
+| **模式切换自动** | `P:D=xxx`（control_mode 变化） | ControlTrigger 检测 → `FOC_ControlExecutor_AbortSpecialPhase` |
 
-退出时经突发通告（fast，`FOC_OutputMgr_WriteFastEvent`）输出 `abort:<phase>`——`AbortSpecialPhase` 可由 Control ISR 自动退出触发，禁用主循环慢文本。
+退出时经 fast 通道（直调 L3 `FOC_Platform_WriteDebugFast`，字面量文本）输出 `abort:<phase>`——该函数可由 Control ISR 自动退出或主循环 `Y:A` 调用，禁用主循环慢文本与格式化。
 
-模块级 Abort 函数（`FOC_CoggingCalib_Abort` / `FOC_ReInit_Abort`）重置对应模块的内部状态机，不清除已采集的数据以便下次启动时恢复。
+模块级 Abort 函数（`FOC_CoggingCalib_Abort` / `FOC_Align_Abort` / `FOC_Acoustic_Reset`）重置对应模块的内部状态机；对齐/齿槽标定不清除已采集的数据以便下次启动时恢复。
 
 ### control_region
 
@@ -792,8 +806,8 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
 6. 采样滤波特性（Kalman、LPF、电气周期偏移补偿）
 7. 特殊控制状态退出：`FOC_SPECIAL_PHASE_ABORT_ENABLE`（当 `COGGING_CALIB_ENABLE`、`ALIGN_ENABLE` 或 `ACOUSTIC_ENABLE` 启用时自动开启）
 8. 电流环电压基准来源：`FOC_CURRENT_LOOP_VOLTAGE_BASE_SOURCE`（设定值 / 实测母线电压，见"电流环电压基准"小节）
-9. 注入基础设施：`FOC_INJECTION_ENABLE`（+ `FOC_INJECTION_MODE` 选择相干/任意频率；注入轴为**运行时参数**）
-10. 声学回报：`FOC_ACOUSTIC_ENABLE`（声学为与对齐/标定同级的 `ACOUSTIC` 相位；输出轴 / 幅值 / 包络 / 解码容量见 `foc_cfg_init_values.h`）
+9. 注入基础设施：`FOC_INJECTION_ENABLE`（+ `FOC_INJECTION_MODE` 选择相干/任意频率）。**注入的轴 / 幅值 / 频率 / 参考角均归驱动该注入的功能域**：声学用 `FOC_ACOUSTIC_OUTPUT_AXIS` + 幅值 + 声学域参考角策略（可信源跟随转子，否则保持现值）；HFI 用 `FOC_HFI_INJECT_AXIS` / `FOC_HFI_DEFAULT_*`（预留，接入时由估计器下发并保证注入帧=解调帧）；sink 侧无功能默认值（`FOC_Injection_Init` 为零初值，未配置即无输出）
+10. 声学回报：`FOC_ACOUSTIC_ENABLE`（声学为与对齐/标定同级的 `ACOUSTIC` 相位；输出轴 / 幅值 / 包络 / 解码容量见 `foc_cfg_init_values.h`；触发收口 `FOC_Acoustic_RequestTune/RequestStop`，协议 `A:P/A:S` 与 L1 就绪播报共用）
 11. 有感对齐/标定：`FOC_ALIGN_ENABLE`（上电 `STARTUP` 自动执行 + 命令 `aaYI` 复用同一实现；关闭时须由 LS 默认值提供方向/零点/极对数，见编译期约束）
 
 ### 常见功能宏组合
@@ -825,11 +839,13 @@ FOC_SourceMgr_Init(motor, low_source, high_source):
    - 无感估计器需电流采样
    - SMO 需至少一种低速角度 source（当编码器不可用时）
    - Source 切换配置需满足 low/high source 组合约束
+   - 声学回报依赖注入基础设施（`ACOUSTIC_ENABLE` → `INJECTION_ENABLE`）
+   - HFI 估计器依赖注入基础设施（`ESTIMATOR_HFI_ENABLE` → `INJECTION_ENABLE`；载波由 sink 产生、解调结果由其消费）
 4. **角度模式 source 兼容性约束**：`FOC_CONTROL_SRC_IS_ANGLE_CAPABLE(src)` 宏判断 source 是否提供可靠的绝对位置（ENCODER 或 HFI）。`SPEED_ANGLE_ONLY` 构建要求两个 source 均为 ANGLE_CAPABLE；`FULL` 构建可在运行时切到 `SPEED_ANGLE`，运行时 Source Manager 会锁定 LOW 源不作速域切换（角度模式依赖编码器可靠源），因此 `FULL` 构建要求 LOW source 为 ANGLE_CAPABLE（HIGH 可为 SMO，仅服务速度模式的高速无感段）。
 
 ## 数学变换与 SVPWM（ISR 快线热点优化约束）
 
-- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT/STARTUP）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。注入与解调的单位正弦同源复用该 LUT（`foc_ctrl_injection` 直接调用 `FOC_MathLut_SinCos`，不持有模块内自带表），因此解调参考与施加电压严格同相。声学回报的音频波形同样直接调用 `FOC_MathLut_Sin`（不持有模块内自带表），与注入共用同一三角函数源。
+- **三角函数联合查表**：`FOC_MathLut_SinCos` 一次 wrap/象限/索引计算同时返回 sin/cos（位级等价于分别查 `FOC_MathLut_Sin`）。电流环 Park、执行器逆 Park、SMO PLL 提取均使用 `Math_ParkTransformSC` / `Math_InverseParkTransformSC` 预计算 sin/cos 变体，避免同角度重复查表。**特殊 phase（COGGING_CALIB/REINIT/STARTUP）输出路径不经过 executor 电流环核心，各模块内部独立查表，不共享跨模块缓存**（避免过期角度）。注入与解调的单位正弦同源复用该 LUT（`foc_ctrl_injection` 直接调用 `FOC_MathLut_SinCos`，不持有模块内自带表），因此解调参考与施加电压严格同相。声学回报的音频波形同样直接调用 `FOC_MathLut_Sin`（不持有模块内自带表），与注入共用同一三角函数源。声学注入的**参考角由声学域显式给出**（见"ACOUSTIC 相位输出"），遥测读取的是 sink 在唯一叠加点写入的 `ctrl.inject_axis`（**单一事实源**，声学播放期同样正确）。
 - **SVPWM 输入为 αβ 静止坐标系**：`SVPWM_Update` 直接消费逆 Park 的 αβ 结果，不再经逆 Clarke 转三相（v2.2.5 起，消除往返冗余）；SVPWM 内部按 αβ 判扇区（符号）与查角度（比值），不依赖矢量幅值归一化，近零矢量判零直接以幅值平方阈值输出中点。
 - **运行期不变常量缓存**：SMO 等模块将 `Rs`/`inv_L`/LPF alpha 等派生量在 Init 时缓存，避免每周期重算除法；依赖对齐可变字段（如 `pole_pairs`）的派生量不缓存。
 - **LUT 表单点定义**：`foc_math_lut.h` 的 `static const` 表改为"单点定义（`FOC_MATH_LUT_IMPL` 由 `foc_math_transforms.c` 定义）+ 其余翻译单元 `extern` 声明"，避免同一张表在每个包含该头文件的翻译单元各存一份（历史实测 sin 表 6 份、atan 表 2 份，合计约占 ROM 36%）。

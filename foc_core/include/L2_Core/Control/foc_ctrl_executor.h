@@ -38,11 +38,16 @@ uint8_t FOC_ControlExecutor_RunCycle(foc_motor_t *motor, float dt_sec);
  *         Converges fault / disable / phase-switch stop paths. */
 void FOC_ControlExecutor_FullStop(foc_motor_t *motor);
 
-/** @brief Safe output: zero voltage, open-loop stop. */
-void FOC_ControlExecutor_SafeOutput(foc_motor_t *motor);
+#if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
+/** @brief 特殊控制相位中止（协议 Y:A 与 L1 自动退出守卫共用的单一收口）：
+ *         各相位回滚安全态 → fast 通告 → 归 NORMAL → 全停 → 重建控制基准。
+ *         ISR 与主循环均可调用，只用 fast 通道与字面量文本。 */
+void FOC_ControlExecutor_AbortSpecialPhase(foc_motor_t *motor);
+#endif
 
-/** @brief Stop motor output (open-loop zero). */
-void FOC_ControlExecutor_Stop(foc_motor_t *motor);
+/** @brief 错误复位（协议 Y:C）收口：清错误计数 + 重建控制基准 + 按参数就绪情况回 STARTUP/NORMAL。
+ *         须在 system_fault 仍为 1（ISR 走 FullStop）时调用，无竞态。 */
+void FOC_ControlExecutor_RecoverFault(foc_motor_t *motor);
 
 /** @brief 处理一个控制周期结果（L1 采样/阈值判定产出码后转调）：
  *         OK→维持运行；FAULT_*→锁存故障 + 全停 + 突发短码。

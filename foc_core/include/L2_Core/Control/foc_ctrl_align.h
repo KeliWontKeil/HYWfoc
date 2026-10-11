@@ -89,6 +89,7 @@ static inline void FOC_Align_Request(foc_motor_t *motor) { (void)motor; }
 static inline void FOC_Align_RequestStartup(foc_motor_t *motor) { (void)motor; }
 static inline uint8_t FOC_Align_TakeReport(foc_motor_t *motor) { (void)motor; return 0U; }
 static inline uint8_t FOC_Align_RunStep(foc_motor_t *motor, float dt_sec) { (void)motor; (void)dt_sec; return 0U; }
+static inline void FOC_Align_Abort(foc_motor_t *motor) { (void)motor; }
 
 #endif /* FOC_ALIGN_ENABLE */
 

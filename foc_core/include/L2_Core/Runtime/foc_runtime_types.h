@@ -3,20 +3,6 @@
 
 #include <stdint.h>
 
-typedef struct {
-    uint16_t init_checks_pass_mask;
-    uint16_t init_checks_fail_mask;
-    uint8_t finalize_init;
-
-    uint8_t sensor_state_updated;
-    uint8_t adc_valid;
-    uint8_t encoder_valid;
-
-    float undervoltage_vbus;
-
-    uint8_t control_loop_skipped;
-} runtime_step_signal_t;
-
 typedef enum {
     RUNTIME_INIT_CHECK_COMM = (1U << 0),
     RUNTIME_INIT_CHECK_PROTOCOL = (1U << 1),
@@ -27,6 +13,15 @@ typedef enum {
     RUNTIME_INIT_CHECK_MOTOR = (1U << 6),
     RUNTIME_INIT_CHECK_VBUS = (1U << 7)
 } runtime_init_check_t;
+
+/* 就绪前静态可判定项（不含依赖对齐产物的 MOTOR 位，后者由 FOC_Control_VerifyMotor 判定） */
+#define RUNTIME_INIT_CHECK_STATIC_ALL ((uint16_t)(RUNTIME_INIT_CHECK_COMM |       \
+                                                  RUNTIME_INIT_CHECK_PROTOCOL |   \
+                                                  RUNTIME_INIT_CHECK_COMMAND |    \
+                                                  RUNTIME_INIT_CHECK_DEBUG |      \
+                                                  RUNTIME_INIT_CHECK_SENSOR |     \
+                                                  RUNTIME_INIT_CHECK_PWM |        \
+                                                  RUNTIME_INIT_CHECK_VBUS))
 
 /* ========== Task rate identifiers for callback registration ========== */
 typedef enum {

@@ -624,6 +624,12 @@
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
             <File>
+              <FileName>foc_app_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app_event.c</FilePath>
+            </File>
+
+            <File>
               <FileName>foc_output_mgr.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_output_mgr.c</FilePath>
@@ -1396,6 +1402,12 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
+            <File>
+              <FileName>foc_app_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app_event.c</FilePath>
+            </File>
+
             <File>
               <FileName>foc_output_mgr.c</FileName>
               <FileType>1</FileType>
@@ -2170,6 +2182,12 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app.c</FilePath>
             </File>
+            <File>
+              <FileName>foc_app_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\foc_core\src\L1_Orchestration\foc_app_event.c</FilePath>
+            </File>
+
             <File>
               <FileName>foc_output_mgr.c</FileName>
               <FileType>1</FileType>

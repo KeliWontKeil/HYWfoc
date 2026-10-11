@@ -56,6 +56,9 @@ typedef struct {
 typedef struct {
     uint16_t comm_pulse_counter;
     uint16_t run_blink_counter;
+    uint8_t  last_blue;          /* 上次写入的灯电平（0xFF = 未知，强制首拍写入） */
+    uint8_t  last_red;
+    uint8_t  last_green;
 } foc_indicator_runtime_t;
 
 /*
@@ -77,12 +80,30 @@ typedef struct {
 
 /*
  * ================================================================
+ * 应用级事件状态（跨电机 reinit 保持）
+ *
+ * 由 L1 事件段（foc_app_event）驱动：fault 跃迁补发、就绪沿声学播报等
+ * "状态跃迁触发的对外通告"。不随 reinit 重置——否则会重复播报上电提示音、
+ * 漏报 reinit 期间的故障跃迁。
+ * ================================================================
+ */
+typedef struct {
+    uint8_t prev_system_fault;
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    uint8_t ready_prev;
+    uint8_t ready_announced;
+#endif
+} foc_app_event_state_t;
+
+/*
+ * ================================================================
  * 系统顶层聚合
  * ================================================================
  */
 typedef struct {
-    foc_system_cfg_t cfg;        /* 持久配置 */
-    foc_runtime_ctx_t runtime;   /* 运行时状态 */
+    foc_system_cfg_t cfg;          /* 持久配置 */
+    foc_app_event_state_t events;  /* 应用级事件状态（跨 reinit 保持） */
+    foc_runtime_ctx_t runtime;     /* 运行时状态 */
 } foc_system_t;
 
 #endif /* FOC_SYSTEM_TYPES_H */

@@ -8,6 +8,8 @@
 #include "L2_Core/Runtime/foc_monitor_queue_types.h"
 #include "LS_Config/foc_config.h"
 
+typedef struct foc_motor_t foc_motor_t;
+
 #define OSC_SNAPSHOT_CHANNEL_COUNT FOC_OSC_CHANNEL_COUNT
 
 typedef struct {

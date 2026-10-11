@@ -1,16 +1,18 @@
 # 何易位|HYW FOC
 
 ### 🚧 项目正在缓慢开发中(?) 
+### 当前正聚焦于上位机开发，因此该项目只会以极其缓慢的速度推进
 ### 诸位点个Star好不好，~~求求你了~求求你了~帮帮可莉吧~~
 
 - 项目名称：何易位FOC
 - English Name：HYW FOC（想不到怎么翻译好，先这样用首字母吧）
 
 - 当前项目状态：单电机 FOC 驱动库（有感+无感）
-- 当前稳定基线：v2.4.1
-- 下一活跃目标版本：v2.4.x
+- 当前稳定基线：v2.5.1
+- 下一活跃目标版本：v2.5.x
 
-- 新硬件（HYWFOC_Explorer）已完成适配！
+- 初始化标定策略结构性优化
+- 音乐播放功能已追加：集成RTTTL格式《花の塔》
 
 ## 何意味？（这个项目是什么）
 
@@ -22,11 +24,11 @@ HYW FOC 是一个可裁剪、结构清晰、可移植、扩展性强、支持有
 - 纯C语言实现，不依赖任何实时系统/运行环境
 - 采用OOP相关思想，模块化分层解耦架构
 - 部分功能可使用宏裁剪
+- 高频注入/RTTTL格式音乐播放
 
 使用 AI 辅助开发（非 VibeCoding）🤖  
 - 开发过程中尝试使用了多种AI插件开发，copilot、cline、claudecode等等，目前还是用的cline  
 - 梁圣的恩！情！还不完  
-- deepseek王朝了
 
 B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库](https://www.bilibili.com/video/BV1QWK56yEaN/?share_source=copy_web&vd_source=023bcb10e6adbb3330677c68017bc143)  
 硬件开源地址：[何易位FOC|HYW FOC：低成本无刷电机FOC驱动](https://oshwhub.com/wqsarvearf/project_wripnfij)
@@ -55,6 +57,7 @@ B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库
 - 齿槽转矩补偿（在线标定 + 运行时补偿）
 - 完整的控制和监控协议，支持多种命令和自定义格式化输出/反馈回报
 - 错误检测及安全机制
+- 高频注入和RTTTL格式音乐播放
 
 ### 当前能力一览
 
@@ -78,7 +81,7 @@ B站演示视频：[何易位FOC：我开发了一个全开源无刷电机FOC库
 
 > 现阶段：有感/无感 FOC框架，持续进行控制效果优化、代码优化、BUG修复。
 > 目前已进入稳定版本
-> 后续计划：高频注入无感 FOC
+> 后续计划：高频注入参数辨识、优化的无感 FOC
 
 ---
 
@@ -120,31 +123,15 @@ FOC_VSCODE/
 
 ## 何易为？（如何简单开始使用该项目）
 
-### ~~当然是直接让 AI 来做啦~~ 🚀
-
-#### 路径 A：人力理解+古法开发
-1. 阅读 [docs/README.md](docs/README.md) 了解文档分层与阅读顺序。
-2. 阅读 [docs/architecture.md](docs/architecture.md) 理解分层架构与接口边界。
-3. 阅读 [docs/development.md](docs/development.md) 了解通用开发与验证流程。
-4. 阅读 [docs/protocol-parameters.md](docs/protocol-parameters.md) 了解协议与参数语义。
-5. 阅读完文档后，你就可以开始阅读代码了，然后慢慢的一步一步尝试把这玩意整到你自己的板子上面去......~~什么年代了还在搞传统开发~~
-
-#### 路径 B：从 HYWFOC_Explorer 开始上手
-1. 准备硬件。我在hardware文件夹里直接放了整个嘉立创EDA专业版的工程，买元件，嫖板子，然后把它装起来！当然你要觉得我画的板子不咋地~~确实不咋地~~，可以参考原理图自己从头设计。
-2. 打开 [examples/HYWFOC_Explorer/software/Project.code-workspace](examples/HYWFOC_Explorer/software/Project.code-workspace) 或 [examples/HYWFOC_Explorer/software/Project.uvprojx](examples/HYWFOC_Explorer/software/Project.uvprojx)。你可以选择你喜欢和熟悉的IDE。
-3. 调整相关宏定义设置相关参数和算法裁剪，编译并烧录。
-4. 按 [docs/protocol-parameters.md](docs/protocol-parameters.md) 与实例 README 指导，发送命令并进行验证/观察现象
-5. 如果一切正常的话，去做你想做的吧，摸索代码/二次开发/优化算法都行。
-
-#### 捷径（极其推荐）：把 AI_INITIALIZATION.md 甩给 AI
-- [AI_INITIALIZATION.md](AI_INITIALIZATION.md) 会告诉 AI 如何初始化理解这个项目。
-- 也可使用各家 AI 的项目初始化功能，让它先建立上下文再协助你开发。
-- 然后有任何问题和想法全部交给AI吧
-- ~~绝对不是我懒得写教程~~
+1. 根据前面的链接，去嘉立创开源平台找板子，或是直接看丢在项目文件夹里面的原理图/PCB工程
+2. 使用我画好的板子：打板~~美美白嫖嘉立创~~，焊接，烧录程序；或是根据我的原理图和代码参考，将核心库移植到你自己的板子上（不保证能用）
+3. 用你的各种上位机给它发命令，开转！
 
 ---
 
 ## 何移位？（如何移植这个库）
+
+### ~~当然是直接让 AI 来做啦~~ 🚀
 
 由于具体的硬件读取相关逻辑，如采样/发送/协议解析完全依赖api接口实现，故库的核心内容并不包含例如：串口DMA、PWM同步电流采样、I2C协议、传感器读取等硬件层相关内容
 - 也就是说，你不能指望把这个库拿来就用
@@ -187,20 +174,17 @@ FOC_VSCODE/
 
 ~~项目没人看没人开发也没关系，我会在角落里默默开发的......~~
 
-顺便推一下作者的另一个很垃圾的上位机小项目：PortOSC  
-https://github.com/KeliWontKeil/PortOSC
-
 ---
 ## 其他开发相关
 ### 开发计划
-优先开发计划，完成前无必要不动核心库：
-- 新硬件功能验证（适配已完成）
-- 上位机开发
+优先开发计划，未完成时调试算法极其麻烦：
+- 上位机开发，非本项目
 
-核心库下版本目标（控制效果与算法持续优化，里程碑见 NEXT_MISSION.md）：
-- 控制效果优化、PID 参数按速度/负载自适应
-- 高频注入
+后期开发目标：
+- 高频注入参数辨识
+- 无感观测器优化、PID调参、自适应PID
 - 有感/无感控制进一步打磨
+- 高频注入FOC，磁链观测器
 
 极长期目标：
 1. ~~把这个库开发成世界上最牛逼的FOC库~~（做梦中）

@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "L1_Orchestration/foc_app.h"
 #include "L2_Core/Protocol/foc_protocol_output.h"
 #include "L2_Core/Protocol/foc_protocol_parser.h"
+#include "L2_Core/Control/foc_ctrl_executor.h"
 #include "L2_Core/Control/foc_ctrl_init.h"
 #include "L2_Core/Control/foc_ctrl_sens_cogging_calib.h"
 #include "L2_Core/Control/foc_ctrl_align.h"
@@ -17,9 +17,6 @@
 #include "L3_Hal/foc_platform_api.h"
 #include "LS_Config/foc_config.h"
 
-/* ========== 内部状态（指向 L1 系统 report 配置） ========== */
-static foc_report_config_t *g_report_config = 0;
-
 /* ========== 内部工具函数 ========== */
 
 static uint8_t IsInRange(float value, float min_value, float max_value)
@@ -29,7 +26,7 @@ static uint8_t IsInRange(float value, float min_value, float max_value)
 
 /* ========== P 命令组参数读写（运行参数） ========== */
 
-static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
+static uint8_t WriteParam(foc_motor_t *motor, foc_report_config_t *report, char subcommand, float value)
 {
     switch (subcommand)
     {
@@ -68,15 +65,15 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
         if (value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ || value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ) return 0U;
-        { foc_report_config_t *report = g_report_config; if (report != 0) report->semantic_freq_hz = (uint16_t)value; }
+        if (report != 0) report->semantic_freq_hz = (uint16_t)value;
         break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV:
         if (value < COMMAND_MANAGER_PARAM_REPORT_FREQ_MIN_HZ || value > COMMAND_MANAGER_PARAM_REPORT_FREQ_MAX_HZ) return 0U;
-        { foc_report_config_t *report = g_report_config; if (report != 0) report->osc_freq_hz = (uint16_t)value; }
+        if (report != 0) report->osc_freq_hz = (uint16_t)value;
         break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
         if (value < COMMAND_MANAGER_PARAM_OSC_MASK_MIN || value > COMMAND_MANAGER_PARAM_OSC_MASK_MAX) return 0U;
-        { foc_report_config_t *report = g_report_config; if (report != 0) report->osc_param_mask = (uint16_t)value; }
+        if (report != 0) report->osc_param_mask = (uint16_t)value;
         break;
 #endif
 
@@ -91,7 +88,7 @@ static uint8_t WriteParam(foc_motor_t *motor, char subcommand, float value)
     return 1U;
 }
 
-static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value_out)
+static uint8_t ReadParam(const foc_motor_t *motor, const foc_report_config_t *report, char subcommand, float *value_out)
 {
     if (value_out == 0) return 0U;
 
@@ -107,11 +104,11 @@ static uint8_t ReadParam(const foc_motor_t *motor, char subcommand, float *value
         *value_out = motor->cfg.sensor_sample_offset_percent; break;
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
     case COMMAND_MANAGER_PARAM_SUBCMD_SEMANTIC_DIV:
-        { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->semantic_freq_hz : 0.0f; } break;
+        *value_out = (report != 0) ? (float)report->semantic_freq_hz : 0.0f; break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_DIV:
-        { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->osc_freq_hz : 0.0f; } break;
+        *value_out = (report != 0) ? (float)report->osc_freq_hz : 0.0f; break;
     case COMMAND_MANAGER_PARAM_SUBCMD_OSC_PARAM_MASK:
-        { const foc_report_config_t *report = g_report_config; *value_out = (report != 0) ? (float)report->osc_param_mask : 0.0f; } break;
+        *value_out = (report != 0) ? (float)report->osc_param_mask : 0.0f; break;
 #endif
     case COMMAND_MANAGER_PARAM_SUBCMD_CONTROL_MODE:
         *value_out = (float)motor->state.control_mode; break;
@@ -439,7 +436,7 @@ static uint8_t ReadConfigParam(const foc_motor_t *motor, char subcommand, float 
 
 /* ========== 状态读写 ========== */
 
-static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
+static uint8_t WriteState(foc_motor_t *motor, foc_report_config_t *report, char subcommand, uint8_t state)
 {
     uint8_t normalized = (state != 0U) ? 1U : 0U;
     switch (subcommand)
@@ -453,13 +450,13 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
         motor->state.motor_enabled = normalized; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { foc_report_config_t *report = g_report_config; if (report != 0) report->semantic_enabled = normalized; } break;
+        if (report != 0) report->semantic_enabled = normalized; break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { foc_report_config_t *report = g_report_config; if (report != 0) report->osc_enabled = normalized; } break;
+        if (report != 0) report->osc_enabled = normalized; break;
 #else
         return 0U;
 #endif
@@ -476,7 +473,7 @@ static uint8_t WriteState(foc_motor_t *motor, char subcommand, uint8_t state)
     return 1U;
 }
 
-static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *state_out)
+static uint8_t ReadState(const foc_motor_t *motor, const foc_report_config_t *report, char subcommand, uint8_t *state_out)
 {
     if (state_out == 0) return 0U;
     switch (subcommand)
@@ -485,13 +482,13 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
         *state_out = motor->state.motor_enabled; break;
     case COMMAND_MANAGER_STATE_SUBCMD_SEMANTIC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { const foc_report_config_t *report = g_report_config; *state_out = (report != 0) ? report->semantic_enabled : 0; } break;
+        *state_out = (report != 0) ? report->semantic_enabled : 0; break;
 #else
         return 0U;
 #endif
     case COMMAND_MANAGER_STATE_SUBCMD_OSC_ENABLE:
 #if (FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE)
-        { const foc_report_config_t *report = g_report_config; *state_out = (report != 0) ? report->osc_enabled : 0; } break;
+        *state_out = (report != 0) ? report->osc_enabled : 0; break;
 #else
         return 0U;
 #endif
@@ -508,10 +505,10 @@ static uint8_t ReadState(const foc_motor_t *motor, char subcommand, uint8_t *sta
 }
 
 
-static uint8_t ReportSingleParam(const foc_motor_t *motor, char subcommand)
+static uint8_t ReportSingleParam(const foc_motor_t *motor, const foc_report_config_t *report, char subcommand)
 {
     float value;
-    if (ReadParam(motor, subcommand, &value) == 0U) return 0U;
+    if (ReadParam(motor, report, subcommand, &value) == 0U) return 0U;
     FOC_Protocol_OutputParam(subcommand, value);
     return 1U;
 }
@@ -524,30 +521,30 @@ static uint8_t ReportSingleConfig(const foc_motor_t *motor, char subcommand)
     return 1U;
 }
 
-static uint8_t ReportSingleState(const foc_motor_t *motor, char subcommand)
+static uint8_t ReportSingleState(const foc_motor_t *motor, const foc_report_config_t *report, char subcommand)
 {
     uint8_t state_val;
-    if (ReadState(motor, subcommand, &state_val) == 0U) return 0U;
+    if (ReadState(motor, report, subcommand, &state_val) == 0U) return 0U;
     FOC_Protocol_OutputState(subcommand, state_val);
     return 1U;
 }
 
 /* ========== P 命令执行 ========== */
 
-static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const protocol_command_t *cmd)
+static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, foc_report_config_t *report, const protocol_command_t *cmd)
 {
     foc_protocol_frame_result_t res = {0, 0, 0, 0};
     float value = 0.0f;
 
     if (cmd->has_param != 0U)
     {
-        if (WriteParam(motor, cmd->subcommand, cmd->param_value) == 0U)
+        if (WriteParam(motor, report, cmd->subcommand, cmd->param_value) == 0U)
         {
             FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
             res.needs_status = 1U;
             return res;
         }
-        if (ReadParam(motor, cmd->subcommand, &value) != 0U)
+        if (ReadParam(motor, report, cmd->subcommand, &value) != 0U)
             FOC_Protocol_OutputParam(cmd->subcommand, value);
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
@@ -564,7 +561,7 @@ static foc_protocol_frame_result_t ExecutePCommand(foc_motor_t *motor, const pro
         return res;
     }
 
-    if (ReportSingleParam(motor, cmd->subcommand) == 0U)
+    if (ReportSingleParam(motor, report, cmd->subcommand) == 0U)
     {
         FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
         res.needs_status = 1U;
@@ -624,7 +621,7 @@ static foc_protocol_frame_result_t ExecuteCCommand(foc_motor_t *motor, const pro
 
 /* ========== S 命令执行 ========== */
 
-static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const protocol_command_t *cmd)
+static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, foc_report_config_t *report, const protocol_command_t *cmd)
 {
     foc_protocol_frame_result_t res = {0, 0, 0, 0};
     uint8_t state_val = 0U;
@@ -637,13 +634,13 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
             res.needs_status = 1U;
             return res;
         }
-        if (WriteState(motor, cmd->subcommand, state_val) == 0U)
+        if (WriteState(motor, report, cmd->subcommand, state_val) == 0U)
         {
             FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
             res.needs_status = 1U;
             return res;
         }
-        if (ReadState(motor, cmd->subcommand, &state_val) == 0U)
+        if (ReadState(motor, report, cmd->subcommand, &state_val) == 0U)
         {
             FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
             res.needs_status = 1U;
@@ -665,7 +662,7 @@ static foc_protocol_frame_result_t ExecuteSCommand(foc_motor_t *motor, const pro
         return res;
     }
 
-    if (ReportSingleState(motor, cmd->subcommand) == 0U)
+    if (ReportSingleState(motor, report, cmd->subcommand) == 0U)
     {
         FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
         res.needs_status = 1U;
@@ -715,7 +712,7 @@ static foc_protocol_frame_result_t ExecuteACommand(foc_motor_t *motor, const pro
             res.needs_status = 1U;
             return res;
         }
-        if (FOC_App_PlayTune(tune_id) == 0U)
+        if (FOC_Acoustic_RequestTune(motor, tune_id) == 0U)
         {
             FOC_Protocol_WriteStatus((uint8_t)COMMAND_MANAGER_STATUS_PARAM_INVALID_CHAR);
             res.needs_status = 1U;
@@ -736,7 +733,7 @@ static foc_protocol_frame_result_t ExecuteACommand(foc_motor_t *motor, const pro
             res.needs_status = 1U;
             return res;
         }
-        FOC_App_StopTune();
+        FOC_Acoustic_RequestStop(motor);
         FOC_Protocol_OutputAcousticPlaying(0U);
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
@@ -781,7 +778,7 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 #if (FOC_SPECIAL_PHASE_ABORT_ENABLE == FOC_CFG_ENABLE)
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_ABORT)
     {
-        FOC_App_AbortSpecialPhase();
+        FOC_ControlExecutor_AbortSpecialPhase(motor);
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
         res.needs_status = 1U;
@@ -801,31 +798,7 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 
     if (cmd->subcommand == COMMAND_MANAGER_SYSTEM_SUBCMD_FAULT_CLEAR_REINIT)
     {
-        /* 错误复位前重建控制基准（此时 system_fault 仍为 1，ISR 走 FullStop，无竞态） */
-        FOC_Control_RebuildControlBasis(motor);
-        motor->state.sensor_invalid_consecutive = 0U;
-        motor->state.protocol_error_count = 0U;
-        motor->state.param_error_count = 0U;
-        motor->state.control_skip_count = 0U;
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-        motor->state.system_fault = 0U;
-        motor->state.system_running = 1U;
-        motor->state.motor_enabled = (uint8_t)COMMAND_MANAGER_DEFAULT_MOTOR_ENABLE;
-        motor->state.current_loop_ready = 0U;
-
-        /* 上电自检尚未完成（如欠压）导致电机参数未标定：恢复后回到启动对齐阶段重新标定，
-         * 而非直接进入 NORMAL（否则电角度基准缺失无法换向）。参数已标定则沿用原恢复路径。 */
-#if (FOC_ALIGN_ENABLE == FOC_CFG_ENABLE) && (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
-        if (FOC_Control_IsMotorParamCalibrated(&motor->params) == 0U)
-        {
-            FOC_Align_RequestStartup(motor);
-        }
-        else
-#endif
-        {
-            motor->state.control_phase = FOC_CONTROL_PHASE_NORMAL;
-        }
-
+        FOC_ControlExecutor_RecoverFault(motor);
         FOC_Protocol_WriteLog("recovery: system fault cleared, control basis rebuilt\r\n");
         FOC_Protocol_WriteStatus((uint8_t)FOC_PROTOCOL_STATUS_OK_CHAR);
         res.comm_active  = 1U;
@@ -893,7 +866,7 @@ static foc_protocol_frame_result_t HandleSystemCommand(foc_motor_t *motor, const
 
 /* ========== 单帧解析与分发 ========== */
 
-static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, const uint8_t *frame, uint16_t len)
+static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, foc_report_config_t *report, const uint8_t *frame, uint16_t len)
 {
     protocol_core_frame_parse_result_t parse_result;
     protocol_command_t command;
@@ -916,9 +889,9 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
     }
 
     if (command.command == COMMAND_MANAGER_CMD_SYSTEM) return HandleSystemCommand(motor, &command);
-    if (command.command == COMMAND_MANAGER_CMD_PARAM)  return ExecutePCommand(motor, &command);
+    if (command.command == COMMAND_MANAGER_CMD_PARAM)  return ExecutePCommand(motor, report, &command);
     if (command.command == COMMAND_MANAGER_CMD_CONFIG) return ExecuteCCommand(motor, &command);
-    if (command.command == COMMAND_MANAGER_CMD_STATE)   return ExecuteSCommand(motor, &command);
+    if (command.command == COMMAND_MANAGER_CMD_STATE)   return ExecuteSCommand(motor, report, &command);
 #if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
     if (command.command == COMMAND_MANAGER_CMD_ACOUSTIC) return ExecuteACommand(motor, &command);
 #endif
@@ -932,9 +905,9 @@ static foc_protocol_frame_result_t ParseAndDispatchFrame(foc_motor_t *motor, con
  * 公开 API
  * ================================================================= */
 
-void FOC_Protocol_Init(foc_report_config_t *report)
+/* 写入报告配置默认值（L1 初始化时调用；协议层不持有该配置指针，逐次调用显式传入）。 */
+void FOC_Protocol_InitReport(foc_report_config_t *report)
 {
-    g_report_config = report;
     if (report != 0)
     {
 #if ((FOC_PROTOCOL_ENABLE_TELEMETRY_REPORT == FOC_CFG_ENABLE) || \
@@ -953,6 +926,7 @@ void FOC_Protocol_Init(foc_report_config_t *report)
 
 foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
     foc_motor_t *motor,
+    foc_report_config_t *report,
     const uint8_t *frame,
     uint16_t len)
 {
@@ -960,18 +934,13 @@ foc_protocol_frame_result_t FOC_Protocol_ProcessSingle(
 
     if ((motor == 0) || (frame == 0) || (len == 0U)) return res;
 
-    res = ParseAndDispatchFrame(motor, frame, len);
+    res = ParseAndDispatchFrame(motor, report, frame, len);
     return res;
-}
-
-const foc_report_config_t *FOC_Protocol_GetReportConfig(void)
-{
-    return g_report_config;
 }
 
 /* ========== 批量队列输出（供 X 指令使用） ========== */
 
-void FOC_Protocol_QueueParams(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
+void FOC_Protocol_QueueParams(const foc_motor_t *motor, const foc_report_config_t *report, fifo_queue_t *tx_fifo)
 {
     float value;
     const char params[] = {
@@ -988,7 +957,7 @@ void FOC_Protocol_QueueParams(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
     uint16_t i;
     for (i = 0U; i < (uint16_t)(sizeof(params) / sizeof(params[0])); i++)
     {
-        if (ReadParam(motor, params[i], &value) != 0U)
+        if (ReadParam(motor, report, params[i], &value) != 0U)
         {
             char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
             ProtocolText_FormatParamLine(line, sizeof(line), params[i], value);
@@ -1048,7 +1017,7 @@ void FOC_Protocol_QueueConfigs(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
     }
 }
 
-void FOC_Protocol_QueueStates(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
+void FOC_Protocol_QueueStates(const foc_motor_t *motor, const foc_report_config_t *report, fifo_queue_t *tx_fifo)
 {
     uint8_t state_val;
     const char states[] = {
@@ -1064,7 +1033,7 @@ void FOC_Protocol_QueueStates(const foc_motor_t *motor, fifo_queue_t *tx_fifo)
     uint16_t i;
     for (i = 0U; i < (uint16_t)(sizeof(states) / sizeof(states[0])); i++)
     {
-        if (ReadState(motor, states[i], &state_val) != 0U)
+        if (ReadState(motor, report, states[i], &state_val) != 0U)
         {
             char line[COMMAND_MANAGER_REPLY_BUFFER_LEN];
             ProtocolText_FormatStateLine(line, sizeof(line), states[i], state_val);

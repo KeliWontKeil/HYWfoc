@@ -1,10 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "L2_Core/foc_motor_aggregate.h"
 #include "L1_Orchestration/foc_init.h"
-
-#include <stdio.h>
-#include <string.h>
 
 #include "L1_Orchestration/foc_output_mgr.h"
 #include "L2_Core/Runtime/foc_queue.h"
@@ -30,10 +28,19 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
 {
     if ((sys == 0) || (motor == 0)) return;
 
+    sys->events.prev_system_fault = 0U;
+#if (FOC_ACOUSTIC_ENABLE == FOC_CFG_ENABLE)
+    sys->events.ready_prev = 0U;
+    sys->events.ready_announced = 0U;
+#endif
+
     sys->runtime.tasks.service_pending = 0U;
     sys->runtime.tasks.monitor_pending = 0U;
     sys->runtime.indicator.comm_pulse_counter = 0U;
     sys->runtime.indicator.run_blink_counter = 0U;
+    sys->runtime.indicator.last_blue = 0xFFU;
+    sys->runtime.indicator.last_red = 0xFFU;
+    sys->runtime.indicator.last_green = 0xFFU;
     sys->runtime.comm.source_rr = 0U;
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
      (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
@@ -60,7 +67,7 @@ void FOC_Init_Runtime(foc_system_t *sys, foc_motor_t *motor,
               FOC_MONITOR_ELEM_QUEUE_DEPTH);
 #endif
 
-    FOC_Protocol_Init(&sys->cfg.report);
+    FOC_Protocol_InitReport(&sys->cfg.report);
 #if ((DEBUG_STREAM_ENABLE_SEMANTIC_REPORT == FOC_CFG_ENABLE) || \
      (DEBUG_STREAM_ENABLE_OSC_REPORT == FOC_CFG_ENABLE))
     DebugStream_Init(&sys->runtime.monitor.stream);
@@ -179,12 +186,13 @@ void FOC_Init_Verify_Static(foc_motor_t *motor, uint8_t vbus_ok)
 
     if (motor == 0) return;
 
-    /* 静态可判定项：不含电机参数位（由 FOC_Init_Verify_Motor 在对齐完成后判定） */
+    /* 静态可判定项：不含电机参数位（由 FOC_Control_VerifyMotor 在对齐完成后判定） */
     motor->state.init_check_mask = RUNTIME_INIT_CHECK_COMMAND |
                                     RUNTIME_INIT_CHECK_COMM |
                                     RUNTIME_INIT_CHECK_PROTOCOL |
                                     RUNTIME_INIT_CHECK_DEBUG |
                                     RUNTIME_INIT_CHECK_PWM;
+    motor->state.init_fail_mask = 0U;
 
 #if (FOC_SENSOR_ENCODER_ENABLE == FOC_CFG_ENABLE)
     if ((motor->sensor.adc_valid != 0U) && (motor->sensor.encoder_valid != 0U))
@@ -208,13 +216,7 @@ void FOC_Init_Verify_Static(foc_motor_t *motor, uint8_t vbus_ok)
         motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_VBUS;
     }
 
-    missing = (uint16_t)(RUNTIME_INIT_CHECK_VBUS |
-               RUNTIME_INIT_CHECK_PWM |
-               RUNTIME_INIT_CHECK_SENSOR |
-               RUNTIME_INIT_CHECK_DEBUG |
-               RUNTIME_INIT_CHECK_COMMAND |
-               RUNTIME_INIT_CHECK_PROTOCOL |
-               RUNTIME_INIT_CHECK_COMM) & (~motor->state.init_check_mask);
+    missing = (uint16_t)(RUNTIME_INIT_CHECK_STATIC_ALL & (~motor->state.init_check_mask));
 
     if ((motor->state.init_fail_mask == 0U) && (missing == 0U))
     {
@@ -231,28 +233,4 @@ void FOC_Init_Verify_Static(foc_motor_t *motor, uint8_t vbus_ok)
     motor->state.last_fault_code = ((bad & (uint16_t)(~RUNTIME_INIT_CHECK_VBUS)) == 0U) ?
         (uint8_t)FOC_FAULT_UNDERVOLTAGE : (uint8_t)FOC_FAULT_INIT_FAILED;
     FOC_Init_ReportChecksFailed(bad);
-}
-
-/* 就绪后：电机参数就绪判定（STARTUP 对齐完成时调用；ISR 安全，仅状态字段 + fast 短码） */
-uint8_t FOC_Init_Verify_Motor(foc_motor_t *motor)
-{
-    if (motor == 0) return 0U;
-
-    if (FOC_Control_IsMotorParamCalibrated(&motor->params) != 0U)
-    {
-        motor->state.init_check_mask |= RUNTIME_INIT_CHECK_MOTOR;
-        motor->state.init_fail_mask &= (uint16_t)(~RUNTIME_INIT_CHECK_MOTOR);
-        motor->state.system_running = 1U;
-        motor->state.system_fault = 0U;
-        motor->state.last_fault_code = (uint8_t)FOC_FAULT_NONE;
-        FOC_Platform_WriteDebugFast("init: OK\r\n");
-        return 1U;
-    }
-
-    motor->state.init_fail_mask |= RUNTIME_INIT_CHECK_MOTOR;
-    motor->state.system_running = 0U;
-    motor->state.system_fault = 1U;
-    motor->state.last_fault_code = (uint8_t)FOC_FAULT_INIT_FAILED;
-    FOC_Platform_WriteDebugFast("FAULT PARAM\r\n");
-    return 0U;
 }

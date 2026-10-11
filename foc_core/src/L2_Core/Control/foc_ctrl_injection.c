@@ -239,6 +239,9 @@ static void Injection_ApplyWave(foc_injection_state_t *inj,
         inj->inj_q = 0.0f;
     }
 
+    /* 单一事实源：记录本拍实际叠加轴（遥测据此解读解调支路） */
+    ctrl->inject_axis = (uint8_t)(axis & FOC_INJECTION_AXIS_DQ);
+
     if (demod != 0U)
     {
         Injection_DemodAccumulate(inj, ctrl, ref_sin, ref_cos, axis);
@@ -247,9 +250,18 @@ static void Injection_ApplyWave(foc_injection_state_t *inj,
 
 void FOC_Injection_Init(foc_injection_state_t *inj)
 {
+    /* 基础设施不替功能选轴/频率/幅值：零初值 + 未使能（未配置即无输出，fail-safe）。
+     * 驱动功能在启用前调用 FOC_Injection_Configure(...) 传入自己的轴/频率/幅值。 */
     inj->enabled = 0U;
-    FOC_Injection_Configure(inj, FOC_INJECTION_DEFAULT_FREQ_HZ,
-                            FOC_INJECTION_DEFAULT_AMPLITUDE_V, FOC_INJECTION_AXIS_D);
+    inj->axis = 0U;
+    inj->mode = 0U;
+    inj->n_div = 0U;
+    inj->freq_act_hz = 0.0f;
+    inj->amplitude_v = 0.0f;
+    inj->phase_inc_rad = 0.0f;
+    inj->phase_rad = 0.0f;
+    Injection_ClearOutput(inj);
+    Injection_DemodClear(&inj->demod);
 }
 
 /* 复位瞬态（停止/恢复路径）；保留频率/幅值与派生量配置 */
